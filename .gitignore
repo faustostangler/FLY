@@ -81,6 +81,7 @@ tree.txt
 # Database files
 *.db
 *.csv
+*.db-journal
 
 # Binary directories
 bin/
