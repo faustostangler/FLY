@@ -22,31 +22,26 @@ def get_chrome_version():
     Returns:
         str: The Chrome version, or None if not found.
     """
+    chrome_path_64 = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+    chrome_path_32 = r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+    chrome_error_msg = 'Failed to retrieve Chrome version: {e}'
+
     for reg_query in settings.registry_paths:
         try:
-            # Query the Windows Registry for Chrome version
             output = subprocess.check_output(reg_query, shell=True)
-            # Extract and return the version number from the registry output
             version = re.search(r'\d+\.\d+\.\d+\.\d+', output.decode('utf-8')).group(0)
             return version
         except subprocess.CalledProcessError:
-            # Continue to the next registry key if this one fails
             continue
 
-    # If registry queries fail, fallback to querying the Chrome executable directly
     try:
-        # Default path to Chrome executable
-        chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
-        if not os.path.exists(chrome_path):
-            chrome_path = r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
-        
-        # Run the Chrome executable with the version flag
+        chrome_path = chrome_path_64 if os.path.exists(chrome_path_64) else chrome_path_32
         output = subprocess.check_output([chrome_path, '--version'], shell=True)
         version = re.search(r'\d+\.\d+\.\d+\.\d+', output.decode('utf-8')).group(0)
         return version
 
     except Exception as e:
-        system.log_error(f"Failed to retrieve Chrome version: {e}")
+        system.log_error(chrome_error_msg.format(e=e))
         return None
 
 def get_chromedriver_url(version):
@@ -59,20 +54,19 @@ def get_chromedriver_url(version):
     Returns:
         str: The URL for downloading the corresponding ChromeDriver.
     """
-    # Hardcoded URL template
-    chromedriver_url = f"https://storage.googleapis.com/chrome-for-testing-public/{version}/win64/chromedriver-win64.zip"
-    
+    chromedriver_url_template = f'https://storage.googleapis.com/chrome-for-testing-public/{version}/win64/chromedriver-win64.zip'
+    url_error_msg = f'Error obtaining ChromeDriver for version {version}'
+
     try:
-        # Make an HTTP request to get the ChromeDriver
-        response = requests.get(chromedriver_url)
+        response = requests.get(chromedriver_url_template)
         if response.status_code == 200:
-            return settings.chromedriver_url
+            return chromedriver_url_template
         else:
-            print(f"Error obtaining ChromeDriver for version {version}")
+            print(url_error_msg)
             return None
 
     except Exception as e:
-        system.log_error(e)
+        system.log_error(str(e))
         return None
 
 def download_and_extract_chromedriver(url, dest_folder):
@@ -86,28 +80,27 @@ def download_and_extract_chromedriver(url, dest_folder):
     Returns:
         str: The path to the extracted ChromeDriver executable.
     """
+    zip_filename = 'chromedriver.zip'
+    chromedriver_folder = 'chromedriver-win64'
+    chromedriver_executable = 'chromedriver.exe'
+    download_error_msg = 'Failed to download or extract ChromeDriver: {e}'
+
     try:
-        # Download the ChromeDriver zip file
         response = requests.get(url)
-        zip_path = dest_folder / 'chromedriver.zip'
-        
-        # Save the downloaded content to a zip file
+        zip_path = dest_folder / zip_filename
+
         with open(zip_path, 'wb') as file:
             file.write(response.content)
-        
-        # Extract the ChromeDriver archive
+
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(dest_folder)
-        
-        # Remove the downloaded zip file
+
         os.remove(zip_path)
-        
-        # Return the path to the extracted ChromeDriver executable
-        chromedriver_path = dest_folder / 'chromedriver-win64' / 'chromedriver.exe'
+        chromedriver_path = dest_folder / chromedriver_folder / chromedriver_executable
         return str(chromedriver_path.resolve())
 
     except Exception as e:
-        system.log_error(e)
+        system.log_error(download_error_msg.format(e=e))
         return None
 
 def get_chromedriver_path():
@@ -117,34 +110,32 @@ def get_chromedriver_path():
     Returns:
         str: The path to the ChromeDriver executable.
     """
+    base_path = Path(__file__).resolve().parent.parent
+    bin_folder = settings.bin_folder
+    chrome_version_error_msg = 'Unable to determine Chrome version.'
+    chromedriver_url_error_msg = 'Unable to determine the correct ChromeDriver URL.'
+    path_error_msg = 'Failed to obtain ChromeDriver path dynamically.'
+
     try:
-        # Define the base path for ChromeDriver download and extraction
-        base_path = Path(__file__).resolve().parent.parent
-        path = base_path / settings.bin_folder
-        
-        # Get the installed Chrome version
         chrome_version = get_chrome_version()
         if not chrome_version:
-            raise Exception("Unable to determine Chrome version.")
+            raise Exception(chrome_version_error_msg)
 
-        # Construct the URL to download the appropriate ChromeDriver version
         chromedriver_url = get_chromedriver_url(chrome_version)
         if not chromedriver_url:
-            raise Exception("Unable to determine the correct ChromeDriver URL.")
-        
-        # Create the directory if it does not exist
+            raise Exception(chromedriver_url_error_msg)
+
+        path = base_path / bin_folder
         path.mkdir(parents=True, exist_ok=True)
-        
-        # Download and extract ChromeDriver
+
         chromedriver_path = download_and_extract_chromedriver(chromedriver_url, path)
         if not chromedriver_path:
-            raise Exception("Failed to download or extract ChromeDriver.")
-        
-        print(chromedriver_path)
+            raise Exception(path_error_msg)
+
         return chromedriver_path
 
     except Exception as e:
-        system.log_error(e)
+        system.log_error(str(e))
         return None
 
 def load_driver(chromedriver_path):
@@ -157,30 +148,25 @@ def load_driver(chromedriver_path):
     Returns:
         tuple: A tuple containing the WebDriver and WebDriverWait instances.
     """
+    load_driver_error_msg = 'Failed to load driver: {e}'
+
     try:
-        # Initialize the ChromeDriver service
         chrome_service = Service(chromedriver_path)
-        
-        # Set Chrome options
         chrome_options = Options()
-        chrome_options.add_argument("--window-size=960,540")
-        chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--log-level=3")
+        chrome_options.add_argument('--window-size=960,540')
+        chrome_options.add_argument('--ignore-certificate-errors')
+        chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument('--ignore-ssl-errors')
-        chrome_options.add_argument("--disable-infobars")
-        # chrome_options.add_argument("--headless")  # Uncomment to run in headless mode
+        chrome_options.add_argument('--disable-infobars')
 
-        # Initialize WebDriver
         driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-
-        # Define exceptions to ignore during WebDriverWait
         exceptions_ignore = (NoSuchElementException, StaleElementReferenceException)
         driver_wait = WebDriverWait(driver, settings.wait_time, ignored_exceptions=exceptions_ignore)
 
         return driver, driver_wait
 
     except Exception as e:
-        system.log_error(e)
+        system.log_error(load_driver_error_msg.format(e=e))
         return None, None
 
 def initialize_driver():
@@ -192,31 +178,29 @@ def initialize_driver():
     Returns:
         tuple: A tuple containing the WebDriver and WebDriverWait instances.
     """
+    hardcoded_chromedriver_path = r'D:\\Fausto Stangler\\Documentos\\Python\\FLY\\backend\\bin\\chromedriver-win64\\chromedriver.exe'
+    initialize_driver_error_msg = 'Failed to load driver from hardcoded path.'
+    dynamic_driver_error_msg = 'Failed to obtain ChromeDriver path dynamically.'
+
     try:
-        # Hardcoded ChromeDriver path
-        chromedriver_path = r'D:\\Fausto Stangler\\Documentos\\Python\\FLY\\backend\\bin\\chromedriver-win64\\chromedriver.exe'
-        driver, driver_wait = load_driver(chromedriver_path)
-        
-        # If the driver is not None, return it; otherwise, try dynamic path
+        driver, driver_wait = load_driver(hardcoded_chromedriver_path)
         if driver is not None:
             return driver, driver_wait
         else:
-            raise Exception("Failed to load driver from hardcoded path.")
+            raise Exception(initialize_driver_error_msg)
 
     except Exception as initial_error:
         try:
-            # Dynamically obtain the ChromeDriver path
             chromedriver_path = get_chromedriver_path()
             if not chromedriver_path:
-                raise Exception("Failed to obtain ChromeDriver path dynamically.")
-            
-            # Load the WebDriver and return it
+                raise Exception(dynamic_driver_error_msg)
+
             driver, driver_wait = load_driver(chromedriver_path)
             return driver, driver_wait
 
         except Exception as dynamic_error:
-            system.log_error(dynamic_error)
+            system.log_error(str(dynamic_error))
             return None, None
 
-if __name__ == "__main__":
-    print('This is a module, not meant to be run directly.')
+if __name__ == '__main__':
+    print(settings.module_alert)
