@@ -8,6 +8,7 @@
 
 # testing
 /coverage
+*.log
 
 # next.js
 /.next/
@@ -96,7 +97,6 @@ bin/
 *.ods
 *.odp
 *.rtf
-*.txt
 
 # Compressed and archived files
 *.zip
@@ -116,3 +116,4 @@ bin/
 *.mobi
 *.jar
 *.war
+
