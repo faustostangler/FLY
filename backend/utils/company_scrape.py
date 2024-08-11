@@ -303,8 +303,8 @@ class CompanyScraper:
     def run(self):
         existing_data = self.load_existing_data()
         new_company_tickers = self.get_company_ticker()
-        # new_company_info = self.get_company_info(new_company_tickers)
-        new_company_info = {}
+        new_company_info = self.get_company_info(new_company_tickers)
+
         total_companies = len(new_company_info)
         batch_size = settings.batch_size
         all_company_info = []

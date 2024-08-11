@@ -10,6 +10,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 import winsound
+import threading
+import pyautogui
+import time
+import random
 
 from utils import settings
 
@@ -72,7 +76,7 @@ def winbeep(frequency=5000, duration=50):
     Returns:
     bool: True if the beep was successful, False otherwise.
     """
-    winsound.Beep(frequency, duration)
+    # winsound.Beep(frequency, duration)
     return True
 
 def clean_text(text):
@@ -227,3 +231,57 @@ def print_info(current_index, extra_info, start_time, total_size):
     print(f"{progress} {extra_info_str}")
     winbeep()
 
+def prefill_input(text, delay=1):
+    """
+    Simulate typing the default text into the input field.
+    
+    Parameters:
+    - text (str): The text to pre-fill in the input.
+    - delay (int): The delay before typing starts.
+    """
+    time.sleep(delay)
+    pyautogui.typewrite(text)
+
+def timed_input(prompt, timeout=5, default='YES'):
+    """
+    Display a prompt and return the user's input, with a timeout and pre-filled value.
+    
+    Parameters:
+    - prompt (str): The input prompt to display.
+    - timeout (int): The number of seconds to wait for input.
+    - default (str): The default value to return if timeout is reached.
+    
+    Returns:
+    - str: The user's input or the default value if timeout is reached.
+    """
+    prefill_thread = threading.Thread(target=prefill_input, args=(default,))
+    prefill_thread.start()
+
+    print(f'{prompt} (default: {default}) [You have {timeout} seconds to answer]: ', end='', flush=True)
+    
+    # Start a thread to run the input() call, which will block until the user provides input
+    input_thread = threading.Thread(target=lambda: input())
+    input_thread.start()
+    
+    # Wait for the input or timeout
+    input_thread.join(timeout=timeout)
+    
+    if input_thread.is_alive():
+        # print(f'\nNo input provided within {timeout} seconds. Using default: {default}')
+        return default
+    else:
+        return input()
+
+def header_random():
+    """Generate random HTTP headers for requests."""
+    user_agent = random.choice(settings.USER_AGENTS)
+    referer = random.choice(settings.REFERERS)
+    language = random.choice(settings.LANGUAGES)
+
+    headers = {
+        'User-Agent': user_agent,
+        'Referer': referer,
+        'Accept-Language': language
+    }
+
+    return headers
