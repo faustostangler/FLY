@@ -326,10 +326,6 @@ class NSDScraper:
                 except Exception as e:
                     system.log_error(f"Error processing NSD {nsd}: {e}")
 
-            # Save any remaining data after loop
-            if all_data:
-                self.save_to_db(all_data)
-
         except Exception as e:
             system.log_error(f"Error in scrape_nsd: {e}")
 
