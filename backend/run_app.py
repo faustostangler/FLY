@@ -19,7 +19,7 @@ if __name__ == '__main__':
         nsd_choice = 'Y'
         if nsd_choice.strip().upper().startswith('Y'):
             nsd_scraper = nsd_scrape.NSDScraper()
-            nsd_scraper.scrape_nsd()
+            nsd_scraper.scrape_nsd() 
             nsd_scraper.close()
 
     except Exception as e:
