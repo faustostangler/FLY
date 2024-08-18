@@ -14,9 +14,9 @@ import threading
 import pyautogui
 import time
 import random
+import sqlite3
 
 from utils import settings
-
 
 def log_error(error):
     """
@@ -81,20 +81,32 @@ def winbeep(frequency=5000, duration=50):
 
 def clean_text(text):
     """
-    Limpa e normaliza o texto de entrada removendo pontuações, convertendo para maiúsculas e removendo espaços em branco.
+    Cleans and normalizes the input text by removing punctuation, converting to uppercase,
+    removing extra whitespace, and eliminating specific words.
 
     Parameters:
-    - text (str): O texto de entrada a ser limpo.
+    - text (str): The input text to be cleaned.
 
     Returns:
-    str: O texto limpo e normalizado.
+    str: The cleaned and normalized text.
     """
     try:
+        # Remove punctuation, accents, and normalize case
         translation_table = str.maketrans('', '', string.punctuation)
         text = unidecode.unidecode(text).translate(translation_table).upper().strip()
         text = re.sub(r'\s+', ' ', text)
+
+        # Regular expression pattern to remove specific words from text
+        words_to_remove = '|'.join(map(re.escape, settings.words_to_remove))
+        pattern = r'\b(?:' + words_to_remove + r')\b'
+        text = re.sub(pattern, '', text)
+
+        # Remove extra spaces after word removal
+        text = re.sub(r'\s+', ' ', text).strip()
+
     except Exception as e:
         log_error(e)
+    
     return text
 
 def text(xpath, driver_wait):
@@ -199,6 +211,7 @@ def wait_forever(driver_wait, xpath):
             element = driver_wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
             return element
         except Exception:
+            print(f'waiting for {xpath} in DOM')
             time.sleep(settings.wait_time)
 
 def print_info(current_index, extra_info, start_time, total_size):
@@ -292,3 +305,33 @@ def header_random():
     }
 
     return headers
+
+def db_optimize(db_path=settings.db_path):
+    """
+    Optimize the SQLite database by running VACUUM, ANALYZE, and REINDEX.
+
+    Parameters:
+    db_path (str): The file path to the SQLite database.
+    """
+    try:
+        # Connect to the database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Run VACUUM to reduce file size and defragment the database
+        cursor.execute("VACUUM")
+
+        # Run ANALYZE to update statistics for query optimization
+        cursor.execute("ANALYZE")
+
+        # Run REINDEX to rebuild indexes for better performance
+        cursor.execute("REINDEX")
+
+        # Commit the changes and close the connection
+        conn.commit()
+        conn.close()
+
+        print(f"Database optimization completed successfully ({db_path}).")
+
+    except sqlite3.Error as e:
+        print(f"An error occurred during database optimization: {e}")

@@ -13,15 +13,14 @@ if __name__ == '__main__':
         if scrape_choice.strip().upper().startswith('Y'):
             # Instancia a classe CompanyScraper e executa o processo de scraping
             scraper = company_scrape.CompanyScraper()  # Instancia a classe, o WebDriver é gerado dentro dela
-            scraper.run()  # Executa o processo principal de scraping
+            new_companies = scraper.run()  # Executa o processo principal de scraping
             scraper.close()  # Fecha o WebDriver
 
         # nsd_choice = system.timed_input('Want to scrape NSD data? (YES/NO): ')
         nsd_choice = 'N'
         if nsd_choice.strip().upper().startswith('Y'):
             nsd_scraper = nsd_scrape.NSDScraper()
-            nsd_scraper.scrape_nsd()
-            nsd_scraper.close()
+            nsd_range = nsd_scraper.scrape_nsd()
 
         # capital_choice = system.timed_input('Want to scrape Capital Sheets? (YES/NO): ')
         capital_choice = 'Y'

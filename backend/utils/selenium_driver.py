@@ -151,8 +151,12 @@ def load_driver(chromedriver_path):
     load_driver_error_msg = 'Failed to load driver: {e}'
 
     try:
+        # Get random headers using the custom function
+        headers = system.header_random()
+
         chrome_service = Service(chromedriver_path)
         chrome_options = Options()
+        chrome_options.add_argument(f"user-agent={headers['User-Agent']}")
         chrome_options.add_argument('--window-size=960,540')
         chrome_options.add_argument('--ignore-certificate-errors')
         chrome_options.add_argument('--log-level=3')

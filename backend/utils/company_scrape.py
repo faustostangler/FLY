@@ -22,14 +22,14 @@ class CompanyScraper:
         self.driver, self.driver_wait = selenium_driver.initialize_driver()
 
     @cached(cache)
-    def get_raw_code(self, url=settings.companies_url):
+    def get_raw_code(self):
         try:
             select_page_xpath = '//*[@id="selectPage"]'
             pagination_xpath = '//*[@id="listing_pagination"]/pagination-template/ul'
             nav_bloc_xpath = '//*[@id="nav-bloco"]/div'
             next_page_xpath = '//*[@id="listing_pagination"]/pagination-template/ul/li[10]/a'
 
-            self.driver.get(url)
+            self.driver.get(settings.companies_url)
             system.choose(select_page_xpath, self.driver, self.driver_wait)
 
             text = system.text(pagination_xpath, self.driver_wait)
@@ -65,7 +65,7 @@ class CompanyScraper:
             'listing': {'tag': 'p', 'class': 'card-nome'}
         }
 
-        raw_code = self.get_raw_code(settings.companies_url)
+        raw_code = self.get_raw_code()
         company_tickers = {}
 
         for inner_html in raw_code:
@@ -142,12 +142,13 @@ class CompanyScraper:
             "registrar": registrar,
         }
 
-    def get_company_info(self, company_tickers):
-        all_company_info = {}
-        total_companies = len(company_tickers)
-        existing_companies = self.load_existing_data(settings.db_name)
+    def get_company_info(self):
+        existing_companies = self.load_existing_data()
+        new_companies = self.get_company_ticker()
 
-        companies_to_process = {name: info for name, info in company_tickers.items() if name not in existing_companies}
+        all_company_info = {}
+
+        companies_to_process = {name: info for name, info in new_companies.items() if name not in existing_companies}
         total_companies_to_process = len(companies_to_process)
 
         start_time = time.time()
@@ -197,25 +198,23 @@ class CompanyScraper:
 
             all_data.append({'company_name': company_name, **info})
 
-            if (total_companies_to_process - i - 1) % (settings.batch_size // 5) == 0 or i == total_companies - 1:
-                all_data = self.save_to_db(all_data, settings.db_name)
+            if (total_companies_to_process - i - 1) % (settings.batch_size // 1) == 0:
+                all_data = self.save_to_db(all_data)
                 all_data.clear()
 
-        return all_company_info
+        return existing_companies, companies_to_process
 
-    def load_existing_data(self, db_name=settings.db_name):
+    def load_existing_data(self):
         existing_data = {}
         try:
-            db_path = os.path.join(settings.db_folder, db_name)
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(settings.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("SELECT * FROM company_info")
-            columns = [column[0] for column in cursor.description]
+            cursor.execute(f"SELECT * FROM {settings.company_table}")
 
             for row in cursor.fetchall():
-                company_name = row[columns.index('company_name')]
-                existing_data[company_name] = dict(zip(columns, row))
+                company_name = row[settings.company_columns.index('company_name')]
+                existing_data[company_name] = dict(zip(settings.company_columns, row))
 
             conn.close()
         except Exception as e:
@@ -223,20 +222,16 @@ class CompanyScraper:
 
         return existing_data
 
-    def save_to_db(self, data, db_name=settings.db_name):
+    def save_to_db(self, data):
         try:
-            if not data:
-                return
-
-            db_path = os.path.join(settings.db_folder, db_name)
             os.makedirs(settings.db_folder, exist_ok=True)
 
-            backup_name = f"{os.path.splitext(db_name)[0]} backup.db"
+            backup_name = f"{os.path.splitext(settings.db_name)[0]} {settings.backup_name}.db"
             backup_path = os.path.join(settings.db_folder, backup_name)
-            if os.path.exists(db_path):
-                shutil.copy2(db_path, backup_path)
+            if os.path.exists(settings.db_path):
+                shutil.copy2(settings.db_path, backup_path)
 
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(settings.db_path)
             cursor = conn.cursor()
 
             cursor.execute('''CREATE TABLE IF NOT EXISTS company_info (
@@ -302,18 +297,18 @@ class CompanyScraper:
         self.save_to_db(batch_to_save)
 
     def run(self):
-        existing_data = self.load_existing_data()
-        new_company_tickers = self.get_company_ticker()
-        new_company_info = self.get_company_info(new_company_tickers)
+        existing_companies, new_companies = self.get_company_info()
 
-        total_companies = len(new_company_info)
+        total_companies = len(new_companies)
         batch_size = settings.batch_size
         all_company_info = []
 
         for i in range(0, total_companies, batch_size):
-            batch = list(new_company_info.items())[i:i + batch_size]
-            self.update_and_save_batch(existing_data, [info for _, info in batch])
+            batch = list(new_companies.items())[i:i + batch_size]
+            self.update_and_save_batch(existing_companies, [info for _, info in batch])
             all_company_info.extend(batch)
+
+        system.db_optimize(self.db_name)
 
         return all_company_info
 

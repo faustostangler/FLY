@@ -82,12 +82,12 @@ class NSDScraper:
             days_elapsed = (datetime.now() - last_sent_date).days + 1 if last_sent_date else 1
 
             # Step 4: Calculate the number of new NSDs with a safety factor
-            safety_factor = 1.5  # Apply a safety factor to account for possible increases
-            estimated_new_nsds = int(daily_submission_estimate * days_elapsed * safety_factor)
+            estimated_new_nsds = int(daily_submission_estimate * days_elapsed * settings.safety_factor)
 
             # Step 5: Generate the full range of NSDs to scrape
             new_nsds = list(range(max_nsd + 1, max_nsd + estimated_new_nsds + 1))
             missing_nsds = self.get_missing_nsds()
+            nsd_range = new_nsds + missing_nsds
             nsd_range = new_nsds + missing_nsds
 
             return nsd_range
@@ -124,8 +124,8 @@ class NSDScraper:
                             return total_nsds / days_span  # Average submissions per day
                 return settings.default_daily_submission_estimate  # Fallback to a default estimate if data is insufficient
         except Exception as e:
-            system.log_error(f"Error calculating daily submission estimate: {e}")
-            return 30
+            # system.log_error(f"Error calculating daily submission estimate: {e}")
+            return settings.default_daily_submission_estimate
 
     def get_last_nsd_and_date(self):
         """
@@ -148,7 +148,7 @@ class NSDScraper:
                     return last_nsd, last_sent_date
                 return 0, None  # If no NSD is found, return 0 and None
         except Exception as e:
-            system.log_error(f"Error retrieving last NSD and date from database: {e}")
+            # system.log_error(f"Error retrieving last NSD and date from database: {e}")
             return 0, None
 
     @cached(cache)
@@ -164,10 +164,11 @@ class NSDScraper:
         """
         try:
             url = f"https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento={nsd}&CodigoTipoInstituicao=1"
-            headers = {"User-Agent": "Mozilla/5.0"}
+            headers = system.header_random()  # Use the random headers from the system module
             response = requests.get(url, headers=headers)
             response.raise_for_status()
-            return response.text
+            html = response.text
+            return html
         except Exception as e:
             system.log_error(f"Error fetching NSD page {nsd}: {e}")
             return None
@@ -184,20 +185,33 @@ class NSDScraper:
         dict: A dictionary of the parsed NSD data.
         """
         try:
+            # Hard-coded XPaths or CSS selectors
+            company_name_selector = '#lblNomeCompanhia'
+            dri_selector = '#lblNomeDRI'
+            nsd_type_version_selector = '#lblDescricaoCategoria'
+            auditor_selector = '#lblAuditor'
+            responsible_auditor_selector = '#lblResponsavelTecnico'
+            protocolo_selector = '#lblProtocolo'
+            quarter_selector = '#lblDataDocumento'
+            sent_date_selector = '#lblDataEnvio'
+            reason_selector = '#lblMotivoCancelamentoReapresentacao'
+
+            # Parse the HTML content
             soup = BeautifulSoup(html, 'html.parser')
             data = {'nsd': nsd}
 
-            data['company'] = system.clean_text(soup.select_one('#lblNomeCompanhia').text)
-            data['dri'] = system.clean_text(soup.select_one('#lblNomeDRI').text.split('-')[0].strip())
-            nsd_type_version = soup.select_one('#lblDescricaoCategoria').text
+            # Extracting data using the defined selectors
+            data['company_name'] = system.clean_text(soup.select_one(company_name_selector).text)
+            data['dri'] = system.clean_text(soup.select_one(dri_selector).text.split('-')[0].strip())
+            nsd_type_version = soup.select_one(nsd_type_version_selector).text
             data['nsd_type'] = system.clean_text(nsd_type_version.split('-')[0].strip())
             data['version'] = int(nsd_type_version.split('V')[-1])
-            data['auditor'] = system.clean_text(soup.select_one('#lblAuditor').text.split('-')[0].strip())
-            data['auditor_rt'] = system.clean_text(soup.select_one('#lblResponsavelTecnico').text)
-            data['protocolo'] = soup.select_one('#lblProtocolo').text.replace('-', '').strip()
+            data['auditor'] = system.clean_text(soup.select_one(auditor_selector).text.split('-')[0].strip())
+            data['responsible_auditor'] = system.clean_text(soup.select_one(responsible_auditor_selector).text)
+            data['protocol'] = soup.select_one(protocolo_selector).text.replace('-', '').strip()
 
             # Handle quarter parsing
-            raw_date = soup.select_one('#lblDataDocumento').text
+            raw_date = soup.select_one(quarter_selector).text
             try:
                 if len(raw_date) == 4:  # Only a year is provided
                     # Assuming the last day of the year
@@ -210,12 +224,12 @@ class NSDScraper:
 
             # Parse the sent date
             try:
-                data['sent_date'] = datetime.strptime(soup.select_one('#lblDataEnvio').text, "%d/%m/%Y %H:%M:%S")
+                data['sent_date'] = datetime.strptime(soup.select_one(sent_date_selector).text, "%d/%m/%Y %H:%M:%S")
             except ValueError as e:
                 system.log_error(f"Error parsing sent date for NSD {nsd}: {e}")
                 data['sent_date'] = None  # Set to None if parsing fails
 
-            data['reason'] = system.clean_text(soup.select_one('#lblMotivoCancelamentoReapresentacao').text)
+            data['reason'] = system.clean_text(soup.select_one(reason_selector).text)
 
             return data if data['sent_date'] else None
 
@@ -223,22 +237,19 @@ class NSDScraper:
             # system.log_error(f"Error parsing NSD {nsd}: {e}")
             return None
 
-    def save_to_db(self, data_list):
+    def save_to_db(self, nsd_data):
         """
         Save a list of NSD data to the SQLite database, with backup.
 
         Parameters:
-        data_list (list): A list of dictionaries containing NSD data.
+        nsd_data (list): A list of dictionaries containing NSD data.
         """
         try:
-            if not data_list:
-                return
-
             # Ensure the database directory exists
             os.makedirs(self.db_folder, exist_ok=True)
 
             # Backup the existing database before saving new data
-            backup_name = f"{os.path.splitext(self.db_name)[0]} backup.db"
+            backup_name = f"{os.path.splitext(self.db_name)[0]} {settings.backup_name}.db"
             backup_path = os.path.join(self.db_folder, backup_name)
             if os.path.exists(self.db_full_path):
                 shutil.copy2(self.db_full_path, backup_path)
@@ -246,47 +257,48 @@ class NSDScraper:
             with sqlite3.connect(self.db_full_path) as conn:
                 cursor = conn.cursor()
 
-                # Ensure the table exists with the correct schema
+                # Ensure the table exists with the correct schema and field order
                 cursor.execute('''CREATE TABLE IF NOT EXISTS nsd
                                 (nsd INTEGER PRIMARY KEY, 
-                                company TEXT, 
-                                dri TEXT, 
+                                company_name TEXT, 
+                                quarter TEXT, 
                                 nsd_type TEXT, 
                                 version INTEGER, 
+                                dri TEXT,
                                 auditor TEXT,
-                                auditor_rt TEXT, 
-                                protocolo TEXT, 
-                                quarter TEXT, 
+                                responsible_auditor TEXT, 
+                                protocol TEXT, 
                                 sent_date TEXT, 
                                 reason TEXT)''')
 
                 # Iterate over the data list and insert or update records
-                for data in data_list:
+                for data in nsd_data:
                     # Handle None values and quarter formatting
                     sent_date_str = data['sent_date'].strftime("%Y-%m-%d %H:%M:%S") if data['sent_date'] else None
 
-                    # Perform the insert or update
+                    # Perform the insert or update with the correct field order
                     cursor.execute('''INSERT INTO nsd 
-                                    (nsd, company, dri, nsd_type, version, auditor, auditor_rt, protocolo, quarter, sent_date, reason) 
+                                    (nsd, company_name, quarter, nsd_type, version, dri, auditor, responsible_auditor, protocol, sent_date, reason) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                     ON CONFLICT(nsd) DO UPDATE SET
-                                    company=excluded.company,
-                                    dri=excluded.dri,
+                                    company_name=excluded.company_name,
+                                    quarter=excluded.quarter,
                                     nsd_type=excluded.nsd_type,
                                     version=excluded.version,
+                                    dri=excluded.dri,
                                     auditor=excluded.auditor,
-                                    auditor_rt=excluded.auditor_rt,
-                                    protocolo=excluded.protocolo,
-                                    quarter=excluded.quarter,
+                                    responsible_auditor=excluded.responsible_auditor,
+                                    protocol=excluded.protocol,
                                     sent_date=excluded.sent_date,
                                     reason=excluded.reason''',
-                                (data['nsd'], data['company'], data['dri'], data['nsd_type'], data['version'], 
-                                    data['auditor'], data['auditor_rt'], data['protocolo'], 
-                                    data['quarter'], sent_date_str, data['reason']))
+                                (data['nsd'], data['company_name'], data['quarter'], data['nsd_type'], data['version'], 
+                                data['dri'], data['auditor'], data['responsible_auditor'], 
+                                data['protocol'], sent_date_str, data['reason']))
 
                 # Commit the transaction
                 conn.commit()
                 print('Partial save completed...')
+            return nsd_data
 
         except Exception as e:
             system.log_error(f"Error saving data to database: {e}")
@@ -297,35 +309,45 @@ class NSDScraper:
         """
         try:
             nsd_range = self.generate_nsd_range()
-            all_data = []
+            nsd_data = []
             total_nsds = len(nsd_range)
             start_time = time.time()
+            limit_counter = 0
 
             for i, nsd in enumerate(nsd_range):
                 try:
                     html = self.fetch_page(nsd)
                     if html:
                         data = self.parse_nsd_data(html, nsd)
-                        if data:
-                            all_data.append(data)
+                        if not data:
+                            extra_info = [nsd]
+                        else:
+                        # Prepare extra information for progress reporting
+                            extra_info = [nsd, data['sent_date'], data['quarter'].strftime("%Y-%m-%d"), data['nsd_type'], data['company_name']]
 
-                    # Prepare extra information for progress reporting
-                    if data:
-                        extra_info = [nsd, data['sent_date'], data['quarter'].strftime("%Y-%m-%d"), data['nsd_type'], data['company']]
-                    else:
-                        extra_info = [nsd]
+                            nsd_data.append(data)
 
                     # Print progress information
                     system.print_info(i, extra_info, start_time, total_nsds)
 
                     # Regressive periodic save
-                    if (total_nsds - i - 1) % (settings.batch_size) == 0:
-                        self.save_to_db(all_data)
-                        all_data.clear()
+                    if (total_nsds - i - 1) % (settings.batch_size // 1) == 0:
+                        if nsd_data:
+                            nsd_data = self.save_to_db(nsd_data)
+                            nsd_data.clear()
+                            limit_counter = 0
+                        else:
+                            limit_counter += 1
+                            # Check if the counter has reached 5
+                            if limit_counter >= 5:
+                                nsd_data = self.save_to_db(nsd_data)
+                                return nsd_range # Interrupts the function so it does not go to infinity
 
                 except Exception as e:
                     system.log_error(f"Error processing NSD {nsd}: {e}")
-
+            system.db_optimize(self.db_name)
+            return nsd_range
+        
         except Exception as e:
             system.log_error(f"Error in scrape_nsd: {e}")
 

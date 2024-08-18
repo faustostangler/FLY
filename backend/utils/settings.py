@@ -1,19 +1,14 @@
-import re
-
 # System-wide settings
+db_name = 'b3.db'  # Database name
+db_folder = 'backend/data'
+db_folder_short = 'data'
+db_path = 'backend/data/b3.db'
+backup_name = 'backup'
+
+# batches
 batch_size = 50  # Batch size for data processing
 num_batches = 8
 big_batch_size = int(40000 / num_batches)
-db_name = 'b3.db'  # Database name
-db_folder = 'backend/data'  # Folder where the database is stored
-db_folder_short = 'data'
-finsheet_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
-
-# NSD scraping settings
-db_path = 'backend/data/b3.db'  # Path to the NSD SQLite database
-nsd_columns = ['company', 'dri', 'dri2', 'dre', 'data', 'versao', 'auditor', 'auditor_rt', 'cancelamento', 'protocolo', 'envio', 'url', 'nsd']  # Adjusted columns based on NSD data
-default_daily_submission_estimate = 30
-statements_columns = ['nsd', 'tipo', 'setor', 'subsetor', 'segmento', 'company_name', 'quadro', 'quarter', 'conta', 'descricao', 'valor', 'version']
 
 # Selenium settings
 wait_time = 2  # Wait time for Selenium operations
@@ -76,10 +71,44 @@ REFERERS = [
 ]
 LANGUAGES = ['en-US;q=1.0', 'es-ES;q=0.9', 'fr-FR;q=0.8', 'de-DE;q=0.7', 'it-IT;q=0.6', 'pt-BR;q=0.9', 'ja-JP;q=0.8', 'zh-CN;q=0.7', 'ko-KR;q=0.6', 'ru-RU;q=0.9', 'ar-SA;q=0.8', 'hi-IN;q=0.7', 'tr-TR;q=0.6', 'nl-NL;q=0.9', 'sv-SE;q=0.8', 'pl-PL;q=0.7', 'fi-FI;q=0.6', 'da-DK;q=0.9', 'no-NO;q=0.8', 'hu-HU;q=0.7', 'ro-RO;q=0.6', 'cs-CZ;q=0.9', 'el-GR;q=0.8', 'th-TH;q=0.7', 'id-ID;q=0.6']
 
-
-# B3 information
+# Company Info from B3
 companies_url = "https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/search?language=pt-br"  # URL for the B3 companies search page
 company_url = "https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/?language=pt-br"  # URL for the B3 company detail page
+company_table = 'company_info'
+company_columns = ['cvm_code', 'company_name', 'ticker', 'ticker_codes', 'isin_codes', 'trading_name', 'sector', 'subsector', 'segment', 'listing', 'activity', 'registrar', 'cnpj', 'website']
+
+# NSD scraping settings
+nsd_columns = ['nsd', 'company_name', 'quarter', 'version', 'nsd_type', 'auditor', 'responsible_auditor', 'protocol', 'sent_date', 'reason']  # Adjusted columns based on NSD data
+nsd_order = ['company_name', 'quarter', 'version']
+default_daily_submission_estimate = 30
+safety_factor = 3  # Apply a safety factor to account for possible increases
+
+# Statements settings
+table_name = 'statements'
+statements_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
+financial_capital_columns = ['account', 'description', 'value']  # Assuming these are the financial/capital columns
+statements_columns = [
+    'nsd', 'sector', 'subsector', 'segment', 'company_name', 
+    'quarter', 'version', 'type', 'frame'
+    ] + financial_capital_columns
+statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'account', 'description']
+
+# Descriptions and accounts
+descriptions = {
+    'acoes_on': 'Ações ON Ordinárias',
+    'acoes_pn': 'Ações PN Preferenciais',
+    'acoes_on_tesouraria': 'Em Tesouraria Ações ON Ordinárias',
+    'acoes_pn_tesouraria': 'Em Tesouraria Ações PN Preferenciais'
+}
+
+accounts = {
+    'acoes_on': '00.01.01',
+    'acoes_pn': '00.01.02',
+    'acoes_on_tesouraria': '00.02.01',
+    'acoes_pn_tesouraria': '00.02.02'
+}
+
+
 
 # Financial and Capital Statements from b3 website
 financial_data_statements = [
@@ -100,16 +129,12 @@ capital_data_statements = [
     ['Dados da Empresa', 'Composição do Capital'], 
 ]
 
-
-
 # List of judicial terms to be removed from company names
-judicial = [
+words_to_remove = [
     '  EM LIQUIDACAO', ' EM LIQUIDACAO', ' EXTRAJUDICIAL', 
     '  EM RECUPERACAO JUDICIAL', '  EM REC JUDICIAL', 
     ' EM RECUPERACAO JUDICIAL', ' EM LIQUIDACAO EXTRAJUDICIAL', ' EMPRESA FALIDA', 
 ]
-# Regular expression pattern to remove judicial terms from company names
-words_to_remove = '|'.join(map(re.escape, judicial))
 
 # Dictionary mapping governance level abbreviations to their full descriptions
 governance_levels = {
@@ -125,3 +150,4 @@ governance_levels = {
     "DRE": "BDR de ETF",
     "DRN": "BDR Não Patrocinado"
 }
+

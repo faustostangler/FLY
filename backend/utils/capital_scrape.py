@@ -24,9 +24,9 @@ class CapitalDataScraper:
         self.db_folder = settings.db_folder
         self.db_name = settings.db_name
 
-    def load_nsd_data(self):
+    def load_nsd_list(self):
         """
-        Load NSD data from the nsd table in b3.db, filtered by settings.finsheet_types.
+        Load NSD data from the nsd table in b3.db, filtered by settings.statements_types.
 
         Returns:
         DataFrame: A DataFrame containing the filtered NSD data.
@@ -37,40 +37,45 @@ class CapitalDataScraper:
                 SELECT *
                 FROM nsd
                 WHERE nsd_type IN ({})
-            """.format(','.join('?' for _ in settings.finsheet_types))
+            """.format(','.join('?' for _ in settings.statements_types))
 
             with sqlite3.connect(db_path) as conn:
-                nsd_data = pd.read_sql_query(query, conn, params=settings.finsheet_types)
+                nsd_data = pd.read_sql_query(query, conn, params=settings.statements_types)
 
             return nsd_data.drop_duplicates()
         except Exception as e:
             system.log_error(f"Error loading NSD data: {e}")
             return pd.DataFrame()
 
-    def load_existing_data(self):
+    def load_financial_statements(self):
         """
-        Load existing NSD data from all .db files in the db_folder.
+        Load existing financial statements from all .db files in the db_folder.
 
         Returns:
         DataFrame: A DataFrame containing the NSD data from all files.
         """
+        included_patterns = [settings.table_name]
+        excluded_patterns = [settings.backup_name, 'math']  # List of patterns to exclude from filenames
+
         try:
             all_dfs = []
-            excluded_patterns = ['backup', 'math', ' ']  # List of patterns to exclude from filenames
-            db_files = [
-                db_file for db_file in glob.glob(f"{self.db_folder}/* .db")
-                if not any(pattern in os.path.basename(db_file) for pattern in excluded_patterns)
+
+            # Get all .db files in the db_folder that include any of the included_patterns and exclude the excluded_patterns
+            database_files = [
+                db_file for db_file in glob.glob(f"{self.db_folder}/*.db")
+                if any(inc in os.path.basename(db_file) for inc in included_patterns)
+                and not any(exc in os.path.basename(db_file) for exc in excluded_patterns)
             ]
 
-            for db_file in db_files:
+            for db_file in database_files:
                 with sqlite3.connect(db_file) as conn:
-                    df = pd.read_sql_query("SELECT * FROM nsd", conn)
+                    df = pd.read_sql_query(f"SELECT * FROM {settings.table_name}", conn)
                     all_dfs.append(df)
 
             if all_dfs:
                 return pd.concat(all_dfs, ignore_index=True).drop_duplicates()
             else:
-                return pd.DataFrame(columns=settings.nsd_columns)
+                return pd.DataFrame(columns=settings.statements_columns)
         except Exception as e:
             system.log_error(f"Error loading existing NSD data: {e}")
             return pd.DataFrame()
@@ -86,7 +91,7 @@ class CapitalDataScraper:
             system.log_error(f"Error loading company_info data: {e}")
             return pd.DataFrame()  # Return an empty DataFrame on error
 
-    def scrape_finantial_data(self, cmbGrupo, cmbQuadro):
+    def scrape_financial_data(self, cmbGrupo, cmbQuadro):
         """
         Scrapes capital data from the specified page.
 
@@ -124,11 +129,10 @@ class CapitalDataScraper:
             df1 = pd.read_html(StringIO(html_content), header=0)[0]
             df2 = pd.read_html(StringIO(html_content), header=0, thousands='.')[0].fillna(0)
 
-            columns = ['conta', 'descricao', 'valor']
             df1 = df1.iloc[:,0:3]
             df2 = df2.iloc[:,0:3]
-            df1.columns = columns
-            df2.columns = columns
+            df1.columns = settings.financial_capital_columns
+            df2.columns = settings.financial_capital_columns
             df = pd.concat([df1.iloc[:, :2], df2.iloc[:, 2:3]], axis=1)
 
             col = df.iloc[:, 2].astype(str)
@@ -138,7 +142,7 @@ class CapitalDataScraper:
             col = col * thousand
             df.iloc[:, 2] = col
 
-            df = df[~df['conta'].str.startswith(drop_items)]
+            df = df[~df[settings.financial_capital_columns[0]].str.startswith(drop_items)]
 
             # selenium exit frame
             self.driver.switch_to.parent_frame()
@@ -174,21 +178,6 @@ class CapitalDataScraper:
             acoes_on_tesouraria_xpath = '//*[@id="QtdAordTeso_1"]'
             acoes_pn_tesouraria_xpath = '//*[@id="QtdAprfTeso_1"]'
 
-            # Descriptions and accounts
-            descriptions = {
-                'acoes_on': 'Ações ON Ordinárias',
-                'acoes_pn': 'Ações PN Preferenciais',
-                'acoes_on_tesouraria': 'Em Tesouraria Ações ON Ordinárias',
-                'acoes_pn_tesouraria': 'Em Tesouraria Ações PN Preferenciais'
-            }
-
-            accounts = {
-                'acoes_on': '00.01.01',
-                'acoes_pn': '00.01.02',
-                'acoes_on_tesouraria': '00.02.01',
-                'acoes_pn_tesouraria': '00.02.02'
-            }
-
             # Select the correct options for cmbGrupo and cmbQuadro
             grupo = system.select(xpath_grupo, cmbGrupo, self.driver, self.driver_wait)
             quadro = system.select(xpath_quadro, cmbQuadro, self.driver, self.driver_wait)
@@ -203,19 +192,36 @@ class CapitalDataScraper:
 
             # Extract the required values
             data = {
-                'conta': [],
-                'descricao': [],
-                'valor': []
+                settings.financial_capital_columns[0]: [],  # 'account'
+                settings.financial_capital_columns[1]: [],  # 'description'
+                settings.financial_capital_columns[2]: []   # 'value'
             }
 
+            # Extract values using the XPaths
             acoes_on = self.driver.find_element(By.XPATH, acoes_on_xpath).text.strip().replace('.', '').replace(',', '.')
             acoes_pn = self.driver.find_element(By.XPATH, acoes_pn_xpath).text.strip().replace('.', '').replace(',', '.')
             acoes_on_tesouraria = self.driver.find_element(By.XPATH, acoes_on_tesouraria_xpath).text.strip().replace('.', '').replace(',', '.')
             acoes_pn_tesouraria = self.driver.find_element(By.XPATH, acoes_pn_tesouraria_xpath).text.strip().replace('.', '').replace(',', '.')
 
-            data['conta'] = [accounts['acoes_on'], accounts['acoes_pn'], accounts['acoes_on_tesouraria'], accounts['acoes_pn_tesouraria']]
-            data['descricao'] = [descriptions['acoes_on'], descriptions['acoes_pn'], descriptions['acoes_on_tesouraria'], descriptions['acoes_pn_tesouraria']]
-            data['valor'] = [float(acoes_on) * thousand, float(acoes_pn) * thousand, float(acoes_on_tesouraria) * thousand, float(acoes_pn_tesouraria) * thousand]
+            # Populate the data dictionary using settings values
+            data[settings.financial_capital_columns[0]] = [
+                settings.accounts['acoes_on'], 
+                settings.accounts['acoes_pn'], 
+                settings.accounts['acoes_on_tesouraria'], 
+                settings.accounts['acoes_pn_tesouraria']
+            ]
+            data[settings.financial_capital_columns[1]] = [
+                settings.descriptions['acoes_on'], 
+                settings.descriptions['acoes_pn'], 
+                settings.descriptions['acoes_on_tesouraria'], 
+                settings.descriptions['acoes_pn_tesouraria']
+            ]
+            data[settings.financial_capital_columns[2]] = [
+                float(acoes_on) * thousand, 
+                float(acoes_pn) * thousand, 
+                float(acoes_on_tesouraria) * thousand, 
+                float(acoes_pn_tesouraria) * thousand
+            ]
 
             df = pd.DataFrame(data)
 
@@ -236,39 +242,48 @@ class CapitalDataScraper:
         - df (DataFrame): The processed capital data as a DataFrame.
         - setor (str): The sector associated with the data.
         """
-        table_name = 'statements'
 
         try:
             # Hard-coded configurations
             db_name_base = self.db_name.split('.')[0]  # Extract the base name (e.g., 'b3')
-            db_name = f"{db_name_base} {table_name} {setor}"  # Create a database file name specific to the sector
+            db_name = f"{db_name_base} {settings.table_name} {setor}"  # Create a database file name specific to the sector
             db_path = os.path.join(self.db_folder, db_name + '.db')
-            backup_path = os.path.join(self.db_folder, f"{db_name_base} {table_name} {setor} backup.db")
+            backup_path = os.path.join(self.db_folder, f"{db_name_base} {settings.table_name} {setor} {settings.backup_name}.db")
             
             # SQL command to create the table with a composite primary key
             create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
+            CREATE TABLE IF NOT EXISTS {settings.table_name} (
                 nsd INTEGER,
-                tipo TEXT,
-                setor TEXT,
-                subsetor TEXT,
-                segmento TEXT,
+                sector TEXT,
+                subsector TEXT,
+                segment TEXT,
                 company_name TEXT,
-                quadro TEXT,
                 quarter TEXT,
-                conta TEXT,
-                descricao TEXT,
-                valor REAL,
                 version TEXT,
-                PRIMARY KEY (company_name, quarter, version, tipo, quadro, conta, descricao)
+                type TEXT,
+                frame TEXT,
+                account TEXT,
+                description TEXT,
+                value REAL,
+                PRIMARY KEY (company_name, quarter, version, type, frame, account, description)
             )
             """
 
             # SQL command for INSERT OR REPLACE
             insert_sql = f"""
-            INSERT OR REPLACE INTO {table_name} 
-            (nsd, tipo, setor, subsetor, segmento, company_name, quadro, quarter, conta, descricao, valor, version)
+            INSERT INTO {settings.table_name} 
+            (nsd, sector, subsector, segment, company_name, quarter, version, type, frame, account, description, value) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(company_name, quarter, version, type, frame, account, description) DO UPDATE SET
+            nsd=excluded.nsd,
+            sector=excluded.sector,
+            subsector=excluded.subsector,
+            segment=excluded.segment,
+            type=excluded.type,
+            frame=excluded.frame,
+            account=excluded.account,
+            description=excluded.description,
+            value=excluded.value
             """
 
             # Create a backup if the database already exists
@@ -281,75 +296,78 @@ class CapitalDataScraper:
                 conn.execute(create_table_sql)
                 conn.commit()
 
-                # Ensure DataFrame columns match the table structure
-                df = df[settings.statements_columns]
-                
                 # Insert data using INSERT OR REPLACE
                 for _, row in df.iterrows():
                     conn.execute(insert_sql, tuple(row))
 
                 conn.commit()
 
-            return df
+            print('partial save...')
+            return db_path
 
         except Exception as e:
             system.log_error(f"Error saving data for setor {setor}: {e}")
 
-    def filter_new_nsds(self, df_nsd):
-        """
-        Filter out NSD entries that have already been processed.
+    # def filter_new_nsds(self, df_nsd):
+    #     """
+    #     Filter out NSD entries that have already been processed.
 
-        Parameters:
-        - df_nsd (DataFrame): The DataFrame of NSD entries to filter.
+    #     Parameters:
+    #     - df_nsd (DataFrame): The DataFrame of NSD entries to filter.
 
-        Returns:
-        DataFrame: A DataFrame containing only new NSD entries.
-        """
-        try:
-            existing_data = self.load_nsd_data()
-            return df_nsd[~df_nsd['nsd'].isin(existing_data['nsd'])]
-        except Exception as e:
-            system.log_error(f"Error filtering new NSD entries: {e}")
-            return df_nsd
+    #     Returns:
+    #     DataFrame: A DataFrame containing only new NSD entries.
+    #     """
+    #     try:
+    #         existing_data = self.load_nsd_data()
+    #         return df_nsd[~df_nsd['nsd'].isin(existing_data['nsd'])]
+    #     except Exception as e:
+    #         system.log_error(f"Error filtering new NSD entries: {e}")
+    #         return df_nsd
 
     def run_scraper(self):
         """
         Run the entire scraping process for the provided NSD entries, iterating over all financial data statements.
         """
         last_order = 'ZZZZZZZZZZ'
-        statements_order = ['conta', 'descricao']
+        scrape_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version']
 
         try:
             # Load data
-            actual_data = self.load_nsd_data()
-            existing_data = self.load_existing_data()
+            nsd_list = self.load_nsd_list()
+            nsd_list = nsd_list.sort_values(by=settings.nsd_order, ascending=True)
+            financial_statements = self.load_financial_statements()
+            financial_statements = financial_statements.sort_values(by=settings.statements_order, ascending=True)
             company_info = self.load_company_info()
 
-            # Filter the data to exclude nsd entries that are already in existing_data
-            new_data = actual_data[~actual_data['company'].isin(existing_data['company'])]
+            # NSDs que já foram processados e estão nos financial statements
+            old_nsd = nsd_list[nsd_list['nsd'].isin(financial_statements['nsd'])].sort_values(by=settings.nsd_order, ascending=True)
+
+            # Filter the data to exclude nsd entries that are already in financial_statements
+            new_nsd = nsd_list[~nsd_list['nsd'].isin(financial_statements['nsd'])].sort_values(by=settings.nsd_order, ascending=True)
 
             # Merge filtered_nsd_data with company_info on matching company names
-            scrape_targets = pd.merge(new_data, company_info, left_on='company', right_on='company_name', how='inner')
+            scrape_targets = pd.merge(new_nsd, company_info, on='company_name', how='inner')
 
             # Custom sorting to place empty fields last
-            scrape_targets['setor'] = scrape_targets['setor'].replace('', last_order)  # Replace empty strings with a placeholder
-            scrape_targets['subsetor'] = scrape_targets['subsetor'].replace('', last_order)
-            scrape_targets['segmento'] = scrape_targets['segmento'].replace('', last_order)
+            scrape_targets['sector'] = scrape_targets['sector'].replace('', last_order)  # Replace empty strings with a placeholder
+            scrape_targets['subsector'] = scrape_targets['subsector'].replace('', last_order)
+            scrape_targets['segment'] = scrape_targets['segment'].replace('', last_order)
 
-            # Order the list by setor, subsetor, segmento, company, quarter, and version
-            scrape_targets = scrape_targets.sort_values(by=['setor', 'subsetor', 'segmento', 'company', 'quarter', 'version'], ascending=True)
+            # Order the list by sector, subsector, segment, company_name, quarter, and version
+            scrape_targets = scrape_targets.sort_values(by=scrape_order, ascending=True)
 
             # Restore empty fields
-            scrape_targets['setor'] = scrape_targets['setor'].replace(last_order, '')  # Restore empty fields
-            scrape_targets['subsetor'] = scrape_targets['subsetor'].replace(last_order, '')
-            scrape_targets['segmento'] = scrape_targets['segmento'].replace(last_order, '')
+            scrape_targets['sector'] = scrape_targets['sector'].replace(last_order, '')  # Restore empty fields
+            scrape_targets['subsector'] = scrape_targets['subsector'].replace(last_order, '')
+            scrape_targets['segment'] = scrape_targets['segment'].replace(last_order, '')
 
             # Initialize the overall counter
             counter = 0
             total_items = len(scrape_targets)  # Total number of items across all sectors
 
             # Process data sector by sector, with sectors having empty strings processed last
-            for setor, sector_data in scrape_targets.groupby('setor', sort=False):
+            for sector, sector_data in scrape_targets.groupby('sector', sort=False):
                 all_data = []  # List to store all the processed data
                 start_time = time.time()  # Record the start time for the entire process
                 sector_size = len(sector_data)  # Total number of rows in the current sector
@@ -357,18 +375,18 @@ class CapitalDataScraper:
                 for i, row in sector_data.iterrows():
                     company_quarter_data = []  # Clear company_quarter_data for each company
 
-                    nsd = row.iloc[sector_data.columns.get_loc('nsd')]
-                    company_name = row.iloc[sector_data.columns.get_loc('company')]
-                    quarter = pd.to_datetime(row.iloc[sector_data.columns.get_loc('quarter')], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')
-                    setor = row.iloc[sector_data.columns.get_loc('setor')]
-                    subsetor = row.iloc[sector_data.columns.get_loc('subsetor')]
-                    segmento = row.iloc[sector_data.columns.get_loc('segmento')]
-                    version = row.iloc[sector_data.columns.get_loc('version')]
+                    nsd = row['nsd']
+                    company_name = row['company_name']
+                    quarter = pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')
+                    sector = row['sector']
+                    subsector = row['subsector']
+                    segment = row['segment']
+                    version = row['version']
 
                     url = f"https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento={nsd}&CodigoTipoInstituicao=1"
                     self.driver.get(url)
 
-                    extra_info = [nsd, setor, subsetor, segmento, company_name, quarter]
+                    extra_info = [nsd, company_name, quarter]
                     system.print_info(counter, extra_info, start_time, total_items)
 
                     # Combine financial and capital statements into a single list
@@ -377,7 +395,7 @@ class CapitalDataScraper:
                     for cmbGrupo, cmbQuadro in statements:
                         # Decide which scraping function to use based on cmbGrupo and cmbQuadro
                         if [cmbGrupo, cmbQuadro] in settings.financial_data_statements:
-                            df = self.scrape_finantial_data(cmbGrupo, cmbQuadro)
+                            df = self.scrape_financial_data(cmbGrupo, cmbQuadro)
                         else:
                             df = self.scrape_capital_data(cmbGrupo, cmbQuadro)
 
@@ -388,19 +406,15 @@ class CapitalDataScraper:
                                 company_name=company_name,
                                 quarter=quarter,
                                 version=version,
-                                segmento=segmento,
-                                subsetor=subsetor,
-                                setor=setor,
-                                tipo=cmbGrupo,
-                                quadro=cmbQuadro
+                                segment=segment,
+                                subsector=subsector,
+                                sector=sector,
+                                type=cmbGrupo,
+                                frame=cmbQuadro
                             )
                             
-                            # Reorder the columns if necessary
-                            cols = ['nsd', 'company_name', 'quarter', 'version', 'segmento', 'subsetor', 'setor', 'tipo', 'quadro'] + list(df.columns[:-9])
-                            df = df[cols]
-
                             # Append the DataFrame directly to company_quarter_data
-                            company_quarter_data.append(df)
+                            company_quarter_data.append(df[settings.statements_columns])
 
                     all_data.extend(company_quarter_data)  # Add all processed DataFrames to all_data
 
@@ -408,14 +422,17 @@ class CapitalDataScraper:
                     counter += 1
 
                     # Save to DB every settings.batch_size iterations or at the end
-                    if (counter) % int(settings.batch_size / 1) == 0 or counter == total_items:
+                    if (counter) % int(settings.batch_size // 1) == 0 or counter == total_items:
                         if all_data:
                             batch_df = pd.concat(all_data, ignore_index=True)
                             # Reorder columns and sort
-                            batch_df = batch_df[settings.statements_columns].sort_values(by=statements_order)
-                            batch_df = self.save_to_db(batch_df, setor)
+                            batch_df = batch_df[settings.statements_columns].sort_values(by=settings.statements_order)
+                            db_path = self.save_to_db(batch_df, sector)
                             all_data.clear()  # Clear the list after saving
 
+                system.db_optimize(db_path)
+
+            system.db_optimize(db_path)
             return scrape_targets
         except Exception as e:
             system.log_error(f"Error in run_scraper: {e}")
