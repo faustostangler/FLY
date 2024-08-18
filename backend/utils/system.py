@@ -158,6 +158,13 @@ def choose(xpath, driver, driver_wait):
         log_error(e)
         return ''
 
+def select(xpath, text, driver, driver_wait):
+    element = wait_forever(driver_wait, xpath)
+    select = Select(driver.find_element(By.XPATH, xpath))
+    select.select_by_visible_text(text)
+
+    return select
+
 def raw_text(xpath, driver_wait):
     """
     Encontra e recupera o HTML bruto de um elemento da web usando o xpath e o objeto de espera fornecido.

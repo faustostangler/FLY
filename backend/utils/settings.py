@@ -7,12 +7,13 @@ big_batch_size = int(40000 / num_batches)
 db_name = 'b3.db'  # Database name
 db_folder = 'backend/data'  # Folder where the database is stored
 db_folder_short = 'data'
-finsheet_types = ["DEMONSTRAÇÕES FINANCEIRAS PADRONIZADAS", "INFORMAÇÕES TRIMESTRAIS"]
+finsheet_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
 
 # NSD scraping settings
 db_path = 'backend/data/b3.db'  # Path to the NSD SQLite database
 nsd_columns = ['company', 'dri', 'dri2', 'dre', 'data', 'versao', 'auditor', 'auditor_rt', 'cancelamento', 'protocolo', 'envio', 'url', 'nsd']  # Adjusted columns based on NSD data
 default_daily_submission_estimate = 30
+statements_columns = ['nsd', 'tipo', 'setor', 'subsetor', 'segmento', 'company_name', 'quadro', 'quarter', 'conta', 'descricao', 'valor', 'version']
 
 # Selenium settings
 wait_time = 2  # Wait time for Selenium operations
@@ -79,6 +80,27 @@ LANGUAGES = ['en-US;q=1.0', 'es-ES;q=0.9', 'fr-FR;q=0.8', 'de-DE;q=0.7', 'it-IT;
 # B3 information
 companies_url = "https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/search?language=pt-br"  # URL for the B3 companies search page
 company_url = "https://sistemaswebb3-listados.b3.com.br/listedCompaniesPage/?language=pt-br"  # URL for the B3 company detail page
+
+# Financial and Capital Statements from b3 website
+financial_data_statements = [
+    ['DFs Consolidadas', 'Demonstração do Resultado'], 
+    ['DFs Consolidadas', 'Balanço Patrimonial Ativo'], 
+    ['DFs Consolidadas', 'Balanço Patrimonial Passivo'], 
+    ['DFs Consolidadas', 'Demonstração do Fluxo de Caixa'], 
+    ['DFs Consolidadas', 'Demonstração de Valor Adicionado'], 
+    ['DFs Individuais', 'Demonstração do Resultado'], 
+    ['DFs Individuais', 'Balanço Patrimonial Ativo'], 
+    ['DFs Individuais', 'Balanço Patrimonial Passivo'], 
+    ['DFs Individuais', 'Demonstração do Fluxo de Caixa'], 
+    ['DFs Individuais', 'Demonstração de Valor Adicionado'], 
+]
+
+# Capital data configurations
+capital_data_statements = [
+    ['Dados da Empresa', 'Composição do Capital'], 
+]
+
+
 
 # List of judicial terms to be removed from company names
 judicial = [
