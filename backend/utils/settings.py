@@ -91,7 +91,7 @@ statements_columns = [
     'nsd', 'sector', 'subsector', 'segment', 'company_name', 
     'quarter', 'version', 'type', 'frame'
     ] + financial_capital_columns
-statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'account', 'description']
+statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'account', 'description']
 
 # Descriptions and accounts
 descriptions = {

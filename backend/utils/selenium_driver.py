@@ -162,6 +162,7 @@ def load_driver(chromedriver_path):
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument('--ignore-ssl-errors')
         chrome_options.add_argument('--disable-infobars')
+        chrome_options.add_argument('--headless')
 
         driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
         exceptions_ignore = (NoSuchElementException, StaleElementReferenceException)

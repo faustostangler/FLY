@@ -37,16 +37,15 @@ if __name__ == '__main__':
             # Create a ThreadPoolExecutor for simultaneous execution
             with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
                 futures = []
-                for start in range(0, total_items, batch_size):
+                for batch_index, start in enumerate(range(0, total_items, batch_size)):
                     end = min(start + batch_size, total_items)
-                    print(f"Submitting batch from {start} to {end}")
-
                     futures.append(executor.submit(
-                        lambda targets=scrape_targets[start:end]: (
-                            capital_scrape.CapitalDataScraper().run_scraper(targets),
-                            capital_scrape.CapitalDataScraper().close_scraper()  # Close the scraper after running
+                        lambda targets=scrape_targets[start:end], index=batch_index + 1: (
+                            capital_scrape.CapitalDataScraper().run_scraper(targets, index),
+                            capital_scrape.CapitalDataScraper().close_scraper()
                         )
                     ))
+
 
                 # Optionally, wait for all futures to complete
                 for future in as_completed(futures):

@@ -419,7 +419,7 @@ class CapitalDataScraper:
             system.log_error(f"Error processing company quarter data: {e}")
             return []  # Return an empty list to prevent the process from stopping
 
-    def run_scraper(self, scrape_targets):
+    def run_scraper(self, scrape_targets, batch_number=None):
         """
         Run the entire scraping process for the identified NSD entries, iterating over all financial data statements.
         """
@@ -437,7 +437,7 @@ class CapitalDataScraper:
                 for i, row in sector_data.iterrows():
                     try:
                         # Print progress information
-                        extra_info = [row['nsd'], row['company_name'], pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')]
+                        extra_info = [batch_number, row['nsd'], row['company_name'], pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')]
                         system.print_info(counter, extra_info, start_time, total_items)
 
                         # Process each company-quarter data using the refactored function
@@ -448,7 +448,7 @@ class CapitalDataScraper:
                         counter += 1
 
                         # Save to DB every settings.batch_size iterations or at the end
-                        if (total_items - counter - 1) % int(settings.batch_size // 1) == 0:
+                        if (total_items - counter - 1) % int(settings.batch_size // settings.max_workers) == 0:
                             if all_data:
                                 batch_df = pd.concat(all_data, ignore_index=True)
                                 # Reorder columns and sort
