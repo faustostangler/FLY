@@ -422,7 +422,7 @@ class CapitalDataScraper:
                     counter += 1
 
                     # Save to DB every settings.batch_size iterations or at the end
-                    if (counter) % int(settings.batch_size // 1) == 0 or counter == total_items:
+                    if (total_items - counter - 1) % int(settings.batch_size // 1) == 0:
                         if all_data:
                             batch_df = pd.concat(all_data, ignore_index=True)
                             # Reorder columns and sort
