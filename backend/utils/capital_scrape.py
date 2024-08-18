@@ -8,6 +8,7 @@ from io import StringIO
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
+import itertools
 
 from utils import system
 from utils import settings
@@ -308,45 +309,35 @@ class CapitalDataScraper:
         except Exception as e:
             system.log_error(f"Error saving data for setor {setor}: {e}")
 
-    # def filter_new_nsds(self, df_nsd):
-    #     """
-    #     Filter out NSD entries that have already been processed.
-
-    #     Parameters:
-    #     - df_nsd (DataFrame): The DataFrame of NSD entries to filter.
-
-    #     Returns:
-    #     DataFrame: A DataFrame containing only new NSD entries.
-    #     """
-    #     try:
-    #         existing_data = self.load_nsd_data()
-    #         return df_nsd[~df_nsd['nsd'].isin(existing_data['nsd'])]
-    #     except Exception as e:
-    #         system.log_error(f"Error filtering new NSD entries: {e}")
-    #         return df_nsd
-
-    def run_scraper(self):
+    def identify_scrape_targets(self):
         """
-        Run the entire scraping process for the provided NSD entries, iterating over all financial data statements.
-        """
-        last_order = 'ZZZZZZZZZZ'
-        scrape_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version']
+        Identifies and returns companies that need new financial data scraping.
 
+        This function loads the NSD list, financial statements, and company information,
+        filters out NSD entries already present in financial statements, and merges 
+        the remaining NSD entries with company information to identify the scrape targets.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the companies that need new financial data scraping.
+        """
         try:
-            # Load data
+            last_order = 'ZZZZZZZZZZ'
+            scrape_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version']
+
+            # Load the necessary datasets
             nsd_list = self.load_nsd_list()
-            nsd_list = nsd_list.sort_values(by=settings.nsd_order, ascending=True)
             financial_statements = self.load_financial_statements()
-            financial_statements = financial_statements.sort_values(by=settings.statements_order, ascending=True)
             company_info = self.load_company_info()
 
-            # NSDs que já foram processados e estão nos financial statements
-            old_nsd = nsd_list[nsd_list['nsd'].isin(financial_statements['nsd'])].sort_values(by=settings.nsd_order, ascending=True)
+            # Sort datasets according to the predefined order in settings
+            nsd_list = nsd_list.sort_values(by=settings.nsd_order, ascending=True)
+            financial_statements = financial_statements.sort_values(by=settings.statements_order, ascending=True)
 
-            # Filter the data to exclude nsd entries that are already in financial_statements
-            new_nsd = nsd_list[~nsd_list['nsd'].isin(financial_statements['nsd'])].sort_values(by=settings.nsd_order, ascending=True)
+            # Identify NSD entries that are not in financial statements
+            new_nsd = nsd_list[~nsd_list['nsd'].isin(financial_statements['nsd'])]
+            new_nsd = new_nsd.sort_values(by=settings.nsd_order, ascending=True)
 
-            # Merge filtered_nsd_data with company_info on matching company names
+            # Merge filtered NSD data with company information on matching company names
             scrape_targets = pd.merge(new_nsd, company_info, on='company_name', how='inner')
 
             # Custom sorting to place empty fields last
@@ -362,80 +353,123 @@ class CapitalDataScraper:
             scrape_targets['subsector'] = scrape_targets['subsector'].replace(last_order, '')
             scrape_targets['segment'] = scrape_targets['segment'].replace(last_order, '')
 
+
+            return scrape_targets
+
+        except Exception as e:
+            # Log any errors encountered during the process
+            system.log_error(f"Error identifying scrape targets: {e}")
+
+    def process_company_quarter_data(self, row):
+        """
+        Process financial and capital data for a specific company and quarter.
+
+        Args:
+            row (pd.Series): A row of data containing NSD, company name, quarter, sector, and other metadata.
+
+        Returns:
+            list: A list of DataFrames with the processed financial and capital data for the company.
+        """
+        try:
+            company_quarter_data = []  # List to store data for the company in the current quarter
+
+            # Extract data from the row
+            nsd = row['nsd']
+            company_name = row['company_name']
+            quarter = pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')
+            sector = row['sector']
+            subsector = row['subsector']
+            segment = row['segment']
+            version = row['version']
+
+            # Construct the URL for the NSD entry
+            url = f"https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento={nsd}&CodigoTipoInstituicao=1"
+            self.driver.get(url)
+
+            # Define all statements to be scraped
+            statements = settings.financial_data_statements + settings.capital_data_statements
+
+            for cmbGrupo, cmbQuadro in statements:
+                # Determine which scraping method to use
+                if [cmbGrupo, cmbQuadro] in settings.financial_data_statements:
+                    df = self.scrape_financial_data(cmbGrupo, cmbQuadro)
+                else:
+                    df = self.scrape_capital_data(cmbGrupo, cmbQuadro)
+
+                if df is not None:
+                    # Add necessary metadata columns to the DataFrame
+                    df = df.assign(
+                        nsd=nsd,
+                        company_name=company_name,
+                        quarter=quarter,
+                        version=version,
+                        segment=segment,
+                        subsector=subsector,
+                        sector=sector,
+                        type=cmbGrupo,
+                        frame=cmbQuadro
+                    )
+                    # Append the processed DataFrame to the list
+                    company_quarter_data.append(df[settings.statements_columns])
+
+            return company_quarter_data
+
+        except Exception as e:
+            # Log any errors encountered during processing
+            system.log_error(f"Error processing company quarter data: {e}")
+            return []  # Return an empty list to prevent the process from stopping
+
+    def run_scraper(self, scrape_targets):
+        """
+        Run the entire scraping process for the identified NSD entries, iterating over all financial data statements.
+        """
+        try:
             # Initialize the overall counter
             counter = 0
             total_items = len(scrape_targets)  # Total number of items across all sectors
 
-            # Process data sector by sector, with sectors having empty strings processed last
+            # Process data sector by sector, processing sectors with empty strings last
             for sector, sector_data in scrape_targets.groupby('sector', sort=False):
                 all_data = []  # List to store all the processed data
                 start_time = time.time()  # Record the start time for the entire process
                 sector_size = len(sector_data)  # Total number of rows in the current sector
 
                 for i, row in sector_data.iterrows():
-                    company_quarter_data = []  # Clear company_quarter_data for each company
+                    try:
+                        # Print progress information
+                        extra_info = [row['nsd'], row['company_name'], pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')]
+                        system.print_info(counter, extra_info, start_time, total_items)
 
-                    nsd = row['nsd']
-                    company_name = row['company_name']
-                    quarter = pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')
-                    sector = row['sector']
-                    subsector = row['subsector']
-                    segment = row['segment']
-                    version = row['version']
+                        # Process each company-quarter data using the refactored function
+                        company_quarter_data = self.process_company_quarter_data(row)
+                        all_data.extend(company_quarter_data)  # Add all processed DataFrames to all_data
 
-                    url = f"https://www.rad.cvm.gov.br/ENET/frmGerenciaPaginaFRE.aspx?NumeroSequencialDocumento={nsd}&CodigoTipoInstituicao=1"
-                    self.driver.get(url)
+                        # Increment the overall counter
+                        counter += 1
 
-                    extra_info = [nsd, company_name, quarter]
-                    system.print_info(counter, extra_info, start_time, total_items)
+                        # Save to DB every settings.batch_size iterations or at the end
+                        if (total_items - counter - 1) % int(settings.batch_size // 1) == 0:
+                            if all_data:
+                                batch_df = pd.concat(all_data, ignore_index=True)
+                                # Reorder columns and sort
+                                batch_df = batch_df[settings.statements_columns].sort_values(by=settings.statements_order)
+                                db_path = self.save_to_db(batch_df, sector)
+                                all_data.clear()  # Clear the list after saving
 
-                    # Combine financial and capital statements into a single list
-                    statements = settings.financial_data_statements + settings.capital_data_statements
-
-                    for cmbGrupo, cmbQuadro in statements:
-                        # Decide which scraping function to use based on cmbGrupo and cmbQuadro
-                        if [cmbGrupo, cmbQuadro] in settings.financial_data_statements:
-                            df = self.scrape_financial_data(cmbGrupo, cmbQuadro)
-                        else:
-                            df = self.scrape_capital_data(cmbGrupo, cmbQuadro)
-
-                        if df is not None:
-                            # Add metadata columns using assign
-                            df = df.assign(
-                                nsd=nsd,
-                                company_name=company_name,
-                                quarter=quarter,
-                                version=version,
-                                segment=segment,
-                                subsector=subsector,
-                                sector=sector,
-                                type=cmbGrupo,
-                                frame=cmbQuadro
-                            )
-                            
-                            # Append the DataFrame directly to company_quarter_data
-                            company_quarter_data.append(df[settings.statements_columns])
-
-                    all_data.extend(company_quarter_data)  # Add all processed DataFrames to all_data
-
-                    # Increment the overall counter
-                    counter += 1
-
-                    # Save to DB every settings.batch_size iterations or at the end
-                    if (total_items - counter - 1) % int(settings.batch_size // 1) == 0:
-                        if all_data:
-                            batch_df = pd.concat(all_data, ignore_index=True)
-                            # Reorder columns and sort
-                            batch_df = batch_df[settings.statements_columns].sort_values(by=settings.statements_order)
-                            db_path = self.save_to_db(batch_df, sector)
-                            all_data.clear()  # Clear the list after saving
+                    except Exception as e:
+                        # Log any errors encountered during processing of individual rows
+                        system.log_error(f"Error processing row {i} in sector {sector}: {e}")
 
                 system.db_optimize(db_path)
 
             system.db_optimize(db_path)
+
             return scrape_targets
+
         except Exception as e:
+            # Log any errors encountered during the main scraping process
             system.log_error(f"Error in run_scraper: {e}")
+            return None  # Return None to indicate that the scraping process did not complete
 
     def close_scraper(self):
         """Close the WebDriver."""
