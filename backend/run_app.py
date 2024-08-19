@@ -1,5 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from utils import settings
 from utils import system
 from utils import selenium_driver
@@ -27,29 +25,7 @@ if __name__ == '__main__':
         # capital_choice = system.timed_input('Want to scrape Capital Sheets? (YES/NO): ')
         capital_choice = 'Y'
         if capital_choice.strip().upper().startswith('Y'):
-            # Initialize the scraper to identify scrape targets
-            initial_scraper = capital_scrape.CapitalDataScraper()
-            scrape_targets = initial_scraper.identify_scrape_targets()
-            total_items = len(scrape_targets)
-            batch_size = int(total_items / settings.max_workers)
-            initial_scraper.close_scraper()  # Close the initial scraper after identifying targets
-
-            # Create a ThreadPoolExecutor for simultaneous execution
-            with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
-                futures = []
-                for batch_index, start in enumerate(range(0, total_items, batch_size)):
-                    end = min(start + batch_size, total_items)
-                    futures.append(executor.submit(
-                        lambda targets=scrape_targets[start:end], index=batch_index + 1: (
-                            capital_scrape.CapitalDataScraper().run_scraper(targets, index),
-                            capital_scrape.CapitalDataScraper().close_scraper()
-                        )
-                    ))
-
-
-                # Optionally, wait for all futures to complete
-                for future in as_completed(futures):
-                    future.result()  # This will raise an exception if one occurred in the thread
+            capital_scrape.CapitalDataScraper.main()
 
     except Exception as e:
         e = system.log_error(e)

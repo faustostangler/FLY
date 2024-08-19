@@ -206,6 +206,7 @@ def wait_forever(driver_wait, xpath):
     Returns:
     WebElement: O elemento da web encontrado.
     """
+    counter = 0
     while True:
         try:
             element = driver_wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
@@ -213,6 +214,9 @@ def wait_forever(driver_wait, xpath):
         except Exception:
             print(f'waiting for {xpath} in DOM')
             time.sleep(settings.wait_time)
+            counter +=1
+            if counter == 5:
+                driver_wait.close()
 
 def print_info(current_index, extra_info, start_time, total_size):
     """

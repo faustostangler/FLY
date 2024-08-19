@@ -8,7 +8,8 @@ from io import StringIO
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
-import itertools
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 from utils import system
 from utils import settings
@@ -68,10 +69,17 @@ class CapitalDataScraper:
                 and not any(exc in os.path.basename(db_file) for exc in excluded_patterns)
             ]
 
-            for db_file in database_files:
+            total_files = len(database_files)
+            start_time = time.time()
+
+            for i, db_file in enumerate(database_files):
                 with sqlite3.connect(db_file) as conn:
                     df = pd.read_sql_query(f"SELECT * FROM {settings.table_name}", conn)
                     all_dfs.append(df)
+
+                # Use system.print_info to display progress
+                extra_info = [os.path.basename(db_file)]
+                system.print_info(i, extra_info, start_time, total_files)
 
             if all_dfs:
                 return pd.concat(all_dfs, ignore_index=True).drop_duplicates()
@@ -470,6 +478,48 @@ class CapitalDataScraper:
             # Log any errors encountered during the main scraping process
             system.log_error(f"Error in run_scraper: {e}")
             return None  # Return None to indicate that the scraping process did not complete
+
+    def run_in_batches(self):
+        try:
+            # Identify the scrape targets
+            scrape_targets = self.identify_scrape_targets()
+            total_items = len(scrape_targets)
+            batch_size = int(total_items / settings.max_workers)
+            self.close_scraper()
+
+            with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
+                futures = []
+                for batch_index, start in enumerate(range(0, total_items, batch_size)):
+                    end = min(start + batch_size, total_items)
+                    futures.append(executor.submit(
+                        lambda targets=scrape_targets[start:end], index=batch_index + 0: (
+                            self.run_scraper_with_new_instance(targets, index)
+                        )
+                    ))
+
+                for future in as_completed(futures):
+                    future.result()  # This will raise an exception if one occurred in the thread
+
+        except Exception as e:
+            system.log_error(f"Error during batch processing: {e}")
+        finally:
+            self.close_scraper()
+
+    def run_scraper_with_new_instance(self, scrape_targets, batch_number):
+        """
+        Create a new instance of CapitalDataScraper and run the scraper.
+        This ensures each batch has its own WebDriver instance.
+        """
+        scraper = CapitalDataScraper()
+        try:
+            scraper.run_scraper(scrape_targets, batch_number)
+        finally:
+            scraper.close_scraper()
+
+    @staticmethod
+    def main():
+        scraper = CapitalDataScraper()
+        scraper.run_in_batches()
 
     def close_scraper(self):
         """Close the WebDriver."""
