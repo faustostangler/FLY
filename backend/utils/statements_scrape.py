@@ -15,9 +15,9 @@ from utils import system
 from utils import settings
 from utils import selenium_driver
 
-class CapitalDataScraper:
+class StatementsDataScraper:
     """
-    A class to scrape and store capital data from NSD pages.
+    A class to scrape and store statements data from NSD pages.
     """
 
     def __init__(self):
@@ -69,6 +69,11 @@ class CapitalDataScraper:
                 and not any(exc in os.path.basename(db_file) for exc in excluded_patterns)
             ]
 
+            database_files = sorted(database_files,
+                key=os.path.getsize,  # Ordenar pelo tamanho do arquivo
+                reverse=False          # True = Do maior para o menor 6'53
+                )
+
             total_files = len(database_files)
             start_time = time.time()
 
@@ -102,7 +107,7 @@ class CapitalDataScraper:
 
     def scrape_financial_data(self, cmbGrupo, cmbQuadro):
         """
-        Scrapes capital data from the specified page.
+        Scrapes statements data from the specified page.
 
         Parameters:
         - group_value: The group combo box value.
@@ -140,8 +145,8 @@ class CapitalDataScraper:
 
             df1 = df1.iloc[:,0:3]
             df2 = df2.iloc[:,0:3]
-            df1.columns = settings.financial_capital_columns
-            df2.columns = settings.financial_capital_columns
+            df1.columns = settings.financial_statements_columns
+            df2.columns = settings.financial_statements_columns
             df = pd.concat([df1.iloc[:, :2], df2.iloc[:, 2:3]], axis=1)
 
             col = df.iloc[:, 2].astype(str)
@@ -151,7 +156,7 @@ class CapitalDataScraper:
             col = col * thousand
             df.iloc[:, 2] = col
 
-            df = df[~df[settings.financial_capital_columns[0]].str.startswith(drop_items)]
+            df = df[~df[settings.financial_statements_columns[0]].str.startswith(drop_items)]
 
             # selenium exit frame
             self.driver.switch_to.parent_frame()
@@ -162,9 +167,9 @@ class CapitalDataScraper:
             # system.log_error(e)
             return None
 
-    def scrape_capital_data(self, cmbGrupo, cmbQuadro):
+    def scrape_statements_data(self, cmbGrupo, cmbQuadro):
         """
-        Process the scraped capital data into a DataFrame.
+        Process the scraped statements data into a DataFrame.
 
         Parameters:
         - cmbGrupo: The group combo box value.
@@ -201,9 +206,9 @@ class CapitalDataScraper:
 
             # Extract the required values
             data = {
-                settings.financial_capital_columns[0]: [],  # 'account'
-                settings.financial_capital_columns[1]: [],  # 'description'
-                settings.financial_capital_columns[2]: []   # 'value'
+                settings.financial_statements_columns[0]: [],  # 'account'
+                settings.financial_statements_columns[1]: [],  # 'description'
+                settings.financial_statements_columns[2]: []   # 'value'
             }
 
             # Extract values using the XPaths
@@ -213,19 +218,19 @@ class CapitalDataScraper:
             acoes_pn_tesouraria = self.driver.find_element(By.XPATH, acoes_pn_tesouraria_xpath).text.strip().replace('.', '').replace(',', '.')
 
             # Populate the data dictionary using settings values
-            data[settings.financial_capital_columns[0]] = [
+            data[settings.financial_statements_columns[0]] = [
                 settings.accounts['acoes_on'], 
                 settings.accounts['acoes_pn'], 
                 settings.accounts['acoes_on_tesouraria'], 
                 settings.accounts['acoes_pn_tesouraria']
             ]
-            data[settings.financial_capital_columns[1]] = [
+            data[settings.financial_statements_columns[1]] = [
                 settings.descriptions['acoes_on'], 
                 settings.descriptions['acoes_pn'], 
                 settings.descriptions['acoes_on_tesouraria'], 
                 settings.descriptions['acoes_pn_tesouraria']
             ]
-            data[settings.financial_capital_columns[2]] = [
+            data[settings.financial_statements_columns[2]] = [
                 float(acoes_on) * thousand, 
                 float(acoes_pn) * thousand, 
                 float(acoes_on_tesouraria) * thousand, 
@@ -240,15 +245,15 @@ class CapitalDataScraper:
             return df
             
         except Exception as e:
-            system.log_error(f"Error processing capital data: {e}")
+            system.log_error(f"Error processing statements data: {e}")
             return None
 
     def save_to_db(self, df, setor):
         """
-        Save the processed capital data to a sector-specific database.
+        Save the processed statements data to a sector-specific database.
 
         Parameters:
-        - df (DataFrame): The processed capital data as a DataFrame.
+        - df (DataFrame): The processed statements data as a DataFrame.
         - setor (str): The sector associated with the data.
         """
 
@@ -370,13 +375,13 @@ class CapitalDataScraper:
 
     def process_company_quarter_data(self, row):
         """
-        Process financial and capital data for a specific company and quarter.
+        Process financial and statements data for a specific company and quarter.
 
         Args:
             row (pd.Series): A row of data containing NSD, company name, quarter, sector, and other metadata.
 
         Returns:
-            list: A list of DataFrames with the processed financial and capital data for the company.
+            list: A list of DataFrames with the processed financial and statements data for the company.
         """
         try:
             company_quarter_data = []  # List to store data for the company in the current quarter
@@ -395,14 +400,14 @@ class CapitalDataScraper:
             self.driver.get(url)
 
             # Define all statements to be scraped
-            statements = settings.financial_data_statements + settings.capital_data_statements
+            statements = settings.financial_data_statements + settings.statements_data_statements
 
             for cmbGrupo, cmbQuadro in statements:
                 # Determine which scraping method to use
                 if [cmbGrupo, cmbQuadro] in settings.financial_data_statements:
                     df = self.scrape_financial_data(cmbGrupo, cmbQuadro)
                 else:
-                    df = self.scrape_capital_data(cmbGrupo, cmbQuadro)
+                    df = self.scrape_statements_data(cmbGrupo, cmbQuadro)
 
                 if df is not None:
                     # Add necessary metadata columns to the DataFrame
@@ -507,10 +512,10 @@ class CapitalDataScraper:
 
     def run_scraper_with_new_instance(self, scrape_targets, batch_number):
         """
-        Create a new instance of CapitalDataScraper and run the scraper.
+        Create a new instance of StatementsDataScraper and run the scraper.
         This ensures each batch has its own WebDriver instance.
         """
-        scraper = CapitalDataScraper()
+        scraper = StatementsDataScraper()
         try:
             scraper.run_scraper(scrape_targets, batch_number)
         finally:
@@ -518,7 +523,7 @@ class CapitalDataScraper:
 
     @staticmethod
     def main():
-        scraper = CapitalDataScraper()
+        scraper = StatementsDataScraper()
         scraper.run_in_batches()
 
     def close_scraper(self):
@@ -528,8 +533,8 @@ class CapitalDataScraper:
 
 if __name__ == "__main__":
     try:
-        scraper = CapitalDataScraper()
-        scraper.run_scraper(group_value='Capital', quadro_value='Quadro Demonstrativo')
+        scraper = StatementsDataScraper()
+        scraper.run_scraper(group_value='Statements', quadro_value='Quadro Demonstrativo')
     except Exception as e:
         system.log_error(e)
     finally:

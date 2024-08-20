@@ -7,7 +7,7 @@ backup_name = 'backup'
 
 # batches
 batch_size = 50  # Batch size for data processing
-max_workers = 8
+max_workers = 4
 big_batch_size = int(40000 / max_workers)
 
 # Selenium settings
@@ -86,11 +86,11 @@ safety_factor = 3  # Apply a safety factor to account for possible increases
 # Statements settings
 table_name = 'statements'
 statements_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
-financial_capital_columns = ['account', 'description', 'value']  # Assuming these are the financial/capital columns
+financial_statements_columns = ['account', 'description', 'value']  # Assuming these are the financial/statements columns
 statements_columns = [
     'nsd', 'sector', 'subsector', 'segment', 'company_name', 
     'quarter', 'version', 'type', 'frame'
-    ] + financial_capital_columns
+    ] + financial_statements_columns
 statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'account', 'description']
 
 # Descriptions and accounts
@@ -125,7 +125,7 @@ financial_data_statements = [
 ]
 
 # Capital data configurations
-capital_data_statements = [
+statements_data_statements = [
     ['Dados da Empresa', 'Composição do Capital'], 
 ]
 
