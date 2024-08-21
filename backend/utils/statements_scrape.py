@@ -333,10 +333,10 @@ class StatementsDataScraper:
         Returns:
             pd.DataFrame: A DataFrame containing the companies that need new financial data scraping.
         """
-        try:
-            last_order = 'ZZZZZZZZZZ'
-            scrape_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version']
+        last_order = 'ZZZZZZZZZZ'
+        scrape_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version']
 
+        try:
             # Load the necessary datasets
             nsd_list = self.load_nsd_list()
             financial_statements = self.load_financial_statements()
@@ -484,7 +484,7 @@ class StatementsDataScraper:
             system.log_error(f"Error in run_scraper: {e}")
             return None  # Return None to indicate that the scraping process did not complete
 
-    def run_in_batches(self):
+    def main(self):
         try:
             # Identify the scrape targets
             scrape_targets = self.identify_scrape_targets()
@@ -520,11 +520,6 @@ class StatementsDataScraper:
             scraper.run_scraper(scrape_targets, batch_number)
         finally:
             scraper.close_scraper()
-
-    @staticmethod
-    def main():
-        scraper = StatementsDataScraper()
-        scraper.run_in_batches()
 
     def close_scraper(self):
         """Close the WebDriver."""

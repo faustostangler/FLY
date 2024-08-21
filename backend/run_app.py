@@ -24,15 +24,17 @@ if __name__ == '__main__':
             nsd_range = nsd_scraper.scrape_nsd()
 
         # statements_choice = system.timed_input('Want to scrape Statements Sheets? (YES/NO): ')
-        statements_choice = 'Y'
+        statements_choice = 'N'
         if statements_choice.strip().upper().startswith('Y'):
-            statements_scrape.StatementsDataScraper.main()
+            scraper = statements_scrape.StatementsDataScraper()
+            scraper.main()
 
         # math_choice = system.timed_input('Want to scrape Statements Sheets? (YES/NO): ')
         math_choice = 'Y'
         if math_choice.strip().upper().startswith('Y'):
             # Call the MathTransformation process
-            math_transformation.MathTransformation.main()
+            scraper = math_transformation.MathTransformation()
+            scraper.main()
 
     except Exception as e:
         e = system.log_error(e)

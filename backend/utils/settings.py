@@ -7,7 +7,7 @@ backup_name = 'backup'
 
 # batches
 batch_size = 50  # Batch size for data processing
-max_workers = 4
+max_workers = 1
 big_batch_size = int(40000 / max_workers)
 
 # Selenium settings
@@ -92,6 +92,11 @@ statements_columns = [
     'quarter', 'version', 'type', 'frame'
     ] + financial_statements_columns
 statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'account', 'description']
+year_end_accounts = ['3', '4']
+cumulative_quarter_accounts = ['6', '7']
+
+# Math settings
+table_name_math = 'math'
 
 # Descriptions and accounts
 descriptions = {
