@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from utils import system, settings
+from utils import system
+from utils import settings
 
 class MathTransformation:
     """
@@ -40,7 +41,7 @@ class MathTransformation:
 
                 database_files = sorted(database_files,
                     key=os.path.getsize,  # Ordenar pelo tamanho do arquivo
-                    reverse=True          # True = Do maior para o menor 6'53
+                    reverse=False          # True = Do maior para o menor 6'53
                     )
                 
                 return database_files
@@ -186,6 +187,41 @@ class MathTransformation:
             system.log_error(f"Error during cumulative quarter balance adjustment: {e}")
             return pd.DataFrame(columns=settings.statements_columns)
 
+    def mathmagic(self, db_file):
+        with sqlite3.connect(db_file) as conn:
+            # Step 1: open database and get statements
+            statements = pd.read_sql_query(f"SELECT * FROM {settings.table_name}", conn)
+
+        # Step 2: Filter to keep only newer versions
+        statements = self.filter_newer_versions(statements)
+
+        # Ensure 'quarter' is in datetime format and create 'year' and 'month' columns
+        statements['quarter'] = pd.to_datetime(statements['quarter'], errors='coerce')
+        statements['year'] = statements['quarter'].dt.year  # Create the 'year' column
+        statements['month'] = statements['quarter'].dt.month  # Create the 'month' column
+
+        # Step 3: Split into groups
+        unmodified_statements, year_end_balance_statements, cumulative_quarter_balances_statements = self.split_into_groups(statements)
+        
+        # Step 4: Apply the adjustments
+        year_end_balance_statements = self.adjust_year_end_balance(year_end_balance_statements)
+        cumulative_quarter_balances_statements = self.adjust_cumulative_quarter_balances(cumulative_quarter_balances_statements)
+
+        # Step 5: Combine all groups back together
+        df = pd.concat([unmodified_statements, year_end_balance_statements, cumulative_quarter_balances_statements])
+        df.drop(columns=['year', 'month'], inplace=True)
+
+        # Sort values
+        df = df.sort_values(by=settings.statements_order)
+
+        # Connect to the SQLite database
+        db_file = db_file.replace('statements', 'math')
+        conn = sqlite3.connect(db_file)
+
+        # Save the DataFrame to the SQLite database
+        with sqlite3.connect(db_file) as conn:
+            df.to_sql(f'{settings.table_name}', conn, if_exists='replace', index=False)
+
     def run_math_with_new_instance(self, data):
         """
         Create a new instance of MathTransformation and run the math processing.
@@ -203,72 +239,26 @@ class MathTransformation:
 
     def main(self):
         """
-        Run the math transformations in batches using multiple threads.
+        Run the math transformations on each database file using multiple threads.
         """
         try:
-            # abrir os statements for db_file, filter, transform, concat, save
+            # Get the list of database files
             database_files = self.get_database_files()
 
             total_files = len(database_files)
             start_time = time.time()
-            for i, db_file in enumerate(database_files):
-                with sqlite3.connect(db_file) as conn:
-                    # Step 1: open database and get statements
-                    statements = pd.read_sql_query(f"SELECT * FROM {settings.table_name}", conn)
 
-                # Step 2: Filter to keep only newer versions
-                statements = self.filter_newer_versions(statements)
-
-                # Ensure 'quarter' is in datetime format and create 'year' and 'month' columns
-                statements['quarter'] = pd.to_datetime(statements['quarter'], errors='coerce')
-                statements['year'] = statements['quarter'].dt.year  # Create the 'year' column
-                statements['month'] = statements['quarter'].dt.month  # Create the 'month' column
-
-                # Step 3: Split into groups
-                unmodified_statements, year_end_balance_statements, cumulative_quarter_balances_statements = self.split_into_groups(statements)
-                
-                # Step 4: Apply the adjustments
-                year_end_balance_statements = self.adjust_year_end_balance(year_end_balance_statements)
-                cumulative_quarter_balances_statements = self.adjust_cumulative_quarter_balances(cumulative_quarter_balances_statements)
-
-                # Step 5: Combine all groups back together
-                df = pd.concat([unmodified_statements, year_end_balance_statements, cumulative_quarter_balances_statements])
-                df.drop(columns=['year', 'month'], inplace=True)
-
-                # Sort values
-                df = df.sort_values(by=settings.statements_order)
-
-                # Connect to the SQLite database
-                db_file = db_file.replace('statements', 'math')
-                conn = sqlite3.connect(db_file)
-
-                # Save the DataFrame to the SQLite database
-                with sqlite3.connect(db_file) as conn:
-                    df.to_sql(f'{settings.table_name}', conn, if_exists='replace', index=False)
-
-                # Use system.print_info to display progress
-                extra_info = [os.path.basename(db_file)]
-                system.print_info(i, extra_info, start_time, total_files)
-
-
-
-
-
-            # Future Steps: Compare to actual saved modified files, split into groups, apply transformations, etc.
-            total_items = len(statements)
-            batch_size = int(total_items / settings.max_workers)
-
+            # Use ThreadPoolExecutor to run mathmagic concurrently
             with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
                 futures = []
-                for batch_index, start in enumerate(range(0, total_items, batch_size)):
-                    end = min(start + batch_size, total_items)
-                    batch_data = data.iloc[start:end]
-                    futures.append(executor.submit(
-                        self.run_math_with_new_instance, batch_data
-                    ))
+                for i, db_file in enumerate(database_files):
+                    futures.append(executor.submit(self.mathmagic, db_file))
 
-                for future in as_completed(futures):
-                    future.result()
+                # Track and print the progress
+                for i, future in enumerate(as_completed(futures)):
+                    extra_info = [os.path.basename(database_files[i])]
+                    system.print_info(i, extra_info, start_time, total_files)
+                    future.result()  # This will raise an exception if one occurred in the thread
 
         except Exception as e:
             system.log_error(f"Error during batch processing: {e}")

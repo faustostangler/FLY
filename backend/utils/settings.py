@@ -7,7 +7,7 @@ backup_name = 'backup'
 
 # batches
 batch_size = 50  # Batch size for data processing
-max_workers = 1
+max_workers = 4
 big_batch_size = int(40000 / max_workers)
 
 # Selenium settings
