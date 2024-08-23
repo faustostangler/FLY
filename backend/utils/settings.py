@@ -7,7 +7,7 @@ backup_name = 'backup'
 
 # batches
 batch_size = 50  # Batch size for data processing
-max_workers = 4
+max_workers = 8
 big_batch_size = int(40000 / max_workers)
 
 # Selenium settings
@@ -84,7 +84,7 @@ default_daily_submission_estimate = 30
 safety_factor = 3  # Apply a safety factor to account for possible increases
 
 # Statements settings
-table_name = 'statements'
+statements_file = 'statements'
 statements_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
 financial_statements_columns = ['account', 'description', 'value']  # Assuming these are the financial/statements columns
 statements_columns = [
@@ -96,7 +96,7 @@ year_end_accounts = ['3', '4']
 cumulative_quarter_accounts = ['6', '7']
 
 # Math settings
-table_name_math = 'math'
+statements_file_math = 'math'
 
 # Descriptions and accounts
 descriptions = {

@@ -339,7 +339,7 @@ class NSDScraper:
                         else:
                             limit_counter += 1
                             # Check if the counter has reached 5
-                            if limit_counter >= 5:
+                            if limit_counter >= 2:
                                 nsd_data = self.save_to_db(nsd_data)
                                 return nsd_range # Interrupts the function so it does not go to infinity
 

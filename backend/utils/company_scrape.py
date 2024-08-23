@@ -18,8 +18,10 @@ class CompanyScraper:
     cache = TTLCache(maxsize=3000, ttl=60*5)
 
     def __init__(self):
-        # Instancia o WebDriver e WebDriverWait usando a função `initialize_driver` existente
+        """Initialize the scraper with settings and WebDriver."""
         self.driver, self.driver_wait = selenium_driver.initialize_driver()
+        self.db_folder = settings.db_folder
+        self.db_name = settings.db_name
 
     @cached(cache)
     def get_raw_code(self):

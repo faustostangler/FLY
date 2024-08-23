@@ -26,7 +26,7 @@ class MathTransformation:
             Returns:
             DataFrame: A DataFrame containing the NSD data from all files.
             """
-            included_patterns = [settings.table_name]
+            included_patterns = [settings.statements_file]
             excluded_patterns = [settings.backup_name, 'math']  # List of patterns to exclude from filenames
 
             try:
@@ -190,7 +190,7 @@ class MathTransformation:
     def mathmagic(self, db_file):
         with sqlite3.connect(db_file) as conn:
             # Step 1: open database and get statements
-            statements = pd.read_sql_query(f"SELECT * FROM {settings.table_name}", conn)
+            statements = pd.read_sql_query(f"SELECT * FROM {settings.statements_file}", conn)
 
         # Step 2: Filter to keep only newer versions
         statements = self.filter_newer_versions(statements)
@@ -220,24 +220,11 @@ class MathTransformation:
 
         # Save the DataFrame to the SQLite database
         with sqlite3.connect(db_file) as conn:
-            df.to_sql(f'{settings.table_name}', conn, if_exists='replace', index=False)
+            df.to_sql(f'{settings.statements_file}', conn, if_exists='replace', index=False)
 
-    def run_math_with_new_instance(self, data):
-        """
-        Create a new instance of MathTransformation and run the math processing.
-        This ensures isolated processing for different batches.
-
-        Args:
-            data (pd.DataFrame): The data batch to process.
-        """
-        transformer = MathTransformation()
-        try:
-            transformed_data = transformer.run_math(data)
-            transformer.save_transformed_data(transformed_data)
-        finally:
-            del transformer
-
-    def main(self):
+        return len(df)
+    
+    def main_thread(self):
         """
         Run the math transformations on each database file using multiple threads.
         """
@@ -247,6 +234,7 @@ class MathTransformation:
 
             total_files = len(database_files)
             start_time = time.time()
+            total_lines = 0
 
             # Use ThreadPoolExecutor to run mathmagic concurrently
             with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
@@ -256,12 +244,57 @@ class MathTransformation:
 
                 # Track and print the progress
                 for i, future in enumerate(as_completed(futures)):
-                    extra_info = [os.path.basename(database_files[i])]
+                    extra_info = [db_file.replace('statements', 'math')]
                     system.print_info(i, extra_info, start_time, total_files)
                     future.result()  # This will raise an exception if one occurred in the thread
+            return database_files
+        
+        except Exception as e:
+            system.log_error(f"Error during batch processing: {e}")
+
+    def main_sequential(self):
+        """
+        Run the math transformations on each database file sequentially.
+        """
+        try:
+            # Get the list of database files
+            database_files = self.get_database_files()
+
+            total_files = len(database_files)
+            start_time = time.time()
+            total_lines = 0
+            # Process each database file sequentially
+            for i, db_file in enumerate(database_files):
+                lines = self.mathmagic(db_file)
+                total_lines += lines
+                # Track and print the progress
+                extra_info = [f'{lines} lines', db_file.replace('statements', 'math')]
+                system.print_info(i, extra_info, start_time, total_files)
+            return database_files
 
         except Exception as e:
             system.log_error(f"Error during batch processing: {e}")
+
+    def main(self, thread=False):
+        # abrir math, abrir statements, comparar e filtrar *** mudar para colocar tudo dentro do db statements, e em tabelas original e math_transformation
+        db_file_statements = r'backend/data\b3 statements COMUNICACOES.db'
+        db_file_math = db_file_statements.replace(f'{settings.statements_file}', f'{settings.statements_file_math}')
+
+        with sqlite3.connect(db_file_statements) as conn:
+            # Step 1: open database and get statements
+            statements = pd.read_sql_query(f"SELECT * FROM {settings.statements_file}", conn)
+            
+        with sqlite3.connect(db_file_statements) as conn:
+            # Step 1: open database and get statements
+            math_statements = pd.read_sql_query(f"SELECT * FROM {settings.statements_file}", conn)
+
+
+
+        if thread != False:
+            database_files = self.main_thread()
+        else:
+            database_files = self.main_sequential()
+
 
 if __name__ == "__main__":
     transformer = MathTransformation()
