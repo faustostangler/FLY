@@ -76,7 +76,7 @@ class StatementsDataScraper:
                 sector = table[0]
                 df = pd.read_sql_query(f"SELECT * FROM {sector}", conn)
                 financial_statements[sector] = df  # Store the DataFrame with the sector as the key
-
+                df.to_csv(f'{sector}.csv')
                 # Use system.print_info to display progress
                 total_lines += len(df)
                 extra_info = [f'{len(df)} lines in', sector, f'{total_lines} total lines']
