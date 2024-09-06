@@ -43,7 +43,7 @@ if __name__ == '__main__':
         if transduction_choice.strip().upper().startswith('Y'):
             # Call the MathTransformation process
             standart_statements = statements_standardize.StandardizedReport()
-            standart_statements.main()
+            data = standart_statements.main()
     except Exception as e:
         e = system.log_error(e)
 

@@ -84,13 +84,12 @@ default_daily_submission_estimate = 30
 safety_factor = 3  # Apply a safety factor to account for possible increases
 
 # Statements settings
+statements_sheet_columns = ['company_name', 'quarter', 'version', 'type', 'frame']
+
 statements_file = 'statements'
 statements_types = ["DEMONSTRACOES FINANCEIRAS PADRONIZADAS", "INFORMACOES TRIMESTRAIS"]
 financial_statements_columns = ['account', 'description', 'value']  # Assuming these are the financial/statements columns
-statements_columns = [
-    'nsd', 'sector', 'subsector', 'segment', 'company_name', 
-    'quarter', 'version', 'type', 'frame'
-    ] + financial_statements_columns
+statements_columns = ['nsd', 'sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'frame'] + financial_statements_columns
 statements_order = ['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'account', 'description']
 year_end_accounts = ['3', '4']
 cumulative_quarter_accounts = ['6', '7']

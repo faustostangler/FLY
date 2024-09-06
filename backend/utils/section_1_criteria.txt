@@ -1,0 +1,4869 @@
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'startswith', '1']
+    ['account', 'level', 1]
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'startswith', '1']
+    ['account', 'level', 1]
+  01.01 - Ativo Circulante de Curto Prazo
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+    ['account', 'level', 2]
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'startswith', '1']
+    ['account', 'level', 1]
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'startswith', '1']
+    ['account', 'level', 1]
+  01.01 - Ativo Circulante de Curto Prazo
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+    ['account', 'level', 2]
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'caixa']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'aplica']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'cont']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'estoq']
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'longo prazo']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'invest']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'imob']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'intang']
+
+
+
+01.02.05 - Diferido
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.05 - Diferido
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'difer']
+
+
+
+01 - Ativo Total contains 1 items
+Contém itens como:
+    1 - Ativo Total
+01.01 - Ativo Circulante de Curto Prazo contains 0 items
+Contém itens como:
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo contains 0 items
+Contém itens como:
+01.01.02 - Aplicações Financeiras de Curto Prazo contains 0 items
+Contém itens como:
+01.01.03 - Contas a Receber de Curto Prazo contains 0 items
+Contém itens como:
+01.01.04 - Estoques de Curto Prazo contains 0 items
+Contém itens como:
+01.01.05 - Ativos Biológicos de Curto Prazo contains 0 items
+Contém itens como:
+01.01.06 - Tributos a Recuperar de Curto Prazo contains 0 items
+Contém itens como:
+01.01.07 - Despesas Antecipadas de Curto Prazo contains 0 items
+Contém itens como:
+01.01.09 - Outros Ativos Circulantes de Curto Prazo contains 0 items
+Contém itens como:
+01.02 - Ativo Não Circulante de Longo Prazo contains 0 items
+Contém itens como:
+01.02.01 - Ativo Realizável a Longo Prazo contains 0 items
+Contém itens como:
+01.02.02 - Investimentos contains 0 items
+Contém itens como:
+01.02.03 - Imobilizado contains 0 items
+Contém itens como:
+01.02.04 - Intangível contains 0 items
+Contém itens como:
+01.02.05 - Diferido contains 0 items
+Contém itens como:
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'caixa']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'aplica']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'cont']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'estoq']
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+    1.01.02 - Aplicações Financeiras
+    1.01.03 - Contas a Receber
+    1.01.04 - Estoques
+    1.01.05 - Ativos Biológicos
+    1.01.06 - Tributos a Recuperar
+    1.01.07 - Despesas Antecipadas
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'longo prazo']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'invest']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'imob']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'intang']
+
+
+
+01.02.05 - Diferido
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.02 - Investimentos
+    1.02.03 - Imobilizado
+    1.02.04 - Intangível
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.05 - Diferido
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'difer']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'caixa']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.02 - Aplicações Financeiras
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'aplica']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.03 - Contas a Receber
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'cont']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.04 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'estoq']
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.05 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.07 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'longo prazo']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.02 - Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'invest']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.03 - Imobilizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'imob']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+    1.02.04 - Intangível
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'intang']
+
+
+
+01.02.05 - Diferido
+Contém itens como:
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.05 - Diferido
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains', 'difer']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.02 - Aplicações Financeiras
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.03 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.04 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.05 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.07 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.02 - Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.03 - Imobilizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.04 - Intangível
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.05 - Diferido
+Contém itens como:
+    1.02.05 - Diferido
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.05 - Diferido
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'difer']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+
+
+
+01.01.01.01 - Caixa e Bancos de Curto Prazo
+Contém itens como:
+    1.01.01.01 - Caixa e Bancos
+    1.01.01.01 - Caixa e bancos
+    1.01.01.01 - Caixas e Bancos
+    1.01.01.01 - Caixa e contas bancárias
+    1.01.01.01 - Caixas e contas Bancárias
+    1.01.01.01 - Caixas e contas bancarias
+    1.01.01.01 - Caixa e contas Bancarias
+    1.01.01.01 - Caixas e Contas bancarias
+    1.01.01.01 - Caixas e contas Bancarias
+    1.01.01.01 - Caixa e contas bancarias
+    1.01.01.01 - Caixa e Contas Bancárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.01 - Caixa e Bancos de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'caix']
+
+
+
+01.01.01.02 - Aplicações Líquidas de Curto Prazo
+Contém itens como:
+    1.01.01.02 - Aplicações Financeiras
+    1.01.01.02 - Aplicações financeiras
+    1.01.01.02 - Aplicações Finaceiras
+    1.01.01.02 - Aplicação com Liquidez Imediata
+    1.01.01.02 - Aplicações com Liquidez Imediata
+    1.01.01.02 - Aplicações de Liquidez Imediata
+    1.01.01.02 - Aplicação Com Liquidez Imediata
+    1.01.01.02 - Aplicação com liquidez imediata
+    1.01.01.02 - Aplicaçõe financeiras
+    1.01.01.02 - Aplicações Financeiras com Liquidez Imediata
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.02 - Aplicações Líquidas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.02 - Aplicações Financeiras
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+
+
+
+01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+Contém itens como:
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.01.02.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'just']
+
+
+
+01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+Contém itens como:
+    1.01.02.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.01.02.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'cust']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.03 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+
+
+
+01.01.03.01 - Contas de Clientes de Curto Prazo
+Contém itens como:
+    1.01.03.01 - Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.01 - Clientes
+Contém itens como:
+    1.01.03.01.01 - Contas a receber de clientes
+    1.01.03.01.02 - Outros clientes
+    1.01.03.01.02 - Outros Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.01 - Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.02 - Créditos de Liquidação Duvidosa
+Contém itens como:
+    1.01.03.01.02 - Provisão para Créditos de Liquidação Duvidosa
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação duvidosa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.02 - Créditos de Liquidação Duvidosa
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'duvid']
+
+
+
+01.01.03.01.03 - Outros
+Contém itens como:
+    1.01.03.01.01 - Contas a Receber
+    1.01.03.01.02 - Títulos a receber - debênture privada
+    1.01.03.01.01 - Contas a receber
+    1.01.03.01.02 - Contas a receber a faturar
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação luvidosa
+    1.01.03.01.01 - Ministério das Comunicações
+    1.01.03.01.01 - Ministerio das Comunicações
+    1.01.03.01.01 - Ministerio das comunicações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.03 - Outros
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_none', ['client', 'duvid']]
+
+
+
+01.01.03.02 - Outras Contas de Curto Prazo
+Contém itens como:
+    1.01.03.02 - Outras Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.02 - Outras Contas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'not_contains', 'client']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.04 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+Contém itens como:
+    1.01.04.01 - Estoques material de consumo
+    1.01.04.01 - Material de consumo de almoxarifado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'mater']
+
+
+
+01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+Contém itens como:
+    1.01.04.02 - Mercadorias para revenda
+    1.01.04.02 - Mercadoria para revenda
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'revend']
+
+
+
+01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+Contém itens como:
+    1.01.04.03 - Outros
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_none', ['mater', 'revend']]
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.05 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.07 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+
+
+
+01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+Contém itens como:
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.02.01.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.02.01.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+    1.02.01.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.02.01.03 - Contas a Receber de Longo Prazo
+Contém itens como:
+    1.02.01.03 - Contas a Receber
+    1.02.01.04 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.03 - Contas a Receber de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'cont']
+
+
+
+01.02.01.04 - Estoques de Longo Prazo
+Contém itens como:
+    1.02.01.04 - Estoques
+    1.02.01.05 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.04 - Estoques de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.02.01.05 - Ativos Biológicos de Longo Prazo
+Contém itens como:
+    1.02.01.05 - Ativos Biológicos
+    1.02.01.06 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.05 - Ativos Biológicos de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.02.01.06 - Tributos a Recuperar de Longo Prazo
+Contém itens como:
+    1.02.01.06 - Tributos Diferidos
+    1.02.01.07 - Tributos Diferidos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.06 - Tributos a Recuperar de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.02.01.07 - Despesas Antecipadas de Longo Prazo
+Contém itens como:
+    1.02.01.07 - Despesas Antecipadas
+    1.02.01.08 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.07 - Despesas Antecipadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+Contém itens como:
+    1.02.01.08 - Créditos com Partes Relacionadas
+    1.02.01.09 - Créditos com Partes Relacionadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'relacionad']
+
+
+
+01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+Contém itens como:
+    1.02.01.09 - Outros Ativos Não Circulantes
+    1.02.01.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+    1.02.01.10 - Outros Ativos Não Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'outros']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.02 - Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+
+
+
+01.02.02.01 - Participações Societárias
+Contém itens como:
+    1.02.02.01 - Participações Societárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+
+
+
+01.02.02.01.01 - Participações em Coligadas
+Contém itens como:
+    1.02.02.01.01 - Participações em Coligadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.01 - Participações em Coligadas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'colig']
+
+
+
+01.02.02.01.02 - Participações em Controladas
+Contém itens como:
+    1.02.02.01.02 - Participações em Controladas
+    1.02.02.01.03 - Participações em Controladas em Conjunto
+    1.02.02.01.04 - Participações em Controladas em Conjunto
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.02 - Participações em Controladas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'control']
+
+
+
+01.02.02.01.03 - Outras
+Contém itens como:
+    1.02.02.01.04 - Outras Participações Societárias
+    1.02.02.01.05 - Outros Investimentos
+    1.02.02.01.04 - Outros Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.03 - Outras
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_none', ['colig', 'control']]
+
+
+
+01.02.02.02 - Propriedades para Investimento
+Contém itens como:
+    1.02.02.02 - Propriedades para Investimento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.02 - Propriedades para Investimento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'propried']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.03 - Imobilizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+
+
+
+01.02.03.01 - Imobilizado em Operação
+Contém itens como:
+    1.02.03.01 - Imobilizado em Operação
+    1.02.03.02 - Imobilizado Arrendado
+    1.02.03.03 - Imobilizado em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.01 - Imobilizado em Operação
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'imobiliz']
+
+
+
+01.02.03.02 - Direito de Uso em Arrendamento
+Contém itens como:
+    1.02.03.02 - Direito de Uso em Arrendamento
+    1.02.03.02 - Direito de Uso em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.02 - Direito de Uso em Arrendamento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'direito']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.04 - Intangível
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01 - Intangíveis
+Contém itens como:
+    1.02.04.01 - Intangíveis
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01.01 - Carteira de Clientes
+Contém itens como:
+    1.02.04.01.05 - Carteira de clientes
+    1.02.04.01.03 - Carteira de Clientes
+    1.02.04.01.02 - Carteira de clientes
+    1.02.04.01.02 - Carteira de Clientes
+    1.02.04.01.05 - Carteira de clientes e alocações
+    1.02.04.01.03 - Carteira de clientes e alocações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.01 - Carteira de Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.02.04.01.02 - Softwares
+Contém itens como:
+    1.02.04.01.02 - Sistemas Aplicativos
+    1.02.04.01.03 - Sistemas de Informação
+    1.02.04.01.02 - Sistemas e aplicativos
+    1.02.04.01.03 - Licenças de software e sistemas
+    1.02.04.01.02 - Software
+    1.02.04.01.02 - Sistemas de Processamento de Dados
+    1.02.04.01.03 - Software
+    1.02.04.01.02 - Sistemas de Aplicativos
+    1.02.04.01.04 - Sistemas em Andamento
+    1.02.04.01.04 - Sistemas em Andamentos
+    1.02.04.01.03 - Sistemas em Andamento
+    1.02.04.01.05 - Sistemas Aplicativos
+    1.02.04.01.02 - Licença de uso de Softwares
+    1.02.04.01.02 - Licença de uso de software
+    1.02.04.01.02 - Direito de uso de softwares
+    1.02.04.01.02 - Softwares
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.02 - Softwares
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['softwar', 'aplicativ', 'sistem']]
+
+
+
+01.02.04.01.03 - Marcas e Patentes
+Contém itens como:
+    1.02.04.01.05 - Marcas e Patentes
+    1.02.04.01.05 - Marcas e patentes
+    1.02.04.01.03 - Marcas e Patentes
+    1.02.04.01.04 - Marcas e Patentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.03 - Marcas e Patentes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['marc', 'patent']]
+
+
+
+01.02.04.02 - Goodwill
+Contém itens como:
+    1.02.04.02 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+
+
+
+01.02.04.02.01 - Goodwill
+Contém itens como:
+    1.02.04.02.01 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.01 - Goodwill
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_any', ['ágio', 'agio', 'goodwill']]
+
+
+
+01.02.04.02.02 - Mais Valia
+Contém itens como:
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.02 - Mais Valia
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_all', 'mais valia']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+
+
+
+01.01.01.01 - Caixa e Bancos de Curto Prazo
+Contém itens como:
+    1.01.01.01 - Caixa e Bancos
+    1.01.01.01 - Caixa e bancos
+    1.01.01.01 - Caixas e Bancos
+    1.01.01.01 - Caixa e contas bancárias
+    1.01.01.01 - Caixas e contas Bancárias
+    1.01.01.01 - Caixas e contas bancarias
+    1.01.01.01 - Caixa e contas Bancarias
+    1.01.01.01 - Caixas e Contas bancarias
+    1.01.01.01 - Caixas e contas Bancarias
+    1.01.01.01 - Caixa e contas bancarias
+    1.01.01.01 - Caixa e Contas Bancárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.01 - Caixa e Bancos de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'caix']
+
+
+
+01.01.01.02 - Aplicações Líquidas de Curto Prazo
+Contém itens como:
+    1.01.01.02 - Aplicações Financeiras
+    1.01.01.02 - Aplicações financeiras
+    1.01.01.02 - Aplicações Finaceiras
+    1.01.01.02 - Aplicação com Liquidez Imediata
+    1.01.01.02 - Aplicações com Liquidez Imediata
+    1.01.01.02 - Aplicações de Liquidez Imediata
+    1.01.01.02 - Aplicação Com Liquidez Imediata
+    1.01.01.02 - Aplicação com liquidez imediata
+    1.01.01.02 - Aplicaçõe financeiras
+    1.01.01.02 - Aplicações Financeiras com Liquidez Imediata
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.02 - Aplicações Líquidas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.02 - Aplicações Financeiras
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+
+
+
+01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+Contém itens como:
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.01.02.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'just']
+
+
+
+01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+Contém itens como:
+    1.01.02.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.01.02.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'cust']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.03 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+
+
+
+01.01.03.01 - Contas de Clientes de Curto Prazo
+Contém itens como:
+    1.01.03.01 - Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.01 - Clientes
+Contém itens como:
+    1.01.03.01.01 - Contas a receber de clientes
+    1.01.03.01.02 - Outros clientes
+    1.01.03.01.02 - Outros Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.01 - Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.02 - Créditos de Liquidação Duvidosa
+Contém itens como:
+    1.01.03.01.02 - Provisão para Créditos de Liquidação Duvidosa
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação duvidosa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.02 - Créditos de Liquidação Duvidosa
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'duvid']
+
+
+
+01.01.03.01.03 - Outros
+Contém itens como:
+    1.01.03.01.01 - Contas a Receber
+    1.01.03.01.02 - Títulos a receber - debênture privada
+    1.01.03.01.01 - Contas a receber
+    1.01.03.01.02 - Contas a receber a faturar
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação luvidosa
+    1.01.03.01.01 - Ministério das Comunicações
+    1.01.03.01.01 - Ministerio das Comunicações
+    1.01.03.01.01 - Ministerio das comunicações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.03 - Outros
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_none', ['client', 'duvid']]
+
+
+
+01.01.03.02 - Outras Contas de Curto Prazo
+Contém itens como:
+    1.01.03.02 - Outras Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.02 - Outras Contas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'not_contains', 'client']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.04 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+Contém itens como:
+    1.01.04.01 - Estoques material de consumo
+    1.01.04.01 - Material de consumo de almoxarifado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'mater']
+
+
+
+01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+Contém itens como:
+    1.01.04.02 - Mercadorias para revenda
+    1.01.04.02 - Mercadoria para revenda
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'revend']
+
+
+
+01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+Contém itens como:
+    1.01.04.03 - Outros
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_none', ['mater', 'revend']]
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.05 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.07 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+
+
+
+01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+Contém itens como:
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.02.01.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.02.01.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+    1.02.01.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.02.01.03 - Contas a Receber de Longo Prazo
+Contém itens como:
+    1.02.01.03 - Contas a Receber
+    1.02.01.04 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.03 - Contas a Receber de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'cont']
+
+
+
+01.02.01.04 - Estoques de Longo Prazo
+Contém itens como:
+    1.02.01.04 - Estoques
+    1.02.01.05 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.04 - Estoques de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.02.01.05 - Ativos Biológicos de Longo Prazo
+Contém itens como:
+    1.02.01.05 - Ativos Biológicos
+    1.02.01.06 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.05 - Ativos Biológicos de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.02.01.06 - Tributos a Recuperar de Longo Prazo
+Contém itens como:
+    1.02.01.06 - Tributos Diferidos
+    1.02.01.07 - Tributos Diferidos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.06 - Tributos a Recuperar de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.02.01.07 - Despesas Antecipadas de Longo Prazo
+Contém itens como:
+    1.02.01.07 - Despesas Antecipadas
+    1.02.01.08 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.07 - Despesas Antecipadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+Contém itens como:
+    1.02.01.08 - Créditos com Partes Relacionadas
+    1.02.01.09 - Créditos com Partes Relacionadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'relacionad']
+
+
+
+01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+Contém itens como:
+    1.02.01.09 - Outros Ativos Não Circulantes
+    1.02.01.10 - Outros Ativos Não Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'outros']
+    ['description', 'not_contains', 'aplic']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.02 - Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+
+
+
+01.02.02.01 - Participações Societárias
+Contém itens como:
+    1.02.02.01 - Participações Societárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+
+
+
+01.02.02.01.01 - Participações em Coligadas
+Contém itens como:
+    1.02.02.01.01 - Participações em Coligadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.01 - Participações em Coligadas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'colig']
+
+
+
+01.02.02.01.02 - Participações em Controladas
+Contém itens como:
+    1.02.02.01.02 - Participações em Controladas
+    1.02.02.01.03 - Participações em Controladas em Conjunto
+    1.02.02.01.04 - Participações em Controladas em Conjunto
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.02 - Participações em Controladas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'control']
+
+
+
+01.02.02.01.03 - Outras
+Contém itens como:
+    1.02.02.01.04 - Outras Participações Societárias
+    1.02.02.01.05 - Outros Investimentos
+    1.02.02.01.04 - Outros Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.03 - Outras
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_none', ['colig', 'control']]
+
+
+
+01.02.02.02 - Propriedades para Investimento
+Contém itens como:
+    1.02.02.02 - Propriedades para Investimento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.02 - Propriedades para Investimento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'propried']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.03 - Imobilizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+
+
+
+01.02.03.01 - Imobilizado em Operação
+Contém itens como:
+    1.02.03.01 - Imobilizado em Operação
+    1.02.03.02 - Imobilizado Arrendado
+    1.02.03.03 - Imobilizado em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.01 - Imobilizado em Operação
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'imobiliz']
+
+
+
+01.02.03.02 - Direito de Uso em Arrendamento
+Contém itens como:
+    1.02.03.02 - Direito de Uso em Arrendamento
+    1.02.03.02 - Direito de Uso em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.02 - Direito de Uso em Arrendamento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'direito']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.04 - Intangível
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01 - Intangíveis
+Contém itens como:
+    1.02.04.01 - Intangíveis
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01.01 - Carteira de Clientes
+Contém itens como:
+    1.02.04.01.05 - Carteira de clientes
+    1.02.04.01.03 - Carteira de Clientes
+    1.02.04.01.02 - Carteira de clientes
+    1.02.04.01.02 - Carteira de Clientes
+    1.02.04.01.05 - Carteira de clientes e alocações
+    1.02.04.01.03 - Carteira de clientes e alocações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.01 - Carteira de Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.02.04.01.02 - Softwares
+Contém itens como:
+    1.02.04.01.02 - Sistemas Aplicativos
+    1.02.04.01.03 - Sistemas de Informação
+    1.02.04.01.02 - Sistemas e aplicativos
+    1.02.04.01.03 - Licenças de software e sistemas
+    1.02.04.01.02 - Software
+    1.02.04.01.02 - Sistemas de Processamento de Dados
+    1.02.04.01.03 - Software
+    1.02.04.01.02 - Sistemas de Aplicativos
+    1.02.04.01.04 - Sistemas em Andamento
+    1.02.04.01.04 - Sistemas em Andamentos
+    1.02.04.01.03 - Sistemas em Andamento
+    1.02.04.01.05 - Sistemas Aplicativos
+    1.02.04.01.02 - Licença de uso de Softwares
+    1.02.04.01.02 - Licença de uso de software
+    1.02.04.01.02 - Direito de uso de softwares
+    1.02.04.01.02 - Softwares
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.02 - Softwares
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['softwar', 'aplicativ', 'sistem']]
+
+
+
+01.02.04.01.03 - Marcas e Patentes
+Contém itens como:
+    1.02.04.01.05 - Marcas e Patentes
+    1.02.04.01.05 - Marcas e patentes
+    1.02.04.01.03 - Marcas e Patentes
+    1.02.04.01.04 - Marcas e Patentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.03 - Marcas e Patentes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['marc', 'patent']]
+
+
+
+01.02.04.02 - Goodwill
+Contém itens como:
+    1.02.04.02 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+
+
+
+01.02.04.02.01 - Goodwill
+Contém itens como:
+    1.02.04.02.01 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.01 - Goodwill
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_any', ['ágio', 'agio', 'goodwill']]
+
+
+
+01.02.04.02.02 - Mais Valia
+Contém itens como:
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.02 - Mais Valia
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_all', 'mais valia']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+
+
+
+01.01.01.01 - Caixa e Bancos de Curto Prazo
+Contém itens como:
+    1.01.01.01 - Caixa e Bancos
+    1.01.01.01 - Caixa e bancos
+    1.01.01.01 - Caixas e Bancos
+    1.01.01.01 - Caixa e contas bancárias
+    1.01.01.01 - Caixas e contas Bancárias
+    1.01.01.01 - Caixas e contas bancarias
+    1.01.01.01 - Caixa e contas Bancarias
+    1.01.01.01 - Caixas e Contas bancarias
+    1.01.01.01 - Caixas e contas Bancarias
+    1.01.01.01 - Caixa e contas bancarias
+    1.01.01.01 - Caixa e Contas Bancárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.01 - Caixa e Bancos de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'caix']
+
+
+
+01 - Ativo Total
+Contém itens como:
+    1 - Ativo Total
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+
+
+
+01.01 - Ativo Circulante de Curto Prazo
+Contém itens como:
+    1.01 - Ativo Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+
+
+
+01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+Contém itens como:
+    1.01.01 - Caixa e Equivalentes de Caixa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+
+
+
+01.01.01.01 - Caixa e Bancos de Curto Prazo
+Contém itens como:
+    1.01.01.01 - Caixa e Bancos
+    1.01.01.01 - Caixa e bancos
+    1.01.01.01 - Caixas e Bancos
+    1.01.01.01 - Caixa e contas bancárias
+    1.01.01.01 - Caixas e contas Bancárias
+    1.01.01.01 - Caixas e contas bancarias
+    1.01.01.01 - Caixa e contas Bancarias
+    1.01.01.01 - Caixas e Contas bancarias
+    1.01.01.01 - Caixas e contas Bancarias
+    1.01.01.01 - Caixa e contas bancarias
+    1.01.01.01 - Caixa e Contas Bancárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.01 - Caixa e Bancos de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'caix']
+
+
+
+01.01.01.02 - Aplicações Líquidas de Curto Prazo
+Contém itens como:
+    1.01.01.02 - Aplicações Financeiras
+    1.01.01.02 - Aplicações financeiras
+    1.01.01.02 - Aplicações Finaceiras
+    1.01.01.02 - Aplicação com Liquidez Imediata
+    1.01.01.02 - Aplicações com Liquidez Imediata
+    1.01.01.02 - Aplicações de Liquidez Imediata
+    1.01.01.02 - Aplicação Com Liquidez Imediata
+    1.01.01.02 - Aplicação com liquidez imediata
+    1.01.01.02 - Aplicaçõe financeiras
+    1.01.01.02 - Aplicações Financeiras com Liquidez Imediata
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'caixa']
+  01.01.01.02 - Aplicações Líquidas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.01.02 - Aplicações Financeiras de Curto Prazo
+Contém itens como:
+    1.01.02 - Aplicações Financeiras
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+
+
+
+01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+Contém itens como:
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.01.02.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.01.02.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.01 - Aplicações a Valor Justo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'just']
+
+
+
+01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+Contém itens como:
+    1.01.02.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.01.02.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.02 - Aplicações Financeiras de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'aplica']
+  01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.02']
+    ['description', 'contains_all', 'cust']
+
+
+
+01.01.03 - Contas a Receber de Curto Prazo
+Contém itens como:
+    1.01.03 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+
+
+
+01.01.03.01 - Contas de Clientes de Curto Prazo
+Contém itens como:
+    1.01.03.01 - Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.01 - Clientes
+Contém itens como:
+    1.01.03.01.01 - Contas a receber de clientes
+    1.01.03.01.02 - Outros clientes
+    1.01.03.01.02 - Outros Clientes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.01 - Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.01.03.01.02 - Créditos de Liquidação Duvidosa
+Contém itens como:
+    1.01.03.01.02 - Provisão para Créditos de Liquidação Duvidosa
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação duvidosa
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.02 - Créditos de Liquidação Duvidosa
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_all', 'duvid']
+
+
+
+01.01.03.01.03 - Outros
+Contém itens como:
+    1.01.03.01.01 - Contas a Receber
+    1.01.03.01.02 - Títulos a receber - debênture privada
+    1.01.03.01.01 - Contas a receber
+    1.01.03.01.02 - Contas a receber a faturar
+    1.01.03.01.03 - Perdas estimadas em créditos de liquidação luvidosa
+    1.01.03.01.01 - Ministério das Comunicações
+    1.01.03.01.01 - Ministerio das Comunicações
+    1.01.03.01.01 - Ministerio das comunicações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.01 - Contas de Clientes de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'contains_all', 'client']
+  01.01.03.01.03 - Outros
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.01.03.01']
+    ['description', 'contains_none', ['client', 'duvid']]
+
+
+
+01.01.03.02 - Outras Contas de Curto Prazo
+Contém itens como:
+    1.01.03.02 - Outras Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.03 - Contas a Receber de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'receb']
+  01.01.03.02 - Outras Contas de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.03']
+    ['description', 'not_contains', 'client']
+
+
+
+01.01.04 - Estoques de Curto Prazo
+Contém itens como:
+    1.01.04 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+Contém itens como:
+    1.01.04.01 - Estoques material de consumo
+    1.01.04.01 - Material de consumo de almoxarifado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.01 - Estoques de Material de Consumo de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'mater']
+
+
+
+01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+Contém itens como:
+    1.01.04.02 - Mercadorias para revenda
+    1.01.04.02 - Mercadoria para revenda
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.02 - Estoques de Material para Revenda de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_all', 'revend']
+
+
+
+01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+Contém itens como:
+    1.01.04.03 - Outros
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.04 - Estoques de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'estoq']
+  01.01.04.03 - Estoques de Outros Itens de Curto Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.01.04']
+    ['description', 'contains_none', ['mater', 'revend']]
+
+
+
+01.01.05 - Ativos Biológicos de Curto Prazo
+Contém itens como:
+    1.01.05 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.05 - Ativos Biológicos de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.01.06 - Tributos a Recuperar de Curto Prazo
+Contém itens como:
+    1.01.06 - Tributos a Recuperar
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.06 - Tributos a Recuperar de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.01.07 - Despesas Antecipadas de Curto Prazo
+Contém itens como:
+    1.01.07 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.07 - Despesas Antecipadas de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.01.09 - Outros Ativos Circulantes de Curto Prazo
+Contém itens como:
+    1.01.08 - Outros Ativos Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.01 - Ativo Circulante de Curto Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'circul']
+    ['description', 'not_contains', 'não']
+  01.01.09 - Outros Ativos Circulantes de Curto Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.01']
+    ['description', 'contains_all', 'outros']
+
+
+
+01.02 - Ativo Não Circulante de Longo Prazo
+Contém itens como:
+    1.02 - Ativo Não Circulante
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+
+
+
+01.02.01 - Ativo Realizável a Longo Prazo
+Contém itens como:
+    1.02.01 - Ativo Realizável a Longo Prazo
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+
+
+
+01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+Contém itens como:
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo
+    1.02.01.02 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+    1.02.01.01 - Aplicações Financeiras Avaliadas a Valor Justo através do Resultado
+    1.02.01.02 - Aplicações Financeiras Avaliadas a Valor Justo através de Outros Resultados Abrangentes
+    1.02.01.03 - Aplicações Financeiras Avaliadas ao Custo Amortizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.02 - Aplicações a Valor Justo de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'aplic']
+
+
+
+01.02.01.03 - Contas a Receber de Longo Prazo
+Contém itens como:
+    1.02.01.03 - Contas a Receber
+    1.02.01.04 - Contas a Receber
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.03 - Contas a Receber de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'cont']
+
+
+
+01.02.01.04 - Estoques de Longo Prazo
+Contém itens como:
+    1.02.01.04 - Estoques
+    1.02.01.05 - Estoques
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.04 - Estoques de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'estoq']
+
+
+
+01.02.01.05 - Ativos Biológicos de Longo Prazo
+Contém itens como:
+    1.02.01.05 - Ativos Biológicos
+    1.02.01.06 - Ativos Biológicos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.05 - Ativos Biológicos de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'biol']
+
+
+
+01.02.01.06 - Tributos a Recuperar de Longo Prazo
+Contém itens como:
+    1.02.01.06 - Tributos Diferidos
+    1.02.01.07 - Tributos Diferidos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.06 - Tributos a Recuperar de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'tribut']
+
+
+
+01.02.01.07 - Despesas Antecipadas de Longo Prazo
+Contém itens como:
+    1.02.01.07 - Despesas Antecipadas
+    1.02.01.08 - Despesas Antecipadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.07 - Despesas Antecipadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'despes']
+
+
+
+01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+Contém itens como:
+    1.02.01.08 - Créditos com Partes Relacionadas
+    1.02.01.09 - Créditos com Partes Relacionadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'relacionad']
+
+
+
+01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+Contém itens como:
+    1.02.01.09 - Outros Ativos Não Circulantes
+    1.02.01.10 - Outros Ativos Não Circulantes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.01 - Ativo Realizável a Longo Prazo
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'longo prazo']
+  01.02.01.09 - Outros Ativos Circulantes de Longo Prazo
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.01']
+    ['description', 'contains_all', 'outros']
+    ['description', 'not_contains', 'aplic']
+
+
+
+01.02.02 - Investimentos
+Contém itens como:
+    1.02.02 - Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+
+
+
+01.02.02.01 - Participações Societárias
+Contém itens como:
+    1.02.02.01 - Participações Societárias
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+
+
+
+01.02.02.01.01 - Participações em Coligadas
+Contém itens como:
+    1.02.02.01.01 - Participações em Coligadas
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.01 - Participações em Coligadas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'colig']
+
+
+
+01.02.02.01.02 - Participações em Controladas
+Contém itens como:
+    1.02.02.01.02 - Participações em Controladas
+    1.02.02.01.03 - Participações em Controladas em Conjunto
+    1.02.02.01.04 - Participações em Controladas em Conjunto
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.02 - Participações em Controladas
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_all', 'control']
+
+
+
+01.02.02.01.03 - Outras
+Contém itens como:
+    1.02.02.01.04 - Outras Participações Societárias
+    1.02.02.01.05 - Outros Investimentos
+    1.02.02.01.04 - Outros Investimentos
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.01 - Participações Societárias
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'particip']
+  01.02.02.01.03 - Outras
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.02.01']
+    ['description', 'contains_none', ['colig', 'control']]
+
+
+
+01.02.02.02 - Propriedades para Investimento
+Contém itens como:
+    1.02.02.02 - Propriedades para Investimento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.02 - Investimentos
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'invest']
+  01.02.02.02 - Propriedades para Investimento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.02']
+    ['description', 'contains_all', 'propried']
+
+
+
+01.02.03 - Imobilizado
+Contém itens como:
+    1.02.03 - Imobilizado
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+
+
+
+01.02.03.01 - Imobilizado em Operação
+Contém itens como:
+    1.02.03.01 - Imobilizado em Operação
+    1.02.03.02 - Imobilizado Arrendado
+    1.02.03.03 - Imobilizado em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.01 - Imobilizado em Operação
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'imobiliz']
+
+
+
+01.02.03.02 - Direito de Uso em Arrendamento
+Contém itens como:
+    1.02.03.02 - Direito de Uso em Arrendamento
+    1.02.03.02 - Direito de Uso em Andamento
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.03 - Imobilizado
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'imob']
+  01.02.03.02 - Direito de Uso em Arrendamento
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.03']
+    ['description', 'contains_all', 'direito']
+
+
+
+01.02.04 - Intangível
+Contém itens como:
+    1.02.04 - Intangível
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01 - Intangíveis
+Contém itens como:
+    1.02.04.01 - Intangíveis
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+
+
+
+01.02.04.01.01 - Carteira de Clientes
+Contém itens como:
+    1.02.04.01.05 - Carteira de clientes
+    1.02.04.01.03 - Carteira de Clientes
+    1.02.04.01.02 - Carteira de clientes
+    1.02.04.01.02 - Carteira de Clientes
+    1.02.04.01.05 - Carteira de clientes e alocações
+    1.02.04.01.03 - Carteira de clientes e alocações
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.01 - Carteira de Clientes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_all', 'client']
+
+
+
+01.02.04.01.02 - Softwares
+Contém itens como:
+    1.02.04.01.02 - Sistemas Aplicativos
+    1.02.04.01.03 - Sistemas de Informação
+    1.02.04.01.02 - Sistemas e aplicativos
+    1.02.04.01.03 - Licenças de software e sistemas
+    1.02.04.01.02 - Software
+    1.02.04.01.02 - Sistemas de Processamento de Dados
+    1.02.04.01.03 - Software
+    1.02.04.01.02 - Sistemas de Aplicativos
+    1.02.04.01.04 - Sistemas em Andamento
+    1.02.04.01.04 - Sistemas em Andamentos
+    1.02.04.01.03 - Sistemas em Andamento
+    1.02.04.01.05 - Sistemas Aplicativos
+    1.02.04.01.02 - Licença de uso de Softwares
+    1.02.04.01.02 - Licença de uso de software
+    1.02.04.01.02 - Direito de uso de softwares
+    1.02.04.01.02 - Softwares
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.02 - Softwares
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['softwar', 'aplicativ', 'sistem']]
+
+
+
+01.02.04.01.03 - Marcas e Patentes
+Contém itens como:
+    1.02.04.01.05 - Marcas e Patentes
+    1.02.04.01.05 - Marcas e patentes
+    1.02.04.01.03 - Marcas e Patentes
+    1.02.04.01.04 - Marcas e Patentes
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01 - Intangíveis
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'intang']
+  01.02.04.01.03 - Marcas e Patentes
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.01']
+    ['description', 'contains_any', ['marc', 'patent']]
+
+
+
+01.02.04.02 - Goodwill
+Contém itens como:
+    1.02.04.02 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+
+
+
+01.02.04.02.01 - Goodwill
+Contém itens como:
+    1.02.04.02.01 - Goodwill
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.01 - Goodwill
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_any', ['ágio', 'agio', 'goodwill']]
+
+
+
+01.02.04.02.02 - Mais Valia
+Contém itens como:
+Criteria Path:
+  01 - Ativo Total
+    ['account', 'level', 1]
+    ['account', 'startswith', '1']
+  01.02 - Ativo Não Circulante de Longo Prazo
+    ['account', 'level', 2]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', ['não', 'circul']]
+  01.02.04 - Intangível
+    ['account', 'level', 3]
+    ['account', 'startswith', '1.02']
+    ['description', 'contains_all', 'intang']
+  01.02.04.02 - Goodwill
+    ['account', 'level', 4]
+    ['account', 'startswith', '1.02.04']
+    ['description', 'contains_all', 'goodwill']
+  01.02.04.02.02 - Mais Valia
+    ['account', 'level', 5]
+    ['account', 'startswith', '1.02.04.02']
+    ['description', 'contains_all', 'mais valia']
+
+
+

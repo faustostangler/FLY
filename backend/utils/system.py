@@ -215,6 +215,41 @@ def wait_forever(driver_wait, xpath):
             # log_error(f"Error WAITING during batch processing {xpath}: {e}")
             time.sleep(settings.wait_time * 5)
 
+def subtract_lists(list1, list2):
+    """
+    Subtract elements of list2 from list1.
+    Example: ['a', 'b'] - ['b', 'c'] = ['a']
+
+    Parameters
+    ----------
+    list1 : list
+        The list from which elements will be removed.
+    list2 : list
+        The list of elements to remove from list1.
+
+    Returns
+    -------
+    list
+        A list containing elements from list1 that are not in list2.
+    """
+    return [item for item in list1 if item not in list2]
+
+def escape_keywords(keywords):
+    """
+    Escape special characters in a list of keywords for regex operations.
+
+    Parameters
+    ----------
+    keywords : list
+        A list of keywords that may contain special characters.
+
+    Returns
+    -------
+    list
+        A list of escaped keywords ready for regex operations.
+    """
+    return [re.escape(keyword) for keyword in keywords]
+
 def print_info(current_index, extra_info, start_time, total_size):
     """
     Prints the provided information along with the progress, elapsed time, and remaining time.
