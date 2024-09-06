@@ -76,7 +76,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-tree.txt
 
 # Database files
 *.db
@@ -98,6 +97,7 @@ bin/
 *.ods
 *.odp
 *.rtf
+*.txt
 
 # Compressed and archived files
 *.zip
