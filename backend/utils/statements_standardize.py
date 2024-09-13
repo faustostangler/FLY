@@ -3,10 +3,15 @@ import pandas as pd
 import numpy as np
 import sqlite3
 import time
+import re
+import os
+
+import plotly.express as px
 
 from utils import system
 from utils import settings
 from utils import intel
+
 
 class StandardizedReport:
     def __init__(self):
@@ -115,90 +120,133 @@ class StandardizedReport:
             system.log_error(f"Error during filtering newer versions: {e}")
             return pd.DataFrame(columns=settings.statements_columns), pd.DataFrame(columns=settings.statements_columns)
 
-    def apply_criteria_to_dataframe(self, df, criteria):
+    def apply_criteria(self, df, criteria, parent_mask=None, output_file='output.txt', parent_criteria_info=None):
         """
-        Apply a list of criteria to a DataFrame, modifying it based on specified filters and target modifications.
+        Applies a criterion and its sub-criteria to the DataFrame.
 
         Parameters:
-            df (pd.DataFrame): The DataFrame to modify.
-            criteria (list): A list of dictionaries containing target modifications and filters.
+            df (pd.DataFrame): The DataFrame to be modified.
+            criteria (dict): A dictionary containing 'target', 'filter', and 'sub_criteria'.
+            parent_mask (pd.Series): Optional parent level mask to apply.
+            output_file (str): Path to the output file.
+            parent_criteria_info (list): List to keep track of parent criteria for output purposes.
+
+        Returns:
+            pd.DataFrame: The modified DataFrame.
+        """
+        target = criteria['target']
+        filters = criteria['filter']
+        sub_criteria = criteria.get('sub_criteria', [])
+        
+        # Initialize the parent criteria info list if not provided
+        if parent_criteria_info is None:
+            parent_criteria_info = []
+
+        # Initialize the mask for the entire DataFrame or use the parent mask
+        base_mask = pd.Series([True] * len(df)) if parent_mask is None else parent_mask.copy()
+        mask = base_mask.copy()
+
+        # Append the current criteria to the parent criteria info
+        parent_criteria_info.append({'target': target, 'filters': filters})
+
+        crits = []
+
+        # Define a dictionary to map filter conditions to functions
+        condition_map = {
+            'equals': lambda col, val: col == val.lower(),
+            'not_equals': lambda col, val: col != val.lower(),
+            # 'startswith': lambda col, val: col.str.startswith(tuple(map(str.lower, val))),
+            'startswith': lambda col, val: col.astype(str).str.startswith(val),
+            'not_startswith': lambda col, val: ~col.str.startswith(tuple(map(str.lower, val))),
+            'endswith': lambda col, val: col.str.endswith(tuple(map(str.lower, val))),
+            'not_endswith': lambda col, val: ~col.str.endswith(tuple(map(str.lower, val))),
+            'contains_all': lambda col, val: col.apply(lambda x: all(term in x.lower() for term in val) if pd.notna(x) else False),
+            'contains_any': lambda col, val: col.str.contains('|'.join(map(re.escape, val)), case=False, na=False),
+            'contains_none': lambda col, val: ~col.str.contains('|'.join(map(re.escape, val)), case=False, na=False),
+            'not_contains': lambda col, val: col.apply(lambda x: not all(term in x.lower() for term in val) if pd.notna(x) else True),
+            'not_contains_any': lambda col, val: col.apply(lambda x: all(term not in x.lower() for term in val) if pd.notna(x) else True),
+            'level': lambda col, val: (col.str.count(r'\.') + 1) == int(val)  # Merged level filter for exact levels
+        }
+
+        # Apply each filter to the mask
+        for filter_column, filter_condition, filter_value in filters:
+            crits.append([filter_column, filter_condition, filter_value])
+
+            # Convert filter values to lists for conditions that need lists
+            if filter_condition in ['contains_any', 'contains_none', 'contains_all', 'not_contains_all']:
+                if not isinstance(filter_value, list):
+                    filter_value = [filter_value]
+
+            # df_column_lower = df[filter_column].str.lower() if df[filter_column].dtype == 'O' else df[filter_column]
+            df_column_lower = df[filter_column].str.lower().str.strip() if df[filter_column].dtype == 'O' else df[filter_column]
+
+            # Apply the filter condition using the mapping
+            if filter_condition in condition_map:
+                condition_mask = condition_map[filter_condition](df_column_lower, filter_value)
+                mask &= condition_mask
+            else:
+                raise ValueError(f"Unknown filter condition: {filter_condition}")
+
+        # Ensure 'account_standard', 'description_standard', 'standard_criteria', and 'items_match' columns exist
+        if 'account_standard' not in df.columns:
+            df['account_standard'] = ''
+        if 'description_standard' not in df.columns:
+            df['description_standard'] = ''
+        if 'standard_criteria' not in df.columns:
+            df['standard_criteria'] = ''
+        if 'items_match' not in df.columns:
+            df['items_match'] = ''
+
+        # Apply the target modifications to the DataFrame for the current mask
+        account, description = target.split(' - ')
+        df.loc[mask, 'account_standard'] = account
+        df.loc[mask, 'description_standard'] = description
+        df.loc[mask, 'standard_criteria'] = ' | '.join([f"{c[0]} {c[1]} {c[2]}" for c in crits])  # Add criteria details
+        
+        # Capture "contém itens como" (items that match the mask)
+        items_example = df.loc[mask, ['account', 'description']].drop_duplicates().apply(lambda row: f"{row['account']} - {row['description']}", axis=1).tolist()
+        df.loc[mask, 'items_match'] = ', '.join(items_example)
+
+        print(f"{account} - {description}")
+        # print('Criteria Path:')
+        # for parent in parent_criteria_info:
+
+        #     print(f"  {parent['target']}")
+        #     for filt in parent['filters']:
+        #         print(f"    {filt}")
+            
+        # print('Contém itens como:')
+        # for item in items_example:
+        #     print(f"    {item}")
+
+        # print('\n\n')
+
+        # Recursively apply subcriteria using a new refined mask
+        for sub in sub_criteria:
+            # Create a new mask for sub-criteria by filtering the df with 'startswith' of the current filtered results
+            sub_accounts = df.loc[mask, 'account'].unique()
+            sub_mask = df['account'].apply(lambda x: any(x.startswith(acct) for acct in sub_accounts))
+            
+            self.apply_criteria(df, sub, parent_mask=sub_mask, output_file=output_file, parent_criteria_info=parent_criteria_info.copy())
+
+        return df
+
+    def apply_criteria_tree(self, df, criteria_tree, output_file='output.txt'):
+        """
+        Main function to apply a criteria tree to the DataFrame.
+
+        Parameters:
+            df (pd.DataFrame): The DataFrame to be modified.
+            criteria_tree (list): List of criteria in a tree format.
+            output_file (str): Path to the output file.
 
         Returns:
             pd.DataFrame: The modified DataFrame after applying all criteria.
         """
-        try:
-            start_time = time.time()
-            total = len(criteria)
-            for i, criterion in enumerate(criteria):
-                target = criterion.get('target')
-                account = target.get('account')
-                description = target.get('description')
-                filter_criteria = criterion.get('filter')
+        for criteria in criteria_tree:
+            df = self.apply_criteria(df, criteria, output_file=output_file)
+        return df
 
-                # Initialize mask for the entire DataFrame
-                mask = pd.Series([True] * len(df))
-
-                # Apply each filter for the current criterion
-                for filter_criterion in filter_criteria:
-                    filter_column = filter_criterion.get('column')
-                    filter_condition = filter_criterion.get('condition')
-                    filter_value = filter_criterion.get('value')
-
-                    # Convert filter values to lists for all conditions except 'equals' and 'not_equals'
-                    if filter_condition not in ['equals', 'not_equals', 'level_min', 'level_max']:
-                        if not isinstance(filter_value, list):
-                            filter_value = [filter_value]
-
-                    # Convert DataFrame column to lowercase for case-insensitive comparison
-                    df_column_lower = df[filter_column].str.lower() if df[filter_column].dtype == 'O' else df[filter_column]
-
-                    # Apply filter conditions
-                    if filter_condition == 'equals':  # Exact match (case insensitive)
-                        mask &= df_column_lower == filter_value.lower()
-                    elif filter_condition == 'not_equals':  # Not equal to (case insensitive)
-                        mask &= df_column_lower != filter_value.lower()
-                    elif filter_condition == 'startswith':  # Starts with (case insensitive)
-                        mask &= df_column_lower.str.startswith(tuple(map(str.lower, filter_value)))
-                    elif filter_condition == 'not_startswith':  # Does not start with (case insensitive)
-                        mask &= ~df_column_lower.str.startswith(tuple(map(str.lower, filter_value)))
-                    elif filter_condition == 'endswith':  # Ends with (case insensitive)
-                        mask &= df_column_lower.str.endswith(tuple(map(str.lower, filter_value)))
-                    elif filter_condition == 'not_endswith':  # Does not end with (case insensitive)
-                        mask &= ~df_column_lower.str.endswith(tuple(map(str.lower, filter_value)))
-                    elif filter_condition == 'contains':  # Contains (case insensitive)
-                        mask &= df_column_lower.str.contains('|'.join(map(re.escape, filter_value)), case=False, na=False)
-                    elif filter_condition == 'not_contains':  # Does not contain (case insensitive)
-                        mask &= ~df_column_lower.str.contains('|'.join(map(re.escape, filter_value)), case=False, na=False)
-                    elif filter_condition == 'contains_any':  # Contains any of these (case insensitive)
-                        mask &= df_column_lower.str.contains('|'.join(map(re.escape, filter_value)), case=False, na=False)
-                    elif filter_condition == 'contains_none':  # Contains none of these (case insensitive)
-                        mask &= ~df_column_lower.str.contains('|'.join(map(re.escape, filter_value)), case=False, na=False)
-                    elif filter_condition == 'contains_all':  # Contains all of these (case insensitive)
-                        for term in filter_value:
-                            mask &= df_column_lower.str.contains(term, case=False, na=False)
-                    elif filter_condition == 'not_contains_all':  # Does not contain all of these (case insensitive)
-                        for term in filter_value:
-                            mask &= ~df_column_lower.str.contains(term, case=False, na=False)
-                    elif filter_condition == 'level_min':  # Minimum hierarchical level
-                        levels = df[filter_column].str.count(r'\.') + 1
-                        mask &= levels >= int(filter_value)  # Ensure filter_value is an integer
-                    elif filter_condition == 'level_max':  # Maximum hierarchical level
-                        levels = df[filter_column].str.count(r'\.') + 1
-                        mask &= levels <= int(filter_value)  # Ensure filter_value is an integer
-                    else:
-                        raise ValueError(f"Unknown filter condition: {filter_condition}")
-
-                # Apply target modifications to rows matching the mask
-                df.loc[mask, list(target.keys())] = list(target.values())
-
-                extra_info = [f'{account} - {description}', sum(mask)]
-                system.print_info(i, extra_info, start_time, total)
-
-            return df
-
-        except Exception as e:
-            system.log_error(f"Error applying criteria to DataFrame: {e}")
-            return df
 
     def generate_standard_financial_statements(self, df):
         """
@@ -218,10 +266,10 @@ class StandardizedReport:
             sector = df.iloc[0]['sector']
 
             standardization_sections = {
-                'Composição do Capital': intel.section_0_criteria, 
-                'Balanço Patrimonial Ativo': intel.section_1_criteria,
-                'Balanço Patrimonial Passivo': intel.section_2_criteria,
-                'Demonstração do Resultado': intel.section_3_criteria,
+                # 'Composição do Capital': intel.section_0_criteria, 
+                # 'Balanço Patrimonial Ativo': intel.section_1_criteria,
+                # 'Balanço Patrimonial Passivo': intel.section_2_criteria,
+                # 'Demonstração do Resultado': intel.section_3_criteria,
                 'Demonstração de Fluxo de Caixa': intel.section_6_criteria,
                 'Demonstração de Valor Adiconado': intel.section_7_criteria,
             }
@@ -230,12 +278,12 @@ class StandardizedReport:
             total_sections = len(standardization_sections)
 
             # Loop through each section in the standardization pack
-            for i, (section_name, criteria) in enumerate(standardization_sections.items()):
+            for i, (section_name, criteria_tree) in enumerate(standardization_sections.items()):
                 extra_info = [sector, section_name]
                 system.print_info(i, extra_info, start_time, total_sections)
 
                 # Call the apply_criteria_to_dataframe method for each section
-                df = self.apply_criteria_to_dataframe(df, criteria)
+                df = self.apply_criteria_tree(df, criteria_tree)
 
         except Exception as e:
             system.log_error(f"Error during generate_standard_financial_statements: {e}")
