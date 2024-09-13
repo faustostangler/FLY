@@ -97,6 +97,9 @@ cumulative_quarter_accounts = ['6', '7']
 # Math settings
 statements_file_math = 'math'
 
+# Standard settings
+statements_standard = 'standard'
+
 # Descriptions and accounts
 descriptions = {
     'acoes_on': 'Ações ON Ordinárias',

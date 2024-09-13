@@ -80,8 +80,6 @@ class StandardizedReport:
                     extra_info = [f'Loaded {len(df)} items from {sector} in {files}, total {total_lines}']
                     system.print_info(i, extra_info, start_time, len(tables))  # Removed the total_files argument
 
-                    print('braek')
-                    break
                 except Exception as e:
                     system.log_error(f"Error processing table {table}: {e}")
 
@@ -120,7 +118,7 @@ class StandardizedReport:
             system.log_error(f"Error during filtering newer versions: {e}")
             return pd.DataFrame(columns=settings.statements_columns), pd.DataFrame(columns=settings.statements_columns)
 
-    def apply_criteria(self, df, criteria, parent_mask=None, output_file='output.txt', parent_criteria_info=None):
+    def apply_criteria(self, df, criteria, sector, section_name, parent_mask=None, output_file='output.txt', parent_criteria_info=None):
         """
         Applies a criterion and its sub-criteria to the DataFrame.
 
@@ -207,7 +205,7 @@ class StandardizedReport:
         items_example = df.loc[mask, ['account', 'description']].drop_duplicates().apply(lambda row: f"{row['account']} - {row['description']}", axis=1).tolist()
         df.loc[mask, 'items_match'] = ', '.join(items_example)
 
-        print(f"{account} - {description}")
+        print(sector, section_name, f"{account} - {description}")
         # print('Criteria Path:')
         # for parent in parent_criteria_info:
 
@@ -227,11 +225,11 @@ class StandardizedReport:
             sub_accounts = df.loc[mask, 'account'].unique()
             sub_mask = df['account'].apply(lambda x: any(x.startswith(acct) for acct in sub_accounts))
             
-            self.apply_criteria(df, sub, parent_mask=sub_mask, output_file=output_file, parent_criteria_info=parent_criteria_info.copy())
+            self.apply_criteria(df, sub, sector, section_name, parent_mask=sub_mask, output_file=output_file, parent_criteria_info=parent_criteria_info.copy())
 
         return df
 
-    def apply_criteria_tree(self, df, criteria_tree, output_file='output.txt'):
+    def apply_criteria_tree(self, df, criteria_tree, sector, section_name, output_file='output.txt'):
         """
         Main function to apply a criteria tree to the DataFrame.
 
@@ -244,7 +242,7 @@ class StandardizedReport:
             pd.DataFrame: The modified DataFrame after applying all criteria.
         """
         for criteria in criteria_tree:
-            df = self.apply_criteria(df, criteria, output_file=output_file)
+            df = self.apply_criteria(df, criteria, sector, section_name, output_file=output_file)
         return df
 
 
@@ -266,10 +264,10 @@ class StandardizedReport:
             sector = df.iloc[0]['sector']
 
             standardization_sections = {
-                # 'Composição do Capital': intel.section_0_criteria, 
-                # 'Balanço Patrimonial Ativo': intel.section_1_criteria,
-                # 'Balanço Patrimonial Passivo': intel.section_2_criteria,
-                # 'Demonstração do Resultado': intel.section_3_criteria,
+                'Composição do Capital': intel.section_0_criteria, 
+                'Balanço Patrimonial Ativo': intel.section_1_criteria,
+                'Balanço Patrimonial Passivo': intel.section_2_criteria,
+                'Demonstração do Resultado': intel.section_3_criteria,
                 'Demonstração de Fluxo de Caixa': intel.section_6_criteria,
                 'Demonstração de Valor Adiconado': intel.section_7_criteria,
             }
@@ -283,7 +281,7 @@ class StandardizedReport:
                 system.print_info(i, extra_info, start_time, total_sections)
 
                 # Call the apply_criteria_to_dataframe method for each section
-                df = self.apply_criteria_tree(df, criteria_tree)
+                df = self.apply_criteria_tree(df, criteria_tree, sector, section_name)
 
         except Exception as e:
             system.log_error(f"Error during generate_standard_financial_statements: {e}")
@@ -322,6 +320,125 @@ class StandardizedReport:
 
         return dict_df
 
+    def sanitize_db(self, dict_df):
+        """
+        Sanitize all DataFrames in the dictionary by:
+        - Dropping rows where `account_standard` is empty.
+        - Dropping unnecessary columns.
+        - Renaming `account_standard` to `account` and `description_standard` to `description`.
+        - Reordering columns based on `settings.statements_order` and adding `value` column.
+        - Sorting by sector, subsector, segment, company_name, quarter, account.
+
+        Args:
+            dict_df (dict): Dictionary of DataFrames to sanitize, where keys are sector names.
+
+        Returns:
+            dict: Sanitized dictionary of DataFrames.
+        """
+        sanitized_dict = {}
+
+        try:
+            for sector, df in dict_df.items():
+                # Step 1: Drop rows where 'account_standard' is empty or NaN
+                df = df.dropna(subset=['account_standard'])
+                df = df[df['account_standard'].str.strip() != '']
+
+                # Step 2: Drop the unnecessary columns
+                df = df.drop(columns=['account', 'description', 'standard_criteria', 'items_match'])
+
+                # Step 3: Rename 'account_standard' to 'account' and 'description_standard' to 'description'
+                df = df.rename(columns={'account_standard': 'account', 'description_standard': 'description'})
+
+                # Step 4: Reorder the DataFrame columns
+                df = df[settings.statements_columns]
+
+                # Step 5: Sort by the specified columns
+                df = df.sort_values(by=settings.statements_order)
+
+                # Add the sanitized DataFrame to the new dictionary
+                sanitized_dict[sector] = df
+
+            return sanitized_dict
+
+        except Exception as e:
+            system.log_error(f"Error during DataFrame sanitization: {e}")
+            return {}
+
+    def save_to_db(self, data_dict):
+        """
+        Save the transformed and sanitized data to the SQLite database, creating or replacing tables as necessary.
+        Updates existing data and inserts new data.
+
+        Args:
+            data_dict (dict): Dictionary containing DataFrames of transformed data for each sector.
+        """
+        try:
+            # Construct the database path
+            db_path = os.path.join(self.db_folder, f"{settings.db_name.split('.')[0]} {settings.statements_standard}.db")
+
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+
+                start_time = time.time()
+                total_lines = 0
+
+                for i, (sector, df) in enumerate(data_dict.items()):
+                    df['quarter'] = df['quarter'].dt.strftime('%Y-%m-%d')
+
+                    table_name = sector.upper().replace(' ', '_')  # Create a table name from the sector name
+
+                    # Step 1: Create table with all the required columns
+                    create_table_sql = f"""
+                    CREATE TABLE IF NOT EXISTS {table_name} (
+                        nsd INTEGER,
+                        sector TEXT,
+                        subsector TEXT,
+                        segment TEXT,
+                        company_name TEXT,
+                        quarter TEXT,
+                        version TEXT,
+                        type TEXT,
+                        frame TEXT,
+                        account TEXT,
+                        description TEXT,
+                        value REAL,
+                        PRIMARY KEY (company_name, quarter, version, type, frame, account, description)
+                    )
+                    """
+                    cursor.execute(create_table_sql)
+
+                    # Step 2: Insert or update data
+                    insert_sql = f"""
+                    INSERT INTO {table_name} 
+                    (nsd, sector, subsector, segment, company_name, quarter, version, type, frame, account, description, value) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(company_name, quarter, version, type, frame, account, description) DO UPDATE SET
+                    nsd=excluded.nsd,
+                    sector=excluded.sector,
+                    subsector=excluded.subsector,
+                    segment=excluded.segment,
+                    value=excluded.value
+                    """
+
+                    # Step 3: Ensure that only the necessary columns are selected for insertion
+                    df_to_insert = df[['nsd', 'sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'frame', 'account', 'description', 'value']]
+
+                    # Convert the DataFrame to a list of tuples for batch insertion
+                    data_to_insert = list(df_to_insert.itertuples(index=False, name=None))
+
+                    # Step 4: Execute batch insert
+                    cursor.executemany(insert_sql, data_to_insert)
+                    conn.commit()  # Commit the transaction
+
+                    total_lines += len(df)
+                    extra_info = [f'{sector}: {len(df)}, {total_lines} lines']
+                    system.print_info(i, extra_info, start_time, len(data_dict))
+                    df.to_csv(f'df_{table_name}_standard.csv')
+                cursor.close()
+
+        except Exception as e:
+            system.log_error(f"Error saving transformed data to database: {e}")
+
     def main(self):
         """
         Main function to load, process, and standardize financial statement data.
@@ -334,7 +451,10 @@ class StandardizedReport:
             dict_df = self.load_data(settings.statements_file_math)
             standardized_data = self.standardize_data(dict_df)
 
-            # save_to_db()
+            standardized_data = self.sanitize_db(standardized_data)
+
+            # Save standardized data to the database
+            standardized_data = self.save_to_db(standardized_data)
 
             return standardized_data
 
