@@ -80,6 +80,9 @@ class StandardizedReport:
                     extra_info = [f'Loaded {len(df)} items from {sector} in {files}, total {total_lines}']
                     system.print_info(i, extra_info, start_time, len(tables))  # Removed the total_files argument
 
+                    # print('break')
+                    # break
+
                 except Exception as e:
                     system.log_error(f"Error processing table {table}: {e}")
 
@@ -307,7 +310,6 @@ class StandardizedReport:
             total = len(dict_df)
 
             for i, (sector, df) in enumerate(dict_df.items()):
-                df.to_csv(f'df_{sector}.csv', index=False)
 
                 extra_info = [f'{sector}']
                 system.print_info(i, extra_info, start_time, total)
@@ -433,9 +435,13 @@ class StandardizedReport:
                     total_lines += len(df)
                     extra_info = [f'{sector}: {len(df)}, {total_lines} lines']
                     system.print_info(i, extra_info, start_time, len(data_dict))
-                    df.to_csv(f'df_{table_name}_standard.csv')
+
+                    df.to_csv(f'df_{sector}_standard.csv', index=False)
+
                 cursor.close()
 
+            return data_dict
+                
         except Exception as e:
             system.log_error(f"Error saving transformed data to database: {e}")
 
