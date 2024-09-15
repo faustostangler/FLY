@@ -6,6 +6,7 @@ from utils import nsd_scrape
 from utils import statements_scrape
 from utils import math_transformation
 from utils import statements_standardize
+from utils import financial_ratios
 
 if __name__ == '__main__':
     try:
@@ -39,11 +40,19 @@ if __name__ == '__main__':
             mathmagic.main()
 
         # transduction_choice = system.timed_input('Want to Transducte the Math Processed Statements Sheets? (YES/NO): ')
-        transduction_choice = 'Y'
+        transduction_choice = 'N'
         if transduction_choice.strip().upper().startswith('Y'):
             # Call the MathTransformation process
             standart_statements = statements_standardize.StandardizedReport()
             data = standart_statements.main()
+
+        # financial_ratios_choice = system.timed_input('Want to Create Fundamentalist Ratios? (YES/NO): ')
+        financial_ratios_choice = 'Y'
+        if financial_ratios_choice.strip().upper().startswith('Y'):
+            # Call the MathTransformation process
+            financial_ratios = financial_ratios.FinancialRatios()
+            data = financial_ratios.main()
+
     except Exception as e:
         e = system.log_error(e)
 

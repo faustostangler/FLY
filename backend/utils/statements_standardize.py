@@ -4,7 +4,6 @@ import numpy as np
 import sqlite3
 import time
 import re
-import os
 
 import plotly.express as px
 

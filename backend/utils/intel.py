@@ -1854,3 +1854,19 @@ creditor_keywords = ['credor']
 amortization_funding_keywords = ['amortizaç', 'captaç']
 dividends_interest_keywords = ['dividend', 'juros', 'jcp', 'bonifica']
 all_financing_related_keywords = list(set(capital_keywords + shares_keywords + debentures_loans_keywords + creditor_keywords + amortization_funding_keywords + dividends_interest_keywords))
+
+
+##### New Indicators
+indicators_08 = [
+    {
+        'account': '08.01',
+        'description': 'ROE Return On Equity',
+        'formula': lambda df: df['03.11'] / df['02.03'] * 10000  # ROE = Net Profit / Shareholders' Equity * 100
+    },
+    {
+        'account': '08.02',
+        'description': 'Índice de Liquidez Corrente',
+        'formula': lambda df: df['01.01'] / df['02.01']  # Current Ratio = Current Assets / Current Liabilities
+    },
+    # Add more indicators as needed
+]
