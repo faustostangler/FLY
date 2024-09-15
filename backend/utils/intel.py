@@ -1,3 +1,5 @@
+import numpy as np
+
 from utils import system
 
 # statements standardization
@@ -1855,18 +1857,433 @@ amortization_funding_keywords = ['amortizaç', 'captaç']
 dividends_interest_keywords = ['dividend', 'juros', 'jcp', 'bonifica']
 all_financing_related_keywords = list(set(capital_keywords + shares_keywords + debentures_loans_keywords + creditor_keywords + amortization_funding_keywords + dividends_interest_keywords))
 
+class Formula:
+    """
+    Base class for all formula operations.
+    """
+    def __call__(self, df):
+        raise NotImplementedError("Each formula must implement the __call__ method.")
+
+class Addition(Formula):
+    def __init__(self, *accounts, multiplier=1):
+        """
+        Initializes the Addition operation.
+
+        Parameters:
+        - *accounts: A list of account names or Formula instances to be summed.
+        """
+        if len(accounts) < 1:
+            raise ValueError("Addition requires at least one account.")
+        self.accounts = accounts
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Sum all accounts or formulas
+            result = sum(
+                acc(df) if isinstance(acc, Formula) else df[acc]
+                for acc in self.accounts
+            )
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+class Subtraction(Formula):
+    def __init__(self, minuend, *subtrahends, multiplier=1):
+        """
+        Initializes the Subtraction operation.
+
+        Parameters:
+        - minuend (str or Formula): The account name or Formula instance from which to subtract.
+        - *subtrahends: A list of account names or Formula instances to subtract.
+        """
+        if len(subtrahends) < 1:
+            raise ValueError("Subtraction requires at least one subtrahend.")
+        self.minuend = minuend
+        self.subtrahends = subtrahends
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Compute minuend value
+            result = self.minuend(df) if isinstance(self.minuend, Formula) else df[self.minuend]
+            # Subtract each subtrahend
+            for acc in self.subtrahends:
+                sub_val = acc(df) if isinstance(acc, Formula) else df[acc]
+                result -= sub_val
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+class Multiplication(Formula):
+    def __init__(self, *multiplicands, multiplier=1):
+        """
+        Initializes the Multiplication operation.
+
+        Parameters:
+        - *multiplicands: A list of account names or Formula instances to be multiplied.
+        """
+        if len(multiplicands) < 1:
+            raise ValueError("Multiplication requires at least one multiplicand.")
+        self.multiplicands = multiplicands
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Start with an initial value of 1 for multiplication
+            result = np.ones(len(df))
+            # Multiply each multiplicand
+            for acc in self.multiplicands:
+                val = acc(df) if isinstance(acc, Formula) else df[acc]
+                result *= val
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+class Division(Formula):
+    def __init__(self, numerator, denominator, multiplier=1):
+        """
+        Initializes the Division operation.
+
+        Parameters:
+        - numerator (str or Formula): The account name or Formula instance for the numerator.
+        - denominator (str or Formula): The account name or Formula instance for the denominator.
+        - multiplier (float): A constant to multiply the result by. Defaults to 1.
+        """
+        self.numerator = numerator
+        self.denominator = denominator
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Compute numerator and denominator values
+            numerator_val = self.numerator(df) if isinstance(self.numerator, Formula) else df[self.numerator]
+            denominator_val = self.denominator(df) if isinstance(self.denominator, Formula) else df[self.denominator]
+            # Handle division by zero
+            result = np.where(
+                denominator_val != 0,
+                (numerator_val / denominator_val) * self.multiplier,
+                np.nan
+            )
+            return result
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
 
 ##### New Indicators
-indicators_08 = [
+indicators_11 = [
     {
-        'account': '08.01',
-        'description': 'ROE Return On Equity',
-        'formula': lambda df: df['03.11'] / df['02.03'] * 10000  # ROE = Net Profit / Shareholders' Equity * 100
+        'account': '11.01.01', 
+        'description': 'Capital de Giro (Ativos Circulantes - Passivos Circulantes)',
+        'formula': Subtraction('01.01', '02.01') 
     },
     {
-        'account': '08.02',
-        'description': 'Índice de Liquidez Corrente',
-        'formula': lambda df: df['01.01'] / df['02.01']  # Current Ratio = Current Assets / Current Liabilities
+        'account': '11.01.02', 
+        'description': 'Liquidez (Ativos Circulantes por Passivos Circulantes)',
+        'formula': Division('01.01', '02.01') 
     },
-    # Add more indicators as needed
+    {
+        'account': '11.01.03', 
+        'description': 'Ativos Circulantes de Curto Prazo por Ativos',
+        'formula': Division('01.01', '01') 
+    },
+    {
+        'account': '11.01.04', 
+        'description': 'Ativos Não Circulantes de Longo Prazo por Ativos',
+        'formula': Division('01.02', '01') 
+    },
+    {
+        'account': '11.02', 
+        'description': 'Passivos por Ativos',
+        'formula': Division(Subtraction('02', '02.03'), '01') 
+    }, 
+    {
+        'account': '11.02.01', 
+        'description': 'Passivos Circulantes de Curto Prazo por Ativos',
+        'formula': Division('02.01', '01') 
+    },
+    {
+        'account': '11.02.02', 
+        'description': 'Passivos Não Circulantes de Longo Prazo por Ativos',
+        'formula': Division('02.02', '01') 
+    },
+    {
+        'account': '11.02.03', 
+        'description': 'Passivos Circulantes de Curto Prazo por Passivos',
+        'formula': Division('02.01', '02') 
+    },
+    {
+        'account': '11.02.04', 
+        'description': 'Passivos Não Circulantes de Longo Prazo por Passivos',
+        'formula': Division('02.02', '02') 
+    },
+    {
+        'account': '11.03', 
+        'description': 'Patrimônio Líquido por Ativos',
+        'formula': Division('02.03', '01') 
+    },
+    {
+        'account': '11.03.01', 
+        'description': 'Equity Multiplier (Ativos por Patrimônio Líquido)',
+        'formula': Division('01', '02.03') 
+    },
+    {
+        'account': '11.03.02', 
+        'description': 'Passivos por Patrimônio Líquido',
+        'formula': Division(Addition('02.01', '02.02'), '02.03') 
+    },
+    {
+        'account': '11.03.02.01', 
+        'description': 'Passivos Circulantes de Curto Prazo por Patrimônio Líquido',
+        'formula': Division('02.01', '02.03') 
+    },
+    {
+        'account': '11.03.02.02', 
+        'description': 'Passivos Não Circulantes de Longo Prazo por Patrimônio Líquido',
+        'formula': Division('02.02', '02.03') 
+    },
+]
+
+indicators_11b = [
+    {
+        'account': '11.04', 
+        'description': 'Capital Social por Patrimônio Líquido',
+        'formula': Division('02.03.01', '02.03')  # Capital Social divided by Patrimônio Líquido
+    },
+    {
+        'account': '11.05', 
+        'description': 'Reservas por Patrimônio Líquido',
+        'formula': Division(
+            Addition(
+                '02.03.02',  # Reservas de Capital
+                '02.03.03',  # Reservas de Reavaliação
+                '02.03.04'   # Reservas de Lucros
+            ),
+            '02.03'  # Patrimônio Líquido
+        )
+    },
+]
+
+indicators_12 = [
+    {
+        'account': '12.01', 
+        'description': 'Dívida Bruta',
+        'formula': Addition(
+            '02.01.04.01',  # Empréstimos e Financiamentos em Moeda Nacional
+            '02.01.04.02',  # Debêntures
+            '02.01.04.03',  # Financiamento por Arrendamento Financeiro
+            # '02.01.04.09',  # Outros Empréstimos e Financiamentos
+            '02.02.01.01',  # Empréstimos e Financiamentos de Longo Prazo
+            '02.02.01.02',  # Debêntures (longo prazo)
+            '02.02.01.03',  # Financiamento por Arrendamento Financeiro (longo prazo)
+            # '02.02.01.09'   # Outros Empréstimos e Financiamentos (longo prazo)
+        )
+    },
+    {
+        'account': '12.01.01', 
+        'description': 'Dívida Bruta Circulante de Curto Prazo',
+        'formula': Addition(
+            '02.01.04.01',  # Empréstimos e Financiamentos em Moeda Nacional
+            '02.01.04.02',  # Debêntures
+            '02.01.04.03',  # Financiamento por Arrendamento Financeiro
+            # '02.01.04.09'   # Outros Empréstimos e Financiamentos
+        )
+    },
+    {
+        'account': '12.01.02', 
+        'description': 'Dívida Bruta Não Circulante de Longo Prazo',
+        'formula': Addition(
+            '02.02.01.01',  # Empréstimos e Financiamentos de Longo Prazo
+            '02.02.01.02',  # Debêntures (longo prazo)
+            '02.02.01.03',  # Financiamento por Arrendamento Financeiro
+            # '02.02.01.09'   # Outros Empréstimos e Financiamentos (longo prazo)
+        )
+    },
+    {
+        'account': '12.01.03', 
+        'description': 'Dívida Bruta Circulante de Curto Prazo por Dívida Bruta',
+        'formula': Division(
+            Addition(
+                '02.01.04.01',  # Empréstimos e Financiamentos em Moeda Nacional
+                '02.01.04.02',  # Debêntures
+                '02.01.04.03',  # Financiamento por Arrendamento Financeiro
+                # '02.01.04.09'   # Outros Empréstimos e Financiamentos
+            ),
+            Addition(
+                '02.01.04.01', 
+                '02.01.04.02', 
+                '02.01.04.03', 
+                # '02.01.04.09',   # Outros Empréstimos e Financiamentos
+                '02.02.01.01', 
+                '02.02.01.02', 
+                '02.02.01.03', 
+                # '02.02.01.09'   # Outros Empréstimos e Financiamentos (longo prazo)
+            )  # Dívida Bruta Total
+        )
+    },
+    {
+        'account': '12.01.04', 
+        'description': 'Dívida Bruta Não Circulante de Longo Prazo por Dívida Bruta',
+        'formula': Division(
+            Addition(
+                '02.02.01.01',  # Empréstimos e Financiamentos de Longo Prazo
+                '02.02.01.02',  # Debêntures (longo prazo)
+                '02.02.01.03',  # Financiamento por Arrendamento Financeiro (longo prazo)
+                # '02.02.01.09'   # Outros Empréstimos e Financiamentos (longo prazo)
+            ),
+            Addition(
+                '02.01.04.01', 
+                '02.01.04.02', 
+                '02.01.04.03', 
+                # '02.01.04.09',   # Outros Empréstimos e Financiamentos
+                '02.02.01.01', 
+                '02.02.01.02', 
+                '02.02.01.03', 
+                # '02.02.01.09'   # Outros Empréstimos e Financiamentos (longo prazo)
+            )  # Dívida Bruta Total
+        )
+    },
+    {
+        'account': '12.01.05', 
+        'description': 'Dívida Bruta em Moeda Nacional',
+        'formula': Addition(
+            '02.01.04.01.01',  # Empréstimos e Financiamentos em Moeda Nacional (Curto Prazo)
+            '02.02.01.01.01'   # Empréstimos e Financiamentos em Moeda Nacional (Longo Prazo)
+        )
+    },
+    {
+        'account': '12.01.06', 
+        'description': 'Dívida Bruta em Moeda Estrangeira',
+        'formula': Addition(
+            '02.01.04.01.02',  # Empréstimos e Financiamentos em Moeda Estrangeira (Curto Prazo)
+            '02.02.01.01.02'   # Empréstimos e Financiamentos em Moeda Estrangeira (Longo Prazo)
+        )
+    },
+    {
+        'account': '12.01.07', 
+        'description': 'Dívida Bruta em Moeda Nacional por Dívida Bruta',
+        'formula': Division(
+            Addition(
+                '02.01.04.01.01',  # Dívida em Moeda Nacional (Curto Prazo)
+                '02.02.01.01.01'   # Dívida em Moeda Nacional (Longo Prazo)
+            ),
+            Addition(
+                '02.01.04.01.01', '02.01.04.01.02',  # Dívida Nacional e Estrangeira (Curto Prazo)
+                '02.02.01.01.01', '02.02.01.01.02'   # Dívida Nacional e Estrangeira (Longo Prazo)
+            )
+        )
+    },
+    {
+        'account': '12.01.08', 
+        'description': 'Dívida Bruta em Moeda Estrangeira por Dívida Bruta',
+        'formula': Division(
+            Addition(
+                '02.01.04.01.02',  # Dívida em Moeda Estrangeira (Curto Prazo)
+                '02.02.01.01.02'   # Dívida em Moeda Estrangeira (Longo Prazo)
+            ),
+            Addition(
+                '02.01.04.01.01', '02.01.04.01.02',  # Dívida Nacional e Estrangeira (Curto Prazo)
+                '02.02.01.01.01', '02.02.01.01.02'   # Dívida Nacional e Estrangeira (Longo Prazo)
+            )
+        )
+    }, 
+    {
+        'account': '12.02.02', 
+        'description': 'Endividamento Financeiro',
+        'formula': Division(
+            Addition(
+                '02.01.04.01', '02.01.04.02', '02.01.04.03', 
+                # '02.01.04.09',
+                '02.02.01.01', '02.02.01.02', '02.02.01.03', 
+                # '02.02.01.09'
+            ),
+            Addition(
+                '02.03',  # Patrimônio Líquido
+                Addition(
+                    '02.01.04.01', '02.01.04.02', '02.01.04.03', 
+                    # '02.01.04.09',
+                    '02.02.01.01', '02.02.01.02', '02.02.01.03', 
+                    # '02.02.01.09'
+                )  # Dívida Bruta
+            )
+        )
+    },
+    {
+        'account': '12.03', 
+        'description': 'Patrimônio Imobilizado em Capex, Investimentos Não Capex e Intangível Não Capex',
+        'formula': Addition('01.02.02', '01.02.03', '01.02.04')  # Valor diretamente fornecido (Investimentos, Imobilizado, Intangível)
+    },
+    {
+        'account': '12.03.01', 
+        'description': 'Patrimônio Imobilizado por Patrimônio Líquido',
+            'formula': Division(Addition('01.02.02', '01.02.03', '01.02.04'), '02.03')  # Razão de Patrimônio Imobilizado por Patrimônio Líquido
+    },
+    {
+        'account': '12.04', 
+        'description': 'Dívida Líquida',
+        'formula': Subtraction(
+            Addition(
+                '02.01.04.01.01', 
+                '02.01.04.01.02', 
+                '02.01.04.02', 
+                '02.01.04.03', 
+                # '02.01.04.09', 
+            ), 
+            Addition(
+                '02.02.01.01.01', 
+                '02.02.01.01.02', 
+                '02.02.01.02', 
+                '02.02.01.03', 
+                # '02.02.02.09', 
+            ), 
+            multiplier=-1
+        )  # Valor diretamente fornecido (dl = -1 * (dbcp + dblp - dme))
+    },
+    {
+        'account': '12.04.01', 
+        'description': 'Dívida Líquida por EBITDA',
+        'formula': Division(
+            Subtraction(
+                Addition(
+                    '02.01.04.01.01', 
+                    '02.01.04.01.02', 
+                    '02.01.04.02', 
+                    '02.01.04.03', 
+                    # '02.01.04.09', 
+                    ), 
+                    Addition(
+                        '02.02.01.01.01', 
+                        '02.02.01.01.02', 
+                        '02.02.01.02', 
+                        '02.02.01.03', 
+                        # '02.02.02.09',
+                    ), 
+                    multiplier=-1
+            ), 
+            '03.05'
+        )  # Dívida Líquida por EBITDA
+    },
+    {
+        'account': '12.04.02', 
+        'description': 'Serviço da Dívida (Dívida Líquida por Resultado)',
+        'formula': Division(
+            Subtraction(
+                Addition(
+                    '02.01.04.01.01', 
+                    '02.01.04.01.02', 
+                    '02.01.04.02', 
+                    '02.01.04.03', 
+                    # '02.01.04.09',
+                ), 
+                Addition(
+                    '02.02.01.01.01', 
+                    '02.02.01.01.02', 
+                    '02.02.01.02', 
+                    '02.02.01.03', 
+                    # '02.02.02.09', 
+                ), 
+                multiplier=-1
+                ), 
+            '03.11'
+        )  # Dívida Líquida por Resultado (Lucro Líquido)
+    },
 ]

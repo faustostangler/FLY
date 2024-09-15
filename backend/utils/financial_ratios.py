@@ -8,6 +8,7 @@ from utils import settings
 from utils import system
 from utils import intel
 
+
 class FinancialRatios:
     def __init__(self):
         """
@@ -168,19 +169,12 @@ class FinancialRatios:
 
         Parameters:
         - df (pd.DataFrame): Original DataFrame containing financial data.
-        - indicator_list (list of dict): List of dictionaries with indicator definitions.
         - frame_name (str): Name to identify the new 'frame' for the indicators.
+        - indicator_list (list of dict): List of dictionaries with indicator definitions.
 
         Returns:
         - pd.DataFrame: Updated DataFrame with the new indicator rows.
         """
-        # Function to perform safe division
-        def safe_division(numerator, denominator):
-            with np.errstate(divide='ignore', invalid='ignore'):
-                result = numerator / denominator
-                result = result.replace([np.inf, -np.inf], np.nan)  # Replace infinities with NaN
-                return result
-
         # Step 1: Pivot the DataFrame with accounts as columns and include 'quarter' in the index
         pivot_df = df.pivot_table(
             index=['company_name', 'type', 'quarter'],
@@ -189,74 +183,83 @@ class FinancialRatios:
             aggfunc='sum',
             fill_value=0  # Replace missing values with 0
         ).reset_index()
-        
-        # print("Columns of the Pivoted DataFrame:", pivot_df.columns.tolist())
-        
+
+        # print("Pivoted DataFrame created successfully.")
+
         # Step 2: Calculate the Indicators
         for indicator in indicator_list:
             column_name = indicator['description']
             column_account = indicator['account']
+            formula = indicator['formula']
+
             try:
-                # Apply the formula to calculate the indicator
-                pivot_df[column_name] = indicator['formula'](pivot_df)
+                # Apply the formula
+                pivot_df[column_name] = formula(pivot_df)
+
                 # print(f"Indicator '{column_name}' calculated successfully.")
+
             except KeyError as e:
-                print(f"'{column_account} - {column_name}': the account {e} does not exist")
-                pivot_df[column_name] = np.nan  # Assign NaN if the column does not exist
+                print(f"'{column_account} - {column_name}': {e}")
+                pivot_df[column_name] = np.nan  # Assign NaN if any required account is missing
             except Exception as e:
-                print(f"{column_name}': {e} Error calculating the indicator '{column_name}': {e}")
-                pivot_df[column_name] = np.nan  # Assign NaN in case of error
+                print(f"Error calculating the indicator '{column_name}': {e}")
+                pivot_df[column_name] = np.nan  # Assign NaN in case of other errors
 
         # Step 3: Create New Rows for the Indicators
         new_rows = []
-        
+
         for indicator in indicator_list:
             account = indicator['account']
             description = indicator['description']
-            
+
             if description not in pivot_df.columns:
-                print(f"Warning: Indicator '{description}' was not calculated and will be ignored.")
+                print(f"Indicator '{description}' was not calculated and will be ignored.")
                 continue
-            
+
             # Extract the calculated values for the indicator
-            pivot_df['value'] = pivot_df[description]
-            
-            # Select the relevant columns
-            indicator_values = pivot_df[['company_name', 'type', 'quarter', 'value']].copy()
+            indicator_values = pivot_df[['company_name', 'type', 'quarter', description]].copy()
+            indicator_values.rename(columns={description: 'value'}, inplace=True)
             indicator_values['account'] = account
             indicator_values['description'] = description
-            
-            # Assign 'frame' as 'Indicadores' to easily identify the new rows
+
+            # Assign 'frame' as the provided frame_name to easily identify the new rows
             indicator_values['frame'] = frame_name
-            
+
             # Fill in the missing columns with information from the original DataFrame
             # Select unique combinations of 'company_name', 'type', and 'quarter'
-            metadata = df[['company_name', 'type', 'quarter', 'nsd', 'sector', 'subsector', 'segment', 'version']].drop_duplicates(subset=['company_name', 'type', 'quarter'], keep='first')
-            
+            metadata = df[['company_name', 'type', 'quarter', 'nsd', 'sector', 'subsector', 'segment', 'version']].drop_duplicates(
+                subset=['company_name', 'type', 'quarter'],
+                keep='first'
+            )
+
             # Merge with 'metadata' to fill in 'nsd', 'sector', etc.
-            indicator_row = indicator_values.merge(metadata, on=['company_name', 'type', 'quarter'], how='left')
-            
+            indicator_row = indicator_values.merge(
+                metadata,
+                on=['company_name', 'type', 'quarter'],
+                how='left'
+            )
+
             # Reorder the columns to match the original DataFrame
-            indicator_row = indicator_row[['nsd', 'sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'frame', 'account', 'description', 'value']]
-            
+            indicator_row = indicator_row[['nsd', 'sector', 'subsector', 'segment', 'company_name', 'quarter',
+                                        'version', 'type', 'frame', 'account', 'description', 'value']]
+
             # Add to the list of new rows
             new_rows.append(indicator_row)
-        
+
         # Combine all new indicator rows
         if new_rows:
             new_rows_df = pd.concat(new_rows, ignore_index=True)
+            # print("All indicators added successfully.")
         else:
             new_rows_df = pd.DataFrame(columns=df.columns)
             # print("No indicators were added.")
-        
+
         # Step 4: Add the New Rows to the Original DataFrame
         updated_df = pd.concat([df, new_rows_df], ignore_index=True)
-        
-        # Step 5: Final Treatment of Values (optional)
-        # Optional: Fill missing values or perform other cleanups
-        # Example: Replace NaN with zero where appropriate
+
+        # Optional: Final Treatment of Values (e.g., Fill NaN with zero)
         # updated_df['value'] = updated_df['value'].fillna(0)
-        
+
         return updated_df
 
     def main(self):
@@ -269,12 +272,16 @@ class FinancialRatios:
             dfs = {}
             for sector, df in dict_df.items():
                 df = self.adjust_dfs_types(df)
-                df = self.add_indicators(df, 'Indicadores Fundamentalistas', intel.indicators_08)
-                dfs[sector] = df
+                df = self.add_indicators(df, 'Relações Entre Ativos e Passivos', intel.indicators_11)
+                df = self.add_indicators(df, 'Patrimônio', intel.indicators_11b)
+                df = self.add_indicators(df, 'Dívida', intel.indicators_12)
 
+
+                df.to_csv(f'{sector}_ratios.csv', index=False)
+                dfs[sector] = df
             pass
         except Exception as e:
-            system.log_error(f"Error initializing FinancialRatios: {e}")
+            system.log_error(f"Error initializing MinancialRatios: {e}")
 
 if __name__ == "__main__":
     financial_ratios = FinancialRatios()
