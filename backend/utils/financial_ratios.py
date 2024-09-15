@@ -275,6 +275,12 @@ class FinancialRatios:
                 df = self.add_indicators(df, 'Relações Entre Ativos e Passivos', intel.indicators_11)
                 df = self.add_indicators(df, 'Patrimônio', intel.indicators_11b)
                 df = self.add_indicators(df, 'Dívida', intel.indicators_12)
+                df = self.add_indicators(df, 'Resultados Fundamentalistas 1', intel.indicators_13)
+                df = self.add_indicators(df, 'Resultados Fundamentalistas 2', intel.indicators_14)
+                df = self.add_indicators(df, 'Resultados Fundamentalistas 3', intel.indicators_15)
+                df = self.add_indicators(df, 'Resultados Fundamentalistas 4', intel.indicators_16)
+                df = self.add_indicators(df, 'Análise do Fluxo de Caixa', intel.indicators_17)
+                df = self.add_indicators(df, 'Análise do Valor Agregado', intel.indicators_18)
 
 
                 df.to_csv(f'{sector}_ratios.csv', index=False)

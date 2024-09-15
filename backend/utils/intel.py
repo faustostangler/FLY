@@ -2287,3 +2287,643 @@ indicators_12 = [
         )  # Dívida Líquida por Resultado (Lucro Líquido)
     },
 ]
+
+indicators_13 = [
+    {
+        'account': '13.03', 
+        'description': 'Contas a Receber por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.03',  # Contas a Receber de Curto Prazo
+                '01.02.01.03'  # Contas a Receber de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.03.01', 
+        'description': 'Contas a Receber Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.03',  # Contas a Receber de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.03.02', 
+        'description': 'Contas a Receber Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.03',  # Contas a Receber de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.04', 
+        'description': 'Estoques por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.04',  # Estoques de Curto Prazo
+                '01.02.01.04'  # Estoques de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.04.01', 
+        'description': 'Estoques Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.04',  # Estoques de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.04.02', 
+        'description': 'Estoques Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.04',  # Estoques de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.05', 
+        'description': 'Ativos Biológicos por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.05',  # Ativos Biológicos de Curto Prazo
+                '01.02.01.05'  # Ativos Biológicos de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.05.01', 
+        'description': 'Ativos Biológicos Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.05',  # Ativos Biológicos de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.05.02', 
+        'description': 'Ativos Biológicos Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.05',  # Ativos Biológicos de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.06', 
+        'description': 'Tributos por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.06',  # Tributos a Recuperar de Curto Prazo
+                '01.02.01.06'  # Tributos a Recuperar de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.06.01', 
+        'description': 'Tributos Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.06',  # Tributos a Recuperar de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.06.02', 
+        'description': 'Tributos Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.06',  # Tributos a Recuperar de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.07', 
+        'description': 'Despesas por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.07',  # Despesas Antecipadas de Curto Prazo
+                '01.02.01.07'  # Despesas Antecipadas de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.07.01', 
+        'description': 'Despesas Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.07',  # Despesas Antecipadas de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.07.02', 
+        'description': 'Despesas Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.07',  # Despesas Antecipadas de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.09', 
+        'description': 'Outros Ativos por Faturamento',
+        'formula': Division(
+            Addition(
+                '01.01.09',  # Outros Ativos Circulantes de Curto Prazo
+                '01.02.01.09'  # Outros Ativos de Longo Prazo
+            ), 
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.09.01', 
+        'description': 'Outros Ativos Não Circulantes de Curto Prazo por Faturamento',
+        'formula': Division(
+            '01.01.09',  # Outros Ativos Circulantes de Curto Prazo
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '13.09.02', 
+        'description': 'Outros Ativos Não Circulantes de Longo Prazo por Faturamento',
+        'formula': Division(
+            '01.02.01.09',  # Outros Ativos de Longo Prazo
+            '03.01'  # Receita Bruta
+        )
+    }
+]
+
+indicators_14 = [
+    {
+        'account': '14.01.01', 
+        'description': 'Receita por Ativos',
+        'formula': Division(
+            '03.01',  # Receita Bruta
+            '01'  # Ativo Total
+        )
+    },
+    {
+        'account': '14.01.02', 
+        'description': 'Receita por Patrimônio',
+        'formula': Division(
+            '03.01',  # Receita Bruta
+            '02.03'  # Patrimônio Líquido
+        )
+    },
+    {
+        'account': '14.02.01', 
+        'description': 'Coeficiente de Retorno (Resultado por Ativos)',
+        'formula': Division(
+            '03.11',  # Lucro Líquido
+            '01'  # Ativo Total
+        )
+    },
+    {
+        'account': '14.02.02', 
+        'description': 'ROE (Resultado por Patrimônio)',
+        'formula': Division(
+            '03.11',  # Lucro Líquido
+            '02.03'  # Patrimônio Líquido
+        )
+    },
+    {
+        'account': '14.03', 
+        'description': 'Capital Investido',
+        'formula': Addition(
+            '06.01',  # Caixa das Operações
+            '06.02'  # Caixa de Investimentos (CAPEX)
+        )
+    },
+    {
+        'account': '14.03.01', 
+        'description': 'ROIC (Retorno por Capital Investido)',
+        'formula': Division(
+            '03.11',  # Lucro Líquido
+            Addition(
+                '06.01',  # Caixa das Operações
+                '06.02'  # Caixa de Investimentos (CAPEX)
+            )
+        )
+    },
+    {
+        'account': '14.04.01', 
+        'description': 'ROAS (EBIT por Ativos)',
+        'formula': Division(
+            '03.05',  # EBIT
+            '01'  # Ativo Total
+        )
+    }
+]
+
+indicators_15 = [
+    {
+        'account': '15.01', 
+        'description': 'Remuneração de Capital',
+        'formula': Addition(
+            '07.08.03',  # Remuneração de Capital de Terceiros
+            '07.08.04'  # Remuneração de Capital Próprio
+        )
+    },
+    {
+        'account': '15.01.01', 
+        'description': 'Remuneração de Capital de Terceiros por Remuneração de Capital',
+        'formula': Division(
+            '07.08.03',  # Remuneração de Capital de Terceiros
+            Addition(
+                '07.08.03',  # Remuneração de Capital de Terceiros
+                '07.08.04'  # Remuneração de Capital Próprio
+            )
+        )
+    },
+    {
+        'account': '15.01.01.01', 
+        'description': 'Juros Pagos por Remuneração de Capital de Terceiros',
+        'formula': Division(
+            '07.08.03.01',  # Juros Pagos
+            '07.08.03'  # Remuneração de Capital de Terceiros
+        )
+    },
+    {
+        'account': '15.01.01.02', 
+        'description': 'Aluguéis por Remuneração de Capital de Terceiros',
+        'formula': Division(
+            '07.08.03.02',  # Aluguéis
+            '07.08.03'  # Remuneração de Capital de Terceiros
+        )
+    },
+    {
+        'account': '15.01.02', 
+        'description': 'Remuneração de Capital Próprio por Remuneração de Capital',
+        'formula': Division(
+            '07.08.04',  # Remuneração de Capital Próprio
+            Addition(
+                '07.08.03',  # Remuneração de Capital de Terceiros
+                '07.08.04'  # Remuneração de Capital Próprio
+            )
+        )
+    },
+    {
+        'account': '15.01.02.01', 
+        'description': 'Juros Sobre o Capital Próprio por Remuneração de Capital Próprio',
+        'formula': Division(
+            '07.08.04.01',  # Juros Sobre o Capital Próprio
+            '07.08.04'  # Remuneração de Capital Próprio
+        )
+    },
+    {
+        'account': '15.01.02.02', 
+        'description': 'Dividendos por Remuneração de Capital Próprio',
+        'formula': Division(
+            '07.08.04.02',  # Dividendos
+            '07.08.04'  # Remuneração de Capital Próprio
+        )
+    },
+    {
+        'account': '15.01.02.03', 
+        'description': 'Lucros Retidos por Remuneração de Capital Próprio',
+        'formula': Division(
+            '07.08.04.03',  # Lucros Retidos
+            '07.08.04'  # Remuneração de Capital Próprio
+        )
+    },
+    {
+        'account': '15.02', 
+        'description': 'Remuneração de Capital por EBIT',
+        'formula': Division(
+            Addition(
+                '07.08.03',  # Remuneração de Capital de Terceiros
+                '07.08.04'  # Remuneração de Capital Próprio
+            ),
+            '03.05'  # EBIT
+        )
+    },
+    {
+        'account': '15.02.01', 
+        'description': 'Impostos por EBIT',
+        'formula': Division(
+            '03.08',  # Impostos IRPJ e CSLL
+            '03.05'  # EBIT
+        )
+    }
+]
+
+indicators_16 = [
+    {
+        'account': '16.01', 
+        'description': 'Margem Bruta (Resultado Bruto (Receita Líquida) por Receita Bruta)',
+        'formula': Division(
+            '03.03',  # Resultado Bruto (Receita Líquida)
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '16.02', 
+        'description': 'Margem Operacional (Despesas Operacionais por Receita Bruta)',
+        'formula': Division(
+            '03.04',  # Despesas Operacionais
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '16.02.01', 
+        'description': 'Força de Vendas (Despesas com Vendas por Despesas Operacionais)',
+        'formula': Division(
+            '03.04.01',  # Despesas com Vendas
+            '03.04'  # Despesas Operacionais
+        )
+    },
+    {
+        'account': '16.02.02', 
+        'description': 'Peso Administrativo (Despesas com Administração por Despesas Operacionais)',
+        'formula': Division(
+            '03.04.02',  # Despesas Gerais e Administrativas
+            '03.04'  # Despesas Operacionais
+        )
+    },
+    {
+        'account': '16.03', 
+        'description': 'Margem EBITDA (EBITDA por Resultado Bruto (Receita Líquida))',
+        'formula': Division(
+            Addition(
+                '03.05',  # EBIT (Resultado Antes do Resultado Financeiro e dos Tributos)
+                '07.04.01'  # Depreciação e Amortização
+            ),
+            '03.03'  # Resultado Bruto (Receita Líquida)
+        )
+    },
+    {
+        'account': '16.03.01', 
+        'description': 'Margem EBIT (EBIT por Resultado Bruto (Receita Líquida))',
+        'formula': Division(
+            '03.05',  # EBIT (Resultado Antes do Resultado Financeiro e dos Tributos)
+            '03.03'  # Resultado Bruto (Receita Líquida)
+        )
+    },
+    {
+        'account': '16.03.02', 
+        'description': 'Margem de Depreciação por Resultado Bruto (Receita Líquida)',
+        'formula': Division(
+            '07.04.01',  # Depreciação e Amortização
+            '03.03'  # Resultado Bruto (Receita Líquida)
+        )
+    },
+    {
+        'account': '16.04', 
+        'description': 'Margem Não Operacional (Resultado Não Operacional por Resultado Bruto (Receita Líquida))',
+        'formula': Division(
+            '03.06',  # Resultado Financeiro Não Operacional
+            '03.03'  # Resultado Bruto (Receita Líquida)
+        )
+    },
+    {
+        'account': '16.05', 
+        'description': 'Margem Líquida (Lucro Líquido por Receita Bruta)',
+        'formula': Division(
+            '03.11',  # Lucro Líquido
+            '03.01'  # Receita Bruta
+        )
+    }
+]
+
+indicators_17 = [
+    {
+        'account': '17.01', 
+        'description': 'Caixa Total',
+        'formula': Addition(
+            '06.01',  # Caixa das Operações
+            '06.02'  # Caixa de Investimentos (CAPEX)
+        )
+    },
+    {
+        'account': '17.02', 
+        'description': 'Caixa Livre',
+        'formula': Addition(
+            '06.01',  # Caixa das Operações
+            '06.02',  # Caixa de Investimentos (CAPEX)
+            '06.03',  # Caixa de Financiamentos
+        )
+    },
+    {
+        'account': '17.03.01', 
+        'description': 'Caixa de Investimentos por Caixa das Operações',
+        'formula': Division(
+            '06.02',  # Caixa de Investimentos (CAPEX)
+            '06.01'  # Caixa das Operações
+        )
+    },
+    {
+        'account': '17.03.02', 
+        'description': 'Caixa de Investimentos por EBIT',
+        'formula': Division(
+            '06.02',  # Caixa de Investimentos (CAPEX)
+            '03.05'  # EBIT (Resultado Antes do Resultado Financeiro e dos Tributos)
+        )
+    },
+    {
+        'account': '17.04', 
+        'description': 'Caixa Imobilizado',
+        'formula': Addition(
+            '01.02.02',  # Investimentos
+            '01.02.03',  # Imobilizado
+            '01.02.04'  # Intangível
+        )
+    },
+    {
+        'account': '17.05', 
+        'description': 'FCFF simplificado (Caixa Livre para a Firma)',
+        'formula': Subtraction(
+            '06.01',  # Caixa das Operações
+            Addition(
+                '01.02.02',  # Investimentos
+                '01.02.03',  # Imobilizado
+                '01.02.04'  # Intangível
+            )
+        )
+    },
+    {
+        'account': '17.06', 
+        'description': 'FCFE simplificado (Caixa Livre para os Acionistas)',
+        'formula': Subtraction(
+            Subtraction(
+                '06.01',  # Caixa das Operações
+                Addition(
+                    '01.02.02',  # Investimentos
+                    '01.02.03',  # Imobilizado
+                    '01.02.04'  # Intangível
+                )
+            ),
+            '08.01'  # Dividendos Mínimos Obrigatórios
+        )
+    }
+]
+
+indicators_18 = [
+    {
+        'account': '18.01', 
+        'description': 'Margem de Vendas por Valor Agregado',
+        'formula': Division(
+            '07.01',  # Vendas
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.02', 
+        'description': 'Custo dos Insumos por Valor Agregado',
+        'formula': Division(
+            '07.02',  # Custos dos Insumos
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.03', 
+        'description': 'Valor Adicionado Bruto por Valor Agregado',
+        'formula': Division(
+            '07.03',  # Valor Adicionado Bruto
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.04', 
+        'description': 'Retenções por Valor Agregado',
+        'formula': Division(
+            '07.04',  # Retenções
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.05', 
+        'description': 'Valor Adicionado Líquido por Valor Agregado',
+        'formula': Division(
+            '07.05',  # Valor Adicionado Líquido
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.06', 
+        'description': 'Valor Adicionado em Transferência por Valor Agregado',
+        'formula': Division(
+            '07.06',  # Valor Adicionado em Transferência
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.07', 
+        'description': 'Recursos Humanos por Valor Agregado',
+        'formula': Division(
+            '07.08.01',  # Pessoal
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.07.01', 
+        'description': 'Remuneração Direta (Recursos Humanos) por Valor Agregado',
+        'formula': Division(
+            '07.08.01.01',  # Remuneração Direta
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.07.02', 
+        'description': 'Benefícios (Recursos Humanos) por Valor Agregado',
+        'formula': Division(
+            '07.08.01.02',  # Benefícios
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.07.03', 
+        'description': 'FGTS (Recursos Humanos) por Valor Agregado',
+        'formula': Division(
+            '07.08.01.03',  # FGTS
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.08', 
+        'description': 'Impostos por Valor Agregado',
+        'formula': Division(
+            '07.08.02',  # Impostos, Taxas e Contribuições
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.09', 
+        'description': 'Remuneração de Capital de Terceiros por Valor Agregado',
+        'formula': Division(
+            '07.08.03',  # Remuneração de Capital de Terceiros
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.09.01', 
+        'description': 'Juros Pagos a Terceiros por Valor Agregado',
+        'formula': Division(
+            '07.08.03.01',  # Juros Pagos
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.09.02', 
+        'description': 'Aluguéis Pagos a Terceiros por Valor Agregado',
+        'formula': Division(
+            '07.08.03.02',  # Aluguéis
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.10', 
+        'description': 'Remuneração de Capital Próprio por Valor Agregado',
+        'formula': Division(
+            '07.08.04',  # Remuneração de Capital Próprio
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.10.01', 
+        'description': 'Juros Sobre Capital Próprio por Valor Agregado',
+        'formula': Division(
+            '07.08.04.01',  # Juros Sobre Capital Próprio
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.10.02', 
+        'description': 'Dividendos por Valor Agregado',
+        'formula': Division(
+            '07.08.04.02',  # Dividendos
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.10.03', 
+        'description': 'Lucros Retidos por Valor Agregado',
+        'formula': Division(
+            '07.08.04.03',  # Lucros Retidos
+            '07.07'  # Valor Adicionado Total a Distribuir
+        )
+    },
+    {
+        'account': '18.11.01', 
+        'description': 'Alíquota de Impostos (Impostos, Taxas e Contribuições por Receita Bruta)',
+        'formula': Division(
+            '07.08.02',  # Impostos, Taxas e Contribuições
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '18.11.02', 
+        'description': 'Taxa de Juros Pagos (Remuneração de Capital de Terceiros por Receita Bruta)',
+        'formula': Division(
+            '07.08.03',  # Remuneração de Capital de Terceiros
+            '03.01'  # Receita Bruta
+        )
+    },
+    {
+        'account': '18.11.03', 
+        'description': 'Taxa de Proventos Gerados (Remuneração de Capital Próprio por Receita Bruta)',
+        'formula': Division(
+            '07.08.04',  # Remuneração de Capital Próprio
+            '03.01'  # Receita Bruta
+        )
+    }
+]
