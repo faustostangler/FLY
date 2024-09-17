@@ -282,7 +282,6 @@ class FinancialRatios:
                 df = self.add_indicators(df, 'Análise do Fluxo de Caixa', intel.indicators_17)
                 df = self.add_indicators(df, 'Análise do Valor Agregado', intel.indicators_18)
 
-
                 df.to_csv(f'{sector}_ratios.csv', index=False)
                 dfs[sector] = df
             pass
