@@ -8,6 +8,7 @@ from utils import math_transformation
 from utils import statements_standardize
 from utils import financial_ratios
 from utils import financial_plots
+from utils import stock_market_scraper
 
 if __name__ == '__main__':
     try:
@@ -51,7 +52,7 @@ if __name__ == '__main__':
         market_choice = 'Y'
         if market_choice.strip().upper().startswith('Y'):
             # call market processes
-            market = market.
+            market = stock_market_scraper.StockMarketScraper
 
         # financial_ratios_choice = system.timed_input('Want to Create Fundamentalist Ratios? (YES/NO): ')
         financial_ratios_choice = 'N'
