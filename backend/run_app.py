@@ -47,6 +47,12 @@ if __name__ == '__main__':
             standart_statements = statements_standardize.StandardizedReport()
             data = standart_statements.main()
 
+        # we need to grab stock daily data
+        market_choice = 'Y'
+        if market_choice.strip().upper().startswith('Y'):
+            # call market processes
+            market = market.
+
         # financial_ratios_choice = system.timed_input('Want to Create Fundamentalist Ratios? (YES/NO): ')
         financial_ratios_choice = 'N'
         if financial_ratios_choice.strip().upper().startswith('Y'):
@@ -60,4 +66,4 @@ if __name__ == '__main__':
     except Exception as e:
         e = system.log_error(e)
 
-    print('done')
+    # print('done')

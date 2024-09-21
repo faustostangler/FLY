@@ -103,7 +103,7 @@ class FinancialDataPlotter:
             data,
             x='company_name',
             y='value',
-            title=f'Comparison of {description} on {date.strftime("%Y-%m-%d")}',
+            title=f'Comparison of {description} on {date}',
             labels={'company_name': 'Company Name', 'value': description}
         )
         fig.update_layout(xaxis_title='Company Name', yaxis_title=description)
@@ -186,7 +186,7 @@ class FinancialDataPlotter:
             labels=dict(color="Correlation"),
             x=corr_matrix.columns,
             y=corr_matrix.columns,
-            title=f'Correlation Heatmap for {company_name} on {date.strftime("%Y-%m-%d")}'
+            title=f'Correlation Heatmap for {company_name} on {date}'
         )
         fig.show()
 
@@ -220,7 +220,7 @@ class FinancialDataPlotter:
             x=x_metric,
             y=y_metric,
             text='company_name',
-            title=f'{y_metric} vs {x_metric} on {date.strftime("%Y-%m-%d")}',
+            title=f'{y_metric} vs {x_metric} on {date}',
             labels={x_metric: x_metric, y_metric: y_metric}
         )
         fig.update_traces(textposition='top center')
@@ -247,7 +247,7 @@ class FinancialDataPlotter:
             x=['quarter'],
             y='value',
             color='description',
-            title=f'Composition of Financial Metrics for {company_name} on {date.strftime("%Y-%m-%d")}',
+            title=f'Composition of Financial Metrics for {company_name} on {date}',
             labels={'value': 'Value', 'description': 'Description'}
         )
         fig.update_layout(barmode='stack')
@@ -262,37 +262,37 @@ class FinancialDataPlotter:
         end_date='2023-06-30'
         )
 
-        # Compare 'Net Income' among multiple companies on a specific date
-        self.plot_company_comparison(
-            companies=['ALGAR TELECOM SA', 'TIM SA', 'OI SA'],
-            description='Lucro do Período',
-            date='2023-06-30'
-        )
-        # Plot multiple indicators over time for a single company
-        self.plot_indicator_comparison(
-            company_name='TIM SA',
-            descriptions=['Receita de Venda de Bens e/ou Serviços', 'Lucro do Período'],
-            start_date='2015-01-01',
-            end_date='2023-06-30'
-        )
+        # # Compare 'Net Income' among multiple companies on a specific date
+        # self.plot_company_comparison(
+        #     companies=['ALGAR TELECOM SA', 'TIM SA', 'OI SA'],
+        #     description='Lucro do Período',
+        #     date='2023-06-30'
+        # )
+        # # Plot multiple indicators over time for a single company
+        # self.plot_indicator_comparison(
+        #     company_name='TIM SA',
+        #     descriptions=['Receita de Venda de Bens e/ou Serviços', 'Lucro do Período'],
+        #     start_date='2015-01-01',
+        #     end_date='2023-06-30'
+        # )
 
-        # Plot a correlation heatmap for a company at a specific date
-        self.plot_correlation_heatmap(
-            company_name='TIM SA',
-            date='2023-06-30'
-        )
+        # # Plot a correlation heatmap for a company at a specific date
+        # self.plot_correlation_heatmap(
+        #     company_name='TIM SA',
+        #     date='2023-06-30'
+        # )
 
-        # Scatter plot comparing 'Total Assets' vs 'Total Liabilities' across companies
-        self.plot_scatter(
-            x_metric='Ativo Total',
-            y_metric='Passivo Total',
-            date='2023-06-30',
-            companies=['ALGAR TELECOM SA', 'TIM SA', 'OI SA']
-        )
+        # # Scatter plot comparing 'Total Assets' vs 'Total Liabilities' across companies
+        # self.plot_scatter(
+        #     x_metric='Ativo Total',
+        #     y_metric='Passivo Total',
+        #     date='2023-06-30',
+        #     companies=['ALGAR TELECOM SA', 'TIM SA', 'OI SA']
+        # )
 
-        # Plot a stacked bar chart showing the composition of liabilities
-        self.plot_stacked_bar(
-            company_name='TIM SA',
-            descriptions=['Passivo Circulante de Curto Prazo', 'Passivo Não Circulante de Longo Prazo'],
-            date='2023-06-30'
-        )
+        # # Plot a stacked bar chart showing the composition of liabilities
+        # self.plot_stacked_bar(
+        #     company_name='TIM SA',
+        #     descriptions=['Passivo Circulante de Curto Prazo', 'Passivo Não Circulante de Longo Prazo'],
+        #     date='2023-06-30'
+        # )
