@@ -92,76 +92,75 @@ class FinancialRatios:
             print(f"Saving ratios for sector: {sector}")
             # Implementar lógica de salvamento no banco de dados
 
-    def adjust_dfs_types(self, df, source_type='Dados da Empresa', target_types=['DFs Consolidadas', 'DFs Individuais']):
+    def adjust_dfs_types(self, df, source_types=['Dados da Empresa'], target_types=['DFs Consolidadas', 'DFs Individuais']):
         """
-        Conditionally duplicates rows of a specific type for other types, 
+        Conditionally duplicates rows of specific types for other types, 
         based on the prior existence of these types for the same company and quarter.
-        
+
         Parameters:
         - df (pd.DataFrame): Original DataFrame containing the financial data.
-        - source_type (str): The type of row that will be duplicated. Default: 'Dados da Empresa'.
+        - source_types (list of str): List of types of rows that will be duplicated. Default: ['Dados da Empresa'].
         - target_types (list of str): List of types to which the rows will be duplicated.
                                     Default: ['DFs Consolidadas', 'DFs Individuais'].
-        
+
         Returns:
         - pd.DataFrame: Updated DataFrame with the conditional duplications.
         """
         try:
-            # Passo 1: Identificar combinações existentes de company_name e quarter para cada target_type
+            # Step 1: Identify existing combinations of company_name and quarter for each target_type
             existing_combinations = {}
             for target in target_types:
                 existing_keys = df[df['type'] == target][['company_name', 'quarter']].drop_duplicates()
                 existing_combinations[target] = existing_keys
 
-            # Passo 2: Filtrar as linhas do source_type
-            source_df = df[df['type'] == source_type].copy()
-            
-            # Passo 3: Para cada target_type, verificar onde duplicar
-            duplicated_dfs = []
-            for target in target_types:
-                # Obter as combinações onde já existe o target_type
-                target_keys = existing_combinations[target]
-                
-                # Realizar um merge para identificar quais linhas do source_df têm a combinação existente
-                to_duplicate = source_df.merge(target_keys, on=['company_name', 'quarter'], how='inner', suffixes=('', '_target'))
-                
-                if not to_duplicate.empty:
-                    # Duplicar as linhas e alterar o type para o target_type
-                    duplicated = to_duplicate.copy()
-                    duplicated['type'] = target
-                    duplicated_dfs.append(duplicated)
-                    # print(f"Duplicando {len(duplicated)} linhas para o tipo '{target}'.")
-                else:
-                    # print(f"Nenhuma duplicação necessária para o tipo '{target}'.")
-                    pass
-            
-            # Passo 4: Concatenar todas as duplicações
-            if duplicated_dfs:
-                duplicated_df = pd.concat(duplicated_dfs, ignore_index=True)
+            # Step 2: Initialize a list to store all duplicated DataFrames
+            all_duplicated_dfs = []
+
+            # Step 3: Loop through each source_type and perform the duplication logic
+            for source_type in source_types:
+                # Filter the rows of the source_type
+                source_df = df[df['type'] == source_type].copy()
+
+                # For each target_type, check where to duplicate
+                for target in target_types:
+                    # Get the combinations where the target_type already exists
+                    target_keys = existing_combinations[target]
+
+                    # Perform a merge to identify which rows from source_df have an existing combination
+                    to_duplicate = source_df.merge(target_keys, on=['company_name', 'quarter'], how='inner', suffixes=('', '_target'))
+
+                    if not to_duplicate.empty:
+                        # Duplicate the rows and change the 'type' to the target_type
+                        duplicated = to_duplicate.copy()
+                        duplicated['type'] = target
+                        all_duplicated_dfs.append(duplicated)
+
+            # Step 4: Concatenate all the duplications
+            if all_duplicated_dfs:
+                duplicated_df = pd.concat(all_duplicated_dfs, ignore_index=True)
             else:
                 duplicated_df = pd.DataFrame(columns=df.columns)
-                # print("Nenhuma duplicação realizada.")
-            
-            # Passo 5: Remover as linhas originais do source_type
-            df_filtered = df[df['type'] != source_type].copy()
-            
-            # Passo 6: Adicionar as duplicações ao DataFrame
+
+            # Step 5: Remove the original rows from source_types
+            df_filtered = df[~df['type'].isin(source_types)].copy()
+
+            # Step 6: Add the duplications to the DataFrame
             if not duplicated_df.empty:
                 df_updated = pd.concat([df_filtered, duplicated_df], ignore_index=True)
             else:
                 df_updated = df_filtered.copy()
-            
-            # Passo 7: Resetar o índice e ordenar o DataFrame (opcional)
+
+            # Step 7: Reset index and sort the DataFrame
             df_updated.reset_index(drop=True, inplace=True)
-            
-            # Passo 8: Ordenar o DataFrame
             df_updated = df_updated.sort_values(
                 by=['sector', 'subsector', 'segment', 'company_name', 'quarter', 'version', 'type', 'account', 'description']
             ).reset_index(drop=True)
-            
+
             return df_updated
         except Exception as e:
             system.log_error(f"Error processing: {e}")
+            
+
 
     def add_indicators(self, df, frame_name, indicator_list):
         """

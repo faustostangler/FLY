@@ -52,7 +52,8 @@ if __name__ == '__main__':
         market_choice = 'Y'
         if market_choice.strip().upper().startswith('Y'):
             # call market processes
-            market = stock_market_scraper.StockMarketScraper
+            market = stock_market_scraper.StockMarketScraper()
+            market_data = market.main()
 
         # financial_ratios_choice = system.timed_input('Want to Create Fundamentalist Ratios? (YES/NO): ')
         financial_ratios_choice = 'N'

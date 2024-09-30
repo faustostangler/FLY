@@ -161,3 +161,5 @@ governance_levels = {
     "DRN": "BDR Não Patrocinado"
 }
 
+# stock_market
+market_file = 'markets'
