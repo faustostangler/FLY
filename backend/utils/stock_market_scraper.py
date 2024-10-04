@@ -397,7 +397,8 @@ class StockMarketScraper:
 
             # Process each sector's statements and merge with company data
             dict_of_df_statements = {}
-            for sector, df_statements in statements_data.items():
+            start_time = time.time()
+            for i, (sector, df_statements) in enumerate(statements_data.items()):
                 df_statements_companies = self.get_merged_df(df_statements, df_companies)
                 historical_data = self.get_historical_data(df_statements_companies)
 
@@ -409,6 +410,8 @@ class StockMarketScraper:
 
                 dict_of_df_statements[sector] = df_final[settings.statements_columns]  # Store final processed DataFrame
 
+                extra_info = [sector]
+                system.print_info(i, extra_info, satart_time, len(statements_data))
             dict_of_df_statements = self.save_to_db(dict_of_df_statements)
 
             return dict_of_df_statements
