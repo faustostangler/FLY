@@ -77,10 +77,10 @@ class StatementsDataScraper:
                 df = pd.read_sql_query(f"SELECT * FROM {sector}", conn)
                 financial_statements[sector] = df  # Store the DataFrame with the sector as the key
                 df.to_csv(f'{sector}.csv')
-                # Use system.print_info to display progress
+                # Display progress
                 total_lines += len(df)
                 extra_info = [f'{len(df)} lines in', sector, f'{total_lines} total lines']
-                system.print_info(i, extra_info, start_time, total_files)
+                system.print_info(i, total_files, start_time, extra_info)
 
             return financial_statements
 
@@ -461,7 +461,7 @@ class StatementsDataScraper:
                     try:
                         # Print progress information
                         extra_info = [batch_number, row['nsd'], row['company_name'], pd.to_datetime(row['quarter'], dayfirst=False, errors='coerce').strftime('%Y-%m-%d')]
-                        system.print_info(processed_items, extra_info, start_time, total_items)
+                        system.print_info(processed_items, total_items, start_time, extra_info)
 
                         # Process each company-quarter data using the refactored function
                         company_quarter_data = self.process_company_quarter_data(row)

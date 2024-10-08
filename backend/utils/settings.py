@@ -4,6 +4,7 @@ db_folder = 'backend/data'
 db_folder_short = 'data'
 db_path = 'backend/data/b3.db'
 backup_name = 'backup'
+max_workers = 10
 
 # batches
 batch_size = 50  # Batch size for data processing
@@ -100,7 +101,11 @@ statements_file_math = 'math'
 # Standard settings
 statements_standard = 'standard'
 
+# stock_market
+markets_file = 'markets'
+
 # ratios
+indicators_fle = 'indicators'
 
 
 # Descriptions and accounts
@@ -161,8 +166,6 @@ governance_levels = {
     "DRN": "BDR Não Patrocinado"
 }
 
-# stock_market
-market_file = 'markets'
 
 tipos_acoes = {
     '1': 'Direitos de Subscrição de Ações Ordinárias',

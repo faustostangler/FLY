@@ -250,19 +250,19 @@ def escape_keywords(keywords):
     """
     return [re.escape(keyword) for keyword in keywords]
 
-def print_info(current_index, extra_info, start_time, total_size):
+def print_info(index, size, start_time=time.time(), extra_info=[]):
     """
     Prints the provided information along with the progress, elapsed time, and remaining time.
 
     Parameters:
-    - current_index (int): The current index of the item being processed.
-    - extra_info (list): The extra information extracted containing multiple values.
+    - index (int): The current index of the item being processed.
+    - size (int): The total number of items to be processed.
     - start_time (float): The start time of the process.
-    - total_size (int): The total number of items to be processed.
+    - extra_info (list): The extra information extracted containing multiple values.
     """
-    completed_items = current_index + 1
-    remaining_items = total_size - completed_items
-    percentage_completed = completed_items / total_size
+    completed_items = index + 1
+    remaining_items = size - completed_items
+    percentage_completed = completed_items / size
     
     elapsed_time = time.time() - start_time
     avg_time_per_item = elapsed_time / completed_items

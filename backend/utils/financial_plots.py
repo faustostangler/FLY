@@ -33,9 +33,9 @@ class FinancialDataPlotter:
             df['table_name'] = table_name  # Add a column to identify the source table
             df_list.append(df)
 
-            # Display progress using system.print_info
+            # Display progress
             extra_info = [table_name]
-            system.print_info(i, extra_info, start_time, len(tables))  # Removed the total_files argument
+            system.print_info(i, len(tables), start_time, extra_info)
 
             print('break')
             break

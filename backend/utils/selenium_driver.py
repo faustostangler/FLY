@@ -183,6 +183,7 @@ def initialize_driver():
     Returns:
         tuple: A tuple containing the WebDriver and WebDriverWait instances.
     """
+    # https://googlechromelabs.github.io/chrome-for-testing/#stable
     hardcoded_chromedriver_path = r'D:\\Fausto Stangler\\Documentos\\Python\\FLY\\backend\\bin\\chromedriver-win64\\chromedriver.exe'
     initialize_driver_error_msg = 'Failed to load driver from hardcoded path.'
     dynamic_driver_error_msg = 'Failed to obtain ChromeDriver path dynamically.'

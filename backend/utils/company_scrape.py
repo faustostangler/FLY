@@ -50,7 +50,7 @@ class CompanyScraper:
                     system.click(next_page_xpath, self.driver_wait)
 
                 extra_info = [f'page {page + 1}']
-                system.print_info(i, extra_info, start_time, total_pages + 1)
+                system.print_info(i, total_pages + 1, start_time, extra_info)
 
         except Exception as e:
             system.log_error(e)
@@ -196,7 +196,7 @@ class CompanyScraper:
 
             all_company_info[company_name] = info
             extra_info = [info['ticker'], info['cvm_code'], company_name]
-            system.print_info(i, extra_info, start_time, total_companies_to_process)
+            system.print_info(i, total_companies_to_process, start_time, extra_info)
 
             all_data.append({'company_name': company_name, **info})
 
@@ -287,7 +287,7 @@ class CompanyScraper:
         batch_to_save = []
 
         for info in new_data_batch:
-            company_name = info['company_name']
+            company_name = info['trading_name']
             if company_name in existing_data:
                 existing_info = existing_data[company_name]
                 changes = {key: info[key] for key in info if info[key] != existing_info.get(key)}

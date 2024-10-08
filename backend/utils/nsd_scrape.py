@@ -328,7 +328,7 @@ class NSDScraper:
                             nsd_data.append(data)
 
                     # Print progress information
-                    system.print_info(i, extra_info, start_time, total_nsds)
+                    system.print_info(i, total_nsds, start_time, extra_info)
 
                     # Regressive periodic save
                     if (total_nsds - i - 1) % (settings.batch_size // 1) == 0:

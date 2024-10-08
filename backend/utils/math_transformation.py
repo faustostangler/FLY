@@ -66,9 +66,9 @@ class MathTransformation:
                 dfs[sector] = df  # Store the DataFrame with the sector as the key
                 total_lines += len(df)  # Update the total number of processed lines
 
-                # Display progress using system.print_info
+                # Display progress
                 extra_info = [f'Loaded {len(df)} items from {sector} in {files}, total {total_lines}']
-                system.print_info(i, extra_info, start_time, len(tables))  # Removed the total_files argument
+                system.print_info(i, len(tables), start_time, extra_info)
 
             return dfs
 
@@ -165,7 +165,7 @@ class MathTransformation:
 
                 # Prepare information for logging progress
                 extra_info = [f'{size} new lines to math from {sector}, total {total_lines}']
-                system.print_info(i, extra_info, start_time, total_sectors)
+                system.print_info(i, total_sectors, start_time, extra_info)
 
             return filtered_results
 
@@ -410,9 +410,9 @@ class MathTransformation:
                 size = len(transformed_df)
                 total_lines += size
 
-                # Display progress using system.print_info
+                # Display progress
                 extra_info = [f'{size} lines from {sector}, total {total_lines}']
-                system.print_info(i, extra_info, start_time, len(dict_filtered))
+                system.print_info(i, len(dict_filtered), start_time, extra_info)
 
             return dict_transformed
 
@@ -500,7 +500,7 @@ class MathTransformation:
 
                     total_lines += len(df)
                     extra_info = [f'{sector}: {len(df)}, {total_lines} lines']
-                    system.print_info(i, extra_info, start_time, len(data_dict))
+                    system.print_info(i, len(data_dict), start_time, extra_info)
 
                 cursor.close()  # Close the cursor after all operations are complete
 

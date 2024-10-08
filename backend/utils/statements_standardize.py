@@ -75,9 +75,9 @@ class StandardizedReport:
                     dfs[sector] = df  # Store the DataFrame with the sector as the key
                     total_lines += len(df)  # Update the total number of processed lines
 
-                    # Display progress using system.print_info
+                    # Display progress
                     extra_info = [f'Loaded {len(df)} items from {sector} in {files}, total {total_lines}']
-                    system.print_info(i, extra_info, start_time, len(tables))  # Removed the total_files argument
+                    system.print_info(i, len(tables), start_time, extra_info)
 
                     # print('break')
                     # break
@@ -280,7 +280,7 @@ class StandardizedReport:
             # Loop through each section in the standardization pack
             for i, (section_name, criteria_tree) in enumerate(standardization_sections.items()):
                 extra_info = [sector, section_name]
-                system.print_info(i, extra_info, start_time, total_sections)
+                system.print_info(i, total_sections, start_time, extra_info)
 
                 # Call the apply_criteria_to_dataframe method for each section
                 df = self.apply_criteria_tree(df, criteria_tree, sector, section_name)
@@ -306,12 +306,11 @@ class StandardizedReport:
         try:
             print('Standardizing data')
             start_time = time.time()
-            total = len(dict_df)
 
             for i, (sector, df) in enumerate(dict_df.items()):
 
                 extra_info = [f'{sector}']
-                system.print_info(i, extra_info, start_time, total)
+                system.print_info(i, len(dict_df), start_time, extra_info)
 
                 df = self.generate_standard_financial_statements(df)
 
@@ -433,7 +432,7 @@ class StandardizedReport:
 
                     total_lines += len(df)
                     extra_info = [f'{sector}: {len(df)}, {total_lines} lines']
-                    system.print_info(i, extra_info, start_time, len(data_dict))
+                    system.print_info(i, len(data_dict), start_time, extra_info)
 
                     df.to_csv(f'df_{sector}_standard.csv', index=False)
 
