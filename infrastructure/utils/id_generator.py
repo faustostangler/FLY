@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import platform
+import socket
 import time
 import uuid
 from typing import Optional
@@ -26,15 +29,29 @@ class IdGenerator:
     def create_id(self, size: int = 0, string_id: Optional[str] = None) -> str:
         """Retorna um novo identificador no formato PREFIX-timestamp-random."""
         if string_id:
-            full_id = string_id.encode("utf-8")
+            base = string_id.encode("utf-8")
         else:
-            rand_part = uuid.uuid4().hex
-            ts_part = int(time.time() * 1000)
-            salt_part = self.logger_name
-            full_id = f"{salt_part}-{format(ts_part)}-{rand_part}".encode("utf-8")
+            salt = self.logger_name
+            system = platform.system()
+            release = platform.release()
+            version = platform.version()
+            machine = platform.machine()
+            processor = platform.processor()
+            mac = f"{uuid.getnode():012x}"
+            hostname = socket.gethostname()
+            fqdn = socket.getfqdn()
+            node = platform.node()
+            user = os.environ.get("USER") or os.environ.get("USERNAME")
+            home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+            ts = time.time_ns()
+            rand = uuid.uuid4().hex
+
+            composite_str = f"{salt}-{system}-{release}-{version}-{machine}-{processor}-{mac}-{hostname}-{fqdn}-{node}-{user}-{home}-{ts}-{rand}"
+
+            base = composite_str.encode("utf-8")
 
 
-        digest = hashlib.sha256(full_id).hexdigest()
+        digest = hashlib.sha256(base).hexdigest()
         # digest = hashlib.sha512(full_id).hexdigest()
 
 
