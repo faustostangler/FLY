@@ -1,3 +1,5 @@
+"""SQLAlchemy adapter for raw statement persistence."""
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -18,8 +20,8 @@ class SqlAlchemyRawStatementRepository(
     """SQLite-backed repository for ``RawStatementDTO`` objects."""
 
     def __init__(self, config: Config, logger: LoggerPort) -> None:
+        """Initialize repository with ``config`` and ``logger``."""
         super().__init__(config, logger)
-
         self.config = config
         self.logger = logger
 
@@ -30,3 +32,13 @@ class SqlAlchemyRawStatementRepository(
             type: The model class associated with this repository.
         """
         return RawStatementModel, (RawStatementModel.id,)
+
+    def get_by_company_name(self, company_name: str) -> list[RawStatementDTO]:
+        """Return raw statement rows for the given company."""
+        with self.Session() as session:
+            results = (
+                session.query(RawStatementModel)
+                .filter(RawStatementModel.company_name == company_name)
+                .all()
+            )
+            return [r.to_dto() for r in results]

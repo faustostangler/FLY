@@ -1,3 +1,5 @@
+"""DTO for transformed statement rows."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,12 +19,12 @@ class ParsedStatementDTO:
     account: str
     description: str
     value: float
+    processing_hash: str = ""
     id: Optional[int] = None
 
     @staticmethod
     def from_dict(raw: dict) -> "ParsedStatementDTO":
         """Create ``ParsedStatementDTO`` from a raw dictionary."""
-
         nsd_raw = raw.get("nsd", "")
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
@@ -38,5 +40,6 @@ class ParsedStatementDTO:
             account=str(raw.get("account", "")),
             description=str(raw.get("description", "")),
             value=float(raw.get("value", 0.0)),
+            processing_hash=str(raw.get("processing_hash", "")),
             id=None,
         )
