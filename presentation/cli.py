@@ -234,6 +234,7 @@ class CLIAdapter:
 
         math_adapter = MathStatementTransformerAdapter(config=self.config)
         intel_adapter = IntelStatementTransformerAdapter(config=self.config)
+
         usecase = TransformStatementsUseCase(
             math_transformer=math_adapter,
             intel_transformer=intel_adapter,

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Iterable, Tuple
 
-from legacy.backend.utils import intel
+from domain.utils import intel
 
 MATH_YEAR_END_PREFIXES: Tuple[str, ...] = ("3", "4")
 MATH_CUMULATIVE_PREFIXES: Tuple[str, ...] = ("6", "7")

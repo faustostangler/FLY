@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Generic, List, Sequence, Tuple, TypeVar, Union
 
@@ -124,7 +125,7 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], ABC, Generic[
             # Ensure the session is always closed after execution
             session.close()
 
-    def get_all(self) -> List[T]:
+    def get_all_old(self) -> List[T]:
         """Retrieve all persisted DTOs from the database.
 
         This method loads all records from the table corresponding to the DTO's
@@ -151,6 +152,46 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], ABC, Generic[
         finally:
             # Ensure the session is closed even if an error occurs
             session.close()
+
+    def get_all(self, batch_size: int = 100) -> List[T]:
+        """
+        Retrieve all DTOs from the database using paginated cursor-based fetching.
+
+        This method fetches all records incrementally using the 'id' field to
+        avoid loading the entire dataset into memory at once.
+
+        Args:
+            batch_size (int): Number of rows to fetch per query.
+
+        Returns:
+            List[T]: A list of all DTOs retrieved from the database.
+        """
+        batch_size = batch_size or self.config.global_settings.batch_size
+
+        # Create a new SQLAlchemy session
+        session = self.Session()
+
+        # Get the SQLAlchemy model class linked to the current DTO type
+        model, pk_columns = self.get_model_class()
+
+        all_results: List[T] = []
+        last_id = 0
+
+        while True:
+            batch = (
+                session.query(model)
+                .filter(model.id > last_id)
+                .order_by(model.id)
+                .limit(batch_size)
+                .all()
+            )
+
+            if not batch:
+                break
+
+            all_results.extend([m.to_dto() for m in batch])
+            last_id = batch[-1].id
+        return all_results
 
     def get_all_primary_keys(self) -> List[K]:
         """Retrieve all unique primary keys from the database.
