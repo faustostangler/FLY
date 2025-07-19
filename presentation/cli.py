@@ -4,7 +4,7 @@ from application import CompanyDataMapper
 from application.services.company_data_service import CompanyDataService
 from application.services.nsd_service import NsdService
 from application.services.statement_fetch_service import StatementFetchService
-from application.usecases.transform_statements import TransformStatementsUseCase
+from application.services.statement_transform_service import StatementTransformService
 
 # from application.services.statement_parse_service import StatementParseService
 from domain.ports import LoggerPort
@@ -21,10 +21,6 @@ from infrastructure.scrapers.company_data_exchange_scraper import CompanyDataScr
 from infrastructure.scrapers.nsd_scraper import NsdScraper
 from infrastructure.scrapers.requests_raw_statement_scraper import (
     RawStatementScraper,
-)
-from infrastructure.transformers import (
-    IntelStatementTransformerAdapter,
-    MathStatementTransformerAdapter,
 )
 
 
@@ -67,7 +63,6 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-
         # self.logger.log("Run  Method controller.run()", level="info")
 
         # Run company scraper and persist logic
@@ -89,7 +84,6 @@ class CLIAdapter:
 
     def _company_service(self) -> None:
         """Build and execute the company data synchronization flow."""
-
         # self.logger.log("Run  Method controller.run()._company_service()", level="info")
 
         # Initialize data mapper for company DTO transformation
@@ -134,7 +128,6 @@ class CLIAdapter:
 
     def _nsd_service(self) -> None:
         """Build and execute the NSD data synchronization flow."""
-
         # self.logger.log("Run  Method controller.run()._nsd_service()", level="info")
 
         # Create repository for storing NSD records
@@ -171,7 +164,6 @@ class CLIAdapter:
 
     def _statement_service(self) -> None:
         """Build and execute the financial statement fetch flow."""
-
         # self.logger.log("Run  Method controller.run()._statement_service()", level="info")
 
         # Initialize all required repositories
@@ -232,18 +224,20 @@ class CLIAdapter:
         # for _nsd, rows in raw_rows:
         #     all_rows.extend(rows)
 
-        math_adapter = MathStatementTransformerAdapter(config=self.config)
-        intel_adapter = IntelStatementTransformerAdapter(config=self.config)
-
-        usecase = TransformStatementsUseCase(
-            math_transformer=math_adapter,
-            intel_transformer=intel_adapter,
+        transform_service = StatementTransformService(
+            logger=self.logger,
+            raw_repo=raw_statement_repo,
+            parsed_repo=parsed_statement_repo,
+            config=self.config,
         )
-        company_keys = raw_statement_repo.get_existing_by_columns("company_name")
+        transform_service.transform_all()
+# =======
+#         company_keys = raw_statement_repo.get_existing_by_columns("company_name")
 
-        for (company_name,) in company_keys:
-            self.logger.log(f"[{company_name}] Starting transformation", level="info")
+#         for (company_name,) in company_keys:
+#             self.logger.log(f"[{company_name}] Starting transformation", level="info")
 
 
-        parsed = usecase.execute(raw_dtos)
-        parsed_statement_repo.save_all(parsed)
+#         parsed = usecase.execute(raw_dtos)
+#         parsed_statement_repo.save_all(parsed)
+# >>>>>>> 2025-07-16-Statements-Round-2
