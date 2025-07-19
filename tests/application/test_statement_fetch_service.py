@@ -62,6 +62,6 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     result = service.fetch_statements(save_callback="cb", threshold=5)
 
     mock_usecase_inst.fetch_statement_rows.assert_called_once_with(
-        targets=targets, save_callback="cb", threshold=5
+        batch_rows=targets, save_callback="cb", threshold=5
     )
     assert result == mock_usecase_inst.fetch_statement_rows.return_value
