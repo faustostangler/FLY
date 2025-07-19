@@ -231,3 +231,13 @@ class CLIAdapter:
             config=self.config,
         )
         transform_service.transform_all()
+# =======
+#         company_keys = raw_statement_repo.get_existing_by_columns("company_name")
+
+#         for (company_name,) in company_keys:
+#             self.logger.log(f"[{company_name}] Starting transformation", level="info")
+
+
+#         parsed = usecase.execute(raw_dtos)
+#         parsed_statement_repo.save_all(parsed)
+# >>>>>>> 2025-07-16-Statements-Round-2
