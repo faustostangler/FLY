@@ -24,10 +24,10 @@ class StatementTransformService:
 
     def __init__(
         self,
+        config: Config,
         logger: LoggerPort,
         raw_repo: SqlAlchemyRawStatementRepositoryPort,
         parsed_repo: SqlAlchemyParsedStatementRepositoryPort,
-        config: Config,
     ) -> None:
         """Create service with repositories and configuration."""
         self.logger = logger
@@ -52,8 +52,10 @@ class StatementTransformService:
             current_hash = compute_hash(raw_dtos)
 
             if self.parsed_repo.exists_with_hash(company_name, current_hash):
-                self.logger.log(f"[{company_name}] Already processed. Skipping.")
+                self.logger.log(f"[{company_name}] - Already processed. Skipping.")
                 continue
+
+            self.logger.log(f"[{company_name}] - Processing.")
 
             try:
                 parsed_dtos = self.transform_usecase.execute(raw_dtos)

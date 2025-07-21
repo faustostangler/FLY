@@ -225,12 +225,15 @@ class CLIAdapter:
         #     all_rows.extend(rows)
 
         transform_service = StatementTransformService(
+            config=self.config,
             logger=self.logger,
             raw_repo=raw_statement_repo,
             parsed_repo=parsed_statement_repo,
-            config=self.config,
         )
-        transform_service.transform_all()
+        try:
+            transform_service.transform_all()
+        except Exception as e:
+            self.logger.log(f"{e}")
 # =======
 #         company_keys = raw_statement_repo.get_existing_by_columns("company_name")
 

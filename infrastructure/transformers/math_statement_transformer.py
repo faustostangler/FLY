@@ -1,5 +1,3 @@
-"""Math adapter implementing quarter adjustment logic."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,14 +13,19 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
     """Adjust quarterly statement values."""
 
     def __init__(self, config: Config) -> None:
-        self.year_end_prefixes = config.transformers.math_year_end_prefixes
-        self.cumulative_prefixes = config.transformers.math_cumulative_prefixes
+        self.year_end_prefixes = tuple(config.transformers.math_year_end_prefixes)
+        self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
 
-    def _group_key(self, row: RawStatementDTO) -> Tuple[str, str, str]:
-        dt = self._parse(row.quarter)
+    def _group_key(self, row: RawStatementDTO, dt: datetime | None) -> Tuple:
         year = dt.year if dt else 0
-        return row.company_name or "", row.account, str(year)
-
+        return (
+            row.company_name or "",
+            row.account,
+            row.grupo,
+            row.quadro,
+            str(year),
+            row.version or "",
+        )
     def _parse(self, quarter: str | None) -> datetime | None:
         if not quarter:
             return None
@@ -33,15 +36,18 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         groups: Dict[
-            Tuple[str, str, str], List[Tuple[datetime | None, RawStatementDTO]]
+            Tuple[str, str, str, str, str, str], List[Tuple[datetime | None, RawStatementDTO]]
         ] = {}
         for row in rows:
-            key = self._group_key(row)
             dt = self._parse(row.quarter)
+            key = self._group_key(row, dt)
             groups.setdefault(key, []).append((dt, row))
 
         result: List[ParsedStatementDTO] = []
         for key, items in groups.items():
+            if len(items)>4:
+                print(f"Grupo de tamanho maior que 4 itens, possíveis duplicatas\n{items}")
+
             items.sort(key=lambda x: (x[0] or datetime.min))
             account = key[1]
             if account.startswith(self.year_end_prefixes):
@@ -55,7 +61,21 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
     def _as_parsed(
         self, items: List[Tuple[datetime | None, RawStatementDTO]]
     ) -> List[ParsedStatementDTO]:
-        return [ParsedStatementDTO(**row.__dict__) for _dt, row in items]
+        return [
+            ParsedStatementDTO(
+                nsd=row.nsd,
+                company_name=row.company_name,
+                quarter=row.quarter,
+                version=row.version,
+                grupo=row.grupo,
+                quadro=row.quadro,
+                account=row.account,
+                description=row.description,
+                value=row.value,
+                processing_hash="",
+            )
+            for _dt, row in items
+        ]
 
     def _adjust_year_end(
         self, items: List[Tuple[datetime | None, RawStatementDTO]]
@@ -70,8 +90,16 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
                 cumulative += row.value
             values.append(
                 ParsedStatementDTO(
-                    **row.__dict__,
+                    nsd=row.nsd,
+                    company_name=row.company_name,
+                    quarter=row.quarter,
+                    version=row.version,
+                    grupo=row.grupo,
+                    quadro=row.quadro,
+                    account=row.account,
+                    description=row.description,
                     value=val,
+                    processing_hash="",
                 )
             )
         return values
@@ -80,14 +108,22 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         self, items: List[Tuple[datetime | None, RawStatementDTO]]
     ) -> List[ParsedStatementDTO]:
         values: List[ParsedStatementDTO] = []
-        cumulative = 0.0
+        last = 0.0
         for dt, row in items:
-            val = row.value - cumulative
-            cumulative += row.value
+            val = row.value - last
+            last = row.value
             values.append(
                 ParsedStatementDTO(
-                    **row.__dict__,
+                    nsd=row.nsd,
+                    company_name=row.company_name,
+                    quarter=row.quarter,
+                    version=row.version,
+                    grupo=row.grupo,
+                    quadro=row.quadro,
+                    account=row.account,
+                    description=row.description,
                     value=val,
+                    processing_hash="",
                 )
             )
         return values

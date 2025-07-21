@@ -54,7 +54,10 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def _version_int(self, version: str | None) -> int:
         try:
-            return int(version or 0)
+            if not version:
+                return 0
+            digits = ''.join(filter(str.isdigit, version))
+            return int(digits) if digits else 0
         except ValueError:
             return 0
 
