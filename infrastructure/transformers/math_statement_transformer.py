@@ -47,6 +47,16 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         for key, items in groups.items():
             if len(items)>4:
                 print(f"Grupo de tamanho maior que 4 itens, possíveis duplicatas\n{items}")
+            elif len(items) == 1:
+                # print(f"Grupo de tamanho {len(items)}, provavável primeiro trimestre de declaração")
+                pass
+            elif len(items) == 4:
+                # print(f"Ano cheio {len(items)} items, tudo normal")
+                pass
+            else:
+                print(f"Grupo de tamanho {len(items)}, o que está faltando?")
+                for item in items:
+                    print(f"{item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}")
 
             items.sort(key=lambda x: (x[0] or datetime.min))
             account = key[1]

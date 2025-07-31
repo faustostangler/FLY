@@ -52,6 +52,7 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], ABC, Generic[
             conn.execute(text("PRAGMA foreign_keys=ON"))
             conn.execute(text("PRAGMA temp_store=MEMORY"))
             conn.execute(text("PRAGMA cache_size=-65536"))  # 64 MB
+            conn.execute(text("PRAGMA optimize"))
 
         # Create a session factory for managing DB transactions
         self.Session = sessionmaker(

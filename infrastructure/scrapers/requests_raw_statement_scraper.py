@@ -33,6 +33,9 @@ class RawStatementScraper(RawStatementScraperPort):
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
+        """Initialize repository with ``config`` and ``logger``."""
+        super().__init__(config, logger)
+
         """Create the adapter with its configuration and logger."""
         self.config = config
         self.logger = logger
