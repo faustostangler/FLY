@@ -39,6 +39,8 @@ class StatementTransformService:
         self.transform_usecase = TransformStatementsUseCase(
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,
+            config=config,
+            logger=logger,
         )
 
     def transform_all(self) -> None:
@@ -68,4 +70,3 @@ class StatementTransformService:
                 )
             except Exception as exc:  # pragma: no cover - log and continue
                 self.logger.log(f"[{company_name}] Error: {exc}", level="error")
-

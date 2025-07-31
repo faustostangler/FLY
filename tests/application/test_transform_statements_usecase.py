@@ -5,6 +5,7 @@ import pytest
 
 from application.usecases.transform_statements import TransformStatementsUseCase
 from domain.dto.raw_statement_dto import RawStatementDTO
+from tests.conftest import DummyConfig
 
 
 @pytest.fixture()
@@ -62,15 +63,27 @@ def test_execute_validates_and_runs_pipeline(monkeypatch, sample_rows):
         validate_mock,
     )
 
-    print_mock = MagicMock()
-    monkeypatch.setattr("builtins.print", print_mock)
+    logger = MagicMock()
 
-    usecase = TransformStatementsUseCase(math_transformer, intel_transformer)
+    usecase = TransformStatementsUseCase(
+        math_transformer,
+        intel_transformer,
+        DummyConfig(),
+        logger,
+    )
     result = usecase.execute(sample_rows)
 
-    validate_mock.assert_called_once()
-    print_mock.assert_any_call(
-        "After dedupe, group ('ACME', '01', 'G', 'Q', 'V1') missing quarters: ['2020-09-30']"
+    validate_mock.assert_called_once_with(sample_rows)
+    logger.warning.assert_called_once_with(
+        "After dedupe, account-group %s missing quarters: %s",
+        (
+            "ACME",
+            "01",
+            "G",
+            "Q",
+            "V1",
+        ),
+        ["2020-09-30"],
     )
     math_transformer.transform.assert_called_once()
     intel_transformer.transform.assert_called_once_with(["math"])
