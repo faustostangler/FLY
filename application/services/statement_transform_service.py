@@ -39,7 +39,6 @@ class StatementTransformService:
         self.transform_usecase = TransformStatementsUseCase(
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,
-            logger=self.logger,
         )
 
     def transform_all(self) -> None:
@@ -50,6 +49,11 @@ class StatementTransformService:
             raw_dtos: List[RawStatementDTO] = self.raw_repo.get_by_company_name(
                 company_name
             )
+
+            # Example usage:
+            from infrastructure.utils.csv_utils import save_dtos_to_csv
+            save_dtos_to_csv(raw_dtos, "raws_statements.csv")
+
             current_hash = compute_hash(raw_dtos)
 
             if self.parsed_repo.exists_with_hash(company_name, current_hash):
@@ -68,3 +72,4 @@ class StatementTransformService:
                 )
             except Exception as exc:  # pragma: no cover - log and continue
                 self.logger.log(f"[{company_name}] Error: {exc}", level="error")
+

@@ -82,6 +82,7 @@ def extract_sorted_quarters(groups: dict) -> list[datetime]:
 def detect_missing_quarters(sorted_quarters: list[datetime]) -> list[datetime]:
     if not sorted_quarters:
         return []
+
     start = min(sorted_quarters)
     end = max(sorted_quarters)
     expected = []

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 from domain.dto.raw_statement_dto import RawStatementDTO
@@ -32,4 +33,12 @@ def filter_latest_versions(rows: List[RawStatementDTO]) -> List[RawStatementDTO]
     for candidates in groups.values():
         latest = max(candidates, key=lambda r: _version_number(r.version))
         result.append(latest)
+
+        result.sort(key=lambda r: (
+    r.company_name or "",
+    # parse quarter string to datetime (fallback to minimal date)
+    datetime.fromisoformat(r.quarter) if r.quarter else datetime.min,
+    r.grupo or "",
+    r.account or "",
+    ))
     return result
