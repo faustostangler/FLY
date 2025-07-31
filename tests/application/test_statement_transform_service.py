@@ -41,16 +41,18 @@ def test_transform_all_processes_new_data(monkeypatch):
 
     parsed_repo.exists_with_hash.return_value = False
 
+    config = DummyConfig()
     service = StatementTransformService(
         logger=DummyLogger(),
         raw_repo=raw_repo,
         parsed_repo=parsed_repo,
-        config=DummyConfig(),
+        config=config,
     )
 
     usecase_cls.assert_called_once_with(
         math_transformer=ANY,
         intel_transformer=ANY,
+        config=config,
         logger=service.logger,
     )
 
