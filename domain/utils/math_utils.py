@@ -66,3 +66,43 @@ def find_missing_quarters(dates: list[datetime]) -> list[datetime]:
     actual_quarters = {to_quarter_end(dt) for dt in dates}
 
     return [q for q in expected if q not in actual_quarters]
+
+
+def extract_sorted_quarters(groups: dict) -> list[datetime]:
+    seen = set()
+    quarters = []
+    for items in groups.values():
+        for dt, _ in items:
+            if dt and dt not in seen:
+                seen.add(dt)
+                quarters.append(dt)
+    return sorted(quarters)
+
+
+def detect_missing_quarters(sorted_quarters: list[datetime]) -> list[datetime]:
+    if not sorted_quarters:
+        return []
+
+    start = min(sorted_quarters)
+    end = max(sorted_quarters)
+    expected = []
+
+    # Avança trimestre por trimestre
+    current = datetime(start.year, start.month, start.day)
+    while current <= end:
+        expected.append(current)
+        # Avança para o próximo trimestre
+        month = current.month
+        if month == 3:
+            current = datetime(current.year, 6, 30)
+        elif month == 6:
+            current = datetime(current.year, 9, 30)
+        elif month == 9:
+            current = datetime(current.year, 12, 31)
+        elif month == 12:
+            current = datetime(current.year + 1, 3, 31)
+        else:
+            break  # formato inesperado
+
+    # Compara os esperados com os reais
+    return [dt for dt in expected if dt not in sorted_quarters]

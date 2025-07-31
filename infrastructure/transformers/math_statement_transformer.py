@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.utils.math_utils import detect_missing_quarters, extract_sorted_quarters
 from infrastructure.config import Config
 
 
@@ -43,23 +44,34 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             key = self._group_key(row, dt)
             groups.setdefault(key, []).append((dt, row))
 
+        # Verificação de completude dos quarters
+        quarters = extract_sorted_quarters(groups)
+        missing = detect_missing_quarters(quarters)
+        if missing:
+            print("Quarters ausentes na base: faça uma busca no nsd para verificar se estão disponíveis")
+            for q in missing:
+                print(" -", q.strftime("%Y-%m-%d"))
+
         result: List[ParsedStatementDTO] = []
-        for key, items in groups.items():
-            if len(items)>4:
-                print(f"Grupo de tamanho maior que 4 itens, possíveis duplicatas\n{items}")
-            elif len(items) == 1:
-                # print(f"Grupo de tamanho {len(items)}, provavável primeiro trimestre de declaração")
-                pass
-            elif len(items) == 4:
-                # print(f"Ano cheio {len(items)} items, tudo normal")
-                pass
-            else:
-                print(f"Grupo de tamanho {len(items)}, o que está faltando?")
-                for item in items:
-                    print(f"{item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}")
+        for i, group in enumerate(groups.items()):
+            (company, account, grupo, quadro, year, version), items = group
+
+            target_accounts = ['00.01.01', '1', '2', '3.01', '4.01', '6.01', '7.01']
+            if account in target_accounts:
+                if len(items)>4:
+                    print(f"Sheet {i}/{len(groups)} de tamanho maior que 4 itens, possíveis duplicatas\n{items}")
+                elif len(items) == 1:
+                    print(f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}")
+                    pass
+                elif len(items) == 4:
+                    print(f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}")
+                    pass
+                else:
+                    print(f"Sheet de tamanho {len(items)}, o que está faltando?")
+                    for item in items:
+                        print(f"{i}/{len(groups)} - {item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}")
 
             items.sort(key=lambda x: (x[0] or datetime.min))
-            account = key[1]
             if account.startswith(self.year_end_prefixes):
                 result.extend(self._adjust_year_end(items))
             elif account.startswith(self.cumulative_prefixes):
