@@ -1,4 +1,4 @@
-"""Setup environment for the project."""
+"""Utility to create VS Code configuration for the virtual environment."""
 
 import json
 import os

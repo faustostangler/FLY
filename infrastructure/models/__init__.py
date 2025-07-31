@@ -6,11 +6,8 @@ from .nsd_model import NSDModel
 from .parsed_statement_model import ParsedStatementModel
 from .raw_statement_model import RawStatementModel
 
-# Provide a common "Base" alias expected by tests
-Base = BaseModel
-
 __all__ = [
-    "Base",
+    "BaseModel",
     "CompanyDataModel",
     "NSDModel",
     "RawStatementModel",

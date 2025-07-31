@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from infrastructure.models.base_model import Base
+from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.parsed_statement_repository import (
     SqlAlchemyParsedStatementRepository,
 )
@@ -14,7 +14,7 @@ def test_replace_and_exists(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    Base.metadata.create_all(engine)
+    BaseModel.metadata.create_all(engine)
 
     dto = ParsedStatementDTO(
         nsd="1",
