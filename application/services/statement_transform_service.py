@@ -50,10 +50,6 @@ class StatementTransformService:
                 company_name
             )
 
-            # Example usage:
-            from infrastructure.utils.csv_utils import save_dtos_to_csv
-            save_dtos_to_csv(raw_dtos, "raws_statements.csv")
-
             current_hash = compute_hash(raw_dtos)
 
             if self.parsed_repo.exists_with_hash(company_name, current_hash):

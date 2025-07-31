@@ -23,6 +23,9 @@ class TransformStatementsUseCase:
 
     def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run transformation pipeline for ``raw_dtos``."""
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(raw_dtos, "raws_statements.csv")
+
         stage1 = filter_latest_versions(raw_dtos)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
