@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 from application.services.statement_transform_service import StatementTransformService
 from domain.dto.raw_statement_dto import RawStatementDTO
@@ -46,6 +46,12 @@ def test_transform_all_processes_new_data(monkeypatch):
         raw_repo=raw_repo,
         parsed_repo=parsed_repo,
         config=DummyConfig(),
+    )
+
+    usecase_cls.assert_called_once_with(
+        math_transformer=ANY,
+        intel_transformer=ANY,
+        logger=service.logger,
     )
 
     service.transform_all()

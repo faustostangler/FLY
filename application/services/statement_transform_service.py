@@ -39,6 +39,7 @@ class StatementTransformService:
         self.transform_usecase = TransformStatementsUseCase(
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,
+            logger=self.logger,
         )
 
     def transform_all(self) -> None:
