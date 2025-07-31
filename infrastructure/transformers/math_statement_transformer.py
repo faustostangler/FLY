@@ -16,6 +16,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
     def __init__(self, config: Config) -> None:
         self.year_end_prefixes = tuple(config.transformers.math_year_end_prefixes)
         self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
+        self.target_accounts = set(config.transformers.math_target_accounts)
 
     def _group_key(self, row: RawStatementDTO, dt: datetime | None) -> Tuple:
         year = dt.year if dt else 0
@@ -27,6 +28,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             str(year),
             row.version or "",
         )
+
     def _parse(self, quarter: str | None) -> datetime | None:
         if not quarter:
             return None
@@ -37,7 +39,8 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         groups: Dict[
-            Tuple[str, str, str, str, str, str], List[Tuple[datetime | None, RawStatementDTO]]
+            Tuple[str, str, str, str, str, str],
+            List[Tuple[datetime | None, RawStatementDTO]],
         ] = {}
         for row in rows:
             dt = self._parse(row.quarter)
@@ -48,7 +51,9 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         quarters = extract_sorted_quarters(groups)
         missing = detect_missing_quarters(quarters)
         if missing:
-            print("Quarters ausentes na base: faça uma busca no nsd para verificar se estão disponíveis")
+            print(
+                "Quarters ausentes na base: faça uma busca no nsd para verificar se estão disponíveis"
+            )
             for q in missing:
                 print(" -", q.strftime("%Y-%m-%d"))
 
@@ -56,20 +61,27 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         for i, group in enumerate(groups.items()):
             (company, account, grupo, quadro, year, version), items = group
 
-            target_accounts = ['00.01.01', '1', '2', '3.01', '4.01', '6.01', '7.01']
-            if account in target_accounts:
-                if len(items)>4:
-                    print(f"Sheet {i}/{len(groups)} de tamanho maior que 4 itens, possíveis duplicatas\n{items}")
+            if account in self.target_accounts:
+                if len(items) > 4:
+                    print(
+                        f"Sheet {i}/{len(groups)} de tamanho maior que 4 itens, possíveis duplicatas\n{items}"
+                    )
                 elif len(items) == 1:
-                    print(f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}")
+                    print(
+                        f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}"
+                    )
                     pass
                 elif len(items) == 4:
-                    print(f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}")
+                    print(
+                        f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}"
+                    )
                     pass
                 else:
                     print(f"Sheet de tamanho {len(items)}, o que está faltando?")
                     for item in items:
-                        print(f"{i}/{len(groups)} - {item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}")
+                        print(
+                            f"{i}/{len(groups)} - {item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}"
+                        )
 
             items.sort(key=lambda x: (x[0] or datetime.min))
             if account.startswith(self.year_end_prefixes):

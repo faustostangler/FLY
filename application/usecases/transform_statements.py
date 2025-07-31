@@ -7,6 +7,7 @@ from typing import List
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.utils.version_utils import filter_latest_versions
 
 
 class TransformStatementsUseCase:
@@ -22,6 +23,7 @@ class TransformStatementsUseCase:
 
     def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run transformation pipeline for ``raw_dtos``."""
-        stage1 = self.math_transformer.transform(raw_dtos)
-        stage2 = self.intel_transformer.transform(stage1)  # type: ignore[arg-type]
-        return stage2
+        stage1 = filter_latest_versions(raw_dtos)
+        stage2 = self.math_transformer.transform(stage1)
+        stage3 = self.intel_transformer.transform(stage2)  # type: ignore[arg-type]
+        return stage3
