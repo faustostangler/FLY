@@ -4,6 +4,7 @@ from application.ports import StatementTransformerPort
 from application.usecases.transform_statements import TransformStatementsUseCase
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
+from tests.conftest import DummyConfig
 
 
 class DummyTransformer(StatementTransformerPort):
@@ -43,6 +44,7 @@ def test_usecase_logs_missing_and_deduplicates():
     usecase = TransformStatementsUseCase(
         math_transformer=DummyTransformer(),
         intel_transformer=DummyTransformer(),
+        config=DummyConfig(),
         logger=logger,
     )
 
@@ -56,13 +58,17 @@ def test_usecase_logs_missing_and_deduplicates():
 
     result = usecase.execute(rows)
 
-    expected = {
-        "Group ('ACME', 'ACC', 'G', 'Q', 'V1') is missing quarters: ['2021-06-30']",
-        "Group ('ACME', 'ACC', 'G', 'Q', 'V2') is missing quarters: ['2021-06-30']",
-    }
-
-    actual = {args[0] for args, kwargs in logger.log.call_args_list}
-    assert actual == expected
+    logger.warning.assert_any_call(
+        "Group %s missing quarters: %s",
+        ("ACME", "ACC", "G", "Q", "V1"),
+        ["2021-06-30"],
+    )
+    logger.warning.assert_any_call(
+        "Group %s missing quarters: %s",
+        ("ACME", "ACC", "G", "Q", "V2"),
+        ["2021-06-30"],
+    )
+    assert logger.warning.call_count == 2
 
     mapping = {(r.quarter, r.version) for r in result}
     assert ("2021-03-31", "V2") in mapping

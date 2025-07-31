@@ -120,6 +120,26 @@ class Logger(LoggerPort):
             # fallback on error
             self._logger.error(f"Logging failed: {e} - {full_message}")
 
+    def warning(
+        self,
+        message: str,
+        *args,
+        progress: Optional[dict] = None,
+        extra: Optional[dict] = None,
+        worker_id: Optional[str] = None,
+        show_path: Optional[bool] = None,
+    ) -> None:
+        """Emit a warning-level log message."""
+        formatted = message % args if args else message
+        self.log(
+            formatted,
+            level="warning",
+            progress=progress,
+            extra=extra,
+            worker_id=worker_id,
+            show_path=show_path,
+        )
+
 
 class SafeFormatter(logging.Formatter):
     """Formatter that injects default values for missing log attributes."""
