@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
+from typing import Dict, List, Tuple
 
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.utils.math_utils import detect_missing_quarters, extract_sorted_quarters
+from domain.utils.math_utils import detect_missing_quarters
 
 
-def validate_quarter_completeness(rows: List[RawStatementDTO]) -> List[datetime]:
-    """Return any missing quarter-end dates across ``rows``."""
-    groups = {}
+def validate_quarter_completeness(
+    rows: List[RawStatementDTO],
+) -> Dict[Tuple[str, str, str, str, str], List[datetime]]:
+    """Return missing quarters for each distinct statement group."""
+    groups: Dict[Tuple[str, str, str, str, str], List[datetime]] = {}
     for row in rows:
-        dt = datetime.fromisoformat(row.quarter) if row.quarter else None
+        if not row.quarter:
+            continue
+        dt = datetime.fromisoformat(row.quarter)
         key = (
             row.company_name or "",
             row.account,
@@ -21,7 +25,13 @@ def validate_quarter_completeness(rows: List[RawStatementDTO]) -> List[datetime]
             row.quadro,
             row.version or "",
         )
-        groups.setdefault(key, []).append((dt, row))
+        groups.setdefault(key, []).append(dt)
 
-    quarters = extract_sorted_quarters(groups)
-    return detect_missing_quarters(quarters)
+    missing_by_group: Dict[Tuple[str, str, str, str, str], List[datetime]] = {}
+    for key, dts in groups.items():
+        unique_sorted = sorted(set(dts))
+        miss = detect_missing_quarters(unique_sorted)
+        if miss:
+            missing_by_group[key] = miss
+
+    return missing_by_group
