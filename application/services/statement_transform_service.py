@@ -39,7 +39,6 @@ class StatementTransformService:
         self.transform_usecase = TransformStatementsUseCase(
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,
-            config=config,
             logger=self.logger,
         )
 

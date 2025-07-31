@@ -52,7 +52,6 @@ def test_transform_all_processes_new_data(monkeypatch):
     usecase_cls.assert_called_once_with(
         math_transformer=ANY,
         intel_transformer=ANY,
-        config=config,
         logger=service.logger,
     )
 
