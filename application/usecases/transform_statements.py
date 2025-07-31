@@ -19,29 +19,25 @@ class TransformStatementsUseCase:
         self,
         math_transformer: StatementTransformerPort,
         intel_transformer: StatementTransformerPort,
-        config,
         logger: LoggerPort,
     ) -> None:
         """Store dependencies for the statement transformation pipeline."""
         self.math_transformer = math_transformer
         self.intel_transformer = intel_transformer
-        self.config = config
         self.logger = logger
 
     def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run transformation pipeline for ``raw_dtos``."""
-        targets = set(self.config.transformers.math_target_accounts)
-        validation_candidates = [r for r in raw_dtos if r.account in targets]
+        deduped = filter_latest_versions(raw_dtos)
 
-        missing_map = validate_quarter_completeness(validation_candidates)
+        missing_map = validate_quarter_completeness(deduped)
         for key, miss in missing_map.items():
             self.logger.warning(
-                "Group %s missing quarters: %s",
+                "After dedupe, version-group %s missing quarters: %s",
                 key,
                 [d.strftime("%Y-%m-%d") for d in miss],
             )
 
-        stage1 = filter_latest_versions(raw_dtos)
-        stage2 = self.math_transformer.transform(stage1)
-        stage3 = self.intel_transformer.transform(stage2)  # type: ignore[arg-type]
-        return stage3
+        stage1 = self.math_transformer.transform(deduped)
+        stage2 = self.intel_transformer.transform(stage1)  # type: ignore[arg-type]
+        return stage2
