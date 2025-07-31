@@ -1,9 +1,11 @@
+"""SQLAlchemy ORM model for the ``tbl_nsd`` table."""
+
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.nsd_dto import NsdDTO
@@ -19,7 +21,9 @@ class NSDModel(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[str] = mapped_column(String)
-    company_name: Mapped[Optional[str]] = mapped_column()
+    company_name: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("tbl_company.company_name")
+    )
     quarter: Mapped[Optional[datetime]] = mapped_column(DateTime)
     version: Mapped[Optional[str]] = mapped_column()
     nsd_type: Mapped[Optional[str]] = mapped_column()

@@ -1,6 +1,8 @@
+"""Base model shared by raw and parsed statement rows."""
+
 from __future__ import annotations
 
-from sqlalchemy import Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base_model import BaseModel
@@ -24,8 +26,10 @@ class AbstractStatementModel(BaseModel):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nsd: Mapped[str] = mapped_column(String)
-    company_name: Mapped[str | None] = mapped_column()
+    nsd: Mapped[str] = mapped_column(String, ForeignKey("tbl_nsd.nsd"))
+    company_name: Mapped[str | None] = mapped_column(
+        ForeignKey("tbl_company.company_name")
+    )
     quarter: Mapped[str | None] = mapped_column()
     version: Mapped[str | None] = mapped_column()
     grupo: Mapped[str] = mapped_column()
