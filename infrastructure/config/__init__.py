@@ -1,3 +1,3 @@
-from .config import Config, math_target_accounts
+from .config import Config
 
-__all__ = ["Config", "math_target_accounts"]
+__all__ = ["Config",]

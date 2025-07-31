@@ -9,12 +9,9 @@ from .paths import PathConfig, load_paths
 from .scraping import ScrapingConfig, load_scraping_config
 from .statements import StatementsConfig, load_statements_config
 from .transformers import (
-    MATH_TARGET_ACCOUNTS,
     TransformersConfig,
     load_transformers_config,
 )
-
-math_target_accounts = MATH_TARGET_ACCOUNTS
 
 
 class Config:
