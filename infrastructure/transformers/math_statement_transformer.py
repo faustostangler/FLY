@@ -1,3 +1,5 @@
+"""Adapters to perform math transformations on statement rows."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,6 +15,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
     """Adjust quarterly statement values."""
 
     def __init__(self, config: Config) -> None:
+        """Store transformation rules from ``config``."""
         self.year_end_prefixes = tuple(config.transformers.math_year_end_prefixes)
         self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
         self.target_accounts = set(config.transformers.math_target_accounts)
@@ -37,6 +40,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             return None
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
+        """Convert raw rows into parsed ones applying math adjustments."""
         groups: Dict[
             Tuple[str, str, str, str, str, str],
             List[Tuple[datetime | None, RawStatementDTO]],
@@ -49,28 +53,6 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         result: List[ParsedStatementDTO] = []
         for i, group in enumerate(groups.items()):
             (company, account, grupo, quadro, year, version), items = group
-
-            if account in self.target_accounts:
-                if len(items) > 4:
-                    print(
-                        f"Sheet {i}/{len(groups)} de tamanho maior que 4 itens, possíveis duplicatas\n{items}"
-                    )
-                elif len(items) == 1:
-                    print(
-                        f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}"
-                    )
-                    pass
-                elif len(items) == 4:
-                    print(
-                        f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}"
-                    )
-                    pass
-                else:
-                    print(f"Sheet de tamanho {len(items)}, o que está faltando?")
-                    for item in items:
-                        print(
-                            f"{i}/{len(groups)} - {item[1].version} item {item[1].quarter}, grupo {item[1].grupo} account {item[1].account}"
-                        )
 
             items.sort(key=lambda x: (x[0] or datetime.min))
             if account.startswith(self.year_end_prefixes):

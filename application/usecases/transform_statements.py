@@ -28,10 +28,10 @@ class TransformStatementsUseCase:
 
     def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run transformation pipeline for ``raw_dtos``."""
-        missing = validate_quarter_completeness(raw_dtos)
-        if missing:
+        missing_map = validate_quarter_completeness(raw_dtos)
+        for key, miss in missing_map.items():
             self.logger.log(
-                f"Missing quarters in raw data: {[d.strftime('%Y-%m-%d') for d in missing]}",
+                f"Group {key} is missing quarters: {[d.strftime('%Y-%m-%d') for d in miss]}",
                 level="warning",
             )
 
