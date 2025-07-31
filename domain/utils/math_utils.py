@@ -18,3 +18,51 @@ def parse_quarter(quarter: str | None) -> datetime | None:
 def quarter_index(dt: datetime) -> int:
     """Return quarter number (1-4) for ``dt``."""
     return (dt.month - 1) // 3 + 1
+
+
+def find_missing_quarters(dates: list[datetime]) -> list[datetime]:
+    """Return the expected quarter-end dates missing from ``dates``.
+
+    Parameters
+    ----------
+    dates:
+        Collection of datetimes representing quarter ends or arbitrary dates.
+
+    Returns
+    -------
+    list[datetime]
+        Quarter-end dates that should exist between the first and last provided
+        dates but are absent from ``dates``.
+    """
+
+    if not dates:
+        return []
+
+    unique_dates = sorted(set(dates))
+    start = unique_dates[0]
+    end = unique_dates[-1]
+
+    def to_quarter_end(dt: datetime) -> datetime:
+        month = dt.month
+        if month in (1, 2, 3):
+            return datetime(dt.year, 3, 31)
+        if month in (4, 5, 6):
+            return datetime(dt.year, 6, 30)
+        if month in (7, 8, 9):
+            return datetime(dt.year, 9, 30)
+        return datetime(dt.year, 12, 31)
+
+    expected: list[datetime] = []
+    y, m = start.year, to_quarter_end(start).month
+    current = datetime(y, m, 1)
+    while current <= end:
+        quarter_end = to_quarter_end(current)
+        expected.append(quarter_end)
+        next_month = current.month + 3
+        next_year = current.year + (next_month - 1) // 12
+        next_month = ((next_month - 1) % 12) + 1
+        current = datetime(next_year, next_month, 1)
+
+    actual_quarters = {to_quarter_end(dt) for dt in dates}
+
+    return [q for q in expected if q not in actual_quarters]
