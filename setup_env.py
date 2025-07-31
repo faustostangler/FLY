@@ -1,5 +1,7 @@
-import os
+"""Setup environment for the project."""
+
 import json
+import os
 import platform
 
 # Detecta o sistema operacional
@@ -19,9 +21,7 @@ else:
 os.makedirs(vscode_dir, exist_ok=True)
 
 # Monta o dicionário de configuração
-settings = {
-    "python.defaultInterpreterPath": python_path
-}
+settings = {"python.defaultInterpreterPath": python_path}
 
 # Salva o settings.json
 with open(settings_path, "w") as f:
