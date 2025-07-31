@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import List
 
 from application.ports import StatementTransformerPort
@@ -9,6 +10,7 @@ from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
+from infrastructure.config import Config
 
 
 class TransformStatementsUseCase:
@@ -18,41 +20,55 @@ class TransformStatementsUseCase:
         self,
         math_transformer: StatementTransformerPort,
         intel_transformer: StatementTransformerPort,
+        config: Config,
+        logger: logging.Logger,
     ) -> None:
         self.math_transformer = math_transformer
         self.intel_transformer = intel_transformer
+        self.config = config
+        self.logger = logger
 
     def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run transformation pipeline for ``raw_dtos``."""
         stage1 = filter_latest_versions(raw_dtos)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+
         save_dtos_to_csv(stage1, "raws_statements_stage_1.csv")
 
-        # Stage 2: validate completeness
-        missing_map = validate_quarter_completeness(stage1)
+        # Stage 1.5: restrict validation to MATH_TARGET_ACCOUNTS
+        targets = tuple(self.config.transformers.math_target_accounts)
+        validation_candidates = [
+            r for r in stage1 if any(r.account.startswith(prefix) for prefix in targets)
+        ]
+
+        # Stage 2: detect missing quarter-ends only for filtered accounts
+        missing_map = validate_quarter_completeness(validation_candidates)
         if missing_map:
             for key, dates in missing_map.items():
-                print(
-                    f"After dedupe, group {key} missing quarters: "
-                    f"{[d.strftime('%Y-%m-%d') for d in dates]}"
+                self.logger.warning(
+                    "After dedupe, account-group %s missing quarters: %s",
+                    key,
+                    [d.strftime("%Y-%m-%d") for d in dates],
                 )
         stage2 = stage1
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+
         save_dtos_to_csv(stage2, "raws_statements_stage_2.csv")
 
         # Stage 3: math transformation
         stage3 = self.math_transformer.transform(stage2)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+
         save_dtos_to_csv(stage3, "raws_statements_stage_3.csv")
 
         # Stage 4: intel transformation
         stage4 = self.intel_transformer.transform(stage3)  # type: ignore[arg-type]
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+
         save_dtos_to_csv(stage4, "raws_statements_stage_4.csv")
 
         return stage4
-

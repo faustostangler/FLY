@@ -30,6 +30,9 @@ class DummyLogger:
     def log(self, *args, **kwargs):
         pass
 
+    def warning(self, *args, **kwargs):
+        pass
+
 
 class DummyConfig:
     class Database:
@@ -43,3 +46,8 @@ class DummyConfig:
         queue_size = 10
 
     global_settings = Global()
+
+    class Transformers:
+        math_target_accounts = ("01",)
+
+    transformers = Transformers()

@@ -6,7 +6,6 @@ from typing import Dict, List, Tuple
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.utils.math_utils import detect_missing_quarters, extract_sorted_quarters
 from infrastructure.config import Config
 
 
@@ -46,16 +45,6 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             dt = self._parse(row.quarter)
             key = self._group_key(row, dt)
             groups.setdefault(key, []).append((dt, row))
-
-        # Verificação de completude dos quarters
-        quarters = extract_sorted_quarters(groups)
-        missing = detect_missing_quarters(quarters)
-        if missing:
-            print(
-                "Quarters ausentes na base: faça uma busca no nsd para verificar se estão disponíveis"
-            )
-            for q in missing:
-                print(" -", q.strftime("%Y-%m-%d"))
 
         result: List[ParsedStatementDTO] = []
         for i, group in enumerate(groups.items()):
