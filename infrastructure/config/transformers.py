@@ -5,6 +5,15 @@ from domain.utils import intel
 
 MATH_YEAR_END_PREFIXES: Tuple[str, ...] = ("3", "4")
 MATH_CUMULATIVE_PREFIXES: Tuple[str, ...] = ("6", "7")
+MATH_TARGET_ACCOUNTS: Tuple[str, ...] = (
+    "00.01.01",
+    "1",
+    "2",
+    "3.01",
+    "4.01",
+    "6.01",
+    "7.01",
+)
 INTEL_YEAR_END_PREFIXES: Tuple[str, ...] = ("03", "04")
 INTEL_CUMULATIVE_PREFIXES: Tuple[str, ...] = ("06", "07")
 INTEL_SECTION_CRITERIA: Tuple[Tuple[str, Iterable[dict]], ...] = (
@@ -27,6 +36,9 @@ class TransformersConfig:
     math_cumulative_prefixes: Tuple[str, ...] = field(
         default_factory=lambda: MATH_CUMULATIVE_PREFIXES
     )
+    math_target_accounts: Tuple[str, ...] = field(
+        default_factory=lambda: MATH_TARGET_ACCOUNTS
+    )
     intel_year_end_prefixes: Tuple[str, ...] = field(
         default_factory=lambda: INTEL_YEAR_END_PREFIXES
     )
@@ -43,6 +55,7 @@ def load_transformers_config() -> TransformersConfig:
     return TransformersConfig(
         math_year_end_prefixes=MATH_YEAR_END_PREFIXES,
         math_cumulative_prefixes=MATH_CUMULATIVE_PREFIXES,
+        math_target_accounts=MATH_TARGET_ACCOUNTS,
         intel_year_end_prefixes=INTEL_YEAR_END_PREFIXES,
         intel_cumulative_prefixes=INTEL_CUMULATIVE_PREFIXES,
         intel_section_criteria=INTEL_SECTION_CRITERIA,
