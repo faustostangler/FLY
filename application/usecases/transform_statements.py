@@ -27,8 +27,7 @@ class TransformStatementsUseCase:
         stage1 = filter_latest_versions(raw_dtos)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
-
-        save_dtos_to_csv(stage1, "raws_latest_statements.csv")
+        save_dtos_to_csv(stage1, "raws_statements_stage_1.csv")
 
         # Stage 2: validate completeness
         missing_map = validate_quarter_completeness(stage1)
@@ -38,11 +37,22 @@ class TransformStatementsUseCase:
                     f"After dedupe, group {key} missing quarters: "
                     f"{[d.strftime('%Y-%m-%d') for d in dates]}"
                 )
-        stage2_validated = stage1
+        stage2 = stage1
+
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(stage2, "raws_statements_stage_2.csv")
 
         # Stage 3: math transformation
-        stage3 = self.math_transformer.transform(stage2_validated)
+        stage3 = self.math_transformer.transform(stage2)
+
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(stage3, "raws_statements_stage_3.csv")
 
         # Stage 4: intel transformation
         stage4 = self.intel_transformer.transform(stage3)  # type: ignore[arg-type]
+
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(stage4, "raws_statements_stage_4.csv")
+
         return stage4
+
