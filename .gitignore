@@ -47,6 +47,7 @@ ENV/
 env/
 .envrc
 .env/
+.venv-linux/
 
 # VSCode specific
 .vscode/

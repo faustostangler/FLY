@@ -48,6 +48,10 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], ABC, Generic[
         # Enable Write-Ahead Logging mode to support concurrent reads/writes
         with self.engine.connect() as conn:
             conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA synchronous=FULL"))
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.execute(text("PRAGMA temp_store=MEMORY"))
+            conn.execute(text("PRAGMA cache_size=-65536"))  # 64 MB
 
         # Create a session factory for managing DB transactions
         self.Session = sessionmaker(
