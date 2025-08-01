@@ -7,5 +7,5 @@ class BaseModel(DeclarativeBase):
     pass
 
 
-# Alias used in tests and other modules
-Base = BaseModel
+# # Alias used in tests and other modules
+# Base = BaseModel

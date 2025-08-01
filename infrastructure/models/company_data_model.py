@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Index, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.company_data_dto import CompanyDataDTO
@@ -62,6 +62,11 @@ class CompanyDataModel(BaseModel):
     date_quotation: Mapped[Optional[datetime]] = mapped_column(DateTime)
     last_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+    __table_args__ = (
+        Index("ix_company_cvm_code", "cvm_code"),
+        Index("ix_company_company_name", "company_name"),
+    )
 
     @staticmethod
     def from_dto(dto: CompanyDataRawDTO | CompanyDataDTO) -> "CompanyDataModel":

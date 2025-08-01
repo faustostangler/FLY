@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
@@ -12,6 +12,33 @@ class ParsedStatementModel(AbstractStatementModel):
     """ORM model for parsed statement rows."""
 
     __tablename__ = "tbl_parsed_statements"
+
+    nsd: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("tbl_nsd.nsd"),
+    )
+    company_name: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("tbl_company.company_name"),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "nsd",
+            "company_name",
+            "quarter",
+            "version",
+            "grupo",
+            "quadro",
+            "account",
+            name="uq_parsed_statements_fullkey",
+        ),
+        Index("ix_parsed_statements_company_name", "company_name"),
+        Index("ix_parsed_statements_quarter", "quarter"),
+        Index("ix_parsed_statements_account", "account"),
+        Index("ix_parsed_statements_nsd", "nsd"),
+        Index("ix_parsed_statements_company_quarter", "company_name", "quarter"),
+    )
 
     processing_hash: Mapped[str | None] = mapped_column(String, index=True)
 

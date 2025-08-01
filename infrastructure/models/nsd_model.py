@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.nsd_dto import NsdDTO
@@ -31,6 +31,12 @@ class NSDModel(BaseModel):
     protocol: Mapped[Optional[str]] = mapped_column()
     sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     reason: Mapped[Optional[str]] = mapped_column()
+
+
+    __table_args__ = (
+        Index("ix_nsd_nsd", "nsd"),
+        Index("ix_nsd_company_name", "company_name"),
+    )
 
     @staticmethod
     def from_dto(dto: NsdDTO) -> "NSDModel":

@@ -29,8 +29,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
-        filtered = self._filter_newer_versions(rows)
-        standardized = self.generate_standard_financial_statements(filtered)
+        standardized = self.generate_standard_financial_statements(rows)
         cleaned = self.adjust_columns(standardized)
         corrected = self.detect_and_correct_outliers(cleaned)
         adjusted = self._transform_quarterly_values(corrected)
