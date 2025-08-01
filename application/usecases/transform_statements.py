@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 from typing import List
 
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.ports import LoggerPort
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
 from infrastructure.config import Config
@@ -21,7 +21,7 @@ class TransformStatementsUseCase:
         math_transformer: StatementTransformerPort,
         intel_transformer: StatementTransformerPort,
         config: Config,
-        logger: logging.Logger,
+        logger: LoggerPort,
     ) -> None:
         self.math_transformer = math_transformer
         self.intel_transformer = intel_transformer
@@ -38,20 +38,15 @@ class TransformStatementsUseCase:
 
         # Stage 1.5: restrict validation to MATH_TARGET_ACCOUNTS
         targets = tuple(self.config.transformers.math_target_accounts)
-        validation_candidates = [
-            r for r in stage1 if any(r.account.startswith(prefix) for prefix in targets)
-        ]
+        validation_candidates = [r for r in stage1 if r.account in targets]
 
         # Stage 2: detect missing quarter-ends only for filtered accounts
         missing_map = validate_quarter_completeness(validation_candidates)
         if missing_map:
             for key, dates in missing_map.items():
-                self.logger.warning(
-                    "After dedupe, account-group %s missing quarters: %s",
-                    key,
-                    [d.strftime("%Y-%m-%d") for d in dates],
-                )
-        stage2 = stage1
+                self.logger.log(
+                    f"After dedupe, account-group {key} missing quarters: {[d.strftime('%Y-%m-%d') for d in dates]}")
+        stage2 = stage1 # in fact impplement raw_statement download by nsd search for missing then proceed to stage2
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
 

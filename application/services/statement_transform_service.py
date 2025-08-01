@@ -40,7 +40,7 @@ class StatementTransformService:
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,
             config=config,
-            logger=logger,
+            logger=self.logger,
         )
 
     def transform_all(self) -> None:

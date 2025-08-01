@@ -25,7 +25,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             row.grupo,
             row.quadro,
             str(year),
-            row.version or "",
+            "" # row.version or "",
         )
 
     def _parse(self, quarter: str | None) -> datetime | None:

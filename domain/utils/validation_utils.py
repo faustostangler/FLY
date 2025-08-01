@@ -21,7 +21,7 @@ def validate_quarter_completeness(
             row.account,
             row.grupo,
             row.quadro,
-            row.version or "",
+            "", # row.version or "",
         )
         groups.setdefault(key, []).append(dt)
 
