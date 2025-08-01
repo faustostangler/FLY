@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from .parsed_statement_dto import ParsedStatementDTO
+
 
 @dataclass(frozen=True)
 class RawStatementDTO:
@@ -39,4 +41,26 @@ class RawStatementDTO:
             description=str(raw.get("description", "")),
             value=float(raw.get("value", 0.0)),
             id=None,
+        )
+
+    def to_parsed(self, target_line: str) -> "ParsedStatementDTO":
+        """Convert this raw row into a ``ParsedStatementDTO``."""
+
+        from .parsed_statement_dto import ParsedStatementDTO
+
+        parts = target_line.split(" - ", 1)
+        account = parts[0].strip()
+        description = parts[1].strip() if len(parts) > 1 else self.description
+
+        return ParsedStatementDTO(
+            nsd=self.nsd,
+            company_name=self.company_name,
+            quarter=self.quarter,
+            version=self.version,
+            grupo=self.grupo,
+            quadro=self.quadro,
+            account=account,
+            description=description,
+            value=self.value,
+            processing_hash="",
         )

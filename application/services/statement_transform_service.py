@@ -11,6 +11,7 @@ from domain.ports import (
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
 )
+from domain.services import StatementClassificationService
 from domain.utils import compute_hash
 from infrastructure.config import Config
 from infrastructure.transformers import (
@@ -35,7 +36,11 @@ class StatementTransformService:
         self.parsed_repo = parsed_repo
 
         math_transformer = MathStatementTransformerAdapter(config)
-        intel_transformer = IntelStatementTransformerAdapter(config)
+        classification_service = StatementClassificationService()
+        intel_transformer = IntelStatementTransformerAdapter(
+            config=config,
+            classification_service=classification_service,
+        )
         self.transform_usecase = TransformStatementsUseCase(
             math_transformer=math_transformer,
             intel_transformer=intel_transformer,

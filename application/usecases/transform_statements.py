@@ -45,8 +45,10 @@ class TransformStatementsUseCase:
         if missing_map:
             for key, dates in missing_map.items():
                 self.logger.log(
-                    f"After dedupe, account-group {key} missing quarters: {[d.strftime('%Y-%m-%d') for d in dates]}")
-        stage2 = stage1 # in fact impplement raw_statement download by nsd search for missing then proceed to stage2
+                    f"After dedupe, account-group {key} missing quarters: {[d.strftime('%Y-%m-%d') for d in dates]}",
+                    level="warning",
+                )
+        stage2 = stage1  # in fact impplement raw_statement download by nsd search for missing then proceed to stage2
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
 
