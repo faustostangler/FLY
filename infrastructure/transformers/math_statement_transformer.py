@@ -105,12 +105,26 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
     ) -> List[ParsedStatementDTO]:
         values: List[ParsedStatementDTO] = []
         cumulative = 0.0
-        for dt, row in items:
-            if dt and dt.month == 12:
-                val = row.value - cumulative
+        for idx, (dt, row) in enumerate(items):
+            if not dt:
+                # Data inválida ou None, mantém valor bruto
+                val = row.value
+            elif dt.month == 12:
+                if idx == 0:
+                    # Primeiro dezembro sem histórico anterior
+                    # Mantém valor bruto (não temos base para ajustar)
+                    val = row.value / 4  ## aproximation for first December
+                    cumulative = 0.0  # Reset para próximo ano
+                else:
+                    # Demais dezembros: valor isolado = total - acumulado parcial
+                    val = row.value - cumulative
+                    cumulative = 0.0  # Reset para próximo ano
             else:
+                # Meses intermediários: acumulando para subtrair em dezembro
                 val = row.value
                 cumulative += row.value
+
+            # Recria DTO imutável
             values.append(
                 ParsedStatementDTO(
                     nsd=row.nsd,
@@ -125,6 +139,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
                     processing_hash="",
                 )
             )
+
         return values
 
     def _adjust_cumulative(

@@ -31,40 +31,13 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
         from infrastructure.utils.csv_utils import save_dtos_to_csv
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 
-        standardized = self.classification_service.classify(rows, self.criteria_tree)
-        save_dtos_to_csv(standardized, "raws_statements_stage_4_1_standardized.csv")
+        transformed1 = self.classification_service.classify(rows, self.criteria_tree)
+        save_dtos_to_csv(transformed1, "raws_statements_stage_4_1_standardized.csv")
 
-        cleaned = self.adjust_columns(standardized)
-        save_dtos_to_csv(cleaned, "raws_statements_stage_4_3_cleaned.csv")
+        transformed2 = self.detect_and_correct_outliers(transformed1)
+        save_dtos_to_csv(transformed2, "raws_statements_stage_4_2_corrected_outliers.csv")
 
-        corrected = self.detect_and_correct_outliers(cleaned)
-        adjusted = self._transform_quarterly_values(corrected)
-        return adjusted
-
-    # Filtering -------------------------------------------------------------
-    def _filter_newer_versions(
-        self, rows: Iterable[RawStatementDTO]
-    ) -> List[RawStatementDTO]:
-        latest: Dict[
-            Tuple[str | None, str | None, str | None, str | None, str],
-            RawStatementDTO,
-        ] = {}
-        for row in rows:
-            key = (row.company_name, row.quarter, row.grupo, row.quadro, row.account)
-            version = self._version_int(row.version)
-            existing = latest.get(key)
-            if not existing or version > self._version_int(existing.version):
-                latest[key] = row
-        return list(latest.values())
-
-    def _version_int(self, version: str | None) -> int:
-        try:
-            if not version:
-                return 0
-            digits = "".join(filter(str.isdigit, version))
-            return int(digits) if digits else 0
-        except ValueError:
-            return 0
+        return transformed2
 
     # Cleanup --------------------------------------------------------------
     def adjust_columns(
@@ -85,77 +58,64 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
     def detect_and_correct_outliers(
         self, rows: Iterable[ParsedStatementDTO]
     ) -> List[ParsedStatementDTO]:
-        groups: Dict[Tuple[str | None, str], List[ParsedStatementDTO]] = {}
+        neighbor_count = 5  # Number of neighboring periods to consider
+        epsilon = 1e-6
+
+        # Agrupa por (grupo, account)
+        groups: Dict[Tuple[str, str], List[ParsedStatementDTO]] = {}
         for row in rows:
-            key = (row.company_name, row.account)
+            key = (row.grupo, row.account)
             groups.setdefault(key, []).append(row)
 
         results: List[ParsedStatementDTO] = []
         for items in groups.values():
+            # Ordena por quarter (YYYY-MM-DD ordena lexicograficamente)
             items.sort(key=lambda r: r.quarter or "")
             corrected: List[ParsedStatementDTO] = []
+
             for i, row in enumerate(items):
-                prev_val = items[i - 1].value if i > 0 else None
-                next_val = items[i + 1].value if i + 1 < len(items) else None
-                new_val = row.value
-                if prev_val and abs(prev_val * 1000 - row.value) < 1e-6:
-                    new_val = prev_val
-                if next_val and abs(next_val * 1000 - row.value) < 1e-6:
-                    new_val = next_val
+                val = row.value
+
+                # Determina janela adaptativa
+                window_start = max(0, i - neighbor_count)
+                window_end = min(len(items), i + neighbor_count + 1)
+
+                # Listas de vizinhos
+                vals_prev = [r.value for r in items[window_start:i]]
+                vals_next = [r.value for r in items[i+1:window_end]]
+
+                # Se não houver nenhum vizinho, mantém valor
+                if not vals_prev and not vals_next:
+                    corrected.append(row)
+                    continue
+
+                # Vamos testar janelas regressivamente (maior -> menor)
+                windows_max = min(neighbor_count, len(items)-1)
+                new_val = val
+
+                for n in range(windows_max, 0, -1):
+                    vp = vals_prev[-n:] if len(vals_prev) >= 1 else []
+                    vn = vals_next[:n] if len(vals_next) >= 1 else []
+
+                    if vp and vn:
+                        val_mean = (sum(vp) / len(vp) + sum(vn) / len(vn)) / 2
+                    elif vp:
+                        val_mean = sum(vp) / len(vp)
+                    elif vn:
+                        val_mean = sum(vn) / len(vn)
+                    else:
+                        continue  # Nenhum dado, não altera
+
+                    # Teste de outlier pelo desvio
+                    if val_mean and abs(val_mean * 1000 - val) < epsilon:
+                        new_val = val_mean
+                        break
+
+                # Recria DTO imutável manualmente
                 data = {**row.__dict__, "value": new_val}
                 corrected.append(ParsedStatementDTO(**data))
+
             results.extend(corrected)
+
         return results
 
-    # Quarterly Transform --------------------------------------------------
-    def _transform_quarterly_values(
-        self, rows: Iterable[ParsedStatementDTO]
-    ) -> List[ParsedStatementDTO]:
-        groups: Dict[Tuple[str | None, str | None, str], List[ParsedStatementDTO]] = {}
-        for row in rows:
-            dt = parse_quarter(row.quarter)
-            year = str(dt.year) if dt else "0"
-            key = (row.company_name, row.account, year)
-            groups.setdefault(key, []).append(row)
-
-        results: List[ParsedStatementDTO] = []
-        for key, items in groups.items():
-            items.sort(
-                key=lambda r: parse_quarter(r.quarter) or parse_quarter("1900-01-01")
-            )
-            account = key[1]
-            if account.startswith(self.year_end_prefixes):
-                results.extend(self._adjust_year_end(items))
-            elif account.startswith(self.cumulative_prefixes):
-                results.extend(self._adjust_cumulative(items))
-            else:
-                results.extend(items)
-        return results
-
-    def _adjust_year_end(
-        self, items: List[ParsedStatementDTO]
-    ) -> List[ParsedStatementDTO]:
-        cumulative = 0.0
-        result: List[ParsedStatementDTO] = []
-        for row in items:
-            dt = parse_quarter(row.quarter)
-            if dt and dt.month == 12:
-                val = row.value - cumulative
-            else:
-                val = row.value
-                cumulative += row.value
-            data = {**row.__dict__, "value": val}
-            result.append(ParsedStatementDTO(**data))
-        return result
-
-    def _adjust_cumulative(
-        self, items: List[ParsedStatementDTO]
-    ) -> List[ParsedStatementDTO]:
-        previous = 0.0
-        result: List[ParsedStatementDTO] = []
-        for row in items:
-            val = row.value - previous
-            previous = row.value
-            data = {**row.__dict__, "value": val}
-            result.append(ParsedStatementDTO(**data))
-        return result

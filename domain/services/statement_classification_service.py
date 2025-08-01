@@ -18,6 +18,7 @@ class StatementClassificationService:
         """Classify ``rows`` using ``roots`` criteria tree."""
         result: List[ParsedStatementDTO] = []
         for node in roots:
+            # print(f"Processing node: {node.target_line}")
             result.extend(self._process_node(rows, node))
         return result
 
@@ -42,6 +43,8 @@ class StatementClassificationService:
     def _to_parsed(self, row: RawStatementDTO, target_line: str) -> ParsedStatementDTO:
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
+        # raw_account = parts[0].strip()
+        # account = ".".join(seg.zfill(2) for seg in raw_account.split("."))
         description = parts[1].strip() if len(parts) > 1 else row.description
         return ParsedStatementDTO(
             nsd=row.nsd,
@@ -55,6 +58,12 @@ class StatementClassificationService:
             value=row.value,
             processing_hash="",
         )
+
+    def _format_account(self, acc: str) -> str:
+        # primeiro normaliza (remove zeros à esquerda, trata vazios)
+        parts = [(part.lstrip("0") or "0") for part in acc.split(".")]
+        # depois preenche para ter sempre 2 dígitos
+        return ".".join(part.zfill(2) for part in parts)
 
     def _matches(
         self, row: RawStatementDTO, criteria: List[Tuple[str, str, Any]]
