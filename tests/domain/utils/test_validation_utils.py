@@ -31,5 +31,5 @@ def test_validate_quarter_completeness_detects_missing():
     ]
 
     missing = validate_quarter_completeness(rows)
-    key = ("ACME", "01", "G", "Q", "V1")
+    key = ("ACME", "01", "G", "Q", "")
     assert missing[key] == [datetime(2020, 6, 30), datetime(2020, 9, 30)]
