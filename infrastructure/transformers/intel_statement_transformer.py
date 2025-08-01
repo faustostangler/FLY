@@ -3,15 +3,9 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Dict, Iterable, List, Tuple
 
-# =======
-# # =======
-# # """Financial intelligence adapter that calculates simple ratios."""
-# # from __future__ import annotations
-# # from typing import Dict, List, Tuple
-# # >>>>>>> 2025-07-16-Statements-Round-2
-# >>>>>>> 2025-07-16-Statements-Round-2
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
@@ -29,8 +23,19 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
+        ## tem que ver se é melhor primeiro filtrar os repitidos, depois stantard, depois comparar o hash por ano, depois calcular os anos onde houver diferença
+        ## ou se manter como está agora
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(rows, "raws_statements_stage_4_1.csv")
+
         standardized = self.generate_standard_financial_statements(rows)
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(standardized, "raws_statements_stage_4_2_stantardized.csv")
+
         cleaned = self.adjust_columns(standardized)
+        from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(cleaned, "raws_statements_stage_4_3_cleaned.csv")
+
         corrected = self.detect_and_correct_outliers(cleaned)
         adjusted = self._transform_quarterly_values(corrected)
         return adjusted
@@ -62,52 +67,139 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     # Standardization ------------------------------------------------------
     def generate_standard_financial_statements(
-        self, rows: Iterable[ParsedStatementDTO]
+        self, rows: Iterable[RawStatementDTO]
     ) -> List[ParsedStatementDTO]:
+        """
+        Transforma statements crus em statements padronizados conforme Intel.
+        Somente inclui linhas que casam com os critérios definidos em intel.py.
+        """
         result: List[ParsedStatementDTO] = []
         for row in rows:
             data = row.__dict__.copy()
-            for _name, criteria in self.section_criteria:
-                for item in criteria:
-                    data = self.apply_criteria(data, item)
-            result.append(ParsedStatementDTO(**data))
+            normalized_data = self._normalize_dict(data)
+
+            # Percorre seções e critérios do Intel
+            for account, item in self.section_criteria:
+                # Caso 1: item é lista de dicionários
+                if isinstance(item, list):
+                    for sub_item in item:
+                        matched_rows = self._apply_criteria_recursive(data, normalized_data, account, sub_item)
+                        result.extend(matched_rows)
+                # Caso 2: item é um único dicionário
+                else:
+                    matched_rows = self._apply_criteria_recursive(
+                        data, normalized_data, account, item  # type: ignore
+                    )
+                    result.extend(matched_rows)
         return result
 
-    def apply_criteria(self, data: Dict, criteria_item: dict) -> Dict:
-        if self._matches(data, criteria_item.get("criteria", [])):
-            target = criteria_item.get("target_line", "")
+    def _normalize_dict(self, data: Dict) -> Dict:
+        """
+        Remove acentos, espaços extras e baixa para lowercase.
+        Igual ao comportamento do legacy.
+        """
+        normalized = {}
+        for k, v in data.items():
+            text = str(v or "").lower()
+            text = unicodedata.normalize("NFD", text)
+            text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+            text = re.sub(r"\s+", " ", text.strip())
+            normalized[k] = text
+        return normalized
+
+    def _apply_criteria_recursive(
+        self,
+        original_data: Dict,
+        normalized_data: Dict,
+        account: str,
+        item: Dict
+    ) -> List[ParsedStatementDTO]:
+        """
+        Aplica critério principal e sub-critérios de forma recursiva.
+        Retorna uma lista de ParsedStatementDTO gerados.
+        """
+        generated: List[ParsedStatementDTO] = []
+
+        # Se não casou, retorna lista vazia
+        if not self._matches(normalized_data, item.get("criteria", [])):
+            return generated
+
+        # Cria linha base
+        base_data = original_data.copy()
+        base_account = base_data.get("account", "")
+        base_description = base_data.get("description", "")
+
+        target_line = item.get("target_line")
+        if target_line:
+            parts = target_line.split(" - ", 1)
+            base_data["account"] = parts[0].strip()
+            base_data["description"] = parts[1].strip() if len(parts) > 1 else base_description
+        else:
+            # fallback para não quebrar
+            base_data["account"] = base_account
+            base_data["description"] = base_description
+
+        # para que os subníveis vejam as alterações
+        new_normalized = self._normalize_dict(base_data)
+
+        # Cria DTO para este nível
+        generated.append(ParsedStatementDTO(**base_data))
+
+        # Para cada subcritério, gera novas linhas
+        for sub in item.get("sub_criteria", []):
+            sub_level_data = base_data.copy()
+            generated.extend(self._apply_criteria_recursive(sub_level_data, new_normalized, account, sub))
+
+        return generated
+
+    def apply_criteria(self, data: Dict, item: dict) -> Dict:
+        if self._matches(data, item.get("criteria", [])):
+            target = item.get("target_line", "")
             if " - " in target:
                 account, desc = target.split(" - ", 1)
                 data["account"] = account
                 data["description"] = desc
-            for sub in criteria_item.get("sub_criteria", []):
+            for sub in item.get("sub_criteria", []):
                 data = self.apply_criteria(data, sub)
         return data
 
-    def _matches(self, data: Dict, filters: Iterable[Tuple[str, str, object]]) -> bool:
-        for col, cond, val in filters:
-            value = str(data.get(col, "") or "").lower()
-            if cond == "equals" and value != str(val).lower():
+    def _matches(self, data: Dict, criteriae: Iterable[tuple[str, str, str | int | list[str | int]]]) -> bool:
+        """
+        Retorna True somente se TODOS os critérios forem atendidos.
+        """
+        for column, condition, account in criteriae:
+            value = str(data.get(column, "") or "").lower()
+
+            # string treatment
+            if condition == "equals" and value != str(account).lower():
                 return False
-            if cond == "not_equals" and value == str(val).lower():
+            if condition == "not_equals" and value == str(account).lower():
                 return False
-            if cond == "startswith" and not value.startswith(str(val).lower()):
+            if condition == "startswith" and not value.startswith(str(account).lower()):
                 return False
-            if cond == "contains_any":
-                vals = val if isinstance(val, list) else [val]
-                if not any(re.search(re.escape(str(v).lower()), value) for v in vals):
+
+            # list treatments
+            accounts = account if isinstance(account, list) else [account]
+            if condition == "contains_any":
+                if not any(re.search(re.escape(str(v).lower()), value) for v in accounts):
                     return False
-            if cond == "contains_all":
-                vals = val if isinstance(val, list) else [val]
-                if not all(re.search(re.escape(str(v).lower()), value) for v in vals):
+            if condition == "contains_all":
+                if not all(re.search(re.escape(str(v).lower()), value) for v in accounts):
                     return False
-            if cond in ("not_contains", "contains_none"):
-                vals = val if isinstance(val, list) else [val]
-                if any(re.search(re.escape(str(v).lower()), value) for v in vals):
+            if condition in ("not_contains", "contains_none"):
+                if any(re.search(re.escape(str(v).lower()), value) for v in accounts):
                     return False
-            if cond == "level":
+
+            # level treatment
+            if condition == "level":
                 level = value.count(".") + 1 if value else 1
-                if level != int(val):
+                if isinstance(account, (list, tuple)):
+                    return False
+                try:
+                    expected_level = int(account)
+                except (ValueError, TypeError):
+                    return False
+                if level != expected_level:
                     return False
         return True
 
@@ -205,46 +297,3 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
             result.append(ParsedStatementDTO(**data))
         return result
 
-
-# =======
-# # =======
-
-
-# # class IntelStatementTransformerAdapter(StatementTransformerPort):
-# #     """Add basic financial ratios to parsed statements."""
-
-# #     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
-# #         parsed = [
-# #             row
-# #             if isinstance(row, ParsedStatementDTO)
-# #             else ParsedStatementDTO(**row.__dict__)
-# #             for row in rows
-# #         ]
-
-# #         grouped: Dict[Tuple[str | None, str | None], List[ParsedStatementDTO]] = {}
-# #         for row in parsed:
-# #             key = (row.company_name, row.quarter)
-# #             grouped.setdefault(key, []).append(row)
-
-# #         results = list(parsed)
-# #         for (company, quarter), items in grouped.items():
-# #             assets = sum(r.value for r in items if r.account.startswith("01"))
-# #             liabilities = sum(r.value for r in items if r.account.startswith("02"))
-# #             ratio = liabilities / assets if assets else 0.0
-# #             base = items[0]
-# #             results.append(
-# #                 ParsedStatementDTO(
-# #                     nsd=base.nsd,
-# #                     company_name=company,
-# #                     quarter=quarter,
-# #                     version=base.version,
-# #                     grupo="INDICATORS",
-# #                     quadro="RATIOS",
-# #                     account="11.02",
-# #                     description="Passivos por Ativos",
-# #                     value=ratio,
-# #                 )
-# #             )
-# #         return results
-# # >>>>>>> 2025-07-16-Statements-Round-2
-# >>>>>>> 2025-07-16-Statements-Round-2

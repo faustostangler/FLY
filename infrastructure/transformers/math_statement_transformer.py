@@ -56,14 +56,14 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
                         f"Sheet {i}/{len(groups)} de tamanho maior que 4 itens, possíveis duplicatas\n{items}"
                     )
                 elif len(items) == 1:
-                    print(
-                        f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}"
-                    )
+                    # print(
+                    #     f"Sheet {i}/{len(groups)} de tamanho {len(items)}, único demonstrativo {items[0][1].quarter} {year} {version} - {grupo} {quadro} {account}"
+                    # )
                     pass
                 elif len(items) == 4:
-                    print(
-                        f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}"
-                    )
+                    # print(
+                    #     f"Sheet {i}/{len(groups)} Ano cheio {len(items)} items {year} {version} - {grupo} {quadro} {account}"
+                    # )
                     pass
                 else:
                     print(f"Sheet de tamanho {len(items)}, o que está faltando?")
