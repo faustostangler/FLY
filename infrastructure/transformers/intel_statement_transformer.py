@@ -29,13 +29,10 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+        save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 
-        save_dtos_to_csv(rows, "raws_statements_stage_4_1.csv")
-
-        deduped = self._filter_newer_versions(rows)
-
-        standardized = self.classification_service.classify(deduped, self.criteria_tree)
-        save_dtos_to_csv(standardized, "raws_statements_stage_4_2_stantardized.csv")
+        standardized = self.classification_service.classify(rows, self.criteria_tree)
+        save_dtos_to_csv(standardized, "raws_statements_stage_4_1_standardized.csv")
 
         cleaned = self.adjust_columns(standardized)
         save_dtos_to_csv(cleaned, "raws_statements_stage_4_3_cleaned.csv")

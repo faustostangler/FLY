@@ -26,13 +26,15 @@ class StatementClassificationService:
     ) -> List[ParsedStatementDTO]:
         hits = [r for r in rows if self._matches(r, node.criteria)]
         parsed = [self._to_parsed(r, node.target_line) for r in hits]
-        parents = {dto.account for dto in parsed}
+
+        parents = {
+            self._normalize_account(dto.account)
+            for dto in parsed
+        }
         if not parents:
             return parsed
 
-        children_rows = [
-            r for r in rows if any(r.account.startswith(p) for p in parents)
-        ]
+        children_rows = [r for r in rows if any(self._normalize_account(r.account).startswith(p) for p in parents)]
         for child_node in node.children:
             parsed.extend(self._process_node(children_rows, child_node))
         return parsed
@@ -60,12 +62,9 @@ class StatementClassificationService:
         for column, condition, account in criteria:
             value = str(getattr(row, column, "") or "").lower()
 
-            def _norm_acc(val: str) -> str:
-                return ".".join(part.lstrip("0") or "0" for part in val.split("."))
-
             if column == "account":
-                value_cmp = _norm_acc(value)
-                account_cmp = _norm_acc(str(account))
+                value_cmp = self._normalize_account(value)
+                account_cmp = self._normalize_account(str(account))
             else:
                 value_cmp = value
                 account_cmp = str(account).lower()
@@ -99,3 +98,8 @@ class StatementClassificationService:
                 if level != expected:
                     return False
         return True
+
+    @staticmethod
+    def _normalize_account(val: str) -> str:
+        """Strip leading zeros de cada segmento e reconstrói o código."""
+        return ".".join(part.lstrip("0") or "0" for part in val.split("."))
