@@ -14,6 +14,7 @@ from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import LoggerPort, MetricsCollectorPort, RawStatementScraperPort
+from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.config import Config
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.data_cleaner import DataCleaner
@@ -22,7 +23,7 @@ from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
 
-class RawStatementScraper(RawStatementScraperPort):
+class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
     """Fetch statement HTML using ``requests``."""
 
     def __init__(
@@ -33,20 +34,19 @@ class RawStatementScraper(RawStatementScraperPort):
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
-        """Initialize repository with ``config`` and ``logger``."""
-        super().__init__(config, logger)
+        self._init_engine(config, logger)
 
-        """Create the adapter with its configuration and logger."""
-        self.config = config
-        self.logger = logger
+        # Adapter-specific dependencies
         self.data_cleaner = data_cleaner
         self._metrics_collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
+
+        # Utilities for scraping and ID generation
         self.fetch_utils = FetchUtils(config, logger)
-        self.time_utils = TimeUtils(self.config)
+        self.time_utils = TimeUtils(config)
         self.session = self.fetch_utils.create_scraper()
-        self.endpoint = f"{self.config.exchange.nsd_endpoint}"
-        self.statements_config = self.config.statements
+        self.endpoint = config.exchange.nsd_endpoint
+        self.statements_config = config.statements
         self.id_generator = IdGenerator(config=config)
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
