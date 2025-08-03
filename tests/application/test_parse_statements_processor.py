@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from application.services.statement_parse_service import StatementParseService
+from application.processors.parse_statements_processor import ParseStatementsProcessor
 from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
@@ -17,13 +17,13 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
     mock_usecase_inst = MagicMock()
     mock_usecase_cls.return_value = mock_usecase_inst
     monkeypatch.setattr(
-        "application.services.statement_parse_service.ParseAndClassifyStatementsUseCase",
+        "application.processors.parse_statements_processor.ParseAndClassifyStatementsUseCase",
         mock_usecase_cls,
     )
 
     repository = MagicMock(spec=SqlAlchemyParsedStatementRepository)
 
-    service = StatementParseService(
+    processor = ParseStatementsProcessor(
         logger=DummyLogger(),
         repository=repository,
         config=dummy_config,
@@ -31,15 +31,16 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
     )
 
     mock_usecase_cls.assert_called_once_with(
-        logger=service.logger, repository=repository, config=dummy_config
+        logger=processor.logger, repository=repository, config=dummy_config
     )
 
     parse_all = MagicMock()
-    monkeypatch.setattr(service, "_parse_all", parse_all)
+    monkeypatch.setattr(processor, "_parse_all", parse_all)
 
     fetched = [(MagicMock(spec=NsdDTO), [MagicMock(spec=RawStatementDTO)])]
 
-    service.parse_statements(fetched)
+    result = processor.run(fetched)
 
     parse_all.assert_called_once_with(fetched)
     mock_usecase_inst.finalize.assert_called_once()
+    assert result == parse_all.return_value
