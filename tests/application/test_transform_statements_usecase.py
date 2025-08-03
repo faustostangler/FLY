@@ -74,9 +74,8 @@ def test_execute_validates_and_runs_pipeline(monkeypatch, sample_rows):
     result = usecase.execute(sample_rows)
 
     validate_mock.assert_called_once_with(sample_rows)
-    logger.log.assert_called_once_with(
-        "After dedupe, account-group ('ACME', '01', 'G', 'Q', 'V1') missing quarters: ['2020-09-30']",
-        level="warning",
+    logger.warning.assert_called_once_with(
+        "After dedupe, account-group ('ACME', '01', 'G', 'Q', 'V1') missing quarters: ['2020-09-30']"
     )
     math_transformer.transform.assert_called_once()
     intel_transformer.transform.assert_called_once_with(["math"])

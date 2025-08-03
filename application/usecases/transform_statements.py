@@ -6,7 +6,6 @@ from typing import List
 
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import LoggerPort
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
@@ -28,9 +27,11 @@ class TransformStatementsUseCase:
         self.config = config
         self.logger = logger
 
-    def execute(self, raw_dtos: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
-        """Run transformation pipeline for ``raw_dtos``."""
-        stage1 = filter_latest_versions(raw_dtos)
+    def execute(
+        self, parsed_dtos: List[ParsedStatementDTO]
+    ) -> List[ParsedStatementDTO]:
+        """Run transformation pipeline for ``parsed_dtos``."""
+        stage1 = filter_latest_versions(parsed_dtos)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
 
@@ -44,9 +45,8 @@ class TransformStatementsUseCase:
         missing_map = validate_quarter_completeness(validation_candidates)
         if missing_map:
             for key, dates in missing_map.items():
-                self.logger.log(
-                    f"After dedupe, account-group {key} missing quarters: {[d.strftime('%Y-%m-%d') for d in dates]}",
-                    level="warning",
+                self.logger.warning(
+                    f"After dedupe, account-group {key} missing quarters: {[d.strftime('%Y-%m-%d') for d in dates]}"
                 )
         stage2 = stage1  # in fact impplement raw_statement download by nsd search for missing then proceed to stage2
 

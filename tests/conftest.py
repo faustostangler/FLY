@@ -33,6 +33,12 @@ class DummyLogger:
     def warning(self, *args, **kwargs):
         pass
 
+    def info(self, *args, **kwargs):
+        pass
+
+    def error(self, *args, **kwargs):
+        pass
+
 
 class DummyConfig:
     class Database:
@@ -44,6 +50,7 @@ class DummyConfig:
         app_name = "TEST"
         max_workers = 1
         queue_size = 10
+        threshold = 10
 
     global_settings = Global()
 

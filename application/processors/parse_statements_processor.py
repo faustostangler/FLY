@@ -1,3 +1,5 @@
+"""Processor for parsing raw statement rows."""
+
 from __future__ import annotations
 
 from typing import List, Tuple
@@ -7,15 +9,14 @@ from application.usecases.parse_and_classify_statements import (
 )
 from domain.dto import NsdDTO, ParsedStatementDTO, WorkerTaskDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import (
-    LoggerPort,
-    SqlAlchemyParsedStatementRepositoryPort,
-)
+from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
 from infrastructure.config import Config
 from infrastructure.helpers import MetricsCollector, WorkerPool
 
+from .base_processor import BaseProcessor
 
-class StatementParseService:
+
+class ParseStatementsProcessor(BaseProcessor):
     """Parse raw statement rows and persist cleaned records."""
 
     def __init__(
@@ -25,18 +26,13 @@ class StatementParseService:
         config: Config,
         max_workers: int = 1,
     ) -> None:
-        """Store dependencies for the service."""
+        """Store dependencies for the processor."""
         self.logger = logger
         self.config = config
         self.max_workers = max_workers
-
         self.parse_usecase = ParseAndClassifyStatementsUseCase(
-            logger=self.logger,
-            repository=repository,
-            config=self.config,
+            logger=self.logger, repository=repository, config=self.config
         )
-
-        # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
     def _parse_all(
         self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
@@ -47,7 +43,6 @@ class StatementParseService:
             metrics_collector=collector,
             max_workers=self.max_workers,
         )
-
         tasks = list(enumerate(fetched))
 
         def processor(task: WorkerTaskDTO) -> List[ParsedStatementDTO]:
@@ -57,24 +52,29 @@ class StatementParseService:
         result = parse_pool.run(tasks=tasks, processor=processor, logger=self.logger)
         return result.items
 
-    def parse_statements(
+    def load(
         self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
-    ) -> None:
-        """Parse and persist statements from ``fetched`` rows."""
-        # self.logger.log("Run  Method statement_parse_service.run()", level="info")
+    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+        """Simply forward fetched rows to the pipeline."""
+        return fetched
 
+    def transform(
+        self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
+    ) -> List[List[ParsedStatementDTO]]:
+        """Parse fetched rows in parallel."""
         if not fetched:
-            # self.logger.log("No statements to parse", level="info")
-            return
+            return []
+        return self._parse_all(fetched)
 
-        # self.logger.log(
-        #     "Call Method statement_parse_service._parse_all()", level="info"
-        # )
-        self._parse_all(fetched)
-        # self.logger.log(
-        #     "End  Method statement_parse_service._parse_all()", level="info"
-        # )
-
+    def persist(
+        self, parsed: List[List[ParsedStatementDTO]]
+    ) -> List[List[ParsedStatementDTO]]:
+        """Finalize parse use case and return parsed data."""
         self.parse_usecase.finalize()
+        return parsed
 
-        # self.logger.log("End  Method statement_parse_service.run()", level="info")
+    def run(
+        self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
+    ) -> List[List[ParsedStatementDTO]]:
+        """Run the parse pipeline."""
+        return super().run(fetched)

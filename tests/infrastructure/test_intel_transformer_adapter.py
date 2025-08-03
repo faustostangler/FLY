@@ -68,8 +68,8 @@ def test_intel_adapter_full_flow():
     )
     result = adapter.transform(rows)
 
-    assert len(result) == 4
-    first = [r for r in result if r.quarter == "2024-03-31"][0]
+    assert len(result) == 5
+    first = [r for r in result if r.quarter == "2024-03-31" and r.version == "2"][0]
     assert first.value == 11.0
     cum_values = [r for r in result if r.account == "06.01"]
-    assert [r.value for r in cum_values] == [30.0, 30.0, 40.0]
+    assert [r.value for r in cum_values] == [30.0, 60.0, 100.0]

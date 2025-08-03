@@ -135,9 +135,8 @@ class FetchStatementsUseCase:
                     "details": f"{fetched['nsd'].nsd} {fetched['nsd'].company_name} {quarter} {fetched['nsd'].version}",
                     "attempt": f"attempt {attempt}",
                 }
-                self.logger.log(
+                self.logger.warning(
                     f"Retrying {task.index + 1}/{len(tasks)}",
-                    level="warning",
                     extra=extra_info,
                     worker_id=task.worker_id,
                 )
@@ -158,9 +157,8 @@ class FetchStatementsUseCase:
                 "Download": byte_formatter.format_bytes(download_bytes),
                 "Total download": byte_formatter.format_bytes(collector.network_bytes),
             }
-            self.logger.log(
+            self.logger.info(
                 f"Statement {task.index + 1}/{len(tasks)}",
-                level="info",
                 progress={
                     "index": task.index + 1,
                     "size": len(tasks),

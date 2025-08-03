@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from application.services.statement_fetch_service import StatementFetchService
+from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
@@ -20,7 +20,7 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     mock_usecase_inst = MagicMock()
     mock_usecase_cls.return_value = mock_usecase_inst
     monkeypatch.setattr(
-        "application.services.statement_fetch_service.FetchStatementsUseCase",
+        "application.processors.fetch_statements_processor.FetchStatementsUseCase",
         mock_usecase_cls,
     )
 
@@ -32,7 +32,7 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     collector = MagicMock()
     worker_pool = MagicMock()
 
-    service = StatementFetchService(
+    processor = FetchStatementsProcessor(
         logger=DummyLogger(),
         source=source,
         parsed_statements_repo=rows_repo,
@@ -46,7 +46,7 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     )
 
     mock_usecase_cls.assert_called_once_with(
-        logger=service.logger,
+        logger=processor.logger,
         source=source,
         parsed_statements_repo=rows_repo,
         raw_statement_repository=stmt_repo,
@@ -57,9 +57,9 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     )
 
     targets = [MagicMock(spec=NsdDTO)]
-    monkeypatch.setattr(service, "_build_targets", lambda: targets)
+    monkeypatch.setattr(processor, "_build_targets", lambda: targets)
 
-    result = service.fetch_statements(save_callback="cb", threshold=5)
+    result = processor.run(save_callback="cb", threshold=5)
 
     mock_usecase_inst.fetch_statement_rows.assert_called_once_with(
         batch_rows=targets, save_callback="cb", threshold=5
