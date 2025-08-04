@@ -146,7 +146,7 @@ class FetchUtils:
         self,
         scraper: Optional[requests.Session],
         url: str,
-        cache_bypass: bool = False,
+        cache_bypass: bool = True,
         timeout: Optional[int] = None,
         insecure: bool = False,
         worker_id: Optional[str] = None,

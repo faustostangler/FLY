@@ -12,7 +12,7 @@ from typing import Optional
 class NsdDTO:
     """Structured NSD data extracted from the exchange."""
 
-    nsd: str
+    nsd: int
     company_name: Optional[str]
     quarter: Optional[datetime]
     version: Optional[str]
@@ -23,7 +23,6 @@ class NsdDTO:
     protocol: Optional[str]
     sent_date: Optional[datetime]
     reason: Optional[str]
-    id: Optional[int] = None
 
     @staticmethod
     def from_dict(raw: dict) -> Optional[NsdDTO]:
@@ -32,14 +31,8 @@ class NsdDTO:
         if not raw:
             return None
 
-        nsd_raw = raw.get("nsd", "")
-        if nsd_raw is None or not str(nsd_raw).isdigit():
-            raise ValueError("Invalid NSD value")
-
-        nsd_value = str(nsd_raw)
-
         return NsdDTO(
-            nsd=nsd_value,
+            nsd=raw.get("nsd", 0),
             company_name=raw.get("company_name"),
             quarter=raw.get("quarter"),
             version=raw.get("version"),
@@ -50,7 +43,6 @@ class NsdDTO:
             protocol=raw.get("protocol"),
             sent_date=raw.get("sent_date"),
             reason=raw.get("reason"),
-            id=None,
         )
 
     @staticmethod
@@ -68,5 +60,4 @@ class NsdDTO:
             protocol=raw.protocol,
             sent_date=raw.sent_date,
             reason=raw.reason,
-            id=None,
         )

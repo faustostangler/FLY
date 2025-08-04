@@ -15,10 +15,8 @@ class NSDModel(BaseModel):
     """ORM model for the tbl_nsd table."""
 
     __tablename__ = "tbl_nsd"
-    __table_args__ = (UniqueConstraint("nsd", name="uq_nsd"),)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nsd: Mapped[str] = mapped_column(String)
+    nsd: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     company_name: Mapped[Optional[str]] = mapped_column(
         ForeignKey("tbl_company.company_name")
     )
@@ -32,8 +30,8 @@ class NSDModel(BaseModel):
     sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     reason: Mapped[Optional[str]] = mapped_column()
 
-
     __table_args__ = (
+        UniqueConstraint("nsd", name="uq_nsd"),
         Index("ix_nsd_nsd", "nsd"),
         Index("ix_nsd_company_name", "company_name"),
     )
@@ -58,7 +56,6 @@ class NSDModel(BaseModel):
     def to_dto(self) -> NsdDTO:
         """Converts this ORM model back into a NsdDTO."""
         return NsdDTO(
-            id=self.id,
             nsd=self.nsd,
             company_name=self.company_name,
             quarter=self.quarter,

@@ -28,7 +28,7 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
         Returns:
             type: The model class associated with this repository.
         """
-        return NSDModel, (NSDModel.id,)
+        return NSDModel, (NSDModel.nsd,)
 
     def get_all_pending(
         self,
