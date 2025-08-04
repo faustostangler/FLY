@@ -62,13 +62,13 @@ class SqlAlchemyCompanyDataRepository(
                     if c.name != "id"
                 }
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["cvm_code"], set_=update_dict
+                    index_elements=["company_name"], set_=update_dict
                 )
                 session.execute(stmt)
             session.commit()
         except Exception as e:
-            self.logger.log(f"Erro ao salvar CompanyDataDTO: {e}", level="debug")
             session.rollback()
+            self.logger.log(f"Erro ao salvar CompanyDataDTO: {e}", level="debug")
             raise
         finally:
             session.close()

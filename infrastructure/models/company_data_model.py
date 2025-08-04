@@ -20,10 +20,10 @@ class CompanyDataModel(BaseModel):
     __tablename__ = "tbl_company"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    cvm_code: Mapped[str] = mapped_column(unique=True, index=True)
+    cvm_code: Mapped[Optional[str]] = mapped_column()
     issuing_company: Mapped[Optional[str]] = mapped_column()
     trading_name: Mapped[Optional[str]] = mapped_column()
-    company_name: Mapped[Optional[str]] = mapped_column()
+    company_name: Mapped[str] = mapped_column(nullable=False, unique=True, index=True)
     cnpj: Mapped[Optional[str]] = mapped_column()
 
     ticker_codes: Mapped[Optional[str]] = mapped_column()

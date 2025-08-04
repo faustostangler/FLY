@@ -19,6 +19,7 @@ class CompanyDataDTO:
     issuing_company: Optional[str]
     trading_name: Optional[str]
     company_name: Optional[str]
+
     cnpj: Optional[str]
 
     ticker_codes: Optional[str]
