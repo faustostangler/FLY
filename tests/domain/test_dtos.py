@@ -15,11 +15,11 @@ def test_company_dto_from_dict():
 
 def test_nsd_dto_invalid_nsd():
     with pytest.raises(ValueError):
-        NsdDTO.from_dict({"nsd": "not_a_number"})
+        NsdDTO.from_dict({"nsd": "not_a_number", "company_name": "ACME"})
 
 
 def test_nsd_dto_from_dict_sets_id():
-    dto = NsdDTO.from_dict({"id": 1, "nsd": 2})
+    dto = NsdDTO.from_dict({"id": 1, "nsd": 2, "company_name": "ACME"})
     assert dto.id == 1
 
 

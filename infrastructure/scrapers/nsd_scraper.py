@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 from datetime import datetime
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -15,7 +15,7 @@ from domain.ports import (
     MetricsCollectorPort,
     NSDRepositoryPort,
     NSDSourcePort,
-    SqlAlchemyCompanyDataRepositoryPort, 
+    SqlAlchemyCompanyDataRepositoryPort,
     WorkerPoolPort,
 )
 from infrastructure.config import Config
@@ -128,18 +128,13 @@ class NsdScraper(NSDSourcePort):
                 #     level="info",
                 # )
                 parsed = self._parse_html(nsd, response.text)
-
-                # converte o company_name que veio do HTML em cvm_code para a FK bater
-                if parsed and parsed.get("company_name"):
-                    parsed["cvm_code"] = self.company_repo.get_cvm_by_name(parsed["company_name"])
-                else:
-                    parsed["cvm_code"] = None
+                # we now persist by company_name, no CVM lookup needed
             # ————————————————————————————————————————————————————————————————
 
-                # self.logger.log(
-                #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()._parse_html()",
-                #     level="info",
-                # )
+            # self.logger.log(
+            #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()._parse_html()",
+            #     level="info",
+            # )
             except Exception as e:
                 self.logger.log(
                     f"Failed to fetch NSD {nsd}: {e}",
@@ -312,7 +307,7 @@ class NsdScraper(NSDSourcePort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
-        nsd = nsd + 1 # move forward
+        nsd = nsd + 1  # move forward
         multiplier = 0
         while nsd <= max_limit and hole_count < max_linear_holes:
             parsed = self._try_nsd(nsd)

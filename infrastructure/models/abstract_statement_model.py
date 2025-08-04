@@ -13,7 +13,7 @@ class AbstractStatementModel(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[str] = mapped_column()
-    cvm_code: Mapped[str | None] = mapped_column()
+    company_name: Mapped[str | None] = mapped_column()
     quarter: Mapped[str | None] = mapped_column()
     version: Mapped[str | None] = mapped_column()
     grupo: Mapped[str] = mapped_column()
@@ -24,7 +24,7 @@ class AbstractStatementModel(BaseModel):
 
     _FIELDS = (
         "nsd",
-        "cvm_code",
+        "company_name",
         "quarter",
         "version",
         "grupo",

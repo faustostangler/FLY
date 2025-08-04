@@ -18,9 +18,9 @@ class NSDModel(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
-    cvm_code: Mapped[str] = mapped_column(
+    company_name: Mapped[str] = mapped_column(
         String,
-        ForeignKey("tbl_company.cvm_code"),
+        ForeignKey("tbl_company.company_name"),
         nullable=False,
     )
     quarter: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -33,7 +33,7 @@ class NSDModel(BaseModel):
     sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     reason: Mapped[Optional[str]] = mapped_column()
 
-    __table_args__ = (Index("ix_nsd_cvm_code", "cvm_code"),)
+    __table_args__ = (Index("ix_nsd_company_name", "company_name"),)
 
     @staticmethod
     def from_dto(dto: NsdDTO) -> "NSDModel":
@@ -41,7 +41,7 @@ class NSDModel(BaseModel):
         return NSDModel(
             id=dto.id,
             nsd=dto.nsd,
-            cvm_code=dto.cvm_code,
+            company_name=dto.company_name,
             quarter=dto.quarter,
             version=dto.version,
             nsd_type=dto.nsd_type,
@@ -58,7 +58,7 @@ class NSDModel(BaseModel):
         return NsdDTO(
             id=self.id,
             nsd=self.nsd,
-            cvm_code=self.cvm_code,
+            company_name=self.company_name,
             quarter=self.quarter,
             version=self.version,
             nsd_type=self.nsd_type,

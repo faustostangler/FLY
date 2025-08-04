@@ -13,7 +13,7 @@ from tests.conftest import DummyConfig, DummyLogger
 def _make_nsd(nsd: int) -> NsdDTO:
     return NsdDTO(
         nsd=str(nsd),
-        company_name=None,
+        company_name="Comp",
         quarter=None,
         version=None,
         nsd_type=None,
