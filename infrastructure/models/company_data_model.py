@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.company_data_dto import CompanyDataDTO
@@ -18,10 +18,9 @@ class CompanyDataModel(BaseModel):
     """ORM adapter for the ``tbl_company`` table."""
 
     __tablename__ = "tbl_company"
-    __table_args__ = (UniqueConstraint("cvm_code", name="uq_company_cvm_code"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    cvm_code: Mapped[str] = mapped_column()
+    cvm_code: Mapped[str] = mapped_column(unique=True, index=True)
     issuing_company: Mapped[Optional[str]] = mapped_column()
     trading_name: Mapped[Optional[str]] = mapped_column()
     company_name: Mapped[Optional[str]] = mapped_column()
@@ -63,10 +62,7 @@ class CompanyDataModel(BaseModel):
     last_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
-    __table_args__ = (
-        Index("ix_company_cvm_code", "cvm_code"),
-        Index("ix_company_company_name", "company_name"),
-    )
+    __table_args__ = (Index("ix_company_company_name", "company_name"),)
 
     @staticmethod
     def from_dto(dto: CompanyDataRawDTO | CompanyDataDTO) -> "CompanyDataModel":
@@ -103,6 +99,7 @@ class CompanyDataModel(BaseModel):
             return json.dumps([{"code": c.code, "isin": c.isin} for c in value])
 
         return CompanyDataModel(
+            id=attr("id"),
             cvm_code=attr("cvm_code") or attr("issuing_company") or "",
             issuing_company=attr("issuing_company"),
             trading_name=attr("trading_name"),

@@ -10,10 +10,11 @@ from typing import Optional
 from .raw_company_data_dto import CompanyDataRawDTO
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class CompanyDataDTO:
     """Structured company data extracted from the exchange."""
 
+    id: Optional[int] = None
     cvm_code: Optional[str]
     issuing_company: Optional[str]
     trading_name: Optional[str]
@@ -55,7 +56,6 @@ class CompanyDataDTO:
     date_quotation: Optional[datetime]
     last_date: Optional[datetime]
     listing_date: Optional[datetime]
-    id: Optional[int] = None
 
     @staticmethod
     def from_dict(raw: dict) -> "CompanyDataDTO":
@@ -64,6 +64,7 @@ class CompanyDataDTO:
         # Map incoming keys to the canonical DTO fields. Alternative names are
         # also handled for backward compatibility with existing scrapers.
         return CompanyDataDTO(
+            id=raw.get("id"),
             cvm_code=raw.get("cvm_code") or raw.get("codeCVM"),
             issuing_company=raw.get("issuing_company") or raw.get("issuingCompany"),
             trading_name=raw.get("trading_name") or raw.get("tradingName"),
@@ -98,7 +99,6 @@ class CompanyDataDTO:
             date_quotation=raw.get("date_quotation"),
             last_date=raw.get("last_date"),
             listing_date=raw.get("listing_date"),
-            id=None,
         )
 
     @staticmethod
@@ -114,6 +114,7 @@ class CompanyDataDTO:
 
         # Instantiate the immutable DTO using the serialized raw values
         return CompanyDataDTO(
+            id=None,
             cvm_code=raw.cvm_code,
             issuing_company=raw.issuing_company,
             trading_name=raw.trading_name,
@@ -148,5 +149,4 @@ class CompanyDataDTO:
             date_quotation=raw.date_quotation,
             last_date=raw.last_date,
             listing_date=raw.listing_date,
-            id=None,
         )

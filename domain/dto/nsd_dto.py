@@ -8,10 +8,11 @@ from datetime import datetime
 from typing import Optional
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class NsdDTO:
     """Structured NSD data extracted from the exchange."""
 
+    id: Optional[int] = None
     nsd: int
     company_name: Optional[str]
     quarter: Optional[datetime]
@@ -31,8 +32,13 @@ class NsdDTO:
         if not raw:
             return None
 
+        nsd_raw = raw.get("nsd")
+        if nsd_raw is None or not str(nsd_raw).isdigit():
+            raise ValueError("Invalid NSD value")
+
         return NsdDTO(
-            nsd=raw.get("nsd", 0),
+            id=raw.get("id"),
+            nsd=int(nsd_raw),
             company_name=raw.get("company_name"),
             quarter=raw.get("quarter"),
             version=raw.get("version"),
@@ -49,6 +55,7 @@ class NsdDTO:
     def from_raw(raw: NsdDTO) -> NsdDTO:
         """Build an NsdDTO from a NsdRawDTO instance."""
         return NsdDTO(
+            id=getattr(raw, "id", None),
             nsd=raw.nsd,
             company_name=raw.company_name,
             quarter=raw.quarter,

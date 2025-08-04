@@ -1,0 +1,46 @@
+from sqlalchemy import text
+
+from domain.dto.raw_statement_dto import RawStatementDTO
+from infrastructure.models.base_model import BaseModel
+from infrastructure.repositories.raw_statement_repository import (
+    SqlAlchemyRawStatementRepository,
+)
+from tests.conftest import DummyConfig, DummyLogger
+
+
+def test_save_all_upserts(SessionLocal, engine):
+    repo = SqlAlchemyRawStatementRepository(config=DummyConfig(), logger=DummyLogger())
+    repo.engine = engine
+    repo.Session = SessionLocal
+    BaseModel.metadata.drop_all(engine)
+    BaseModel.metadata.create_all(engine)
+
+    base = {
+        "nsd": 1,
+        "company_name": "ACME",
+        "quarter": "2020-03-31",
+        "version": "1",
+        "grupo": "G",
+        "quadro": "Q",
+        "account": "01",
+        "description": "d",
+        "value": 1.0,
+    }
+    repo.save_all([RawStatementDTO.from_dict(base)])
+
+    updated = base | {"value": 2.0}
+    repo.save_all([RawStatementDTO.from_dict(updated)])
+
+    with engine.connect() as conn:
+        count = conn.execute(text("SELECT COUNT(*) FROM tbl_raw_statements")).scalar()
+        value = conn.execute(
+            text(
+                """
+                SELECT value FROM tbl_raw_statements
+                WHERE nsd=1 AND account='01'
+                """
+            )
+        ).scalar()
+
+    assert count == 1
+    assert value == 2.0

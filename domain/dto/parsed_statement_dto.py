@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ParsedStatementDTO:
     """Immutable representation of a cleaned statement row."""
 
+    id: Optional[int] = None
     nsd: str
     company_name: Optional[str]
     quarter: Optional[str]
@@ -20,7 +21,6 @@ class ParsedStatementDTO:
     description: str
     value: float
     processing_hash: str = ""
-    id: Optional[int] = None
 
     @staticmethod
     def from_dict(raw: dict) -> "ParsedStatementDTO":
@@ -31,6 +31,7 @@ class ParsedStatementDTO:
         nsd_value = str(nsd_raw)
 
         return ParsedStatementDTO(
+            id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
             quarter=raw.get("quarter"),
@@ -41,5 +42,4 @@ class ParsedStatementDTO:
             description=str(raw.get("description", "")),
             value=float(raw.get("value", 0.0)),
             processing_hash=str(raw.get("processing_hash", "")),
-            id=None,
         )

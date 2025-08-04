@@ -10,11 +10,17 @@ def test_company_dto_from_dict():
     dto = CompanyDataDTO.from_dict(raw)
     assert dto.issuing_company == "XYZ"
     assert dto.company_name == "Xyz Corp"
+    assert dto.id is None
 
 
 def test_nsd_dto_invalid_nsd():
     with pytest.raises(ValueError):
         NsdDTO.from_dict({"nsd": "not_a_number"})
+
+
+def test_nsd_dto_from_dict_sets_id():
+    dto = NsdDTO.from_dict({"id": 1, "nsd": 2})
+    assert dto.id == 1
 
 
 def test_statement_rows_dto_from_dict():
@@ -32,3 +38,4 @@ def test_statement_rows_dto_from_dict():
     dto = RawStatementDTO.from_dict(raw)
     assert dto.account == "00.01.01"
     assert dto.nsd == "102395"
+    assert dto.id is None

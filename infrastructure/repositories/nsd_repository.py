@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from typing import List, Set, Tuple
 
+from sqlalchemy.dialects.sqlite import insert
+
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import LoggerPort, NSDRepositoryPort
 from infrastructure.config import Config
+from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
@@ -21,6 +24,33 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
 
         self.config = config
         self.logger = logger
+
+    def save_all(self, items: List[NsdDTO]) -> None:
+        """Persist ``NsdDTO`` objects using SQLite upserts."""
+        session = self.Session()
+        try:
+            model, _ = self.get_model_class()
+            flat_items = ListFlattener.flatten(items)
+            valid_items = [i for i in flat_items if i is not None]
+            for dto in valid_items:
+                obj = model.from_dto(dto)
+                data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
+                stmt = insert(model).values(**data)
+                update_dict = {
+                    c.name: getattr(stmt.excluded, c.name)
+                    for c in model.__table__.columns
+                    if c.name != "id"
+                }
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["nsd"], set_=update_dict
+                )
+                session.execute(stmt)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def get_model_class(self) -> Tuple[type, tuple]:
         """Return the SQLAlchemy ORM model class managed by this repository.

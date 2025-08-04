@@ -36,7 +36,9 @@ class AbstractStatementModel(BaseModel):
 
     @classmethod
     def _kwargs_from_dto(cls, dto: object) -> dict:
-        return {field: getattr(dto, field) for field in cls._FIELDS}
+        data = {field: getattr(dto, field) for field in cls._FIELDS}
+        data["id"] = getattr(dto, "id", None)
+        return data
 
     def _dto_kwargs(self) -> dict:
         data = {field: getattr(self, field) for field in self._FIELDS}
