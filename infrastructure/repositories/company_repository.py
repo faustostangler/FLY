@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
+from sqlalchemy.dialects.sqlite import insert
+
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.ports import LoggerPort, SqlAlchemyCompanyDataRepositoryPort
 from infrastructure.config import Config
@@ -44,7 +46,7 @@ class SqlAlchemyCompanyDataRepository(
         self.logger = logger
 
     def save_all(self, items: List[CompanyDataDTO]) -> None:
-        """Persist company DTOs using the surrogate id for updates."""
+        """Persist ``CompanyDataDTO`` objects using SQLite upserts."""
         session = self.Session()
         try:
             model, _ = self.get_model_class()
@@ -52,10 +54,17 @@ class SqlAlchemyCompanyDataRepository(
             valid_items = [i for i in flat_items if i is not None]
             for dto in valid_items:
                 obj = model.from_dto(dto)
-                existing = session.query(model).filter_by(cvm_code=obj.cvm_code).first()
-                if existing:
-                    obj.id = existing.id
-                session.merge(obj)
+                data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
+                stmt = insert(model).values(**data)
+                update_dict = {
+                    c.name: getattr(stmt.excluded, c.name)
+                    for c in model.__table__.columns
+                    if c.name != "id"
+                }
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["cvm_code"], set_=update_dict
+                )
+                session.execute(stmt)
             session.commit()
         except Exception:
             session.rollback()
@@ -71,4 +80,4 @@ class SqlAlchemyCompanyDataRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return CompanyDataModel, (CompanyDataModel.id,)
+        return CompanyDataModel, (CompanyDataModel.cvm_code,)

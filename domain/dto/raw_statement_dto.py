@@ -6,10 +6,11 @@ from typing import Optional
 from .parsed_statement_dto import ParsedStatementDTO
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class RawStatementDTO:
     """Immutable DTO representing a scraped statement row."""
 
+    id: Optional[int] = None
     nsd: str
     company_name: Optional[str]
     quarter: Optional[str]
@@ -19,7 +20,6 @@ class RawStatementDTO:
     account: str
     description: str
     value: float
-    id: Optional[int] = None
 
     @staticmethod
     def from_dict(raw: dict) -> "RawStatementDTO":
@@ -31,6 +31,7 @@ class RawStatementDTO:
         nsd_value = str(nsd_raw)
 
         return RawStatementDTO(
+            id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
             quarter=raw.get("quarter"),
@@ -40,7 +41,6 @@ class RawStatementDTO:
             account=str(raw.get("account", "")),
             description=str(raw.get("description", "")),
             value=float(raw.get("value", 0.0)),
-            id=None,
         )
 
     def to_parsed(self, target_line: str) -> "ParsedStatementDTO":
@@ -53,6 +53,7 @@ class RawStatementDTO:
         description = parts[1].strip() if len(parts) > 1 else self.description
 
         return ParsedStatementDTO(
+            id=None,
             nsd=self.nsd,
             company_name=self.company_name,
             quarter=self.quarter,
