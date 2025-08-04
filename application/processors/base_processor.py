@@ -25,9 +25,9 @@ class BaseProcessor(ABC, Generic[L, T, P]):
         processor_name = self.__class__.__name__
         self.logger.info(f"Starting {processor_name}")
         try:
-            data = self.load(*args, **kwargs)
-            transformed = self.transform(data)
-            result = self.persist(transformed)
+            data: L = self.load(*args, **kwargs)
+            transformed: T = self.transform(data)
+            result: P = self.persist(transformed)
         except Exception as exc:  # pragma: no cover - pass through
             self.logger.error(f"{processor_name} failed: {exc!r}")
             raise

@@ -18,7 +18,7 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEng
     Pode ser especializada para qualquer tipo de DTO.
     """
     def __init__(self, config: Config, logger: LoggerPort) -> None:
-        self._init_engine(config, logger)
+        super().__init__(config, logger)
 
     @abstractmethod
     def get_model_class(self) -> Tuple[type, tuple]:

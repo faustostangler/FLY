@@ -34,7 +34,7 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
-        self._init_engine(config, logger)
+        super().__init__(config, logger)
 
         # Adapter-specific dependencies
         self.data_cleaner = data_cleaner

@@ -52,7 +52,3 @@ class SqlAlchemyEngineMixin:
         BaseModel.metadata.create_all(self.engine)
 
         # self.logger.log(f"Create Instance Base Class {self.__class__.__name__}", level="info")
-
-    def _init_engine(self, config, logger):
-        # Initialize SQLAlchemy engine here
-        pass
