@@ -21,7 +21,7 @@ class BaseProcessor(ABC, Generic[L, T, P]):
 
     def run(self, *args, **kwargs) -> P:
         """Execute processing pipeline with logging and timing."""
-        start_time = time.perf_counter()
+        start_time = time.monotonic()
         processor_name = self.__class__.__name__
         self.logger.info(f"Starting {processor_name}")
         try:
@@ -32,7 +32,7 @@ class BaseProcessor(ABC, Generic[L, T, P]):
             self.logger.error(f"{processor_name} failed: {exc!r}")
             raise
         finally:
-            elapsed = time.perf_counter() - start_time
+            elapsed = time.monotonic() - start_time
             self.logger.info(f"Finished {processor_name} in {elapsed:.2f}s")
         return result
 

@@ -17,15 +17,15 @@ class ParsedStatementModel(AbstractStatementModel):
         String,
         ForeignKey("tbl_nsd.nsd"),
     )
-    company_name: Mapped[str | None] = mapped_column(
+    cvm_code: Mapped[str | None] = mapped_column(
         String,
-        ForeignKey("tbl_company.company_name"),
+        ForeignKey("tbl_company.cvm_code"),
     )
 
     __table_args__ = (
         UniqueConstraint(
             "nsd",
-            "company_name",
+            "cvm_code",
             "quarter",
             "version",
             "grupo",
@@ -33,11 +33,11 @@ class ParsedStatementModel(AbstractStatementModel):
             "account",
             name="uq_parsed_statements_fullkey",
         ),
-        Index("ix_parsed_statements_company_name", "company_name"),
+        Index("ix_parsed_statements_cvm_code", "cvm_code"),
         Index("ix_parsed_statements_quarter", "quarter"),
         Index("ix_parsed_statements_account", "account"),
         Index("ix_parsed_statements_nsd", "nsd"),
-        Index("ix_parsed_statements_company_quarter", "company_name", "quarter"),
+        Index("ix_parsed_statements_cvm_code_quarter", "cvm_code", "quarter"),
     )
 
     processing_hash: Mapped[str | None] = mapped_column(String, index=True)

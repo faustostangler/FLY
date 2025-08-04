@@ -38,5 +38,6 @@ class TimeUtils:
             wait *= random.uniform(0.1, 0.5)
 
         wait_multiplier = wait ** multiplier if multiplier else wait
+        wait_multiplier = wait * multiplier if multiplier else wait
 
         time.sleep(wait_multiplier)

@@ -1,6 +1,6 @@
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Generic, List, Sequence, Tuple, TypeVar, Union
+from typing import Any, Generic, List, Sequence, Tuple, TypeVar, Union, Optional
 
 from domain.ports import LoggerPort
 from domain.ports.base_repository_port import SqlAlchemyRepositoryBasePort
@@ -125,34 +125,59 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEng
         Returns:
             List[T]: A list of all DTOs retrieved from the database.
         """
+        # batch_size = batch_size or self.config.global_settings.batch_size
+
+        # # Create a new SQLAlchemy session
+        # session = self.Session()
+
+        # # Get the SQLAlchemy model class linked to the current DTO type
+        # model, pk_columns = self.get_model_class()
+
+        # all_results: List[T] = []
+        # last_id = 0
+
+        # while True:
+        #     batch = (
+        #         session.query(model)
+        #         .filter(model.id > last_id)
+        #         .order_by(model.id)
+        #         .limit(batch_size)
+        #         .all()
+        #     )
+
+        #     if not batch:
+        #         break
+
+        #     all_results.extend([m.to_dto() for m in batch])
+        #     last_id = batch[-1].id
+        # return all_results
         batch_size = batch_size or self.config.global_settings.batch_size
-
-        # Create a new SQLAlchemy session
-        session = self.Session()
-
-        # Get the SQLAlchemy model class linked to the current DTO type
         model, pk_columns = self.get_model_class()
-
         all_results: List[T] = []
-        last_id = 0
+        last_key: Optional[Union[int, str]] = None
 
-        while True:
-            batch = (
-                session.query(model)
-                .filter(model.id > last_id)
-                .order_by(model.id)
-                .limit(batch_size)
-                .all()
-            )
+        session = self.Session()
+        try:
+            while True:
+                # assume PK único; se for composto pode usar pk_columns tuple
+                col = pk_columns[0]
+                q = session.query(model)
+                if last_key is not None:
+                    q = q.filter(col > last_key)
+                batch = (
+                    q.order_by(col)
+                     .limit(batch_size)
+                     .all()
+                )
+                if not batch:
+                    break
+                all_results.extend(m.to_dto() for m in batch)
+                last_key = getattr(batch[-1], col.key)
+            return all_results
+        finally:
+            session.close()
 
-            if not batch:
-                break
-
-            all_results.extend([m.to_dto() for m in batch])
-            last_id = batch[-1].id
-        return all_results
-
-    def get_all_primary_keys(self) -> List[K]:
+    def get_all_primary_keys(self) -> List[str]:
         """Retrieve all unique primary keys from the database.
 
         This method queries the repository for all distinct identifiers

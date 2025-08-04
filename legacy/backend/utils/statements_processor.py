@@ -83,7 +83,7 @@ class StatementsProcessor(BaseProcessor):
         try:
             result = []
 
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
 
             # Initialize batch size tracking
             if self.shared_total_bytes and self.shared_lock and self.thread_id is not None:
@@ -373,7 +373,7 @@ class StatementsProcessor(BaseProcessor):
             df_companies = df_nsd_company[['company_name', 'cvm_code', 'ticker', 'trading_name']].drop_duplicates().sort_values(by=['company_name']).reset_index(drop=True)
 
             targets = []
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
             for i, row in df_companies.iterrows():
                 if i >= 50:
                     break

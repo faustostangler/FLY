@@ -45,7 +45,7 @@ class MathTransformation:
             dfs = {}
             total_lines = 0
             print(f"loading {files}...")
-            start_time = time.perf_counter()  # Initialize start time for progress tracking
+            start_time = time.monotonic()  # Initialize start time for progress tracking
 
             # Iterate through each table (sector) and process the data
             with self.db_lock:
@@ -138,7 +138,7 @@ class MathTransformation:
         total_sectors = len(dict_new)  # Determine the total number of sectors to process
         total_lines = 0  # Initialize a counter to keep track of the total number of new lines identified
         print("getting new entries...")
-        start_time = time.perf_counter()  # Record the start time to measure processing time for each sector
+        start_time = time.monotonic()  # Record the start time to measure processing time for each sector
 
         try:
             # Iterate over each sector and its associated DataFrame in the new data dictionary
@@ -423,7 +423,7 @@ class MathTransformation:
             total_lines = 0
 
             print("transforming statements...")
-            start_time = time.perf_counter()  # Record start time for progress tracking
+            start_time = time.monotonic()  # Record start time for progress tracking
             # Iterate over each sector in the filtered dictionary
             for i, (sector, df) in enumerate(dict_filtered.items()):
                 # Store the transformed data in the dictionary (we will merge with existing data during saving)
@@ -509,7 +509,7 @@ class MathTransformation:
                 with sqlite3.connect(specific_db_path) as conn:
                     cursor = conn.cursor()
                     print("saving...")
-                    start_time = time.perf_counter()
+                    start_time = time.monotonic()
                     total_lines = 0
                     for i, (sector, df) in enumerate(data_dict.items()):
                         table_name = sector.upper().replace(" ", "_")  # Create a table name from sector name
@@ -571,7 +571,7 @@ class MathTransformation:
                         total_chunks = len(range(0, len(data_to_insert), chunk_size))
                         total_lines = len(data_to_insert)
                         print("saving in parts...")
-                        start_time = time.perf_counter()  # Record the start time for progress tracking
+                        start_time = time.monotonic()  # Record the start time for progress tracking
                         for c, start in enumerate(range(0, len(data_to_insert), chunk_size)):
                             # Process the chunk
                             chunk = data_to_insert[start : start + chunk_size]

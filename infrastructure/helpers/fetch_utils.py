@@ -171,6 +171,20 @@ class FetchUtils:
                 # Perform the request with the current session
                 timeout_wait = timeout + attempt
                 response = scraper.get(url, timeout=timeout_wait)
+                size = len(response.content)
+                atmpt = 0
+                dur = 0
+
+                while size == 0:
+                    atmpt += 1
+                    start_time = time.perf_counter()
+                    response = scraper.get(url, timeout=timeout_wait)
+                    size = len(response.content)
+                    self.time_util.sleep_dynamic(multiplier=atmpt)
+                    end_time = time.perf_counter() - start_time
+                    dur += end_time
+                    self.logger.log(f'Retry {atmpt + 1}: {response.status_code}, {end_time:.2f}s, {dur:.2f}s')
+
                 if response.status_code == 200:
                     # On success, log the total block time if any
                     if block_start:

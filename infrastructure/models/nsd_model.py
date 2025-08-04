@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.nsd_dto import NsdDTO
@@ -18,8 +18,10 @@ class NSDModel(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
-    company_name: Mapped[Optional[str]] = mapped_column(
-        ForeignKey("tbl_company.company_name")
+    cvm_code: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("tbl_company.cvm_code"),
+        nullable=False,
     )
     quarter: Mapped[Optional[datetime]] = mapped_column(DateTime)
     version: Mapped[Optional[str]] = mapped_column()
@@ -31,7 +33,7 @@ class NSDModel(BaseModel):
     sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
     reason: Mapped[Optional[str]] = mapped_column()
 
-    __table_args__ = (Index("ix_nsd_company_name", "company_name"),)
+    __table_args__ = (Index("ix_nsd_cvm_code", "cvm_code"),)
 
     @staticmethod
     def from_dto(dto: NsdDTO) -> "NSDModel":
@@ -39,7 +41,7 @@ class NSDModel(BaseModel):
         return NSDModel(
             id=dto.id,
             nsd=dto.nsd,
-            company_name=dto.company_name,
+            cvm_code=dto.cvm_code,
             quarter=dto.quarter,
             version=dto.version,
             nsd_type=dto.nsd_type,
@@ -56,7 +58,7 @@ class NSDModel(BaseModel):
         return NsdDTO(
             id=self.id,
             nsd=self.nsd,
-            company_name=self.company_name,
+            cvm_code=self.cvm_code,
             quarter=self.quarter,
             version=self.version,
             nsd_type=self.nsd_type,

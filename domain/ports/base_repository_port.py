@@ -40,7 +40,7 @@ class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
         raise NotImplementedError
 
     @abstractmethod
-    def get_all_primary_keys(self) -> List[K]:
+    def get_all_primary_keys(self) -> List[str]:
         """Retrieve the set of all primary keys currently stored.
 
         Returns:

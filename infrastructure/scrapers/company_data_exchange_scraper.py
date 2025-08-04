@@ -414,11 +414,14 @@ class CompanyDataScraper(CompanyDataScraperPort):
             "pageSize": self.PAGE_SIZE,
         }
         token = self._encode_payload(payload)
+
         url = self.endpoint_companies_list + token
-        response, self.session = self.fetch_utils.fetch_with_retry(self.session, url)
+        response, self.session = self.fetch_utils.fetch_with_retry(self.session, url, cache_bypass=False)
+
         bytes_downloaded = len(response.content if response else b"")
         self.metrics_collector.record_network_bytes(bytes_downloaded)
         data = response.json()
+
         results = data.get("results", [])
         total_pages = data.get("page", {}).get("totalPages", 1)
 

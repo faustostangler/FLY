@@ -14,7 +14,7 @@ class NsdDTO:
 
     id: Optional[int] = None
     nsd: int
-    company_name: Optional[str]
+    cvm_code: Optional[str]
     quarter: Optional[datetime]
     version: Optional[str]
     nsd_type: Optional[str]
@@ -39,7 +39,7 @@ class NsdDTO:
         return NsdDTO(
             id=raw.get("id"),
             nsd=int(nsd_raw),
-            company_name=raw.get("company_name"),
+            cvm_code=raw.get("company_name"),
             quarter=raw.get("quarter"),
             version=raw.get("version"),
             nsd_type=raw.get("nsd_type"),
@@ -57,7 +57,7 @@ class NsdDTO:
         return NsdDTO(
             id=getattr(raw, "id", None),
             nsd=raw.nsd,
-            company_name=raw.company_name,
+            cvm_code=raw.cvm_code,
             quarter=raw.quarter,
             version=raw.version,
             nsd_type=raw.nsd_type,

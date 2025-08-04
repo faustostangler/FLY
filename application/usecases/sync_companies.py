@@ -45,13 +45,15 @@ class SyncCompanyDataUseCase:
         # Mark the start time to calculate performance metrics later.
         start = time.perf_counter()
 
-        # Retrieve primary keys already stored to avoid reprocessing them.
-        existing_company_codes = self.repository.get_all_primary_keys()
+        # busca todos os cvm_code que já estão na tabela
+        raw = self.repository.get_existing_by_columns("cvm_code")
+        # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
+        skip_codes = [code for (code,) in raw]
 
         # self.logger.log("Call Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
         # Fetch all companies from the scraper and persist them batch-wise.
         results = self.scraper.fetch_all(
-            skip_codes=existing_company_codes,
+            skip_codes=skip_codes,
             save_callback=self._save_batch,
         )
         # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
@@ -64,7 +66,7 @@ class SyncCompanyDataUseCase:
 
         return SyncCompanyDataResultDTO(
             processed_count=len(results.items),
-            skipped_count=len(existing_company_codes),
+            skipped_count=len(skip_codes),
             bytes_downloaded=bytes_downloaded,
             elapsed_time=elapsed,
         )

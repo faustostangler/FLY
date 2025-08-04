@@ -91,7 +91,7 @@ class StockProcessor(BaseProcessor):
             table_id = "tblResDiario"
 
             processed_batch = []
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
             for i, (_, row) in enumerate(sub_batch.iterrows()):
                 company_ticker = row.iloc[0]
                 year = row.iloc[1]
@@ -205,7 +205,7 @@ class StockProcessor(BaseProcessor):
         dfs = []
 
         try:
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
 
             # Initialize batch size tracking
             if self.shared_total_bytes and self.shared_lock and self.thread_id is not None:
@@ -539,7 +539,7 @@ class StockProcessor(BaseProcessor):
             progress["scrape_size"] = len(targets)
             progress["batch_size"] = self.config.scraping["batch_size"]
 
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
             progress["start_time"] = start_time
             for batch_counter, batch_start in enumerate(range(0, progress["scrape_size"], progress["batch_size"])):
                 progress["batch_counter"] = batch_counter

@@ -66,7 +66,8 @@ class SqlAlchemyCompanyDataRepository(
                 )
                 session.execute(stmt)
             session.commit()
-        except Exception:
+        except Exception as e:
+            self.logger.log(f"Erro ao salvar CompanyDataDTO: {e}", level="debug")
             session.rollback()
             raise
         finally:
@@ -80,4 +81,4 @@ class SqlAlchemyCompanyDataRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return CompanyDataModel, (CompanyDataModel.cvm_code,)
+        return CompanyDataModel, (CompanyDataModel.id,)

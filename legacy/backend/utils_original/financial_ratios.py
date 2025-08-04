@@ -46,7 +46,7 @@ class FinancialRatios:
 
             dfs = {}
             total_lines = 0
-            start_time = time.perf_counter()  # Initialize start time for progress tracking
+            start_time = time.monotonic()  # Initialize start time for progress tracking
             # print(f'debug x {settings.markets_file}')
 
             # Iterate through each table (sector) and process the data
@@ -470,13 +470,13 @@ class FinancialRatios:
                 "Fluxo de Caixa Livre e P/FC": intel.indicators_25,
             }
             # print('selected indicators only')
-            start_time = time.perf_counter()
+            start_time = time.monotonic()
             for i, (sector, df) in enumerate(dict_df.items()):
                 # df.to_csv(f'df_ratios_{sector}.csv')
                 df = self.adjust_dfs_types(df)
 
                 # Loop through the dictionary and apply the add_indicators method
-                start_time2 = time.perf_counter()
+                start_time2 = time.monotonic()
                 for j, (key, value) in enumerate(indicators.items()):
                     df = self.add_indicators(df, key, value, sector)
 
