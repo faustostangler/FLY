@@ -18,7 +18,7 @@ from domain.ports import (
     WorkerPoolPort,
 )
 from infrastructure.config import Config
-from infrastructure.helpers import FetchUtils, SaveStrategy
+from infrastructure.helpers import ByteFormatter, FetchUtils, SaveStrategy
 from infrastructure.helpers.data_cleaner import DataCleaner
 
 
@@ -71,21 +71,21 @@ class NsdScraper(NSDSourcePort):
         #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
         #     level="info",
         # )
+        byte_formatter = ByteFormatter()
 
         self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
 
         start = max(start, max(self.skip_codes, default=0) + 1)
 
-        # max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
-        # max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        # max_nsd = max(max_nsd_existing, max_nsd_probable)
+        max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
+        max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
+        max_nsd = max(start, max_nsd_existing, max_nsd_probable)
 
-        # threshold = threshold or self.config.global_settings.threshold or 50
+        threshold = threshold or self.config.global_settings.threshold or 50
 
-        # self.logger.log("Fetch NSD list", level="info")
+        self.logger.log("Fetch NSD list", level="info")
 
-        # tasks = list(enumerate(range(start, max_nsd + 1)))
-        tasks = list(enumerate(range(34, 45)))
+        tasks = list(enumerate(range(start, max_nsd + 1)))
 
         strategy: SaveStrategy[NsdDTO] = SaveStrategy(
             save_callback, threshold, config=self.config
@@ -142,17 +142,19 @@ class NsdScraper(NSDSourcePort):
                 return None
 
             if parsed:
+                download_bytes = len(response.content)
+                self.metrics_collector.record_network_bytes(download_bytes)
                 extra_info = [
                     f"{parsed.get('nsd', nsd)}",
-                    parsed["quarter"].strftime("%Y-%m-%d")
-                    if parsed.get("quarter") is not None
-                    else "",
-                    parsed.get("company_name", ""),
-                    parsed.get("nsd_type", ""),
                     parsed["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
                     if parsed.get("sent_date") is not None
                     else "",
-                    str(len(response.content)),
+                    parsed.get("nsd_type", ""),
+                    parsed.get("company_name", ""),
+                    parsed["quarter"].strftime("%Y-%m-%d")
+                    if parsed.get("quarter") is not None
+                    else "",
+                    f"{byte_formatter.format_bytes(download_bytes)}",
                 ]
             else:
                 extra_info = []
@@ -287,7 +289,6 @@ class NsdScraper(NSDSourcePort):
             int: The last NSD with valid content.
         """
         nsd = start - 1
-        nsd = 34 - 1
         last_valid = None
 
         max_linear_holes = self.config.global_settings.max_linear_holes or 2000
@@ -304,14 +305,11 @@ class NsdScraper(NSDSourcePort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
-        nsd = nsd + 1  # move forward
-        multiplier = 0
         while nsd <= max_limit and hole_count < max_linear_holes:
             parsed = self._try_nsd(nsd)
             if parsed:
                 last_valid = nsd
-                multiplier += 1
-                nsd += 2 ** int(multiplier)
+                nsd += 2 ** int(nsd - start + 1)
             else:
                 break
 
@@ -378,10 +376,10 @@ class NsdScraper(NSDSourcePort):
         if not self.skip_codes:
             return start
 
-        first_pk = min(self.skip_codes, key=lambda n: int(n))
-        last_pk = max(self.skip_codes, key=lambda n: int(n))
-        first_date = self.repository.get_by_id(first_pk).sent_date
-        last_date = self.repository.get_by_id(last_pk).sent_date
+        dates = [d for (d,) in self.repository.get_existing_by_columns("sent_date")]
+
+        first_date = min(dates)
+        last_date = max(dates)
 
         # Days span between dates
         total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]

@@ -327,7 +327,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                     # "Total download": self.byte_formatter.format_bytes(self.metrics_collector.network_bytes),
                     }
                 self.logger.log(
-                    f"{company_name}",
+                    f"{entry.get('codeCVM')}",
                     level="info",
                     progress={
                         "index": index,
@@ -359,7 +359,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 ),
             }
             self.logger.log(
-                f"{company_name}",
+                f"{entry.get('codeCVM')}",
                 level="info",
                 progress={
                     "index": index,
