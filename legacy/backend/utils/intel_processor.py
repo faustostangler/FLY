@@ -113,7 +113,7 @@ class IntelProcessor(BaseProcessor):
             companies = sub_batch["company_name"].unique()
             total_companies = len(companies)
 
-            start_time = time.time()
+            start_time = time.monotonic()
             for i, company_name in enumerate(companies):
                 # Filter rows for current company
                 mask = sub_batch["company_name"] == company_name
@@ -255,7 +255,7 @@ class IntelProcessor(BaseProcessor):
         """
         try:
             # Track time for logging or benchmarking (optional)
-            start_time = time.time()
+            start_time = time.monotonic()
 
             # Iterate over each criteria item in the section tree
             for i, criteria_item in enumerate(section_criteria):
@@ -1237,7 +1237,7 @@ class IntelProcessor(BaseProcessor):
             # Iterator over only the companies with new/unprocessed statements
             statement_iterator = self.iter_statements_by_company(self.db_filepath)
 
-            start_time = time.time()
+            start_time = time.monotonic()
             for i, (company_name, pretargets) in enumerate(statement_iterator):
                 with self.profiling():
                     targets = self.get_targets(pretargets)

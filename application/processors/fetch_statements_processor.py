@@ -22,7 +22,13 @@ from infrastructure.helpers import WorkerPool
 from .base_processor import BaseProcessor
 
 
-class FetchStatementsProcessor(BaseProcessor):
+class FetchStatementsProcessor(
+    BaseProcessor[
+        Tuple[List[NsdDTO], Optional[Callable[[List[RawStatementDTO]], None]], Optional[int]],  # TypeVar("L")
+        List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("T")
+        List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("P")
+    ]
+):
     """Fetch raw statements for pending NSDs."""
 
     def __init__(
@@ -84,6 +90,14 @@ class FetchStatementsProcessor(BaseProcessor):
         )
         return results
 
+    def run(
+        self,
+        save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
+        threshold: Optional[int] = None,
+    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+        """Run the fetch pipeline."""
+        return super().run(save_callback=save_callback, threshold=threshold)
+
     def load(
         self,
         save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
@@ -117,10 +131,3 @@ class FetchStatementsProcessor(BaseProcessor):
         """No-op persist step; the use case already saves rows."""
         return data
 
-    def run(
-        self,
-        save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
-        threshold: Optional[int] = None,
-    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
-        """Run the fetch pipeline."""
-        return super().run(save_callback=save_callback, threshold=threshold)

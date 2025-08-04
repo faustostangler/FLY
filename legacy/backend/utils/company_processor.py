@@ -95,7 +95,7 @@ class CompanyDataProcessor(BaseProcessor):
             all_data = []
 
             # Run the timer to measure processing time
-            start_time = time.time()
+            start_time = time.monotonic()
 
             # download control
             if self.shared_total_bytes and self.shared_lock and self.thread_id is not None:
@@ -315,7 +315,7 @@ class CompanyDataProcessor(BaseProcessor):
             all_companies = []
 
             # Run timing the process
-            start_time = time.time()
+            start_time = time.monotonic()
 
             # First request: page 1
             payload = {"language": "pt-br", "pageNumber": 1, "pageSize": 120}

@@ -56,7 +56,7 @@ class StockMarketScraper:
             # Initialize variables
             dfs = {}
             total_lines = 0
-            start_time = time.time()
+            start_time = time.monotonic()
 
             print(files)  # Output the current file being processed
 
@@ -331,7 +331,7 @@ class StockMarketScraper:
             list_of_tickers = df_statements_companies[["company_name", "ticker_codes"]].drop_duplicates()
 
             # Loop over tickers and fetch data
-            start_time = time.time()
+            start_time = time.monotonic()
             for i, (_, row) in enumerate(list_of_tickers.iterrows()):
                 company_name = row["company_name"]
                 tickers = row["ticker_codes"].split(",") if isinstance(row["ticker_codes"], str) else []
@@ -372,7 +372,7 @@ class StockMarketScraper:
             list_of_quarters = df_statements_companies[["company_name", "ticker_codes", "quarter"]].drop_duplicates()
 
             new_value = 0
-            start_time = time.time()
+            start_time = time.monotonic()
             total_quarters = len(list_of_quarters)  # Store the total number of quarters
 
             # Iterate over each quarter and create new rows
@@ -441,14 +441,14 @@ class StockMarketScraper:
                             new_value = 0 if pd.isna(new_value) else round(float(new_value), 2)
                             extra_info = [worker_number, company_name, quarter.strftime("%Y-%m-%d"), new_value]
                             with self.print_lock:  # Acquire lock before printing
-                                system.print_info(item_number, len(list_of_quarters), time.time(), extra_info)
+                                system.print_info(item_number, len(list_of_quarters), time.monotonic(), extra_info)
                 except Exception as e:
                     system.log_error(
                         f"Error processing row for company {row['company_name']}, quarter {row['quarter']}: {e}"
                     )
 
             # Use ThreadPoolExecutor to process quarters concurrently
-            start_time = time.time()
+            start_time = time.monotonic()
             with ThreadPoolExecutor(max_workers=settings.max_workers) as worker_pool_executor:
                 futures = {
                     worker_pool_executor.submit(
@@ -556,7 +556,7 @@ class StockMarketScraper:
 
             # Process each sector's statements and merge with company data
             dict_of_df_statements = {}
-            start_time = time.time()
+            start_time = time.monotonic()
             for i, (sector, df_statements) in enumerate(statements_data.items()):
                 # Merge financial statement data with company data
                 df_statements_companies = self.get_merged_df(df_statements, df_companies)

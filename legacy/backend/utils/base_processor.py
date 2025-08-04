@@ -167,7 +167,7 @@ class BaseProcessor:
         results = []
         try:
             total_batches = len(batches)
-            start_time = time.time()
+            start_time = time.monotonic()
             total_scrape_size = sum(len(b) for b in batches)
             cumulative = 0  # will keep track of the global start index for each batch
             items_per_batch = len(batches[0])
@@ -205,7 +205,7 @@ class BaseProcessor:
     def _process_sequentially(self, batches, payload, verbose):
         """"""
         results = []
-        start_time = time.time()
+        start_time = time.monotonic()
         total_batches = len(batches)
         total_scrape_size = sum(len(b) for b in batches)
         items_per_batch = len(batches[0])
@@ -448,12 +448,12 @@ class BaseProcessor:
                     self.total_bytes_transferred += bytes_transferred
 
                 if block_start:
-                    self.total_block_time += time.time() - block_start
+                    self.total_block_time += time.monotonic() - block_start
                     print(f'Dodging server block: {self.total_block_time:.2f}s')
                 return r
             except Exception as e:
                 if block_start is None:
-                    block_start = time.time()
+                    block_start = time.monotonic()
                 wait += 1
                 time.sleep(self.dynamic_sleep() + wait)
                 scraper = self._init_scraper()
@@ -1374,7 +1374,7 @@ class BaseProcessor:
 
             for i, workers in enumerate(workers_list):
                 print(f"{self.config.domain['indent']}starting benchmark {i + 1} of {len(workers_list)}")
-                start_time = time.time()
+                start_time = time.monotonic()
                 process = psutil.Process()
                 initial_memory = process.memory_info().rss / (1024 * 1024)  # MB
 
@@ -1382,7 +1382,7 @@ class BaseProcessor:
                     future = worker_pool_executor.submit(function, *args, **kwargs)
                     result = future.result()
 
-                end_time = time.time()
+                end_time = time.monotonic()
                 elapsed_time = end_time - start_time
                 final_memory = process.memory_info().rss / (1024 * 1024)  # MB
                 memory_used = final_memory - initial_memory
@@ -1451,7 +1451,7 @@ class BaseProcessor:
 
         return error
 
-    def print_info(self, index=0, size=1, start_time=time.time(), extra_info=[], indent_level=0):
+    def print_info(self, index=0, size=1, start_time=time.monotonic(), extra_info=[], indent_level=0):
         """Prints the provided information along with the progress, elapsed
         time, estimated remaining time, and total estimated time."""
         try:
@@ -1459,7 +1459,7 @@ class BaseProcessor:
             remaining_items = size - completed_items
             percentage_completed = completed_items / size
 
-            elapsed_time = time.time() - start_time
+            elapsed_time = time.monotonic() - start_time
             avg_time_per_item = elapsed_time / completed_items
             remaining_time = remaining_items * avg_time_per_item
             total_estimated_time = elapsed_time + remaining_time
@@ -1781,7 +1781,7 @@ class BaseProcessor:
             batch_threads = min(self.config.scraping["max_workers"], batch_number)
             offsets = range(0, total_rows, batch_size)
 
-            start_time = time.time()
+            start_time = time.monotonic()
             with ThreadPoolExecutor(max_workers=batch_threads) as worker_pool_executor:
                 tasks = [
                     worker_pool_executor.submit(
@@ -1971,7 +1971,7 @@ class BaseProcessor:
             batch_size    = self.config.scraping["chunk_size"]
             batch_number  = (total_rows // batch_size) + (1 if total_rows % batch_size else 0)
             batch_threads = min(self.config.scraping["max_workers"], batch_number)
-            start_time    = time.time()
+            start_time    = time.monotonic()
 
             if table_name:
                 rowid_starts = [i * batch_size + 1 for i in range(batch_number)]

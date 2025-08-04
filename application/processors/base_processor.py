@@ -7,14 +7,19 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from domain.ports import LoggerPort
+from typing import Generic, TypeVar
+
+L = TypeVar("L")  # Tipo retornado por load()
+T = TypeVar("T")  # Tipo retornado por transform()
+P = TypeVar("P")  # Tipo retornado por persist() e run()
 
 
-class BaseProcessor(ABC):
+class BaseProcessor(ABC, Generic[L, T, P]):
     """Base class implementing load-transform-persist template."""
 
     logger: LoggerPort
 
-    def run(self, *args, **kwargs) -> Any:
+    def run(self, *args, **kwargs) -> P:
         """Execute processing pipeline with logging and timing."""
         start_time = time.monotonic()
         processor_name = self.__class__.__name__
@@ -32,13 +37,13 @@ class BaseProcessor(ABC):
         return result
 
     @abstractmethod
-    def load(self, *args, **kwargs):
+    def load(self, *args, **kwargs) -> L:
         """Fetch or read raw data."""
 
     @abstractmethod
-    def transform(self, data):
+    def transform(self, data: L) -> T:
         """Apply domain logic and mapping."""
 
     @abstractmethod
-    def persist(self, data):
+    def persist(self, data:T) -> P:
         """Persist transformed data or emit events."""

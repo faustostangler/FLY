@@ -55,7 +55,7 @@ class StandardizedReport:
             dfs = {}
             total_lines = 0
             print(f"loading {files}...")
-            start_time = time.time()  # Initialize start time for progress tracking
+            start_time = time.monotonic()  # Initialize start time for progress tracking
 
             with self.db_lock:
                 # Iterate through each table (sector) and process the data
@@ -309,7 +309,7 @@ class StandardizedReport:
                 "Demonstração de Valor Adiconado": intel.section_7_criteria,
             }
             print("standardizing sections...")
-            start_time = time.time()
+            start_time = time.monotonic()
             total_sections = len(standardization_sections)
 
             # Loop through each section in the standardization pack
@@ -343,7 +343,7 @@ class StandardizedReport:
         """
         try:
             print("standardizing data...")
-            start_time = time.time()
+            start_time = time.monotonic()
 
             for i, (sector, df) in enumerate(dict_df.items()):
                 extra_info = [f"{sector}"]
@@ -441,7 +441,7 @@ class StandardizedReport:
             with sqlite3.connect(specific_db_path) as conn:
                 cursor = conn.cursor()
 
-                start_time = time.time()
+                start_time = time.monotonic()
                 total_lines = 0
 
                 for i, (sector, df) in enumerate(data_dict.items()):
@@ -507,7 +507,7 @@ class StandardizedReport:
                     total_chunks = len(range(0, len(data_to_insert), chunk_size))
                     total_lines = len(data_to_insert)
                     print("saving in parts...")
-                    start_time = time.time()  # Record the start time for progress tracking
+                    start_time = time.monotonic()  # Record the start time for progress tracking
                     for c, start in enumerate(range(0, len(data_to_insert), chunk_size)):
                         # Process the chunk
                         chunk = data_to_insert[start : start + chunk_size]

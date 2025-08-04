@@ -220,7 +220,7 @@ ruff check . --fix  # aplicar lint e autofix
 ## 7. Performance Logging and Benchmarking
 
 ### 7.1 Performance Logging
-- **Guidelines**: All time-based measurements should use a centralized performance logging function rather than time.time() directly. Purpose: Standardized performance logging ensures consistent reporting and benchmarking across modules.
+- **Guidelines**: All time-based measurements should use a centralized performance logging function rather than time.monotonic() directly. Purpose: Standardized performance logging ensures consistent reporting and benchmarking across modules.
 
 - **Avoid Side Effects**: Avoid side effects in functions; instead, return values that can be tested.
 
@@ -260,7 +260,7 @@ A benchmark function should: Test performance using different numbers of workers
   
 - **Example**:
   ```python
-  start_time = time.time()
+  start_time = time.monotonic()
   for i, item in enumerate(items):
       # Loop logic
   ```

@@ -39,7 +39,7 @@ class FinancialDataPlotter:
 
         # Run each table into a DataFrame
         df_list = []
-        start_time = time.time()  # Initialize start time for progress tracking
+        start_time = time.monotonic()  # Initialize start time for progress tracking
         for i, table_name in enumerate(tables):
             table_name = table_name[0]  # Extract table name from tuple
             df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)

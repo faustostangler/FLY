@@ -318,7 +318,7 @@ class NSDScraper:
             nsd_range = self.generate_nsd_range()
             nsd_data = []
             total_nsds = len(nsd_range)
-            start_time = time.time()
+            start_time = time.monotonic()
             limit_counter = 0
 
             for i, nsd in enumerate(nsd_range):
