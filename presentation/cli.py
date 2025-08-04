@@ -39,7 +39,7 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-        self._company_service()
+        # self._company_service()
         self._nsd_service()
         self._statement_service()
 
@@ -67,12 +67,16 @@ class CLIAdapter:
 
     def _nsd_service(self) -> None:
         """Build and execute the NSD data synchronization flow."""
+        company_repo = SqlAlchemyCompanyDataRepository(
+            config=self.config, logger=self.logger
+        )
         nsd_repo = SqlAlchemyNsdRepository(config=self.config, logger=self.logger)
         nsd_scraper = NsdScraper(
             config=self.config,
             logger=self.logger,
             data_cleaner=self.data_cleaner,
             repository=nsd_repo,
+            company_repository=company_repo, 
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
         )

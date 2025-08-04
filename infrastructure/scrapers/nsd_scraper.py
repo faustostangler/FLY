@@ -15,6 +15,7 @@ from domain.ports import (
     MetricsCollectorPort,
     NSDRepositoryPort,
     NSDSourcePort,
+    SqlAlchemyCompanyDataRepositoryPort, 
     WorkerPoolPort,
 )
 from infrastructure.config import Config
@@ -33,6 +34,7 @@ class NsdScraper(NSDSourcePort):
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
         repository: NSDRepositoryPort,
+        company_repository: SqlAlchemyCompanyDataRepositoryPort,  # << novo
     ):
         """Set up configuration, logger, and helper utilities for the
         scraper."""
@@ -43,6 +45,7 @@ class NsdScraper(NSDSourcePort):
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
         self.repository = repository
+        self.company_repo = company_repository
 
         self.fetch_utils = FetchUtils(config, logger)
         self.session = self.fetch_utils.create_scraper()
@@ -74,21 +77,23 @@ class NsdScraper(NSDSourcePort):
 
         self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
 
-        start = max(start, max(self.skip_codes, default=0) + 1)
+        # start = max(start, max(self.skip_codes, default=0) + 1)
 
-        max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
-        max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        max_nsd = max(max_nsd_existing, max_nsd_probable)
+        # max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
+        # max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
+        # max_nsd = max(max_nsd_existing, max_nsd_probable)
 
-        threshold = threshold or self.config.global_settings.threshold or 50
+        # threshold = threshold or self.config.global_settings.threshold or 50
 
-        self.logger.log("Fetch NSD list", level="info")
+        # self.logger.log("Fetch NSD list", level="info")
+
+        # tasks = list(enumerate(range(start, max_nsd + 1)))
+        tasks = list(enumerate(range(34, 45)))
 
         strategy: SaveStrategy[NsdDTO] = SaveStrategy(
             save_callback, threshold, config=self.config
         )
 
-        tasks = list(enumerate(range(start, max_nsd + 1)))
         start_time = time.perf_counter()
 
         def processor(task: WorkerTaskDTO) -> Optional[NsdDTO]:
@@ -123,6 +128,14 @@ class NsdScraper(NSDSourcePort):
                 #     level="info",
                 # )
                 parsed = self._parse_html(nsd, response.text)
+
+                # converte o company_name que veio do HTML em cvm_code para a FK bater
+                if parsed and parsed.get("company_name"):
+                    parsed["cvm_code"] = self.company_repo.get_cvm_by_name(parsed["company_name"])
+                else:
+                    parsed["cvm_code"] = None
+            # ————————————————————————————————————————————————————————————————
+
                 # self.logger.log(
                 #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()._parse_html()",
                 #     level="info",
@@ -282,6 +295,7 @@ class NsdScraper(NSDSourcePort):
             int: The last NSD with valid content.
         """
         nsd = start - 1
+        nsd = 34 - 1
         last_valid = None
 
         max_linear_holes = self.config.global_settings.max_linear_holes or 2000
@@ -298,6 +312,7 @@ class NsdScraper(NSDSourcePort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
+        nsd = nsd + 1 # move forward
         multiplier = 0
         while nsd <= max_limit and hole_count < max_linear_holes:
             parsed = self._try_nsd(nsd)

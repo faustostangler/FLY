@@ -82,3 +82,18 @@ class SqlAlchemyCompanyDataRepository(
             type: The model class associated with this repository.
         """
         return CompanyDataModel, (CompanyDataModel.id,)
+
+    def get_cvm_by_name(self, company_name: str) -> str:
+        """Lookup do código CVM a partir do nome da empresa."""
+        session = self.Session()
+        try:
+            row = (
+                session.query(CompanyDataModel.cvm_code)
+                .filter(CompanyDataModel.company_name == company_name)
+                .one_or_none()
+            )
+            if row is None:
+                raise ValueError(f"Empresa não encontrada: {company_name}")
+            return row[0]
+        finally:
+            session.close()

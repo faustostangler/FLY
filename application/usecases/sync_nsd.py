@@ -30,6 +30,12 @@ class SyncNSDUseCase:
         # Retrieve any previously stored document IDs to avoid duplicates.
         existing_ids = self.repository.get_all_primary_keys()
 
+        # busca todos os cvm_code que já estão na tabela
+        raw = self.repository.get_existing_by_columns("nsd")
+        # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
+        existing_ids = [code for (code,) in raw]
+
+
         # Fetch all documents from the scraper, persisting them in batches.
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
         self.scraper.fetch_all(

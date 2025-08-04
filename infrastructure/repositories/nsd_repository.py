@@ -46,8 +46,9 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
                 )
                 session.execute(stmt)
             session.commit()
-        except Exception:
+        except Exception as e:
             session.rollback()
+            self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
         finally:
             session.close()
