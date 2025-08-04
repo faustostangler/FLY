@@ -39,7 +39,7 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-        self._company_service()
+        # self._company_service()
         self._nsd_service()
         self._statement_service()
 
