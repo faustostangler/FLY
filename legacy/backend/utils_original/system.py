@@ -261,7 +261,7 @@ def escape_keywords(keywords):
     return [re.escape(keyword) for keyword in keywords]
 
 
-def print_info(index, size, start_time=time.monotonic(), extra_info=[]):
+def print_info(index, size, start_time=time.perf_counter(), extra_info=[]):
     """Prints the provided information along with the progress, elapsed time,
     estimated remaining time, and total estimated time.
 
@@ -275,7 +275,7 @@ def print_info(index, size, start_time=time.monotonic(), extra_info=[]):
     remaining_items = size - completed_items
     percentage_completed = completed_items / size
 
-    elapsed_time = time.monotonic() - start_time
+    elapsed_time = time.perf_counter() - start_time
     avg_time_per_item = elapsed_time / completed_items
     remaining_time = remaining_items * avg_time_per_item
     total_estimated_time = elapsed_time + remaining_time

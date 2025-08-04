@@ -73,7 +73,7 @@ class NsdProcessor(BaseProcessor):
             dfs = []
 
             # start time
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
 
             # Initialize batch size tracking
             if self.shared_total_bytes and self.shared_lock and self.thread_id is not None:

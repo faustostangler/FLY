@@ -45,7 +45,7 @@ class HistoricalStockUrlProcessor(BaseProcessor):
         months = [f"{i:02}" for i in range(1, 13)]  # Generate month strings "01" to "12"
 
         try:
-            start_time = time.monotonic()  # Track the start time for performance logging
+            start_time = time.perf_counter()  # Track the start time for performance logging
 
             for i, ticker in enumerate(sub_batch):
                 urls = self.get_urls(months, ticker)
@@ -225,7 +225,7 @@ class HistoricalStockUrlProcessor(BaseProcessor):
             ticker_urls = {}
             months = [f"{i:02}" for i in range(1, 13)]
             dfs = []
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
             for i, ticker in enumerate(tickers):
                 if ticker in fast_debug_tickers:
                     continue
@@ -250,7 +250,7 @@ class HistoricalStockUrlProcessor(BaseProcessor):
                             if (year < current_year) or (year >= current_year and month < current_month)
                         ]
 
-                        start_time = time.monotonic()
+                        start_time = time.perf_counter()
                         for j, (year, month) in enumerate(year_month):
                             if 1 == 1:
                                 url = f"https://bvmf.bmfbovespa.com.br/sig/FormConsultaMercVista.asp?strTipoResumo=RES_MERC_VISTA&strSocEmissora={ticker}&strDtReferencia={month}-{year}&strIdioma=P&intCodNivel=2&intCodCtrl=160"

@@ -36,7 +36,7 @@ class CompanyDataScraper:
             total_pages = max(pages) - 1
 
             raw_code = []
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
 
             for i, page in enumerate(range(0, total_pages + 1)):
                 system.wait_forever(self.driver_wait, nav_bloc_xpath)
@@ -150,7 +150,7 @@ class CompanyDataScraper:
         companies_to_process = {name: info for name, info in new_companies.items() if name not in existing_companies}
         total_companies_to_process = len(companies_to_process)
 
-        start_time = time.monotonic()
+        start_time = time.perf_counter()
         all_data = []
 
         for i, (company_name, info) in enumerate(companies_to_process.items()):

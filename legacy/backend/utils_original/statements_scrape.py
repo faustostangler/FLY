@@ -67,7 +67,7 @@ class StatementsDataScraper:
             tables = cursor.fetchall()
 
             total_files = len(tables)
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
 
             financial_statements = {}  # Initialize the dictionary to store sector DataFrames
             total_lines = 0
@@ -482,7 +482,7 @@ class StatementsDataScraper:
         iterating over all financial data statements."""
         try:
             # Initialize the overall counter
-            start_time = time.monotonic()  # Record the start time for the entire process
+            start_time = time.perf_counter()  # Record the start time for the entire process
             total_items = len(targets)  # Total number of items across all sectors
 
             # Initialize a counter to track the total number of processed items

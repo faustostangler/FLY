@@ -65,7 +65,7 @@ class EventsStatementsProcessor(BaseProcessor):
             dfs = []
 
             # loop companies, load stock_market data and statements_data per company
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
             for i, (ii, row) in enumerate(sub_batch.iterrows()):
                 ticker = row["ticker"]
                 ticker_code = row["ticker_code"]

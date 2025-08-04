@@ -66,7 +66,7 @@ class MarketProcessor(BaseProcessor):
             statements_quarters = targets[["company_name", "ticker_codes", "quarter"]].drop_duplicates()
 
             new_value = 0
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
             total_quarters = len(statements_quarters)  # Store the total number of quarters
 
             # Iterate over each quarter and create new rows
@@ -201,7 +201,7 @@ class MarketProcessor(BaseProcessor):
 
             historical_data = {}
             last_date = "1950-01-01"
-            start_time = time.monotonic()
+            start_time = time.perf_counter()
             for i, (_, row) in enumerate(scrape_tickets.iterrows()):
                 company_name = row["company_name"]
                 sector = row["sector"]
