@@ -314,8 +314,8 @@ class CompanyDataScraper(CompanyDataScraperPort):
             entry = task.data
             worker_id = task.worker_id
 
-            code_cvm = entry.get("codeCVM")
-            if code_cvm in self.skip_codes:
+            company_name = self.data_cleaner.clean_text(entry.get("companyName"))
+            if company_name in self.skip_codes:
                 # download_bytes_pre = self._metrics_collector.network_bytes
                 # download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
 
@@ -327,7 +327,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                     # "Total download": self.byte_formatter.format_bytes(self.metrics_collector.network_bytes),
                     }
                 self.logger.log(
-                    f"{code_cvm}",
+                    f"{company_name}",
                     level="info",
                     progress={
                         "index": index,
@@ -359,7 +359,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 ),
             }
             self.logger.log(
-                f"{code_cvm}",
+                f"{company_name}",
                 level="info",
                 progress={
                     "index": index,

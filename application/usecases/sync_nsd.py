@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import LoggerPort, NSDRepositoryPort, NSDSourcePort
+from domain.ports import (
+    LoggerPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
+    SqlAlchemyCompanyDataRepositoryPort,
+)
+from infrastructure.config import Config
 from infrastructure.helpers.list_flattener import ListFlattener
-from typing import Set, Union
+from infrastructure.utils.id_generator import IdGenerator
 
 
 class SyncNSDUseCase:
@@ -11,14 +17,20 @@ class SyncNSDUseCase:
 
     def __init__(
         self,
+        config: Config,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
+        company_repo: SqlAlchemyCompanyDataRepositoryPort,
         scraper: NSDSourcePort,
+
     ) -> None:
         """Store dependencies required for synchronization."""
+        self.config = config
         self.logger = logger
         self.repository = repository
+        self.company_repo = company_repo
         self.scraper = scraper
+        self.id_generator = IdGenerator(config=config)
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
@@ -27,19 +39,15 @@ class SyncNSDUseCase:
 
         # self.logger.log("Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run()", level="info")
 
-        # Retrieve any previously stored document IDs to avoid duplicates.
-        existing_ids = self.repository.get_all_primary_keys()
-
         # busca todos os cvm_code que já estão na tabela
         raw = self.repository.get_existing_by_columns("nsd")
         # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
-        existing_ids = [code for (code,) in raw]
-
+        existing_nsd = [code for (code,) in raw]
 
         # Fetch all documents from the scraper, persisting them in batches.
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
         self.scraper.fetch_all(
-            skip_codes=existing_ids,
+            skip_codes=existing_nsd,
             save_callback=self._save_batch,
         )
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
@@ -59,6 +67,25 @@ class SyncNSDUseCase:
 
         # Transform raw DTOs from the scraper to domain DTOs.
         dtos = [NsdDTO.from_raw(item) for item in flat_items]
+
+        names = {dto.company_name for dto in dtos if dto.company_name}
+        # → busca os já cadastrados
+        existing_companies = {
+            company_name for (company_name,) in self.company_repo.get_existing_by_columns("company_name")
+        }
+        missing = names - existing_companies
+        if missing:
+            from domain.dto.company_data_dto import CompanyDataDTO
+
+            to_create = [
+                CompanyDataDTO(
+                    cvm_code=self.id_generator.create_id(size=6),
+                    company_name=name
+                    )
+                for name in missing
+            ]
+            # insere todas as empresas faltantes de uma vez
+            self.company_repo.save_all(to_create)
 
         # Save the batch to the repository in a single call.
         self.repository.save_all(dtos)

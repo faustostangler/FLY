@@ -45,8 +45,8 @@ class SyncCompanyDataUseCase:
         # Mark the start time to calculate performance metrics later.
         start = time.perf_counter()
 
-        # busca todos os cvm_code que já estão na tabela
-        raw = self.repository.get_existing_by_columns("cvm_code")
+        # busca todos os company_name que já estão na tabela
+        raw = self.repository.get_existing_by_columns("company_name")
         # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
         skip_codes = [code for (code,) in raw]
 

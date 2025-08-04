@@ -15,48 +15,48 @@ class CompanyDataDTO:
     """Structured company data extracted from the exchange."""
 
     id: Optional[int] = None
-    cvm_code: Optional[str]
-    issuing_company: Optional[str]
-    trading_name: Optional[str]
+    cvm_code: Optional[str] = None
+    issuing_company: Optional[str] = None
+    trading_name: Optional[str] = None
     company_name: Optional[str]
 
-    cnpj: Optional[str]
+    cnpj: Optional[str] = None
 
-    ticker_codes: Optional[str]
-    isin_codes: Optional[str]
-    other_codes: Optional[str]
+    ticker_codes: Optional[str] = None
+    isin_codes: Optional[str] = None
+    other_codes: Optional[str] = None
 
-    industry_sector: Optional[str]
-    industry_subsector: Optional[str]
-    industry_segment: Optional[str]
-    industry_classification: Optional[str]
-    industry_classification_eng: Optional[str]
-    activity: Optional[str]
+    industry_sector: Optional[str] = None
+    industry_subsector: Optional[str] = None
+    industry_segment: Optional[str] = None
+    industry_classification: Optional[str] = None
+    industry_classification_eng: Optional[str] = None
+    activity: Optional[str] = None
 
-    company_segment: Optional[str]
-    company_segment_eng: Optional[str]
-    company_category: Optional[str]
-    company_type: Optional[str]
+    company_segment: Optional[str] = None
+    company_segment_eng: Optional[str] = None
+    company_category: Optional[str] = None
+    company_type: Optional[str] = None
 
-    listing_segment: Optional[str]
-    registrar: Optional[str]
-    website: Optional[str]
-    institution_common: Optional[str]
-    institution_preferred: Optional[str]
+    listing_segment: Optional[str] = None
+    registrar: Optional[str] = None
+    website: Optional[str] = None
+    institution_common: Optional[str] = None
+    institution_preferred: Optional[str] = None
 
-    market: Optional[str]
-    status: Optional[str]
-    market_indicator: Optional[str]
+    market: Optional[str] = None
+    status: Optional[str] = None
+    market_indicator: Optional[str] = None
 
-    code: Optional[str]
-    has_bdr: Optional[bool]
-    type_bdr: Optional[str]
-    has_quotation: Optional[bool]
-    has_emissions: Optional[bool]
+    code: Optional[str] = None
+    has_bdr: Optional[bool] = None
+    type_bdr: Optional[str] = None
+    has_quotation: Optional[bool] = None
+    has_emissions: Optional[bool] = None
 
-    date_quotation: Optional[datetime]
-    last_date: Optional[datetime]
-    listing_date: Optional[datetime]
+    date_quotation: Optional[datetime] = None
+    last_date: Optional[datetime] = None
+    listing_date: Optional[datetime] = None
 
     @staticmethod
     def from_dict(raw: dict) -> "CompanyDataDTO":

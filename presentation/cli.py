@@ -69,22 +69,24 @@ class CLIAdapter:
         """Build and execute the NSD data synchronization flow."""
         company_repo = SqlAlchemyCompanyDataRepository(
             config=self.config, logger=self.logger
-        )
+            )
         nsd_repo = SqlAlchemyNsdRepository(config=self.config, logger=self.logger)
         nsd_scraper = NsdScraper(
             config=self.config,
             logger=self.logger,
             data_cleaner=self.data_cleaner,
             repository=nsd_repo,
-            company_repository=company_repo, 
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
         )
         nsd_service = NsdService(
+            config=self.config,
             logger=self.logger,
             repository=nsd_repo,
+            company_repo=company_repo,
             scraper=nsd_scraper,
         )
+
         nsd_service.sync_nsd()
 
     def _statement_service(self) -> None:

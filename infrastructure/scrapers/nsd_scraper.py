@@ -15,7 +15,6 @@ from domain.ports import (
     MetricsCollectorPort,
     NSDRepositoryPort,
     NSDSourcePort,
-    SqlAlchemyCompanyDataRepositoryPort,
     WorkerPoolPort,
 )
 from infrastructure.config import Config
@@ -34,7 +33,6 @@ class NsdScraper(NSDSourcePort):
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
         repository: NSDRepositoryPort,
-        company_repository: SqlAlchemyCompanyDataRepositoryPort,  # << novo
     ):
         """Set up configuration, logger, and helper utilities for the
         scraper."""
@@ -45,7 +43,6 @@ class NsdScraper(NSDSourcePort):
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
         self.repository = repository
-        self.company_repo = company_repository
 
         self.fetch_utils = FetchUtils(config, logger)
         self.session = self.fetch_utils.create_scraper()
@@ -77,7 +74,7 @@ class NsdScraper(NSDSourcePort):
 
         self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
 
-        # start = max(start, max(self.skip_codes, default=0) + 1)
+        start = max(start, max(self.skip_codes, default=0) + 1)
 
         # max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
         # max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
@@ -383,8 +380,8 @@ class NsdScraper(NSDSourcePort):
 
         first_pk = min(self.skip_codes, key=lambda n: int(n))
         last_pk = max(self.skip_codes, key=lambda n: int(n))
-        first_date = self.repository.get_by_id(str(first_pk)).sent_date
-        last_date = self.repository.get_by_id(str(last_pk)).sent_date
+        first_date = self.repository.get_by_id(first_pk).sent_date
+        last_date = self.repository.get_by_id(last_pk).sent_date
 
         # Days span between dates
         total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]

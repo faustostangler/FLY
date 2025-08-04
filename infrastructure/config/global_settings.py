@@ -3,11 +3,11 @@ from dataclasses import dataclass, field
 APP_NAME = "FLY" # Application name
 
 WAIT = 2  # Default wait time in seconds
-THRESHOLD = 5  # Default threshold for saving data
+THRESHOLD = 500  # Default threshold for saving data
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
-MAX_WORKERS = 50  # Default number of threads for sync operations
+MAX_WORKERS = 1  # Default number of threads for sync operations
 BATCH_SIZE = 100  # Number of items per repository batch
-QUEUE_SIZE = 100  # Max queue size for producer/consumer pipeline
+QUEUE_SIZE = 4 * MAX_WORKERS # Max queue size for producer/consumer pipeline
 
 @dataclass(frozen=True)
 class GlobalSettingsConfig:

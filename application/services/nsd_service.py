@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from application.usecases.sync_nsd import SyncNSDUseCase
-from domain.ports import LoggerPort, NSDRepositoryPort, NSDSourcePort
+from domain.ports import (
+    LoggerPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
+    SqlAlchemyCompanyDataRepositoryPort,
+)
+from infrastructure.config import Config
+from infrastructure.utils.id_generator import IdGenerator
 
 
 class NsdService:
@@ -9,8 +16,10 @@ class NsdService:
 
     def __init__(
         self,
+        config: Config,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
+        company_repo: SqlAlchemyCompanyDataRepositoryPort,
         scraper: NSDSourcePort,
     ) -> None:
         """Instantiate the service with its required dependencies."""
@@ -18,7 +27,11 @@ class NsdService:
 
         # Set up the underlying use case that performs the synchronization.
         self.sync_nsd_usecase = SyncNSDUseCase(
-            logger=self.logger, repository=repository, scraper=scraper
+            config=config,
+            logger=logger,
+            repository=repository,
+            company_repo=company_repo,
+            scraper=scraper
         )
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
