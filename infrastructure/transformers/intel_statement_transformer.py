@@ -27,7 +27,11 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
-        from infrastructure.utils.csv_utils import save_dtos_to_csv
+# <<<<<<< codex/refactor-dependency-injection-in-processors
+        from domain.utils.csv_utils import save_dtos_to_csv
+# =======
+#         from infrastructure.utils.csv_utils import save_dtos_to_csv
+# >>>>>>> 2025-08-05-Statements
 
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 

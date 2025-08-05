@@ -17,8 +17,9 @@ from domain.ports import (
     NSDSourcePort,
     WorkerPoolPort,
 )
+from domain.utils import ByteFormatter, SaveStrategy
 from infrastructure.config import Config
-from infrastructure.helpers import ByteFormatter, FetchUtils, SaveStrategy
+from infrastructure.helpers import FetchUtils
 from infrastructure.helpers.data_cleaner import DataCleaner
 
 
@@ -66,7 +67,6 @@ class NsdScraper(NSDSourcePort):
         **kwargs,
     ) -> ExecutionResultDTO[NsdDTO]:
         """Fetch and parse NSD pages using a worker queue."""
-
         # self.logger.log(
         #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
         #     level="info",

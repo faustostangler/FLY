@@ -1,14 +1,16 @@
+"""Use case for parsing and classifying statement rows."""
+
 from __future__ import annotations
 
 from domain.dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     SqlAlchemyParsedStatementRepositoryPort,
 )
+from domain.utils import SaveStrategy
 from domain.utils.statement_processing import classify_section
-from infrastructure.config import Config
-from infrastructure.helpers import SaveStrategy
 
 
 class ParseAndClassifyStatementsUseCase:
@@ -18,8 +20,9 @@ class ParseAndClassifyStatementsUseCase:
         self,
         logger: LoggerPort,
         repository: SqlAlchemyParsedStatementRepositoryPort,
-        config: Config,
+        config: ConfigPort,
     ) -> None:
+        """Initialize use case with repository and configuration."""
         self.logger = logger
         self.repository = repository
         self.strategy: SaveStrategy[ParsedStatementDTO] = SaveStrategy(

@@ -35,7 +35,13 @@ def test_save_all_json_string(SessionLocal, engine):
 
     json_codes = '[{"code": "AAA", "isin": "123"}]'
     companies = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "other_codes": json_codes})
+        CompanyDataDTO.from_dict(
+            {
+                "issuing_company": "AAA",
+                "company_name": "Alpha",
+                "other_codes": json_codes,
+            }
+        )
     ]
 
     repo.save_all(companies)
@@ -54,19 +60,27 @@ def test_save_all_upserts(SessionLocal, engine):
     BaseModel.metadata.create_all(engine)
 
     first = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Alpha"})
+        CompanyDataDTO.from_dict(
+            {"issuing_company": "AAA", "company_name": "Alpha", "trading_name": "Old"}
+        )
     ]
     repo.save_all(first)
 
     second = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Updated"})
+        CompanyDataDTO.from_dict(
+            {
+                "issuing_company": "AAA",
+                "company_name": "Alpha",
+                "trading_name": "Updated",
+            }
+        )
     ]
     repo.save_all(second)
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT COUNT(*) FROM tbl_company")).scalar()
         name = conn.execute(
-            text("SELECT company_name FROM tbl_company WHERE cvm_code='AAA'")
+            text("SELECT trading_name FROM tbl_company WHERE cvm_code='AAA'")
         ).scalar()
 
     assert result == 1

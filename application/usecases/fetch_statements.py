@@ -9,14 +9,15 @@ from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.dto.worker_class_dto import WorkerTaskDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     RawStatementScraperPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
+    WorkerPoolPort,
 )
-from infrastructure.config import Config
-from infrastructure.helpers import ByteFormatter, SaveStrategy, WorkerPool
+from domain.utils import ByteFormatter, SaveStrategy
 
 
 class FetchStatementsUseCase:
@@ -29,8 +30,8 @@ class FetchStatementsUseCase:
         raw_statement_repository: SqlAlchemyRawStatementRepositoryPort,
         parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
-        worker_pool_executor: WorkerPool,
-        config: Config,
+        worker_pool_executor: WorkerPoolPort,
+        config: ConfigPort,
         max_workers: int = 1,
     ) -> None:
         """Store dependencies for fetching and saving raw rows."""
@@ -177,7 +178,6 @@ class FetchStatementsUseCase:
 
         def handle_batch(item: Tuple[NsdDTO, List[RawStatementDTO]]) -> None:
             """Buffer fetched statement rows via ``strategy``."""
-
             # ``SaveStrategy.handle`` can accept an iterable of rows, so pass
             # the entire list at once for more efficient buffering.
             strategy.handle(item[1])

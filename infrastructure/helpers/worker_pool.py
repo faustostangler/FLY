@@ -1,3 +1,5 @@
+"""Threaded worker pool implementation."""
+
 from __future__ import annotations
 
 import threading
@@ -9,16 +11,15 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from domain.dto import ExecutionResultDTO, WorkerTaskDTO
 from domain.ports import LoggerPort, MetricsCollectorPort, WorkerPoolPort
+from domain.utils.byte_formatter import ByteFormatter
 from infrastructure.config import Config
-from infrastructure.helpers.byte_formatter import ByteFormatter
 
 T = WorkerTaskDTO
 R = TypeVar("R")
 
 
 class WorkerPool(WorkerPoolPort):
-    """Simple thread pool implementation tied to the domain
-    ``WorkerPoolPort``."""
+    """Simple thread pool tied to the domain ``WorkerPoolPort``."""
 
     def __init__(
         self,
@@ -27,7 +28,6 @@ class WorkerPool(WorkerPoolPort):
         max_workers: Optional[int] = None,
     ) -> None:
         """Initialize the worker pool with configuration and metrics."""
-
         self.config = config
         self.metrics_collector = metrics_collector
         self.max_workers = max_workers or config.global_settings.max_workers or 1
@@ -42,7 +42,6 @@ class WorkerPool(WorkerPoolPort):
         post_callback: Optional[Callable[[List[R]], None]] = None,
     ) -> ExecutionResultDTO[R]:
         """Process ``tasks`` concurrently using ``processor``."""
-
         # Inform about the worker pool startup
         # logger.log("Run  Method worker_pool_executor().run()", level="info")
 
