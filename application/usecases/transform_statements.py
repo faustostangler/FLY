@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import List
 
-from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import LoggerPort
+from domain.ports import LoggerPort, StatementTransformerPort
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
 from infrastructure.config import Config
