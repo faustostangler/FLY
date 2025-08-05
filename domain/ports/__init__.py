@@ -4,6 +4,12 @@ from .base_repository_port import SqlAlchemyRepositoryBasePort
 from .base_scraper_port import BaseScraperPort
 from .company_data_scraper_port import CompanyDataScraperPort
 from .company_repository_port import SqlAlchemyCompanyDataRepositoryPort
+from .config_port import (
+    ConfigPort,
+    DomainConfigPort,
+    GlobalSettingsConfigPort,
+    TransformersConfigPort,
+)
 from .data_cleaner_port import DataCleanerPort
 from .logger_port import LoggerPort
 from .metrics_collector_port import MetricsCollectorPort
@@ -28,4 +34,8 @@ __all__ = [
     "RawStatementScraperPort",
     "SqlAlchemyRawStatementRepositoryPort",
     "SqlAlchemyParsedStatementRepositoryPort",
+    "ConfigPort",
+    "DomainConfigPort",
+    "GlobalSettingsConfigPort",
+    "TransformersConfigPort",
 ]

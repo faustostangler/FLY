@@ -44,7 +44,7 @@ def test_execute_validates_and_runs_pipeline(monkeypatch, sample_rows):
     intel_transformer.transform.return_value = ["intel"]
 
     monkeypatch.setattr(
-        "infrastructure.utils.csv_utils.save_dtos_to_csv",
+        "domain.utils.csv_utils.save_dtos_to_csv",
         lambda *args, **kwargs: None,
     )
 

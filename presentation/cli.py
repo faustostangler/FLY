@@ -69,7 +69,7 @@ class CLIAdapter:
         """Build and execute the NSD data synchronization flow."""
         company_repo = SqlAlchemyCompanyDataRepository(
             config=self.config, logger=self.logger
-            )
+        )
         nsd_repo = SqlAlchemyNsdRepository(config=self.config, logger=self.logger)
         nsd_scraper = NsdScraper(
             config=self.config,
@@ -127,7 +127,7 @@ class CLIAdapter:
             logger=self.logger,
             repository=parsed_statement_repo,
             config=self.config,
-            max_workers=self.config.global_settings.max_workers or 1,
+            worker_pool_executor=self.worker_pool_executor,
         )
         parsed_groups = parse_processor.run(raw_rows)
 

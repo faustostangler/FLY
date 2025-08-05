@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 from application import CompanyDataMapper
 from domain.dto import (
@@ -20,9 +20,9 @@ from domain.ports import (
     MetricsCollectorPort,
     WorkerPoolPort,
 )
+from domain.utils import ByteFormatter, SaveStrategy
 from infrastructure.config import Config
-from infrastructure.helpers import FetchUtils, SaveStrategy
-from infrastructure.helpers.byte_formatter import ByteFormatter
+from infrastructure.helpers import FetchUtils
 from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.scrapers.company_data_processors import (
     CompanyDataDetailProcessor,

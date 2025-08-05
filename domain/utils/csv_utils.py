@@ -1,15 +1,11 @@
+"""Utilities for writing DTOs to CSV files."""
+
 import csv
 from typing import List
 
 
 def save_dtos_to_csv(dtos: List, filepath: str) -> None:
-    """
-    Save any list of DTOs to a CSV file. Each attribute of the DTO becomes a column.
-
-    Args:
-        dtos (List): A list of objects with __dict__ attribute (e.g., dataclass instances).
-        filepath (str): Destination CSV file path.
-    """
+    """Save DTOs to ``filepath`` with columns from object attributes."""
     if not dtos:
         raise ValueError("No DTOs provided to save.")
 
@@ -19,7 +15,11 @@ def save_dtos_to_csv(dtos: List, filepath: str) -> None:
         headers = list(vars(first).keys())
     else:
         # Fallback: use dir() to find public attributes
-        headers = [attr for attr in dir(first) if not attr.startswith("_") and not callable(getattr(first, attr))]
+        headers = [
+            attr
+            for attr in dir(first)
+            if not attr.startswith("_") and not callable(getattr(first, attr))
+        ]
 
     # Write CSV
     with open(filepath, mode="w", newline="", encoding="utf-8") as csvfile:
@@ -29,6 +29,6 @@ def save_dtos_to_csv(dtos: List, filepath: str) -> None:
             row = {h: getattr(dto, h) for h in headers}
             writer.writerow(row)
 
+
 # Example usage:
 # save_dtos_to_csv(raws_dto, "raws_statements.csv")
-

@@ -1,4 +1,4 @@
-from infrastructure.helpers.save_strategy import SaveStrategy
+from domain.utils.save_strategy import SaveStrategy
 
 
 def test_handle_flushes_on_threshold():

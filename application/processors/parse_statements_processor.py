@@ -9,9 +9,12 @@ from application.usecases.parse_and_classify_statements import (
 )
 from domain.dto import NsdDTO, ParsedStatementDTO, WorkerTaskDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
-from infrastructure.config import Config
-from infrastructure.helpers import MetricsCollector, WorkerPool
+from domain.ports import (
+    ConfigPort,
+    LoggerPort,
+    SqlAlchemyParsedStatementRepositoryPort,
+    WorkerPoolPort,
+)
 
 from .base_processor import BaseProcessor
 
@@ -23,13 +26,13 @@ class ParseStatementsProcessor(BaseProcessor):
         self,
         logger: LoggerPort,
         repository: SqlAlchemyParsedStatementRepositoryPort,
-        config: Config,
-        max_workers: int = 1,
+        config: ConfigPort,
+        worker_pool_executor: WorkerPoolPort,
     ) -> None:
         """Store dependencies for the processor."""
         self.logger = logger
         self.config = config
-        self.max_workers = max_workers
+        self.worker_pool_executor = worker_pool_executor
         self.parse_usecase = ParseAndClassifyStatementsUseCase(
             logger=self.logger, repository=repository, config=self.config
         )
@@ -37,19 +40,15 @@ class ParseStatementsProcessor(BaseProcessor):
     def _parse_all(
         self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
     ) -> List[List[ParsedStatementDTO]]:
-        collector = MetricsCollector()
-        parse_pool = WorkerPool(
-            config=self.config,
-            metrics_collector=collector,
-            max_workers=self.max_workers,
-        )
         tasks = list(enumerate(fetched))
 
         def processor(task: WorkerTaskDTO) -> List[ParsedStatementDTO]:
             _nsd, rows = task.data
             return [self.parse_usecase.parse_and_store_row(r) for r in rows]
 
-        result = parse_pool.run(tasks=tasks, processor=processor, logger=self.logger)
+        result = self.worker_pool_executor.run(
+            tasks=tasks, processor=processor, logger=self.logger
+        )
         return result.items
 
     def load(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Callable, Generic, List, Optional, TypeVar
 
-from infrastructure.config import Config
+from domain.ports.config_port import ConfigPort
 
 T = TypeVar("T")
 
@@ -17,7 +17,7 @@ class SaveStrategy(Generic[T]):
         self,
         save_callback: Optional[Callable[[List[T]], None]] = None,
         threshold: Optional[int] = None,
-        config: Optional[Config] = None,
+        config: Optional[ConfigPort] = None,
     ) -> None:
         """Create a new strategy instance.
 
@@ -37,8 +37,7 @@ class SaveStrategy(Generic[T]):
     def handle(
         self, item: Optional[Iterable[T]], remaining: Optional[int] = None
     ) -> None:
-        """Add one or more items to the buffer and flush when ``threshold`` is
-        reached.
+        """Add items to the buffer and flush when ``threshold`` is reached.
 
         Args:
             item: Single item or iterable of items to add to the buffer.

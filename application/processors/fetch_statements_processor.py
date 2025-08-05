@@ -8,6 +8,7 @@ from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     NSDRepositoryPort,
@@ -15,16 +16,19 @@ from domain.ports import (
     SqlAlchemyCompanyDataRepositoryPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
+    WorkerPoolPort,
 )
-from infrastructure.config import Config
-from infrastructure.helpers import WorkerPool
 
 from .base_processor import BaseProcessor
 
 
 class FetchStatementsProcessor(
     BaseProcessor[
-        Tuple[List[NsdDTO], Optional[Callable[[List[RawStatementDTO]], None]], Optional[int]],  # TypeVar("L")
+        Tuple[
+            List[NsdDTO],
+            Optional[Callable[[List[RawStatementDTO]], None]],
+            Optional[int],
+        ],  # TypeVar("L")
         List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("T")
         List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("P")
     ]
@@ -34,14 +38,14 @@ class FetchStatementsProcessor(
     def __init__(
         self,
         logger: LoggerPort,
-        config: Config,
+        config: ConfigPort,
         source: RawStatementScraperPort,
         company_repo: SqlAlchemyCompanyDataRepositoryPort,
         nsd_repo: NSDRepositoryPort,
         raw_statement_repo: SqlAlchemyRawStatementRepositoryPort,
         parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
-        worker_pool_executor: WorkerPool,
+        worker_pool_executor: WorkerPoolPort,
         max_workers: int = 1,
     ) -> None:
         """Store dependencies for the processor."""
@@ -130,4 +134,3 @@ class FetchStatementsProcessor(
     ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
         """No-op persist step; the use case already saves rows."""
         return data
-

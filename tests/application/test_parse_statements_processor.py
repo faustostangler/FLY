@@ -23,18 +23,19 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
 
     repository = MagicMock(spec=SqlAlchemyParsedStatementRepository)
 
+    worker_pool = MagicMock()
     processor = ParseStatementsProcessor(
         logger=DummyLogger(),
         repository=repository,
         config=dummy_config,
-        max_workers=2,
+        worker_pool_executor=worker_pool,
     )
 
     mock_usecase_cls.assert_called_once_with(
         logger=processor.logger, repository=repository, config=dummy_config
     )
 
-    parse_all = MagicMock()
+    parse_all = MagicMock(return_value="parsed")
     monkeypatch.setattr(processor, "_parse_all", parse_all)
 
     fetched = [(MagicMock(spec=NsdDTO), [MagicMock(spec=RawStatementDTO)])]
