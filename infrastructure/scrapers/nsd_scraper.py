@@ -305,11 +305,13 @@ class NsdScraper(NSDSourcePort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
+        multiplier = 1
         while nsd <= max_limit and hole_count < max_linear_holes:
             parsed = self._try_nsd(nsd)
             if parsed:
                 last_valid = nsd
-                nsd += 2 ** int(nsd - start + 1)
+                multiplier += 1
+                nsd = nsd * multiplier
             else:
                 break
 
