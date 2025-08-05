@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from typing import List
 
-from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
+# <<<<<<< codex/refactor-dependency-injection-in-processors
 from domain.ports import ConfigPort, LoggerPort
 from domain.utils.csv_utils import save_dtos_to_csv
+# =======
+# from domain.ports import LoggerPort, StatementTransformerPort
+# >>>>>>> 2025-08-05-Statements
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
 

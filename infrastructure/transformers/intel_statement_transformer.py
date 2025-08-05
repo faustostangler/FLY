@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Tuple
 
-from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.ports import StatementTransformerPort
 from domain.services import StatementClassificationService
 from infrastructure.config import Config
 from infrastructure.config.intel_criteria import load_intel_criteria_nodes
@@ -27,7 +27,11 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
+# <<<<<<< codex/refactor-dependency-injection-in-processors
         from domain.utils.csv_utils import save_dtos_to_csv
+# =======
+#         from infrastructure.utils.csv_utils import save_dtos_to_csv
+# >>>>>>> 2025-08-05-Statements
 
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 
