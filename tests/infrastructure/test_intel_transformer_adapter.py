@@ -1,6 +1,6 @@
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.services import StatementClassificationService
-from infrastructure.config import Config
+from infrastructure.config.loader import load_config
 from infrastructure.transformers import IntelStatementTransformerAdapter
 
 
@@ -64,7 +64,7 @@ def test_intel_adapter_full_flow():
     ]
 
     adapter = IntelStatementTransformerAdapter(
-        config=Config(), classification_service=StatementClassificationService()
+        config=load_config(), classification_service=StatementClassificationService()
     )
     result = adapter.transform(rows)
 
