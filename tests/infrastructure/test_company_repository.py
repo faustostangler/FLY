@@ -35,7 +35,13 @@ def test_save_all_json_string(SessionLocal, engine):
 
     json_codes = '[{"code": "AAA", "isin": "123"}]'
     companies = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "other_codes": json_codes})
+        CompanyDataDTO.from_dict(
+            {
+                "issuing_company": "AAA",
+                "company_name": "Alpha",
+                "other_codes": json_codes,
+            }
+        )
     ]
 
     repo.save_all(companies)
@@ -59,15 +65,15 @@ def test_save_all_upserts(SessionLocal, engine):
     repo.save_all(first)
 
     second = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Updated"})
+        CompanyDataDTO.from_dict({"issuing_company": "BBB", "company_name": "Alpha"})
     ]
     repo.save_all(second)
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT COUNT(*) FROM tbl_company")).scalar()
-        name = conn.execute(
-            text("SELECT company_name FROM tbl_company WHERE cvm_code='AAA'")
+        issuing = conn.execute(
+            text("SELECT issuing_company FROM tbl_company WHERE company_name='Alpha'")
         ).scalar()
 
     assert result == 1
-    assert name == "Updated"
+    assert issuing == "BBB"

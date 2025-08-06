@@ -1,11 +1,11 @@
 import re
 
-from infrastructure.config.config import Config
+from infrastructure.config.loader import load_config
 from infrastructure.logging.context_tracker import ContextTracker
 
 
 def sample_function():
-    tracker = ContextTracker(Config().paths.root_dir)
+    tracker = ContextTracker(load_config().paths.root_dir)
     return tracker.get_import_path()
 
 

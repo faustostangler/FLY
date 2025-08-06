@@ -9,17 +9,16 @@ import time
 import uuid
 from typing import Optional
 
-from infrastructure.config.config import Config
+from infrastructure.config import Config
 
 
 class IdGenerator:
-    """
-    Responsável por criar identificadores curtos, únicos e legíveis
-    para threads ou processos de trabalho.
+    """Responsável por criar identificadores curtos, únicos e legíveis para
+    threads ou processos de trabalho.
 
-    • prefixo: nome da aplicação em maiúsculas (p.ex. “FLY”)
-    • ts_part: timestamp em milissegundos, codificado em hexadecimal
-    • rand_part: 8 hex pseudo-aleatórios do UUID-4
+    • prefixo: nome da aplicação em maiúsculas (p.ex. “FLY”) • ts_part:
+    timestamp em milissegundos, codificado em hexadecimal • rand_part: 8
+    hex pseudo-aleatórios do UUID-4
     """
 
     def __init__(self, config: Config, logger_name: str = "FLY") -> None:
@@ -50,9 +49,7 @@ class IdGenerator:
 
             base = composite_str.encode("utf-8")
 
-
         digest = hashlib.sha256(base).hexdigest()
         # digest = hashlib.sha512(full_id).hexdigest()
-
 
         return digest[:size] if size else digest
