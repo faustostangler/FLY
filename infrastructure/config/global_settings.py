@@ -1,27 +1,24 @@
+"""Configuration values shared across the application."""
+
 from dataclasses import dataclass, field
 
-APP_NAME = "FLY" # Application name
+APP_NAME = "FLY"  # Application name
 
 WAIT = 2  # Default wait time in seconds
 THRESHOLD = 500  # Default threshold for saving data
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
 MAX_WORKERS = 1  # Default number of threads for sync operations
 BATCH_SIZE = 100  # Number of items per repository batch
-QUEUE_SIZE = 1 * MAX_WORKERS # Max queue size for producer/consumer pipeline
+QUEUE_SIZE = 1 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
+
 
 @dataclass(frozen=True)
 class GlobalSettingsConfig:
-    """
-    GlobalSettingsConfig class holds global configuration settings.
+    """Global configuration settings.
 
     Attributes:
-        wait (int): The waiting time, initialized with the value of WAIT.
-        threshold (int): The threshold for saving, initialized with the value of THRESHOLD.
-
-    Logic Steps:
-    1. Define class attributes for configuration parameters. # Define attributes for wait and threshold
-    2. Use 'field' to set default values from external constants (WAIT, THRESHOLD). # Set defaults using WAIT and THRESHOLD
-    3. These settings can be used throughout the application for consistent configuration. # Use these settings app-wide
+        wait: Default wait time in seconds.
+        threshold: Threshold for saving data.
     """
 
     # Configuration attributes with defaults
@@ -29,25 +26,17 @@ class GlobalSettingsConfig:
     wait: int = field(default=WAIT)
     threshold: int = field(default=THRESHOLD)
     max_linear_holes: int = field(default=MAX_LINEAR_HOLES)
-    max_workers: int = field(default=MAX_WORKERS)
+    max_workers: int | None = field(default=MAX_WORKERS)
     batch_size: int = field(default=BATCH_SIZE)
     queue_size: int = field(default=QUEUE_SIZE)
 
 
-
 def load_global_settings_config() -> GlobalSettingsConfig:
-    """
-    Loads and returns a GlobalSettingsConfig instance with default global settings.
+    """Load and return the global settings configuration.
 
     Returns:
-        GlobalSettingsConfig: An instance initialized with the default WAIT and THRESHOLD values.
-
-    Logic Steps:
-    1. Use the WAIT and THRESHOLD constants as configuration values.
-    2. Create and return a GlobalSettingsConfig instance with these values.
+        GlobalSettingsConfig: Instance initialized with default values.
     """
-
-    # Run global settings using default constants
     return GlobalSettingsConfig(
         app_name=APP_NAME,
         wait=WAIT,
@@ -57,4 +46,3 @@ def load_global_settings_config() -> GlobalSettingsConfig:
         batch_size=BATCH_SIZE,
         queue_size=QUEUE_SIZE,
     )
-
