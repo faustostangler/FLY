@@ -6,13 +6,13 @@ from typing import Dict, List, Tuple
 from application.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from infrastructure.config import Config
+from domain.ports import ConfigPort
 
 
 class MathStatementTransformerAdapter(StatementTransformerPort):
     """Adjust quarterly statement values."""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: ConfigPort) -> None:
         self.year_end_prefixes = tuple(config.transformers.math_year_end_prefixes)
         self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
         self.target_accounts = set(config.transformers.math_target_accounts)
@@ -25,7 +25,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
             row.grupo,
             row.quadro,
             str(year),
-            "" # row.version or "",
+            "",  # row.version or "",
         )
 
     def _parse(self, quarter: str | None) -> datetime | None:

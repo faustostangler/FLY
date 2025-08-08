@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Callable, Generic, List, Optional, TypeVar
 
-from infrastructure.config import Config
+from domain.ports import ConfigPort
 
 T = TypeVar("T")
 
@@ -17,7 +17,7 @@ class SaveStrategy(Generic[T]):
         self,
         save_callback: Optional[Callable[[List[T]], None]] = None,
         threshold: Optional[int] = None,
-        config: Optional[Config] = None,
+        config: Optional[ConfigPort] = None,
     ) -> None:
         """Create a new strategy instance.
 
