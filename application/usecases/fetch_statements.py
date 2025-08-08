@@ -9,13 +9,13 @@ from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.dto.worker_class_dto import WorkerTaskDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     RawStatementScraperPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
 )
-from infrastructure.config import Config
 from infrastructure.helpers import ByteFormatter, SaveStrategy, WorkerPool
 
 
@@ -30,7 +30,7 @@ class FetchStatementsUseCase:
         parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
-        config: Config,
+        config: ConfigPort,
         max_workers: int = 1,
     ) -> None:
         """Store dependencies for fetching and saving raw rows."""

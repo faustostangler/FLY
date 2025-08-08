@@ -9,7 +9,7 @@ import time
 import uuid
 from typing import Optional
 
-from infrastructure.config import Config
+from domain.ports import ConfigPort
 
 
 class IdGenerator:
@@ -21,7 +21,7 @@ class IdGenerator:
     hex pseudo-aleatórios do UUID-4
     """
 
-    def __init__(self, config: Config, logger_name: str = "FLY") -> None:
+    def __init__(self, config: ConfigPort, logger_name: str = "FLY") -> None:
         self.config = config
         self.logger_name = logger_name or self.config.global_settings.app_name or "FLY"
 

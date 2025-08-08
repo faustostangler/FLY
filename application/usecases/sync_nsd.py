@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,
     SqlAlchemyCompanyDataRepositoryPort,
 )
-from infrastructure.config import Config
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.utils.id_generator import IdGenerator
 
@@ -17,12 +17,11 @@ class SyncNSDUseCase:
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
         company_repo: SqlAlchemyCompanyDataRepositoryPort,
         scraper: NSDSourcePort,
-
     ) -> None:
         """Store dependencies required for synchronization."""
         self.config = config
@@ -63,7 +62,9 @@ class SyncNSDUseCase:
     def _save_batch(self, buffer: list[NsdDTO]) -> None:
         """Persist a batch of raw data after converting to domain DTOs."""
 
-        flat_items = ListFlattener.flatten(buffer)  # recebe nested lists, devolve flat list
+        flat_items = ListFlattener.flatten(
+            buffer
+        )  # recebe nested lists, devolve flat list
 
         # Transform raw DTOs from the scraper to domain DTOs.
         dtos = [NsdDTO.from_raw(item) for item in flat_items]
@@ -71,7 +72,10 @@ class SyncNSDUseCase:
         names = {dto.company_name for dto in dtos if dto.company_name}
         # → busca os já cadastrados
         existing_companies = {
-            company_name for (company_name,) in self.company_repo.get_existing_by_columns("company_name")
+            company_name
+            for (company_name,) in self.company_repo.get_existing_by_columns(
+                "company_name"
+            )
         }
         missing = names - existing_companies
         if missing:
@@ -79,9 +83,8 @@ class SyncNSDUseCase:
 
             to_create = [
                 CompanyDataDTO(
-                    cvm_code=self.id_generator.create_id(size=6),
-                    company_name=name
-                    )
+                    cvm_code=self.id_generator.create_id(size=6), company_name=name
+                )
                 for name in missing
             ]
             # insere todas as empresas faltantes de uma vez
