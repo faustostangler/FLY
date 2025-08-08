@@ -7,8 +7,7 @@ from typing import List, Set, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import LoggerPort, NSDRepositoryPort
-from infrastructure.config import Config
+from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -19,8 +18,10 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDRepositoryPort):
     """Concrete repository for NsdDTO using SQLite via SQLAlchemy."""
 
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
-        super().__init__(config, logger)
+    def __init__(
+        self, database_url: str, config: ConfigPort, logger: LoggerPort
+    ) -> None:
+        super().__init__(database_url, config, logger)
 
         self.config = config
         self.logger = logger

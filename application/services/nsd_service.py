@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from application.usecases.sync_nsd import SyncNSDUseCase
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,
     SqlAlchemyCompanyDataRepositoryPort,
 )
-from infrastructure.config import Config
-from infrastructure.utils.id_generator import IdGenerator
 
 
 class NsdService:
@@ -16,7 +15,7 @@ class NsdService:
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
         company_repo: SqlAlchemyCompanyDataRepositoryPort,
@@ -31,7 +30,7 @@ class NsdService:
             logger=logger,
             repository=repository,
             company_repo=company_repo,
-            scraper=scraper
+            scraper=scraper,
         )
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")

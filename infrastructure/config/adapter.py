@@ -14,7 +14,7 @@ from .transformers import (
 )
 
 
-class Config:
+class ConfigAdapter:
     """Aggregates all specialized configurations into a single object.
 
     Each attribute is an immutable and validated instance of its

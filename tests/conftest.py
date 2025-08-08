@@ -58,3 +58,8 @@ class DummyConfig:
         math_target_accounts = ("01",)
 
     transformers = Transformers()
+
+    class Domain:
+        statements_types = ("dre",)
+
+    domain = Domain()

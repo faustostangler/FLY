@@ -1,24 +1,28 @@
-import time
 from abc import ABC, abstractmethod
-from typing import Any, Generic, List, Sequence, Tuple, TypeVar, Union, Optional
+from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
 
-from domain.ports import LoggerPort
+from domain.ports import ConfigPort, LoggerPort
 from domain.ports.base_repository_port import SqlAlchemyRepositoryBasePort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
-from infrastructure.config import Config
 from infrastructure.helpers.list_flattener import ListFlattener
 
 T = TypeVar("T")  # T any DTO.
 K = TypeVar("K")  # Primary key type (e.g., str, int)
 
 
-class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEngineMixin, ABC, Generic[T, K]):
+class SqlAlchemyRepositoryBase(
+    SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEngineMixin, ABC, Generic[T, K]
+):
     """
     Contract - Interface genérica para repositórios de leitura/escrita.
     Pode ser especializada para qualquer tipo de DTO.
     """
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
-        super().__init__(config, logger)
+
+    def __init__(
+        self, database_url: str, config: ConfigPort, logger: LoggerPort
+    ) -> None:
+        self.config = config
+        super().__init__(database_url, logger)
 
     @abstractmethod
     def get_model_class(self) -> Tuple[type, tuple]:
@@ -113,8 +117,8 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEng
             session.close()
 
     def get_all(self, batch_size: int = 100) -> List[T]:
-        """
-        Retrieve all DTOs from the database using paginated cursor-based fetching.
+        """Retrieve all DTOs from the database using paginated cursor-based
+        fetching.
 
         This method fetches all records incrementally using the 'id' field to
         avoid loading the entire dataset into memory at once.
@@ -164,11 +168,7 @@ class SqlAlchemyRepositoryBase(SqlAlchemyRepositoryBasePort[T, K], SqlAlchemyEng
                 q = session.query(model)
                 if last_key is not None:
                     q = q.filter(col > last_key)
-                batch = (
-                    q.order_by(col)
-                     .limit(batch_size)
-                     .all()
-                )
+                batch = q.order_by(col).limit(batch_size).all()
                 if not batch:
                     break
                 all_results.extend(m.to_dto() for m in batch)

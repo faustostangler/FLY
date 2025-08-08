@@ -7,8 +7,7 @@ from typing import List, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import LoggerPort, SqlAlchemyRawStatementRepositoryPort
-from infrastructure.config import Config
+from domain.ports import ConfigPort, LoggerPort, SqlAlchemyRawStatementRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.raw_statement_model import RawStatementModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -22,9 +21,11 @@ class SqlAlchemyRawStatementRepository(
 ):
     """SQLite-backed repository for ``RawStatementDTO`` objects."""
 
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
+    def __init__(
+        self, database_url: str, config: ConfigPort, logger: LoggerPort
+    ) -> None:
         """Initialize repository with ``config`` and ``logger``."""
-        super().__init__(config, logger)
+        super().__init__(database_url, config, logger)
         self.config = config
         self.logger = logger
 

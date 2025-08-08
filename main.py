@@ -1,6 +1,6 @@
 """Command-line entry point for the FLY application."""
 
-from infrastructure.config import Config
+from infrastructure.config import ConfigAdapter
 from infrastructure.factories import create_data_cleaner
 from infrastructure.logging import Logger
 from presentation import CLIAdapter
@@ -17,11 +17,10 @@ def main() -> None:
     - Starts the application logic by calling ``controller.start_fly()``.
     """
     # Inicializa a configuração
-    config = Config()
+    config = ConfigAdapter()
     logger = Logger(config)
 
     try:
-
         # Load CLI
         logger.log(
             "Run Project FLY",

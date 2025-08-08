@@ -6,9 +6,8 @@ from typing import List
 
 from application.usecases.transform_statements import TransformStatementsUseCase
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
 from domain.services import StatementClassificationService
-from infrastructure.config import Config
 from infrastructure.transformers import (
     IntelStatementTransformerAdapter,
     MathStatementTransformerAdapter,
@@ -22,7 +21,7 @@ class TransformStatementsProcessor(BaseProcessor):
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         parsed_repo: SqlAlchemyParsedStatementRepositoryPort,
     ) -> None:

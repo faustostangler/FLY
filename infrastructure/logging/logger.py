@@ -2,7 +2,7 @@ import logging
 from typing import Any, MutableMapping, Optional
 
 from domain.ports.logger_port import LoggerPort
-from infrastructure.config.config import Config
+from infrastructure.config import ConfigAdapter
 from infrastructure.logging.context_tracker import ContextTracker
 from infrastructure.logging.progress_formatter import ProgressFormatter
 from infrastructure.utils.id_generator import IdGenerator
@@ -12,7 +12,10 @@ class Logger(LoggerPort):
     """Application logger wrapping Python's ``logging`` module."""
 
     def __init__(
-        self, config: Config, level: str = "DEBUG", logger_name: Optional[str] = None
+        self,
+        config: ConfigAdapter,
+        level: str = "DEBUG",
+        logger_name: Optional[str] = None,
     ) -> None:
         self.config = config
         self.logger_name = logger_name or self.config.global_settings.app_name or "FLY"
