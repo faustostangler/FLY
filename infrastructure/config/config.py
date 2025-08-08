@@ -1,6 +1,7 @@
 """Pure configuration DTO definitions."""
 
 from dataclasses import dataclass
+from typing import Final
 
 from .database import DatabaseConfig
 from .domain import DomainConfig
@@ -17,12 +18,12 @@ from .transformers import TransformersConfig
 class Config:
     """Immutable aggregate of all configuration sections."""
 
-    paths: PathConfig
-    database: DatabaseConfig
-    exchange: ExchangeApiConfig
-    scraping: ScrapingConfig
-    logging: LoggingConfig
-    global_settings: GlobalSettingsConfig
-    domain: DomainConfig
-    statements: StatementsConfig
-    transformers: TransformersConfig
+    paths: Final[PathConfig]
+    database: Final[DatabaseConfig]
+    exchange: Final[ExchangeApiConfig]
+    scraping: Final[ScrapingConfig]
+    logging: Final[LoggingConfig]
+    global_settings: Final[GlobalSettingsConfig]
+    domain: Final[DomainConfig]
+    statements: Final[StatementsConfig]
+    transformers: Final[TransformersConfig]
