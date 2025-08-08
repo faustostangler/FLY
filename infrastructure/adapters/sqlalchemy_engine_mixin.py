@@ -2,30 +2,25 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from infrastructure.config import Config
 from domain.ports import LoggerPort
 from infrastructure.models.base_model import BaseModel
 
-class SqlAlchemyEngineMixin:
-    """Reusable mixin for adapters that need SQLAlchemy engine + session setup."""
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
-        """Initialize the repository infrastructure: engine, session, and schema.
 
-        This constructor sets up the SQLite engine with threading support,
-        configures the session factory for ORM transactions, and ensures
-        that all declared models are created in the database.
+class SqlAlchemyEngineMixin:
+    """Reusable mixin for adapters that need SQLAlchemy engine setup."""
+
+    def __init__(self, database_url: str, logger: LoggerPort) -> None:
+        """Initialize engine, session factory and schema.
 
         Args:
-            config (Config): Application configuration containing the database connection string.
-            logger (LoggerPort): Logger used for emitting repository lifecycle messages.
+            database_url: Connection string for the target database.
+            logger: Logger adapter for emitting lifecycle messages.
         """
-        # Store configuration and logger for use throughout the repository
-        self.config = config
         self.logger = logger
 
         # Create SQLAlchemy engine for SQLite with thread-safe settings
         self.engine = create_engine(
-            config.database.connection_string,
+            database_url,
             connect_args={
                 "check_same_thread": False
             },  # allow usage from multiple threads

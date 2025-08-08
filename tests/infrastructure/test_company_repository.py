@@ -9,7 +9,12 @@ from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_save_all(SessionLocal, engine):
-    repo = SqlAlchemyCompanyDataRepository(config=DummyConfig(), logger=DummyLogger())
+    cfg = DummyConfig()
+    repo = SqlAlchemyCompanyDataRepository(
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
+    )
     # use shared engine
     repo.engine = engine
     repo.Session = SessionLocal
@@ -27,7 +32,12 @@ def test_save_all(SessionLocal, engine):
 
 
 def test_save_all_json_string(SessionLocal, engine):
-    repo = SqlAlchemyCompanyDataRepository(config=DummyConfig(), logger=DummyLogger())
+    cfg = DummyConfig()
+    repo = SqlAlchemyCompanyDataRepository(
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
+    )
     repo.engine = engine
     repo.Session = SessionLocal
     BaseModel.metadata.drop_all(engine)
@@ -35,7 +45,13 @@ def test_save_all_json_string(SessionLocal, engine):
 
     json_codes = '[{"code": "AAA", "isin": "123"}]'
     companies = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "other_codes": json_codes})
+        CompanyDataDTO.from_dict(
+            {
+                "issuing_company": "AAA",
+                "company_name": "Alpha",
+                "other_codes": json_codes,
+            }
+        )
     ]
 
     repo.save_all(companies)
@@ -47,27 +63,36 @@ def test_save_all_json_string(SessionLocal, engine):
 
 
 def test_save_all_upserts(SessionLocal, engine):
-    repo = SqlAlchemyCompanyDataRepository(config=DummyConfig(), logger=DummyLogger())
+    cfg = DummyConfig()
+    repo = SqlAlchemyCompanyDataRepository(
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
+    )
     repo.engine = engine
     repo.Session = SessionLocal
     BaseModel.metadata.drop_all(engine)
     BaseModel.metadata.create_all(engine)
 
     first = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Alpha"})
+        CompanyDataDTO.from_dict(
+            {"issuing_company": "AAA", "company_name": "Alpha", "cnpj": "1"}
+        )
     ]
     repo.save_all(first)
 
     second = [
-        CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Updated"})
+        CompanyDataDTO.from_dict(
+            {"issuing_company": "AAA", "company_name": "Alpha", "cnpj": "2"}
+        )
     ]
     repo.save_all(second)
 
     with engine.connect() as conn:
         result = conn.execute(text("SELECT COUNT(*) FROM tbl_company")).scalar()
-        name = conn.execute(
-            text("SELECT company_name FROM tbl_company WHERE cvm_code='AAA'")
+        cnpj = conn.execute(
+            text("SELECT cnpj FROM tbl_company WHERE cvm_code='AAA'")
         ).scalar()
 
     assert result == 1
-    assert name == "Updated"
+    assert cnpj == "2"

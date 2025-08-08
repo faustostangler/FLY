@@ -4,10 +4,10 @@ from application.usecases.sync_companies import SyncCompanyDataUseCase
 from domain.dto import SyncCompanyDataResultDTO
 from domain.ports import (
     CompanyDataScraperPort,
+    ConfigPort,
     LoggerPort,
     SqlAlchemyCompanyDataRepositoryPort,
 )
-from infrastructure.config import Config
 
 
 class CompanyDataService:
@@ -15,7 +15,7 @@ class CompanyDataService:
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         repository: SqlAlchemyCompanyDataRepositoryPort,
         scraper: CompanyDataScraperPort,

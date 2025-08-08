@@ -9,7 +9,12 @@ from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_save_all_upserts(SessionLocal, engine):
-    repo = SqlAlchemyRawStatementRepository(config=DummyConfig(), logger=DummyLogger())
+    cfg = DummyConfig()
+    repo = SqlAlchemyRawStatementRepository(
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
+    )
     repo.engine = engine
     repo.Session = SessionLocal
     BaseModel.metadata.drop_all(engine)

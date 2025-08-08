@@ -1,3 +1,8 @@
-from .config import Config
+"""Public interface for infrastructure configuration adapters."""
 
-__all__ = ["Config",]
+from .adapter import ConfigAdapter
+
+# Backwards compatibility alias
+Config = ConfigAdapter
+
+__all__ = ["ConfigAdapter", "Config"]

@@ -7,8 +7,7 @@ from typing import List, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dto.company_data_dto import CompanyDataDTO
-from domain.ports import LoggerPort, SqlAlchemyCompanyDataRepositoryPort
-from infrastructure.config import Config
+from domain.ports import ConfigPort, LoggerPort, SqlAlchemyCompanyDataRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -33,14 +32,11 @@ class SqlAlchemyCompanyDataRepository(
         Write-Ahead Logging (WAL) mode is enabled to improve concurrent read/write behavior.
     """
 
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
-        """Initialize the SQLite-backed company repository.
-
-        Args:
-            config (Config): Application configuration with database connection details.
-            logger (LoggerPort): Logging adapter used for tracking internal behavior.
-        """
-        super().__init__(config, logger)
+    def __init__(
+        self, database_url: str, config: ConfigPort, logger: LoggerPort
+    ) -> None:
+        """Initialize the SQLite-backed company repository."""
+        super().__init__(database_url, config, logger)
 
         self.config = config
         self.logger = logger

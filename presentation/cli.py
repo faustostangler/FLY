@@ -47,7 +47,9 @@ class CLIAdapter:
         """Build and execute the company data synchronization flow."""
         mapper = CompanyDataMapper(self.data_cleaner)
         company_repo = SqlAlchemyCompanyDataRepository(
-            config=self.config, logger=self.logger
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
         )
         company_scraper = CompanyDataScraper(
             config=self.config,
@@ -68,9 +70,15 @@ class CLIAdapter:
     def _nsd_service(self) -> None:
         """Build and execute the NSD data synchronization flow."""
         company_repo = SqlAlchemyCompanyDataRepository(
-            config=self.config, logger=self.logger
-            )
-        nsd_repo = SqlAlchemyNsdRepository(config=self.config, logger=self.logger)
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
+        nsd_repo = SqlAlchemyNsdRepository(
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
         nsd_scraper = NsdScraper(
             config=self.config,
             logger=self.logger,
@@ -92,14 +100,24 @@ class CLIAdapter:
     def _statement_service(self) -> None:
         """Build and execute the financial statement pipeline."""
         company_repo = SqlAlchemyCompanyDataRepository(
-            config=self.config, logger=self.logger
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
         )
-        nsd_repo = SqlAlchemyNsdRepository(config=self.config, logger=self.logger)
+        nsd_repo = SqlAlchemyNsdRepository(
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
         raw_statement_repo = SqlAlchemyRawStatementRepository(
-            config=self.config, logger=self.logger
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
         )
         parsed_statement_repo = SqlAlchemyParsedStatementRepository(
-            config=self.config, logger=self.logger
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
         )
 
         raw_statements_scraper = RawStatementScraper(

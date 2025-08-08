@@ -11,8 +11,11 @@ from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_replace_and_exists(SessionLocal, engine):
+    cfg = DummyConfig()
     repo = SqlAlchemyParsedStatementRepository(
-        config=DummyConfig(), logger=DummyLogger()
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
     )
     repo.engine = engine
     repo.Session = SessionLocal
@@ -62,8 +65,11 @@ def test_replace_and_exists(SessionLocal, engine):
 
 
 def test_save_all_upserts(SessionLocal, engine):
+    cfg = DummyConfig()
     repo = SqlAlchemyParsedStatementRepository(
-        config=DummyConfig(), logger=DummyLogger()
+        database_url=cfg.database.connection_string,
+        config=cfg,
+        logger=DummyLogger(),
     )
     repo.engine = engine
     repo.Session = SessionLocal
