@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence, Mapping
 from urllib.parse import quote_plus
 
 # import pandas as pd
@@ -152,8 +152,8 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
         return ""
 
     def _build_urls(
-        self, row: NsdDTO, items: list, hash_value: str
-    ) -> list[dict[str, str]]:
+            self, row: NsdDTO, items: Sequence[Mapping[str, object]], hash_value: str
+        ) -> list[dict[str, str]]:
         """Construct statement URLs using ``row`` data and the given hash."""
         nsd_type_map = self.statements_config.nsd_type_map
 
@@ -168,18 +168,16 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
             for item in items:
                 base_url = (
                     self.statements_config.url_df
-                    if item["grupo"].startswith("DFs")
+                    if str(item.get("grupo", "")).startswith("DFs")
                     else self.statements_config.url_capital
                 )
 
                 params = {
-                    "Grupo": item["grupo"],
-                    "Quadro": item["quadro"],
+                    "Grupo": str(item["grupo"]),
+                    "Quadro": str(item["quadro"]),
                     "NomeTipoDocumento": doctype_name,
                     "Empresa": row.company_name,
-                    "DataReferencia": row.quarter.strftime("%Y-%m-%d")
-                    if row.quarter is not None
-                    else "",
+                    "DataReferencia": row.quarter.strftime("%Y-%m-%d") if row.quarter is not None else "",
                     "Versao": row.version,
                     "CodTipoDocumento": str(doctype_code),
                     "NumeroSequencialDocumento": str(row.nsd),
@@ -197,8 +195,8 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
                 full_url = f"{base_url}?{query}"
                 result.append(
                     {
-                        "grupo": item["grupo"],
-                        "quadro": item["quadro"],
+                        "grupo": str(item.get("grupo", "")),
+                        "quadro": str(item.get("quadro", "")),
                         "url": full_url,
                     }
                 )

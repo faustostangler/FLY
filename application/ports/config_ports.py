@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Mapping, Protocol, Sequence, runtime_checkable
 
-
 @runtime_checkable
 class DatabaseConfigPort(Protocol):
     """Database configuration values required by infrastructure."""
@@ -91,11 +90,12 @@ class TransformersConfigPort(Protocol):
     @property
     def intel_cumulative_prefixes(self) -> Sequence[str]: ...
 
+    # @property
+    # def intel_section_criteria(
+    #     self,
+    # ) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
     @property
-    def intel_section_criteria(
-        self,
-    ) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
-
+    def intel_section_criteria(self) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
 
 @runtime_checkable
 class ExchangeApiConfigPort(Protocol):
