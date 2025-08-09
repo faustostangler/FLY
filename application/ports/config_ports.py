@@ -4,6 +4,17 @@ from typing import Mapping, Protocol, Sequence, runtime_checkable
 
 
 @runtime_checkable
+class DatabaseConfigPort(Protocol):
+    """Database configuration values required by infrastructure."""
+
+    @property
+    def connection_string(self) -> str: ...
+
+    @property
+    def tables(self) -> Mapping[str, str]: ...
+
+
+@runtime_checkable
 class GlobalSettingsPort(Protocol):
     """Minimal subset of global runtime settings used by the application."""
 
@@ -96,3 +107,6 @@ class ConfigPort(Protocol):
 
     @property
     def transformers(self) -> TransformersConfigPort: ...
+
+    @property
+    def database(self) -> DatabaseConfigPort: ...

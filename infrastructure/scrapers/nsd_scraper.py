@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
+from application.ports.config_ports import ConfigPort
 from domain.dto import ExecutionResultDTO, NsdDTO, WorkerTaskDTO
 from domain.ports import (
     LoggerPort,
@@ -17,7 +18,6 @@ from domain.ports import (
     NSDSourcePort,
     WorkerPoolPort,
 )
-from infrastructure.config import Config
 from infrastructure.helpers import ByteFormatter, FetchUtils, SaveStrategy
 from infrastructure.helpers.data_cleaner import DataCleaner
 
@@ -27,7 +27,7 @@ class NsdScraper(NSDSourcePort):
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         data_cleaner: DataCleaner,
         worker_pool_executor: WorkerPoolPort,

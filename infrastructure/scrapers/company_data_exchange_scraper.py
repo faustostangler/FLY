@@ -5,9 +5,10 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 from application import CompanyDataMapper
+from application.ports.config_ports import ConfigPort
 from domain.dto import (
     CompanyDataRawDTO,
     ExecutionResultDTO,
@@ -20,7 +21,6 @@ from domain.ports import (
     MetricsCollectorPort,
     WorkerPoolPort,
 )
-from infrastructure.config import Config
 from infrastructure.helpers import FetchUtils, SaveStrategy
 from infrastructure.helpers.byte_formatter import ByteFormatter
 from infrastructure.helpers.data_cleaner import DataCleaner
@@ -41,7 +41,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         data_cleaner: DataCleaner,
         mapper: CompanyDataMapper,
@@ -205,8 +205,10 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
         extra_info = {
             "Download": self.byte_formatter.format_bytes(download_bytes_pos),
-            "Total download": self.byte_formatter.format_bytes(self.metrics_collector.network_bytes),
-            }
+            "Total download": self.byte_formatter.format_bytes(
+                self.metrics_collector.network_bytes
+            ),
+        }
         self.logger.log(
             f"Page {page}/{total_pages}",
             level="info",
@@ -229,11 +231,15 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 fetch = self._fetch_page(task.data)
                 # self.logger.log("End  Method CompanyDataScraper._fetch_companies_list().processor()_fetch_page()", level="info")
 
-                download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
+                download_bytes_pos = (
+                    self._metrics_collector.network_bytes - download_bytes_pre
+                )
 
                 extra_info = {
                     "Download": self.byte_formatter.format_bytes(download_bytes_pos),
-                    "Total download": self.byte_formatter.format_bytes(self.metrics_collector.network_bytes),
+                    "Total download": self.byte_formatter.format_bytes(
+                        self.metrics_collector.network_bytes
+                    ),
                 }
                 self.logger.log(
                     f"Page {task.data}/{total_pages}",
@@ -300,8 +306,8 @@ class CompanyDataScraper(CompanyDataScraperPort):
         strategy: SaveStrategy[CompanyDataRawDTO] = SaveStrategy(
             save_callback, self.threshold, config=self.config
         )
-        detail_exec: ExecutionResultDTO[Optional[CompanyDataRawDTO]] = ExecutionResultDTO(
-            items=[], metrics=self.metrics_collector.get_metrics(0)
+        detail_exec: ExecutionResultDTO[Optional[CompanyDataRawDTO]] = (
+            ExecutionResultDTO(items=[], metrics=self.metrics_collector.get_metrics(0))
         )
 
         # Pair each company dict with its index for progress logging
@@ -325,7 +331,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                     "trading_name": entry["tradingName"],
                     # "Download": self.byte_formatter.format_bytes(download_bytes_pos),
                     # "Total download": self.byte_formatter.format_bytes(self.metrics_collector.network_bytes),
-                    }
+                }
                 self.logger.log(
                     f"{entry.get('codeCVM')}",
                     level="info",
@@ -346,7 +352,9 @@ class CompanyDataScraper(CompanyDataScraperPort):
             result = self.detail_processor.process_entry(entry)
             # self.logger.log("End  Method CompanyDataScraper._fetch_companies_details().processor().self.detail_processor.run(entry)", level="info")
 
-            download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
+            download_bytes_pos = (
+                self._metrics_collector.network_bytes - download_bytes_pre
+            )
 
             issuingCompany = entry.get("issuingCompany")
             tradingName = entry.get("tradingName")
@@ -416,7 +424,9 @@ class CompanyDataScraper(CompanyDataScraperPort):
         token = self._encode_payload(payload)
 
         url = self.endpoint_companies_list + token
-        response, self.session = self.fetch_utils.fetch_with_retry(self.session, url, cache_bypass=False)
+        response, self.session = self.fetch_utils.fetch_with_retry(
+            self.session, url, cache_bypass=False
+        )
 
         bytes_downloaded = len(response.content if response else b"")
         self.metrics_collector.record_network_bytes(bytes_downloaded)
@@ -438,4 +448,3 @@ class CompanyDataScraper(CompanyDataScraperPort):
         """Metrics collector used by the scraper."""
 
         return self._metrics_collector
-

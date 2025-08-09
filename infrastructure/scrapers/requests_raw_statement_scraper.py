@@ -17,7 +17,6 @@ from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import LoggerPort, MetricsCollectorPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
-from infrastructure.config import Config
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
@@ -30,7 +29,7 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         logger: LoggerPort,
         data_cleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,

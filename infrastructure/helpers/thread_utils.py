@@ -1,6 +1,6 @@
 import threading
 
-from infrastructure.config import Config
+from application.ports.config_ports import ConfigPort
 
 
 class WorkerThreadIdentifier:
@@ -9,7 +9,7 @@ class WorkerThreadIdentifier:
     Example identifiers: ``"W1"``, ``"W2"``, up to the ``max_workers`` limit from ``Config``.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: ConfigPort) -> None:
         """Initialize the generator using the configured ``max_workers`` value.
 
         Args:

@@ -4,18 +4,21 @@ from typing import Optional
 
 import psutil
 
-from infrastructure.config import Config
+from application.ports.config_ports import ConfigPort
 
 
 class TimeUtils:
     """Helper for dynamic sleep intervals based on CPU usage."""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: ConfigPort) -> None:
         self.config = config
 
     def sleep_dynamic(
-        self, wait: Optional[float] = None, cpu_interval: Optional[float] = None,
-        multiplier: Optional[int] = 1) -> None:
+        self,
+        wait: Optional[float] = None,
+        cpu_interval: Optional[float] = None,
+        multiplier: Optional[int] = 1,
+    ) -> None:
         """Sleep for a dynamically adjusted time based on CPU utilization.
 
         The logic adjusts the delay as follows:
@@ -37,7 +40,7 @@ class TimeUtils:
         else:
             wait *= random.uniform(0.1, 0.5)
 
-        wait_multiplier = wait ** multiplier if multiplier else wait
+        wait_multiplier = wait**multiplier if multiplier else wait
         wait_multiplier = wait * multiplier if multiplier else wait
 
         time.sleep(wait_multiplier)
