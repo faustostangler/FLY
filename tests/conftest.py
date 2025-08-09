@@ -51,15 +51,32 @@ class DummyConfig:
         max_workers = 1
         queue_size = 10
         threshold = 10
+        batch_size = 100
+        request_timeout_sec = 5.0
+        user_agent = "test-agent"
+        retries = 1
 
     global_settings = Global()
 
     class Transformers:
         math_target_accounts = ("01",)
+        _enabled = {"math": True}
+        _order = ("math",)
+
+        @property
+        def enabled(self):
+            return self._enabled
+
+        @property
+        def order(self):
+            return self._order
 
     transformers = Transformers()
 
     class Domain:
         statements_types = ("dre",)
+        words_to_remove = ()
+        base_currency = "BRL"
+        nsd_gap_days = 0
 
     domain = Domain()

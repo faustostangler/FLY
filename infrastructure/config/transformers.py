@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Iterable, Tuple
+from types import MappingProxyType
+from typing import Iterable, Mapping, Sequence, Tuple
 
 from domain.utils import intel
 
@@ -30,6 +31,10 @@ INTEL_SECTION_CRITERIA: Tuple[Tuple[str, Iterable[dict]], ...] = (
 class TransformersConfig:
     """Configuration for statement transformers."""
 
+    _enabled: Mapping[str, bool] = field(
+        default_factory=lambda: {"math": True, "intel": True}
+    )
+    _order: Tuple[str, ...] = field(default_factory=lambda: ("math", "intel"))
     math_year_end_prefixes: Tuple[str, ...] = field(
         default_factory=lambda: MATH_YEAR_END_PREFIXES
     )
@@ -49,10 +54,20 @@ class TransformersConfig:
         default_factory=lambda: INTEL_SECTION_CRITERIA
     )
 
+    @property
+    def enabled(self) -> Mapping[str, bool]:
+        return MappingProxyType(dict(self._enabled))
+
+    @property
+    def order(self) -> Sequence[str]:
+        return tuple(self._order)
+
 
 def load_transformers_config() -> TransformersConfig:
     """Load the transformers configuration."""
     return TransformersConfig(
+        _enabled={"math": True, "intel": True},
+        _order=("math", "intel"),
         math_year_end_prefixes=MATH_YEAR_END_PREFIXES,
         math_cumulative_prefixes=MATH_CUMULATIVE_PREFIXES,
         math_target_accounts=MATH_TARGET_ACCOUNTS,
