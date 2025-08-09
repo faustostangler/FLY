@@ -12,8 +12,8 @@ import urllib3
 from requests.adapters import HTTPAdapter
 from requests.structures import CaseInsensitiveDict
 
+from application.ports.config_ports import ConfigPort
 from domain.ports import LoggerPort
-from infrastructure.config import Config
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
@@ -21,7 +21,7 @@ from infrastructure.utils.id_generator import IdGenerator
 class FetchUtils:
     """Utility class for HTTP operations with retry and randomized headers."""
 
-    def __init__(self, config: Config, logger: LoggerPort) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort) -> None:
         self.config = config
         self.logger = logger
         self.time_util = TimeUtils(self.config)
@@ -183,7 +183,9 @@ class FetchUtils:
                     self.time_util.sleep_dynamic(multiplier=atmpt)
                     end_time = time.perf_counter() - start_time
                     dur += end_time
-                    self.logger.log(f'Retry {atmpt + 1}: {response.status_code}, {end_time:.2f}s, {dur:.2f}s')
+                    self.logger.log(
+                        f"Retry {atmpt + 1}: {response.status_code}, {end_time:.2f}s, {dur:.2f}s"
+                    )
 
                 if response.status_code == 200:
                     # On success, log the total block time if any
