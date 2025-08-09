@@ -1,18 +1,21 @@
 from dataclasses import dataclass, field
 
-APP_NAME = "FLY" # Application name
+APP_NAME = "FLY"  # Application name
 
 WAIT = 2  # Default wait time in seconds
 THRESHOLD = 500  # Default threshold for saving data
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
 MAX_WORKERS = 1  # Default number of threads for sync operations
 BATCH_SIZE = 100  # Number of items per repository batch
-QUEUE_SIZE = 1 * MAX_WORKERS # Max queue size for producer/consumer pipeline
+QUEUE_SIZE = 1 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
+REQUEST_TIMEOUT_SEC = 5.0
+USER_AGENT = "FLY/1.0"
+RETRIES = 3
+
 
 @dataclass(frozen=True)
 class GlobalSettingsConfig:
-    """
-    GlobalSettingsConfig class holds global configuration settings.
+    """GlobalSettingsConfig class holds global configuration settings.
 
     Attributes:
         wait (int): The waiting time, initialized with the value of WAIT.
@@ -32,12 +35,14 @@ class GlobalSettingsConfig:
     max_workers: int = field(default=MAX_WORKERS)
     batch_size: int = field(default=BATCH_SIZE)
     queue_size: int = field(default=QUEUE_SIZE)
-
+    request_timeout_sec: float = field(default=REQUEST_TIMEOUT_SEC)
+    user_agent: str = field(default=USER_AGENT)
+    retries: int = field(default=RETRIES)
 
 
 def load_global_settings_config() -> GlobalSettingsConfig:
-    """
-    Loads and returns a GlobalSettingsConfig instance with default global settings.
+    """Loads and returns a GlobalSettingsConfig instance with default global
+    settings.
 
     Returns:
         GlobalSettingsConfig: An instance initialized with the default WAIT and THRESHOLD values.
@@ -56,5 +61,7 @@ def load_global_settings_config() -> GlobalSettingsConfig:
         max_workers=MAX_WORKERS,
         batch_size=BATCH_SIZE,
         queue_size=QUEUE_SIZE,
+        request_timeout_sec=REQUEST_TIMEOUT_SEC,
+        user_agent=USER_AGENT,
+        retries=RETRIES,
     )
-

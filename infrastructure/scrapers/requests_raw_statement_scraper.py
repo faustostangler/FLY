@@ -10,10 +10,12 @@ from urllib.parse import quote_plus
 # import pandas as pd
 from bs4 import BeautifulSoup, Tag
 
+from application.ports.config_ports import ConfigPort
+from application.ports.scraper_ports import RawStatementScraperPort
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import LoggerPort, MetricsCollectorPort, RawStatementScraperPort
+from domain.ports import LoggerPort, MetricsCollectorPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.config import Config
 from infrastructure.helpers import WorkerPool
@@ -34,7 +36,8 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
-        super().__init__(config, logger)
+        super().__init__(config.database.connection_string, logger)
+        self._config: ConfigPort = config
 
         # Adapter-specific dependencies
         self.data_cleaner = data_cleaner
@@ -56,6 +59,12 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
         """Metrics collector used by the scraper."""
 
         return self._metrics_collector
+
+    @property
+    def config(self) -> ConfigPort:
+        """Return configuration used by the scraper."""
+
+        return self._config
 
     def _parse_statement_page(
         self, soup: BeautifulSoup, group: str

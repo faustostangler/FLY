@@ -4,16 +4,13 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
+from application.ports.config_ports import ConfigPort
 from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
 from domain.dto import NsdDTO, ParsedStatementDTO, WorkerTaskDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import (
-    ConfigPort,
-    LoggerPort,
-    SqlAlchemyParsedStatementRepositoryPort,
-)
+from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
 from infrastructure.helpers import MetricsCollector, WorkerPool
 
 from .base_processor import BaseProcessor

@@ -5,14 +5,14 @@ from __future__ import annotations
 import time
 from typing import Callable, List, Optional, Tuple
 
+from application.ports.config_ports import ConfigPort
+from application.ports.scraper_ports import RawStatementScraperPort
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.dto.worker_class_dto import WorkerTaskDTO
 from domain.ports import (
-    ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    RawStatementScraperPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
 )

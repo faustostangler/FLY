@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
 
-from domain.ports import ConfigPort, LoggerPort
+from application.ports.config_ports import ConfigPort
+from domain.ports import LoggerPort
 from domain.ports.base_repository_port import SqlAlchemyRepositoryBasePort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers.list_flattener import ListFlattener

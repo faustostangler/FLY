@@ -1,4 +1,6 @@
-"""Aggregate configuration object that loads all config sections."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 
 from .database import DatabaseConfig, load_database_config
 from .domain import DomainConfig, load_domain_config
@@ -8,28 +10,21 @@ from .logging import LoggingConfig, load_logging_config
 from .paths import PathConfig, load_paths
 from .scraping import ScrapingConfig, load_scraping_config
 from .statements import StatementsConfig, load_statements_config
-from .transformers import (
-    TransformersConfig,
-    load_transformers_config,
-)
+from .transformers import TransformersConfig, load_transformers_config
 
 
+@dataclass(frozen=True)
 class ConfigAdapter:
-    """Aggregates all specialized configurations into a single object.
+    """Aggregate configuration composed of individual sections."""
 
-    Each attribute is an immutable and validated instance of its
-    respective domain.
-    """
-
-    def __init__(self) -> None:
-        """Run all configuration sections."""
-        # Run all configurations
-        self.paths: PathConfig = load_paths()
-        self.database: DatabaseConfig = load_database_config()
-        self.exchange: ExchangeApiConfig = load_exchange_api_config()
-        self.scraping: ScrapingConfig = load_scraping_config()
-        self.logging: LoggingConfig = load_logging_config()
-        self.global_settings: GlobalSettingsConfig = load_global_settings_config()
-        self.domain: DomainConfig = load_domain_config()
-        self.statements: StatementsConfig = load_statements_config()
-        self.transformers: TransformersConfig = load_transformers_config()
+    paths: PathConfig = field(default_factory=load_paths)
+    database: DatabaseConfig = field(default_factory=load_database_config)
+    exchange: ExchangeApiConfig = field(default_factory=load_exchange_api_config)
+    scraping: ScrapingConfig = field(default_factory=load_scraping_config)
+    logging: LoggingConfig = field(default_factory=load_logging_config)
+    global_settings: GlobalSettingsConfig = field(
+        default_factory=load_global_settings_config
+    )
+    domain: DomainConfig = field(default_factory=load_domain_config)
+    statements: StatementsConfig = field(default_factory=load_statements_config)
+    transformers: TransformersConfig = field(default_factory=load_transformers_config)

@@ -1,6 +1,7 @@
 """Command line interface that wires together the application services."""
 
 from application import CompanyDataMapper
+from application.ports.config_ports import ConfigPort
 from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.processors.parse_statements_processor import ParseStatementsProcessor
 from application.processors.transform_statements_processor import (
@@ -9,7 +10,6 @@ from application.processors.transform_statements_processor import (
 from application.services.company_data_service import CompanyDataService
 from application.services.nsd_service import NsdService
 from domain.ports import LoggerPort
-from infrastructure.config import Config
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.metrics_collector import MetricsCollector
 from infrastructure.repositories import (
@@ -26,7 +26,7 @@ from infrastructure.scrapers.requests_raw_statement_scraper import RawStatementS
 class CLIAdapter:
     """Orchestrate FLY application flows via the command line."""
 
-    def __init__(self, config: Config, logger: LoggerPort, data_cleaner) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort, data_cleaner) -> None:
         self.config = config
         self.logger = logger
         self.data_cleaner = data_cleaner
