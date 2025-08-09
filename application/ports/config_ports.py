@@ -92,7 +92,40 @@ class TransformersConfigPort(Protocol):
     def intel_cumulative_prefixes(self) -> Sequence[str]: ...
 
     @property
-    def intel_section_criteria(self) -> Sequence[tuple[str, Sequence[dict]]]: ...
+    def intel_section_criteria(
+        self,
+    ) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
+
+
+@runtime_checkable
+class ExchangeApiConfigPort(Protocol):
+    """API endpoints used for scraping exchange data."""
+
+    @property
+    def nsd_endpoint(self) -> str: ...
+
+    @property
+    def company_data_endpoint(self) -> Mapping[str, str]: ...
+
+
+@runtime_checkable
+class StatementsConfigPort(Protocol):
+    """Configuration values for fetching statement pages."""
+
+    @property
+    def statement_items(self) -> Sequence[Mapping[str, object]]: ...
+
+    @property
+    def nsd_type_map(self) -> Mapping[str, tuple[str, int]]: ...
+
+    @property
+    def capital_items(self) -> Sequence[Mapping[str, str]]: ...
+
+    @property
+    def url_df(self) -> str: ...
+
+    @property
+    def url_capital(self) -> str: ...
 
 
 @runtime_checkable
@@ -110,3 +143,9 @@ class ConfigPort(Protocol):
 
     @property
     def database(self) -> DatabaseConfigPort: ...
+
+    @property
+    def exchange(self) -> ExchangeApiConfigPort: ...
+
+    @property
+    def statements(self) -> StatementsConfigPort: ...
