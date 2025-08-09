@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Iterable, Mapping, Sequence, Tuple
+from typing import Mapping, Sequence, Tuple
 
 from domain.utils import intel
 
@@ -17,13 +17,15 @@ MATH_TARGET_ACCOUNTS: Tuple[str, ...] = (
 )
 INTEL_YEAR_END_PREFIXES: Tuple[str, ...] = ("03", "04")
 INTEL_CUMULATIVE_PREFIXES: Tuple[str, ...] = ("06", "07")
-INTEL_SECTION_CRITERIA: Tuple[Tuple[str, Iterable[dict]], ...] = (
-    ("CAPITAL", intel.section_0_criteria),
-    ("BALANCE_ASSET", intel.section_1_criteria),
-    ("BALANCE_LIAB", intel.section_2_criteria),
-    ("INCOME", intel.section_3_criteria),
-    ("CASH_FLOW", intel.section_6_criteria),
-    ("VALUE_ADDED", intel.section_7_criteria),
+
+# Aqui garantimos Sequence[dict[str, object]] em tempo estático e valor imutável em tempo de execução
+INTEL_SECTION_CRITERIA: Tuple[Tuple[str, Tuple[dict[str, object], ...]], ...] = (
+    ("CAPITAL", tuple(intel.section_0_criteria)),
+    ("BALANCE_ASSET", tuple(intel.section_1_criteria)),
+    ("BALANCE_LIAB", tuple(intel.section_2_criteria)),
+    ("INCOME", tuple(intel.section_3_criteria)),
+    ("CASH_FLOW", tuple(intel.section_6_criteria)),
+    ("VALUE_ADDED", tuple(intel.section_7_criteria)),
 )
 
 
@@ -50,9 +52,10 @@ class TransformersConfig:
     intel_cumulative_prefixes: Tuple[str, ...] = field(
         default_factory=lambda: INTEL_CUMULATIVE_PREFIXES
     )
-    intel_section_criteria: Tuple[Tuple[str, Iterable[dict]], ...] = field(
-        default_factory=lambda: INTEL_SECTION_CRITERIA
-    )
+    intel_section_criteria: Tuple[
+        Tuple[str, Tuple[dict[str, object], ...]],
+        ...,
+    ] = field(default_factory=lambda: INTEL_SECTION_CRITERIA)
 
     @property
     def enabled(self) -> Mapping[str, bool]:
@@ -60,7 +63,7 @@ class TransformersConfig:
 
     @property
     def order(self) -> Sequence[str]:
-        return tuple(self._order)
+        return self._order
 
 
 def load_transformers_config() -> TransformersConfig:
