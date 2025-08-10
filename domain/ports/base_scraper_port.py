@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Generic, List, Optional, Set, TypeVar
+from typing import Callable, Generic, List, Optional, TypeVar
 
 from domain.dto import ExecutionResultDTO
 

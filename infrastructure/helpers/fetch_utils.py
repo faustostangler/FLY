@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import ssl
 import time
-from typing import Optional, TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Optional, Protocol, cast
 
 import certifi
 import cloudscraper
@@ -15,7 +15,6 @@ from requests.structures import CaseInsensitiveDict
 from domain.ports import ConfigPort, LoggerPort
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
-
 
 if TYPE_CHECKING:
     class ScrapingConfigProtocol(Protocol):

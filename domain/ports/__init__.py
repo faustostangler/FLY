@@ -13,7 +13,6 @@ from .nsd_source_port import NSDSourcePort
 from .parsed_statement_repository_port import SqlAlchemyParsedStatementRepositoryPort
 from .raw_statement_repository_port import SqlAlchemyRawStatementRepositoryPort
 from .raw_statement_scraper_port import RawStatementScraperPort
-from .scraper_ports import RawStatementScraperPort
 from .statement_transformer_port import StatementTransformerPort
 from .worker_pool_port import WorkerPoolPort
 

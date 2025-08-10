@@ -3,7 +3,6 @@ from __future__ import annotations
 from domain.dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
-from domain.utils.statement_processing import classify_section
 from infrastructure.helpers import SaveStrategy
 
 
