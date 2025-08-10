@@ -6,6 +6,7 @@ from typing import List, Set, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
+from domain import dto
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
@@ -86,4 +87,4 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
                 ~NSDModel.nsd.in_(exclude_nsd),
             )
             results = query.all()
-        return sorted([nsd.to_dto() for nsd in results], key=lambda dto: int(dto.nsd))
+        return sorted([nsd.to_dto() for nsd in results], key=lambda dto: (dto.company_name, dto.quarter, dto.version))
