@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import ssl
 import time
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Protocol, cast
 
 import certifi
 import cloudscraper
@@ -17,6 +17,16 @@ from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
 
+if TYPE_CHECKING:
+    class ScrapingConfigProtocol(Protocol):
+        user_agents: list[str]
+        referers: list[str]
+        languages: list[str]
+        test_internet: Optional[str]
+        timeout: Optional[int]
+
+    class ConfigWithScraping(ConfigPort, Protocol):
+        scraping: ScrapingConfigProtocol
 class FetchUtils:
     """Utility class for HTTP operations with retry and randomized headers."""
 
@@ -29,16 +39,19 @@ class FetchUtils:
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
+    def _scraping(self) -> "ScrapingConfigProtocol":
+        return cast("ConfigWithScraping", self.config).scraping
+
     def header_random(self) -> dict:
         """Generate random HTTP headers based on scraping config."""
         try:
+            cfg = self._scraping()
             return {
-                "User-Agent": random.choice(self.config.scraping.user_agents),
-                "Referer": random.choice(self.config.scraping.referers),
-                "Accept-Language": random.choice(self.config.scraping.languages),
+                "User-Agent": random.choice(cfg.user_agents),
+                "Referer": random.choice(cfg.referers),
+                "Accept-Language": random.choice(cfg.languages),
             }
         except Exception:
-            # self.logger.log(f"Header generation failed: {e}", level="warning")
             return {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/114.0.5735.199 Safari/537.36",
@@ -121,12 +134,11 @@ class FetchUtils:
 
         return scraper
 
-    def test_internet(
-        self, url: Optional[str] = None, timeout: Optional[int] = None
-    ) -> bool:
+    def test_internet(self, url: Optional[str] = None, timeout: Optional[int] = None) -> bool:
         """Checks if internet connection is active via HTTP GET request."""
-        url = url or self.config.scraping.test_internet or "https://www.google.com"
-        timeout = timeout or self.config.scraping.timeout or 5
+        cfg = self._scraping()
+        url = url or cfg.test_internet or "https://www.google.com"
+        timeout = timeout or cfg.timeout or 5
 
         while True:
             try:
@@ -152,7 +164,8 @@ class FetchUtils:
     ) -> tuple[requests.Response, requests.Session]:
         """Fetch a URL, recreating the scraper when blocked."""
 
-        timeout = timeout or self.config.scraping.timeout or 5
+        cfg = self._scraping()
+        timeout = timeout or cfg.timeout or 5
         scraper = scraper or self.create_scraper(insecure=insecure)
 
         block_start = None
