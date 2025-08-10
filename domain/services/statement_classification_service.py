@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Protocol, Sequence, Tuple
+from typing import Any, List, Optional, Protocol, Tuple
 
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-
 from domain.utils.criteria_node import CriteriaNode
 
 

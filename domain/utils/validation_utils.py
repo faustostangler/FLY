@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Dict, List, Optional, Protocol, Sequence, Tuple
 
 from domain.utils.math_utils import detect_missing_quarters
- from domain.utils.math_utils import detect_missing_quarters
 
 
 class _QuarterLike(Protocol):

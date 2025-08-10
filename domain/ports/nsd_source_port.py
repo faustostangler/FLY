@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Set, TypeVar
+from typing import Callable, List, Optional, TypeVar
 
 from domain.dto import ExecutionResultDTO, NsdDTO
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Protocol, Sequence, TypeVar
 
-T_in = TypeVar("T_in")
+T_in = TypeVar("T_in", contravariant=True)
 T_out = TypeVar("T_out")
 
 class StatementTransformerPort(Protocol[T_in, T_out]):

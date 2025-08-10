@@ -39,7 +39,7 @@ class NsdDTO:
         return NsdDTO(
             id=raw.get("id"),
             nsd=int(nsd_raw),
-            company_name=raw.get("company_name"),
+            company_name=str(raw.get("company_name") or ""),
             quarter=raw.get("quarter"),
             version=raw.get("version"),
             nsd_type=raw.get("nsd_type"),
