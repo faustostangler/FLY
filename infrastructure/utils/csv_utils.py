@@ -1,8 +1,8 @@
 import csv
-from typing import List
+from typing import Any, Sequence
 
 
-def save_dtos_to_csv(dtos: List, filepath: str) -> None:
+def save_dtos_to_csv(dtos: Sequence[Any], filepath: str) -> None:
     """
     Save any list of DTOs to a CSV file. Each attribute of the DTO becomes a column.
 

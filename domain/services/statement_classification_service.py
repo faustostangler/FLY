@@ -2,18 +2,39 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Protocol, Sequence, Tuple
 
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+
 from domain.utils.criteria_node import CriteriaNode
+
+
+class _RowLike(Protocol):
+    @property
+    def nsd(self) -> str: ...
+    @property
+    def company_name(self) -> Optional[str]: ...
+    @property
+    def quarter(self) -> Optional[str]: ...
+    @property
+    def version(self) -> Optional[str]: ...
+    @property
+    def grupo(self) -> str: ...
+    @property
+    def quadro(self) -> str: ...
+    @property
+    def account(self) -> str: ...
+    @property
+    def description(self) -> str: ...
+    @property
+    def value(self) -> float: ...
 
 
 class StatementClassificationService:
     """Apply criteria trees to raw statement rows."""
 
     def classify(
-        self, rows: List[RawStatementDTO], roots: List[CriteriaNode]
+        self, rows: List[_RowLike], roots: List[CriteriaNode]
     ) -> List[ParsedStatementDTO]:
         """Classify ``rows`` using ``roots`` criteria tree."""
         result: List[ParsedStatementDTO] = []
@@ -23,7 +44,7 @@ class StatementClassificationService:
         return result
 
     def _process_node(
-        self, rows: List[RawStatementDTO], node: CriteriaNode
+        self, rows: List[_RowLike], node: CriteriaNode
     ) -> List[ParsedStatementDTO]:
         hits = [r for r in rows if self._matches(r, node.criteria)]
         parsed = [self._to_parsed(r, node.target_line) for r in hits]
@@ -40,7 +61,7 @@ class StatementClassificationService:
             parsed.extend(self._process_node(children_rows, child_node))
         return parsed
 
-    def _to_parsed(self, row: RawStatementDTO, target_line: str) -> ParsedStatementDTO:
+    def _to_parsed(self, row: _RowLike, target_line: str) -> ParsedStatementDTO:
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         # raw_account = parts[0].strip()
@@ -66,7 +87,7 @@ class StatementClassificationService:
         return ".".join(part.zfill(2) for part in parts)
 
     def _matches(
-        self, row: RawStatementDTO, criteria: List[Tuple[str, str, Any]]
+        self, row: _RowLike, criteria: List[Tuple[str, str, Any]]
     ) -> bool:
         for column, condition, account in criteria:
             value = str(getattr(row, column, "") or "").lower()

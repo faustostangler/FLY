@@ -1,7 +1,6 @@
 """Command line interface that wires together the application services."""
 
 from application import CompanyDataMapper
-from domain.ports import ConfigPort
 from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.processors.parse_statements_processor import ParseStatementsProcessor
 from application.processors.transform_statements_processor import (
@@ -9,7 +8,7 @@ from application.processors.transform_statements_processor import (
 )
 from application.services.company_data_service import CompanyDataService
 from application.services.nsd_service import NsdService
-from domain.ports import LoggerPort
+from domain.ports import ConfigPort, LoggerPort
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.metrics_collector import MetricsCollector
 from infrastructure.repositories import (
@@ -141,12 +140,21 @@ class CLIAdapter:
         )
         raw_rows = fetch_processor.run()
 
+        parse_pool = WorkerPool(
+            config=self.config,
+            metrics_collector=self.collector,
+            max_workers=self.config.global_settings.max_workers
+        )
+
         parse_processor = ParseStatementsProcessor(
             logger=self.logger,
             repository=parsed_statement_repo,
             config=self.config,
+            worker_pool_executor=parse_pool,
+            metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
+
         parsed_groups = parse_processor.run(raw_rows)
 
         transform_processor = TransformStatementsProcessor(

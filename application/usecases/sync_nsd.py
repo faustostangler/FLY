@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from domain.ports import ConfigPort
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,

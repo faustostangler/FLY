@@ -12,8 +12,7 @@ import urllib3
 from requests.adapters import HTTPAdapter
 from requests.structures import CaseInsensitiveDict
 
-from domain.ports import ConfigPort
-from domain.ports import LoggerPort
+from domain.ports import ConfigPort, LoggerPort
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 

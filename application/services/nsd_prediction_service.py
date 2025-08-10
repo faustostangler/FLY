@@ -33,14 +33,14 @@ def _find_next_probable_nsd(
         return []
 
     last_nsd = max(int(r.nsd) for r in records)
-    max_date = max(r.sent_date for r in records)
+    max_date = max(r.sent_date for r in records if r.sent_date is not None)
     window_start = max_date - timedelta(days=window_days)
 
-    recent = [r for r in records if r.sent_date >= window_start]
+    recent = [r for r in records if r.sent_date is not None and r.sent_date >= window_start]
     if not recent:
         recent = records
 
-    min_date = min(r.sent_date for r in recent)
+    min_date = min(r.sent_date for r in recent if r.sent_date is not None)
     days_span = max((max_date - min_date).days, 1)
     daily_avg = len(recent) / days_span
 

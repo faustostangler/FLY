@@ -9,9 +9,9 @@ from typing import Callable, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
-from domain.ports import ConfigPort
 from domain.dto import ExecutionResultDTO, NsdDTO, WorkerTaskDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     NSDRepositoryPort,

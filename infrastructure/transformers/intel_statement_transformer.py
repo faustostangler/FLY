@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Sequence, Tuple
 
-from domain.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.ports import ConfigPort, StatementTransformerPort
 from domain.services import StatementClassificationService
-from domain.utils import parse_quarter
-from infrastructure.config import Config
 from infrastructure.config.intel_criteria import load_intel_criteria_nodes
 
 
@@ -18,7 +15,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     def __init__(
         self,
-        config: Config,
+        config: ConfigPort,
         classification_service: StatementClassificationService,
     ) -> None:
         self.classification_service = classification_service
@@ -26,7 +23,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
         self.year_end_prefixes = config.transformers.intel_year_end_prefixes
         self.cumulative_prefixes = config.transformers.intel_cumulative_prefixes
 
-    def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
+    def transform(self, rows: Sequence[ParsedStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
         from infrastructure.utils.csv_utils import save_dtos_to_csv
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")

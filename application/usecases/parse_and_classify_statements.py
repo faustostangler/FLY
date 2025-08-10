@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from domain.ports import ConfigPort
 from domain.dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
 from domain.utils.statement_processing import classify_section
 from infrastructure.helpers import SaveStrategy
 
@@ -28,14 +27,19 @@ class ParseAndClassifyStatementsUseCase:
     def parse_and_store_row(self, row: RawStatementDTO) -> ParsedStatementDTO:
         """Build a :class:`ParsedStatementDTO` from a statement row."""
         dto = ParsedStatementDTO(
-            batch_id=str(row.nsd),
+            id=None,
+            nsd=row.nsd,
+            company_name=row.company_name,
+            quarter=row.quarter,
+            version=row.version,
+            grupo=row.grupo,
+            quadro=row.quadro,
             account=row.account,
-            section=classify_section(row.account),
+            description=row.description,
             value=float(row.value),
-            company=row.company_name,
-            period=row.quarter,
+            processing_hash="",  # ou calcule se necessário
         )
-        self.strategy.handle(dto)
+        self.strategy.handle([dto])  # passa como lista para bater com Iterable
         return dto
 
     def finalize(self) -> None:

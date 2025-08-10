@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from domain.ports import ConfigPort
 from application.usecases.sync_nsd import SyncNSDUseCase
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,

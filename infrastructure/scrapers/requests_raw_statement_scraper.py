@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any, Dict, List, Sequence, Mapping
+from typing import Any, Dict, List, Mapping, Sequence
 from urllib.parse import quote_plus
 
 # import pandas as pd
 from bs4 import BeautifulSoup, Tag
 
-from domain.ports import ConfigPort
-from domain.ports.scraper_ports import RawStatementScraperPort
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import LoggerPort, MetricsCollectorPort
+from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.data_cleaner import DataCleaner

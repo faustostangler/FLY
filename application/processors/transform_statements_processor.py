@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import List
 
-from domain.ports import ConfigPort
 from application.usecases.transform_statements import TransformStatementsUseCase
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import LoggerPort, SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
 from domain.services import StatementClassificationService
 from infrastructure.transformers import (
     IntelStatementTransformerAdapter,
@@ -49,11 +48,11 @@ class TransformStatementsProcessor(BaseProcessor):
         return parsed_groups
 
     def transform(
-        self, parsed_groups: List[List[ParsedStatementDTO]]
+        self, data: List[List[ParsedStatementDTO]]
     ) -> List[List[ParsedStatementDTO]]:
         """Apply the transformation use case to each group."""
         processed: List[List[ParsedStatementDTO]] = []
-        for group in parsed_groups:
+        for group in data:
             try:
                 processed.append(self.transform_usecase.execute(group))
                 self.logger.info(f"Processed group of {len(group)} statements")
@@ -62,15 +61,15 @@ class TransformStatementsProcessor(BaseProcessor):
         return processed
 
     def persist(
-        self, processed: List[List[ParsedStatementDTO]]
+        self, data: List[List[ParsedStatementDTO]]
     ) -> List[List[ParsedStatementDTO]]:
         """Persist transformed statements to the repository."""
-        for group in processed:
+        for group in data:
             self.parsed_repo.save_all(group)
-        return processed
+        return data
 
     def run(
-        self, parsed_groups: List[List[ParsedStatementDTO]]
+        self, data: List[List[ParsedStatementDTO]]
     ) -> List[List[ParsedStatementDTO]]:
         """Run the transformation pipeline."""
-        return super().run(parsed_groups)
+        return super().run(data)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Mapping, Protocol, Sequence, runtime_checkable
 
+
 @runtime_checkable
 class DatabaseConfigPort(Protocol):
     """Database configuration values required by infrastructure."""

@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from typing import Callable, List, Optional, Tuple
 
-from domain.ports import ConfigPort
-from domain.ports.scraper_ports import RawStatementScraperPort
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
+    ConfigPort,
     LoggerPort,
-    WorkerPoolPort, 
     MetricsCollectorPort,
     NSDRepositoryPort,
     SqlAlchemyCompanyDataRepositoryPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
+    WorkerPoolPort,
 )
+from domain.ports.scraper_ports import RawStatementScraperPort
 
 from .base_processor import BaseProcessor
 

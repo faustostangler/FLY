@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from domain.ports import LoggerPort
-from typing import Generic, TypeVar
 
 L = TypeVar("L")  # Tipo retornado por load()
 T = TypeVar("T")  # Tipo retornado por transform()

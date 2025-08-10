@@ -1,23 +1,21 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple
 
-from domain.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
-from infrastructure.config import Config
+from domain.ports import ConfigPort, StatementTransformerPort
 
 
-class MathStatementTransformerAdapter(StatementTransformerPort):
+class MathStatementTransformerAdapter(StatementTransformerPort[ParsedStatementDTO, ParsedStatementDTO]):
     """Adjust quarterly statement values."""
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: ConfigPort) -> None:
         self.year_end_prefixes = tuple(config.transformers.math_year_end_prefixes)
         self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
         self.target_accounts = set(config.transformers.math_target_accounts)
 
-    def _group_key(self, row: RawStatementDTO, dt: datetime | None) -> Tuple:
+    def _group_key(self, row: ParsedStatementDTO, dt: datetime | None) -> Tuple:
         year = dt.year if dt else 0
         return (
             row.company_name or "",
@@ -36,10 +34,10 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         except ValueError:
             return None
 
-    def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
+    def transform(self, rows: Sequence[ParsedStatementDTO]) -> List[ParsedStatementDTO]:
         groups: Dict[
             Tuple[str, str, str, str, str, str],
-            List[Tuple[datetime | None, RawStatementDTO]],
+            List[Tuple[datetime | None, ParsedStatementDTO]],
         ] = {}
         for row in rows:
             dt = self._parse(row.quarter)
@@ -82,7 +80,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         return result
 
     def _as_parsed(
-        self, items: List[Tuple[datetime | None, RawStatementDTO]]
+        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
     ) -> List[ParsedStatementDTO]:
         return [
             ParsedStatementDTO(
@@ -101,7 +99,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         ]
 
     def _adjust_year_end(
-        self, items: List[Tuple[datetime | None, RawStatementDTO]]
+        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
     ) -> List[ParsedStatementDTO]:
         values: List[ParsedStatementDTO] = []
         cumulative = 0.0
@@ -143,7 +141,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort):
         return values
 
     def _adjust_cumulative(
-        self, items: List[Tuple[datetime | None, RawStatementDTO]]
+        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
     ) -> List[ParsedStatementDTO]:
         values: List[ParsedStatementDTO] = []
         last = 0.0

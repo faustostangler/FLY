@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List, Protocol
+from typing import List, Protocol, Sequence, TypeVar
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+T_in = TypeVar("T_in")
+T_out = TypeVar("T_out")
 
-
-class StatementTransformerPort(Protocol):
-    """Interface for statement transformation adapters."""
-
-    def transform(self, rows: List[RawStatementDTO]) -> List[ParsedStatementDTO]:
-        """Transform ``rows`` into cleaned ``ParsedStatementDTO`` objects."""
-        raise NotImplementedError
+class StatementTransformerPort(Protocol[T_in, T_out]):
+    def transform(self, rows: Sequence[T_in]) -> List[T_out]:
+        ...

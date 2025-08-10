@@ -7,9 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
-from domain.ports import ConfigPort
 from domain.dto import ExecutionResultDTO, WorkerTaskDTO
-from domain.ports import LoggerPort, MetricsCollectorPort, WorkerPoolPort
+from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort, WorkerPoolPort
 from infrastructure.helpers.byte_formatter import ByteFormatter
 
 T = WorkerTaskDTO
