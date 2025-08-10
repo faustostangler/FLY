@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Tuple
 
-from application.ports import StatementTransformerPort
+from domain.ports import StatementTransformerPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.services import StatementClassificationService

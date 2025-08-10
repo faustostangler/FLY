@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from application.ports import StatementTransformerPort
+from domain.ports import StatementTransformerPort
 from domain.ports import ConfigPort
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import LoggerPort
