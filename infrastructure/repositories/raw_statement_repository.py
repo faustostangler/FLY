@@ -6,7 +6,7 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import LoggerPort, SqlAlchemyRawStatementRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener

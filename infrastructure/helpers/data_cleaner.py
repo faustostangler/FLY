@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from domain.ports import LoggerPort
 from domain.ports.data_cleaner_port import DataCleanerPort
 from infrastructure.utils.normalization import (

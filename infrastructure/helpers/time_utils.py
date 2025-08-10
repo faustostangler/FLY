@@ -4,7 +4,7 @@ from typing import Optional
 
 import psutil
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 
 
 class TimeUtils:

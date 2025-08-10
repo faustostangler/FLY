@@ -1,6 +1,6 @@
 import threading
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 
 
 class WorkerThreadIdentifier:

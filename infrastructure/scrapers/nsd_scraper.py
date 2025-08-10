@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from domain.dto import ExecutionResultDTO, NsdDTO, WorkerTaskDTO
 from domain.ports import (
     LoggerPort,

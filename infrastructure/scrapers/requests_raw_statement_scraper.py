@@ -10,8 +10,8 @@ from urllib.parse import quote_plus
 # import pandas as pd
 from bs4 import BeautifulSoup, Tag
 
-from application.ports.config_ports import ConfigPort
-from application.ports.scraper_ports import RawStatementScraperPort
+from domain.ports import ConfigPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO

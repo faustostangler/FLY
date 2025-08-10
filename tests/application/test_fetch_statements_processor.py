@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from application.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO

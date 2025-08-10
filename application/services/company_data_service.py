@@ -1,6 +1,6 @@
 """Service layer for company-related synchronization operations."""
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from application.usecases.sync_companies import SyncCompanyDataUseCase
 from domain.dto import SyncCompanyDataResultDTO
 from domain.ports import (

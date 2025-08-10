@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from application.usecases.sync_nsd import SyncNSDUseCase
 from domain.ports import (
     LoggerPort,

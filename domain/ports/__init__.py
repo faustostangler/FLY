@@ -13,7 +13,9 @@ from .nsd_source_port import NSDSourcePort
 from .parsed_statement_repository_port import SqlAlchemyParsedStatementRepositoryPort
 from .raw_statement_repository_port import SqlAlchemyRawStatementRepositoryPort
 from .raw_statement_scraper_port import RawStatementScraperPort
+from .raw_statement_scraper_port import RawStatementScraperPort
 from .worker_pool_port import WorkerPoolPort
+from .scraper_ports import RawStatementScraperPort
 
 __all__ = [
     "WorkerPoolPort",
@@ -30,4 +32,6 @@ __all__ = [
     "SqlAlchemyRawStatementRepositoryPort",
     "SqlAlchemyParsedStatementRepositoryPort",
     "ConfigPort",
+    "StatementTransformerPort",
+    "RawStatementScraperPort",
 ]

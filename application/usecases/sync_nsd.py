@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
     LoggerPort,

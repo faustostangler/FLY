@@ -9,7 +9,7 @@ import time
 import uuid
 from typing import Optional
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 
 
 class IdGenerator:

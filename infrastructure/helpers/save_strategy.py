@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Callable, Generic, List, Optional, TypeVar
 
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 
 T = TypeVar("T")
 

@@ -8,7 +8,7 @@ import time
 from typing import Callable, Dict, List, Optional
 
 from application import CompanyDataMapper
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from domain.dto import (
     CompanyDataRawDTO,
     ExecutionResultDTO,

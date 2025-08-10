@@ -1,7 +1,7 @@
 """Command line interface that wires together the application services."""
 
 from application import CompanyDataMapper
-from application.ports.config_ports import ConfigPort
+from domain.ports import ConfigPort
 from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.processors.parse_statements_processor import ParseStatementsProcessor
 from application.processors.transform_statements_processor import (

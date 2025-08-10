@@ -5,18 +5,19 @@ from __future__ import annotations
 import time
 from typing import Callable, List, Optional, Tuple
 
-from application.ports.config_ports import ConfigPort
-from application.ports.scraper_ports import RawStatementScraperPort
+from domain.ports import ConfigPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.dto.worker_class_dto import WorkerTaskDTO
 from domain.ports import (
     LoggerPort,
+    WorkerPoolPort,
     MetricsCollectorPort,
     SqlAlchemyParsedStatementRepositoryPort,
     SqlAlchemyRawStatementRepositoryPort,
 )
-from infrastructure.helpers import ByteFormatter, SaveStrategy, WorkerPool
+from infrastructure.helpers import ByteFormatter, SaveStrategy
 
 
 class FetchStatementsUseCase:
@@ -29,7 +30,7 @@ class FetchStatementsUseCase:
         raw_statement_repository: SqlAlchemyRawStatementRepositoryPort,
         parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
-        worker_pool_executor: WorkerPool,
+        worker_pool_executor: WorkerPoolPort,
         config: ConfigPort,
         max_workers: int = 1,
     ) -> None:
