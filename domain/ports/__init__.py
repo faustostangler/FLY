@@ -16,6 +16,7 @@ from .raw_statement_scraper_port import RawStatementScraperPort
 from .raw_statement_scraper_port import RawStatementScraperPort
 from .worker_pool_port import WorkerPoolPort
 from .scraper_ports import RawStatementScraperPort
+from .statement_transformer_port import StatementTransformerPort
 
 __all__ = [
     "WorkerPoolPort",
