@@ -28,7 +28,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
         from infrastructure.utils.csv_utils import save_dtos_to_csv
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 
-        transformed1 = self.classification_service.classify(rows, self.criteria_tree)
+        transformed1 = self.classification_service.classify(list(rows), self.criteria_tree)
         save_dtos_to_csv(transformed1, "raws_statements_stage_4_1_standardized.csv")
 
         transformed2 = self.detect_and_correct_outliers(transformed1)

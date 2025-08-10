@@ -108,6 +108,8 @@ class ExchangeApiConfigPort(Protocol):
     @property
     def company_data_endpoint(self) -> Mapping[str, str]: ...
 
+    @property
+    def language(self) -> str: ...
 
 @runtime_checkable
 class StatementsConfigPort(Protocol):
