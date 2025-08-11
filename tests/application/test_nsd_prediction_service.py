@@ -28,28 +28,30 @@ def test_find_next_probable_nsd_returns_sequence():
                 reason=None,
             )
         )
-    repo.get_all.return_value = items
 
+    repo.iter_all.side_effect = lambda: (item for item in items)
+
+    materialized = list(repo.iter_all())
     result = _find_next_probable_nsd(
         repository=repo,
         window_days=20,
         safety_factor=1.0,
     )
 
-    max_date = start + timedelta(days=9)
-    min_date = start
+    max_date = max(r.sent_date for r in materialized if r.sent_date is not None)
+    min_date = min(r.sent_date for r in materialized if r.sent_date is not None)
     days_span = (max_date - min_date).days
-    daily_avg = len(items) / days_span
+    daily_avg = len(materialized) / days_span
     days_since_last = (now - max_date).days
     expected_count = int(daily_avg * days_since_last * 1.0)
-    expected = [len(items) + i for i in range(1, expected_count + 1)]
+    expected = [len(materialized) + i for i in range(1, expected_count + 1)]
 
     assert result == expected
 
 
 def test_find_next_probable_nsd_empty():
     repo = MagicMock(spec=NSDRepositoryPort)
-    repo.get_all.return_value = []
+    repo.iter_all.return_value = iter([])
 
     result = _find_next_probable_nsd(repo)
     assert result == []

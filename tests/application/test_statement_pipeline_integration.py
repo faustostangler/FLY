@@ -90,7 +90,11 @@ def test_full_statement_pipeline(monkeypatch):
     raw_rows = fetch_processor.run()
 
     parse_processor = ParseStatementsProcessor(
-        logger=logger, repository=parsed_repo, config=config
+        logger=logger,
+        repository=parsed_repo,
+        config=config,
+        worker_pool_executor=worker_pool,
+        metrics_collector=collector,
     )
     parsed_dto = ParsedStatementDTO(
         nsd="1",
@@ -107,6 +111,7 @@ def test_full_statement_pipeline(monkeypatch):
     parse_processor.parse_usecase.parse_and_store_row = MagicMock(
         return_value=parsed_dto
     )
+    worker_pool.run = MagicMock(return_value=MagicMock(items=[[parsed_dto]]))
     monkeypatch.setattr(parse_processor.parse_usecase, "finalize", lambda: None)
 
     parsed_groups = parse_processor.run(raw_rows)

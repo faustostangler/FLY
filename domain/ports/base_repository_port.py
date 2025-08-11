@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, List, Sequence, Tuple, TypeVar, Union
+from typing import Any, Generator, Generic, List, Sequence, Tuple, TypeVar, Union
 
 T = TypeVar("T")  # DTO type
 K = TypeVar("K")  # Key type (e.g., str, int)
@@ -36,6 +36,19 @@ class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
 
         Returns:
             List[T]: All items stored in the repository.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def iter_all(self, batch_size: int | None = None) -> Generator[T, None, None]:
+        """Return a generator over all persisted items ordered by primary key.
+
+        Args:
+            batch_size: Optional number of rows to fetch per batch. Falls back
+                to configuration when ``None``.
+
+        Returns:
+            Generator[T, None, None]: Sequential DTOs from the repository.
         """
         raise NotImplementedError
 
