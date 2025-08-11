@@ -12,7 +12,7 @@ from tests.conftest import DummyLogger
 
 def test_execute_converts_and_saves():
     repo = MagicMock(spec=SqlAlchemyCompanyDataRepositoryPort)
-    repo.get_existing_by_columns = MagicMock(return_value=[("SKIP",)])
+    repo.iter_existing_by_columns = MagicMock(return_value=iter([("SKIP",)]))
 
     raw = types.SimpleNamespace(
         cvm_code="001",
@@ -76,7 +76,7 @@ def test_execute_converts_and_saves():
 
     result = usecase.synchronize_companies()
 
-    repo.get_existing_by_columns.assert_called_once()
+    repo.iter_existing_by_columns.assert_called_once()
     scraper.fetch_all.assert_called_once()
     repo.save_all.assert_called_once()
     saved = repo.save_all.call_args.args[0]
