@@ -40,7 +40,7 @@ class SqlAlchemyEngineMixin:
         self.Session = sessionmaker(
             bind=self.engine,
             autoflush=True,
-            expire_on_commit=True,
+            expire_on_commit=False,
         )
 
         # Automatically create all tables defined in the SQLAlchemy models

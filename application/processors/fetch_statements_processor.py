@@ -75,13 +75,14 @@ class FetchStatementsProcessor(
         """Return NSD identifiers that still need fetching."""
         company_records = self.company_repo.get_all()
         nsd_records = self.nsd_repo.get_all()
+        raw_statement_existing = self.raw_statement_repo.get_existing_by_columns(
+                column_names="nsd"
+            )
         if not company_records or not nsd_records:
             return []
         nsd_rows_processed = {
             row[0]
-            for row in self.raw_statement_repo.get_existing_by_columns(
-                column_names="nsd"
-            )
+            for row in raw_statement_existing
         }
         valid_types = set(self.config.domain.statements_types)
         company_names = {c.company_name for c in company_records if c.company_name}

@@ -341,7 +341,7 @@ class SqlAlchemyRepositoryBase(
     def get_page_after(self, last_id: int, limit: int) -> List[T]:
         """Return a page of DTOs ordered by surrogate id."""
         session = self.Session()
-        model, _ = self.get_model_class()
+        model, pk_columns = self.get_model_class()
         try:
             query = (
                 session.query(model)

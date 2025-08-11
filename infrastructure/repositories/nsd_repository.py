@@ -31,7 +31,7 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
         """Persist ``NsdDTO`` objects using SQLite upserts."""
         session = self.Session()
         try:
-            model, _ = self.get_model_class()
+            model, pk_columns = self.get_model_class()
             flat_items = ListFlattener.flatten(items)
             valid_items = [i for i in flat_items if i is not None]
             for dto in valid_items:
