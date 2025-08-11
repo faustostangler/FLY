@@ -288,6 +288,39 @@ class SqlAlchemyRepositoryBase(
             # Ensure session is always closed
             session.close()
 
+    def iter_existing_by_columns(
+        self, column_names: Union[str, List[str]], batch_size: int | None = None
+    ) -> Generator[Tuple, None, None]:
+        """Yield distinct column values in a streaming fashion.
+
+        Args:
+            column_names: Single column name or list of column names to fetch.
+            batch_size: Optional number of rows to fetch per batch. Falls back
+                to configuration when ``None``.
+
+        Yields:
+            Tuple: Distinct values ordered by the specified columns.
+        """
+        size = batch_size or self.config.global_settings.batch_size
+        model, _ = self.get_model_class()
+        if isinstance(column_names, str):
+            column_names = [column_names]
+        columns = [getattr(model, col) for col in column_names]
+
+        with self.Session() as session:
+            base_q = (
+                session.query(*columns)
+                .distinct()
+                .order_by(*columns)
+                .yield_per(size)
+                .execution_options(stream_results=True)
+                .enable_eagerloads(False)
+            )
+            for row in base_q:
+                if any(field is None for field in row):
+                    continue
+                yield tuple(row)
+
     def get_existing_by_columns(
         self, column_names: Union[str, List[str]]
     ) -> List[Tuple]:

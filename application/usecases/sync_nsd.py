@@ -39,9 +39,9 @@ class SyncNSDUseCase:
         # self.logger.log("Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run()", level="info")
 
         # busca todos os cvm_code que já estão na tabela
-        raw = self.repository.get_existing_by_columns("nsd")
-        # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
-        existing_nsd = [code for (code,) in raw]
+        existing_nsd = [
+            code for (code,) in self.repository.iter_existing_by_columns("nsd")
+        ]
 
         # Fetch all documents from the scraper, persisting them in batches.
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
@@ -73,7 +73,7 @@ class SyncNSDUseCase:
         # → busca os já cadastrados
         existing_companies = {
             company_name
-            for (company_name,) in self.company_repo.get_existing_by_columns(
+            for (company_name,) in self.company_repo.iter_existing_by_columns(
                 "company_name"
             )
         }

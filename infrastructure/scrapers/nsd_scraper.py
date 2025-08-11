@@ -378,7 +378,7 @@ class NsdScraper(NSDSourcePort):
         if not self.skip_codes:
             return start
 
-        dates = [d for (d,) in self.repository.get_existing_by_columns("sent_date")]
+        dates = [d for (d,) in self.repository.iter_existing_by_columns("sent_date")]
 
         first_date = min(dates)
         last_date = max(dates)

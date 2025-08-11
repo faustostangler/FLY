@@ -1,5 +1,5 @@
 """Command-line entry point for the FLY application."""
-print(f"Start")
+
 from infrastructure.config import ConfigAdapter
 from infrastructure.factories import create_data_cleaner
 from infrastructure.logging import Logger
@@ -16,6 +16,7 @@ def main() -> None:
     - Instantiates the CLI controller with injected dependencies.
     - Starts the application logic by calling ``controller.start_fly()``.
     """
+    print("Start")
     # Inicializa a configuração
     config = ConfigAdapter()
     logger = Logger(config)

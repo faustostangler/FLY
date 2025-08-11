@@ -79,10 +79,9 @@ class FetchStatementsProcessor(
         if not company_names:
             return []
 
-        raw_statement_existing = self.raw_statement_repo.get_existing_by_columns(
-            column_names="nsd"
-        )
-        nsd_rows_processed = {row[0] for row in raw_statement_existing}
+        nsd_rows_processed = {
+            row[0] for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
+        }
         valid_types = set(self.config.domain.statements_types)
 
         results: List[NsdDTO] = []

@@ -73,6 +73,23 @@ class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
         raise NotImplementedError
 
     @abstractmethod
+    def iter_existing_by_columns(
+        self, column_names: Union[str, List[str]], batch_size: int | None = None
+    ) -> Generator[Tuple, None, None]:
+        """Yield existing values for given columns in batches.
+
+        Args:
+            column_names: Single column name or list of column names to fetch.
+            batch_size: Optional number of rows to fetch per batch. Falls back
+                to configuration when ``None``.
+
+        Returns:
+            Generator[Tuple, None, None]: Distinct tuples ordered by the
+            specified columns.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def has_item(self, identifier: K) -> bool:
         """Check whether an item with the given identifier exists.
 
