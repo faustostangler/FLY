@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
+from infrastructure.config.version import get_version
 
-APP_NAME = "FLY"  # Application name
+VERSION = get_version(fallback_release="0.30.524", prefix_for_dev="0.30")
+APP_NAME = "FLY" + "/" + VERSION  # Application name
 
 WAIT = 2  # Default wait time in seconds
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
@@ -9,7 +11,6 @@ THRESHOLD = max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
 QUEUE_SIZE = 1 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
 BATCH_SIZE = 100  # Number of items per repository batch
 REQUEST_TIMEOUT_SEC = 5.0
-USER_AGENT = "FLY/1.0"
 RETRIES = 3
 
 
@@ -36,7 +37,7 @@ class GlobalSettingsConfig:
     batch_size: int = field(default=BATCH_SIZE)
     queue_size: int = field(default=QUEUE_SIZE)
     request_timeout_sec: float = field(default=REQUEST_TIMEOUT_SEC)
-    user_agent: str = field(default=USER_AGENT)
+    user_agent: str = field(default=APP_NAME)
     retries: int = field(default=RETRIES)
 
 
@@ -62,6 +63,6 @@ def load_global_settings_config() -> GlobalSettingsConfig:
         batch_size=BATCH_SIZE,
         queue_size=QUEUE_SIZE,
         request_timeout_sec=REQUEST_TIMEOUT_SEC,
-        user_agent=USER_AGENT,
+        user_agent=APP_NAME,
         retries=RETRIES,
     )
