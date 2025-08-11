@@ -73,26 +73,28 @@ class FetchStatementsProcessor(
 
     def _build_targets(self) -> List[NsdDTO]:
         """Return NSD identifiers that still need fetching."""
-        company_records = self.company_repo.get_all()
-        nsd_records = self.nsd_repo.get_all()
-        raw_statement_existing = self.raw_statement_repo.get_existing_by_columns(
-                column_names="nsd"
-            )
-        if not company_records or not nsd_records:
-            return []
-        nsd_rows_processed = {
-            row[0]
-            for row in raw_statement_existing
+        company_names = {
+            c.company_name for c in self.company_repo.iter_all() if c.company_name
         }
-        valid_types = set(self.config.domain.statements_types)
-        company_names = {c.company_name for c in company_records if c.company_name}
-        nsd_company_names = {n.company_name for n in nsd_records if n.company_name}
-        common_company_names = set(company_names.intersection(nsd_company_names))
-        results = self.nsd_repo.get_all_pending(
-            company_names=common_company_names,
-            valid_types=valid_types,
-            exclude_nsd=nsd_rows_processed,
+        if not company_names:
+            return []
+
+        raw_statement_existing = self.raw_statement_repo.get_existing_by_columns(
+            column_names="nsd"
         )
+        nsd_rows_processed = {row[0] for row in raw_statement_existing}
+        valid_types = set(self.config.domain.statements_types)
+
+        results: List[NsdDTO] = []
+        for nsd in self.nsd_repo.iter_all():
+            if (
+                nsd.company_name
+                and nsd.company_name in company_names
+                and nsd.nsd_type in valid_types
+                and nsd.nsd not in nsd_rows_processed
+            ):
+                results.append(nsd)
+
         return results
 
     def run(

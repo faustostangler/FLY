@@ -1,5 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Generator,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+from sqlalchemy import tuple_ as sa_tuple
 
 from domain.ports import ConfigPort, LoggerPort
 from domain.ports.base_repository_port import SqlAlchemyRepositoryBasePort
@@ -176,6 +188,76 @@ class SqlAlchemyRepositoryBase(
             return all_results
         finally:
             session.close()
+
+    def iter_all(self, batch_size: int | None = None) -> Generator[T, None, None]:
+        """Yield all DTOs sequentially using keyset pagination over the PK."""
+        size = batch_size or self.config.global_settings.batch_size
+        model, pk_columns = self.get_model_class()
+        self.logger.log(
+            f"iter_all start batch_size={size}",
+            level="info",
+        )
+        yielded = 0
+        try:
+            if len(pk_columns) == 1:
+                gen = self._iter_all_simple(size)
+            else:
+                gen = self._iter_all_composite(size)
+            for dto in gen:
+                yielded += 1
+                yield dto
+        finally:
+            self.logger.log(
+                f"iter_all finished total={yielded}",
+                level="info",
+            )
+
+    def _iter_all_simple(self, size: int) -> Generator[T, None, None]:
+        model, pk_columns = self.get_model_class()
+        col = pk_columns[0]
+        last_key: Optional[Any] = None
+        with self.Session() as session:
+            base_q = (
+                session.query(model)
+                .order_by(col)
+                .yield_per(size)
+                .execution_options(stream_results=True)
+                .enable_eagerloads(False)
+            )
+            while True:
+                q = base_q
+                if last_key is not None:
+                    q = q.filter(col > last_key)
+                count = 0
+                for m in q.limit(size):
+                    yield m.to_dto()
+                    last_key = getattr(m, col.key)
+                    count += 1
+                if count == 0:
+                    break
+
+    def _iter_all_composite(self, size: int) -> Generator[T, None, None]:
+        model, pk_columns = self.get_model_class()
+        last_key: Optional[Tuple] = None
+        with self.Session() as session:
+            base_q = (
+                session.query(model)
+                .order_by(*pk_columns)
+                .yield_per(size)
+                .execution_options(stream_results=True)
+                .enable_eagerloads(False)
+            )
+            while True:
+                q = base_q
+                if last_key is not None:
+                    q = q.filter(sa_tuple(*pk_columns) > sa_tuple(*last_key))
+                count = 0
+                for m in q.limit(size):
+                    yield m.to_dto()
+                    last_key = tuple(getattr(m, c.key) for c in pk_columns)
+                    count += 1
+                if count == 0:
+                    break
 
     def get_all_primary_keys(self) -> List[str]:
         """Retrieve all unique primary keys from the database.

@@ -22,11 +22,15 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
     )
 
     repository = MagicMock(spec=SqlAlchemyParsedStatementRepository)
+    worker_pool = MagicMock()
+    collector = MagicMock()
 
     processor = ParseStatementsProcessor(
         logger=DummyLogger(),
         repository=repository,
         config=dummy_config,
+        worker_pool_executor=worker_pool,
+        metrics_collector=collector,
         max_workers=2,
     )
 
