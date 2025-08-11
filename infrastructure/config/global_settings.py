@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from infrastructure.config.version import get_version
 
-VERSION = get_version(fallback_release="0.30.524", prefix_for_dev="0.30")
+VERSION = get_version(fallback_release="0.0.1")
 APP_NAME = "FLY" + "/" + VERSION  # Application name
 
 WAIT = 2  # Default wait time in seconds
