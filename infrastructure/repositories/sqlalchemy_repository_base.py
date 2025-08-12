@@ -194,10 +194,10 @@ class SqlAlchemyRepositoryBase(
         """Yield all DTOs sequentially using keyset pagination over the PK."""
         size = batch_size or self.config.global_settings.batch_size
         model, pk_columns = self.get_model_class()
-        self.logger.log(
-            f"iter_all start batch_size={size}",
-            level="info",
-        )
+        # self.logger.log(
+        #     f"iter_all start batch_size={size}",
+        #     level="info",
+        # )
         yielded = 0
         try:
             if len(pk_columns) == 1:
@@ -208,10 +208,11 @@ class SqlAlchemyRepositoryBase(
                 yielded += 1
                 yield dto
         finally:
-            self.logger.log(
-                f"iter_all finished total={yielded}",
-                level="info",
-            )
+            pass
+            # self.logger.log(
+            #     f"iter_all finished total={yielded}",
+            #     level="info",
+            # )
 
     def _iter_all_simple(self, size: int) -> Generator[T, None, None]:
         model, pk_columns = self.get_model_class()

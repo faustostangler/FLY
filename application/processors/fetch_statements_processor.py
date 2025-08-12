@@ -80,7 +80,7 @@ class FetchStatementsProcessor(
             return []
 
         nsd_rows_processed = {
-            row[0] for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
+            int(row[0]) for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
         }
         valid_types = set(self.config.domain.statements_types)
 
@@ -93,6 +93,7 @@ class FetchStatementsProcessor(
                 and nsd.nsd not in nsd_rows_processed
             ):
                 results.append(nsd)
+        results.sort(key=lambda nsd: (nsd.company_name, nsd.quarter, nsd.version))
 
         return results
 
