@@ -107,29 +107,41 @@ def _is_dev_env() -> bool:
     )
 
 
+@lru_cache(maxsize=1)
+def current_commit_hash() -> Optional[str]:
+    """Return the full (40-char) commit hash for HEAD."""
+    return _run_git(["rev-parse", "HEAD"])
+
+
 def compute_version(state_override: Optional[int] = None) -> str:
     """
-    Retorna 'x.y.z' onde:
-      x = 0 se ambiente de desenvolvimento, 1 se não, ou N se injetado (override/env)
-      y = índice 1-based da branch atual na lista de branches locais ordenada
-      z = número de commits desde o início da branch (fork em relação à base)
+    Returns 'x.y.z {branch}-{commit}' where:
+      x = 0 if development environment, 1 if not, or N if overridden (env/param)
+      y = 1-based index of the current branch in the local branch list
+      z = number of commits since the branch forked from base
+      {branch} = current branch name
+      {commit} = full 40-character commit hash
     """
-    # x (estado)
+    # x (state)
     ov = _resolve_state_override(state_override)
     if ov is not None:
         x = ov
     else:
         x = 0 if _is_dev_env() else 1
 
-    # y (índice da branch)
+    # y (branch index)
     br = current_branch()
     branches = list_local_branches()
     y = branch_index_1based(br, branches)
 
-    # z (commits desde o fork)
+    # z (commits from fork)
     z = commit_count_from_branch_start() or 0
 
-    return f"{x}.{y}.{z}"
+    # branch and commit hash
+    branch_name = br or "unknown"
+    commit_hash = current_commit_hash() or "unknown"
+
+    return f"{x}.{y}.{z} {branch_name}/{commit_hash}"
 
 def get_version(fallback_release: str = "0.0.0",
                 state_override: Optional[int] = None) -> str:
