@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
+    CompanyDataRepositoryPort,
     ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,
-    SqlAlchemyCompanyDataRepositoryPort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.utils.id_generator import IdGenerator
@@ -20,7 +20,7 @@ class SyncNSDUseCase:
         config: ConfigPort,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
-        company_repo: SqlAlchemyCompanyDataRepositoryPort,
+        company_repo: CompanyDataRepositoryPort,
         scraper: NSDSourcePort,
     ) -> None:
         """Store dependencies required for synchronization."""

@@ -7,9 +7,9 @@ from domain.dto import SyncCompanyDataResultDTO
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.raw_company_data_dto import CompanyDataRawDTO
 from domain.ports import (
+    CompanyDataRepositoryPort,
     CompanyDataScraperPort,
     LoggerPort,
-    SqlAlchemyCompanyDataRepositoryPort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -20,7 +20,7 @@ class SyncCompanyDataUseCase:
     def __init__(
         self,
         logger: LoggerPort,
-        repository: SqlAlchemyCompanyDataRepositoryPort,
+        repository: CompanyDataRepositoryPort,
         scraper: CompanyDataScraperPort,
         max_workers: int = 1,
     ):

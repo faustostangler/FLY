@@ -3,10 +3,10 @@
 from application.usecases.sync_companies import SyncCompanyDataUseCase
 from domain.dto import SyncCompanyDataResultDTO
 from domain.ports import (
+    CompanyDataRepositoryPort,
     CompanyDataScraperPort,
     ConfigPort,
     LoggerPort,
-    SqlAlchemyCompanyDataRepositoryPort,
 )
 
 
@@ -17,7 +17,7 @@ class CompanyDataService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: SqlAlchemyCompanyDataRepositoryPort,
+        repository: CompanyDataRepositoryPort,
         scraper: CompanyDataScraperPort,
     ):
         """Initialize dependencies for company synchronization."""

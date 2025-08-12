@@ -8,7 +8,7 @@ from typing import List, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dto import ParsedStatementDTO
-from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, ParsedStatementRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.parsed_statement_model import ParsedStatementModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -18,7 +18,7 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 
 class SqlAlchemyParsedStatementRepository(
     SqlAlchemyRepositoryBase[ParsedStatementDTO, int],
-    SqlAlchemyParsedStatementRepositoryPort,
+    ParsedStatementRepositoryPort,
 ):
     """SQLite-backed repository for ``ParsedStatementDTO`` objects."""
 

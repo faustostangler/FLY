@@ -17,14 +17,14 @@ from tests.conftest import DummyConfig, DummyLogger
 @dataclass(frozen=True)
 class DummyDTO:
     id: int | None
-    name: str
+    name: str | None
 
 
 class DummyModel(BaseModel):
     __tablename__ = "dummy_model_iter_existing"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
-    name: Mapped[str] = mapped_column(String)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
 
     @staticmethod
     def from_dto(dto: DummyDTO) -> "DummyModel":
@@ -117,3 +117,37 @@ def test_iter_existing_by_columns_closes_session_on_break(SessionLocal, engine) 
     for _ in repo.iter_existing_by_columns("id", batch_size=1):
         break
     assert closed["value"]
+
+
+def test_iter_existing_by_columns_null_policy(SessionLocal, engine) -> None:
+    cfg = DummyConfig()
+    repo = DummyRepository(cfg.database.connection_string, cfg, DummyLogger())
+    _setup_repo(repo, engine, SessionLocal)
+    repo.save_all(
+        [
+            DummyDTO(id=1, name="a"),
+            DummyDTO(id=2, name=None),
+            DummyDTO(id=3, name="b"),
+        ]
+    )
+
+    result = list(repo.iter_existing_by_columns("name"))
+    assert result == [("a",), ("b",)]
+
+
+def test_iter_existing_by_columns_include_nulls(SessionLocal, engine) -> None:
+    cfg = DummyConfig()
+    repo = DummyRepository(cfg.database.connection_string, cfg, DummyLogger())
+    _setup_repo(repo, engine, SessionLocal)
+    repo.save_all(
+        [
+            DummyDTO(id=1, name="a"),
+            DummyDTO(id=2, name=None),
+            DummyDTO(id=3, name="b"),
+        ]
+    )
+
+    result = list(
+        repo.iter_existing_by_columns("name", include_nulls=True, batch_size=2)
+    )
+    assert result == [(None,), ("a",), ("b",)]

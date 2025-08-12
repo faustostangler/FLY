@@ -8,13 +8,13 @@ from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
+    CompanyDataRepositoryPort,
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     NSDRepositoryPort,
-    SqlAlchemyCompanyDataRepositoryPort,
-    SqlAlchemyParsedStatementRepositoryPort,
-    SqlAlchemyRawStatementRepositoryPort,
+    ParsedStatementRepositoryPort,
+    RawStatementRepositoryPort,
     WorkerPoolPort,
 )
 from domain.ports.scraper_ports import RawStatementScraperPort
@@ -40,10 +40,10 @@ class FetchStatementsProcessor(
         logger: LoggerPort,
         config: ConfigPort,
         source: RawStatementScraperPort,
-        company_repo: SqlAlchemyCompanyDataRepositoryPort,
+        company_repo: CompanyDataRepositoryPort,
         nsd_repo: NSDRepositoryPort,
-        raw_statement_repo: SqlAlchemyRawStatementRepositoryPort,
-        parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
+        raw_statement_repo: RawStatementRepositoryPort,
+        parsed_statements_repo: ParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPoolPort,
         max_workers: int = 1,
