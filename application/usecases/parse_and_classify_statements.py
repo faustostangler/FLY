@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from domain.dto import ParsedStatementDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import ConfigPort, LoggerPort, SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, ParsedStatementRepositoryPort
 from infrastructure.helpers import SaveStrategy
 
 
@@ -12,7 +12,7 @@ class ParseAndClassifyStatementsUseCase:
     def __init__(
         self,
         logger: LoggerPort,
-        repository: SqlAlchemyParsedStatementRepositoryPort,
+        repository: ParsedStatementRepositoryPort,
         config: ConfigPort,
     ) -> None:
         self.logger = logger

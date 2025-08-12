@@ -7,10 +7,10 @@ from typing import List, Set
 
 from domain.dto.nsd_dto import NsdDTO
 
-from .base_repository_port import SqlAlchemyRepositoryBasePort
+from .base_repository_port import RepositoryBasePort
 
 
-class NSDRepositoryPort(SqlAlchemyRepositoryBasePort[NsdDTO, int]):
+class NSDRepositoryPort(RepositoryBasePort[NsdDTO, int]):
     """Port for NSD persistence operations."""
 
     @abstractmethod

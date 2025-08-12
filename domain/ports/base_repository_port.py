@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Generic, List, Sequence, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Generator,
+    Generic,
+    Iterator,
+    List,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 T = TypeVar("T")  # DTO type
 K = TypeVar("K")  # Key type (e.g., str, int)
 
 
-class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
+class RepositoryBasePort(ABC, Generic[T, K]):
     """Generic interface (port) for basic repository operations.
 
     This abstract base class defines the standard CRUD-like operations
@@ -69,6 +79,22 @@ class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
 
         Returns:
             Set[K]: A set of unique identifiers for all stored items.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def iter_existing_by_columns(
+        self,
+        column_names: Union[str, List[str]],
+        *,
+        batch_size: int | None = None,
+        include_nulls: bool = False,
+    ) -> Iterator[Tuple]:
+        """Yield distinct tuples ordered by the given columns.
+
+        The default excludes rows where ANY selected column is NULL.
+        Ordering must be stable and exactly by the requested column(s).
+        The iterator must not materialize the full result set.
         """
         raise NotImplementedError
 

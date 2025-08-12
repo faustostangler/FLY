@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from application.usecases.sync_nsd import SyncNSDUseCase
 from domain.ports import (
+    CompanyDataRepositoryPort,
     ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
     NSDSourcePort,
-    SqlAlchemyCompanyDataRepositoryPort,
 )
 
 
@@ -18,7 +18,7 @@ class NsdService:
         config: ConfigPort,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
-        company_repo: SqlAlchemyCompanyDataRepositoryPort,
+        company_repo: CompanyDataRepositoryPort,
         scraper: NSDSourcePort,
     ) -> None:
         """Instantiate the service with its required dependencies."""

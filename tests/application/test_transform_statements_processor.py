@@ -4,12 +4,12 @@ from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
 from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import SqlAlchemyParsedStatementRepositoryPort
+from domain.ports import ParsedStatementRepositoryPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_transform_processes_groups(monkeypatch):
-    parsed_repo = MagicMock(spec=SqlAlchemyParsedStatementRepositoryPort)
+    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",
@@ -45,7 +45,7 @@ def test_transform_processes_groups(monkeypatch):
 
 
 def test_transform_returns_empty_when_no_groups(monkeypatch):
-    parsed_repo = MagicMock(spec=SqlAlchemyParsedStatementRepositoryPort)
+    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",

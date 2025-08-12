@@ -12,8 +12,8 @@ from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    SqlAlchemyParsedStatementRepositoryPort,
-    SqlAlchemyRawStatementRepositoryPort,
+    ParsedStatementRepositoryPort,
+    RawStatementRepositoryPort,
     WorkerPoolPort,
 )
 from domain.ports.scraper_ports import RawStatementScraperPort
@@ -27,8 +27,8 @@ class FetchStatementsUseCase:
         self,
         logger: LoggerPort,
         source: RawStatementScraperPort,
-        raw_statement_repository: SqlAlchemyRawStatementRepositoryPort,
-        parsed_statements_repo: SqlAlchemyParsedStatementRepositoryPort,
+        raw_statement_repository: RawStatementRepositoryPort,
+        parsed_statements_repo: ParsedStatementRepositoryPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPoolPort,
         config: ConfigPort,

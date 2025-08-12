@@ -13,7 +13,7 @@ from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    SqlAlchemyParsedStatementRepositoryPort,
+    ParsedStatementRepositoryPort,
     WorkerPoolPort,
 )
 
@@ -26,7 +26,7 @@ class ParseStatementsProcessor(BaseProcessor):
     def __init__(
         self,
         logger: LoggerPort,
-        repository: SqlAlchemyParsedStatementRepositoryPort,
+        repository: ParsedStatementRepositoryPort,
         config: ConfigPort,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
@@ -42,7 +42,9 @@ class ParseStatementsProcessor(BaseProcessor):
             logger=self.logger, repository=repository, config=self.config
         )
 
-    def _parse_all(self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]) -> List[List[ParsedStatementDTO]]:
+    def _parse_all(
+        self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]
+    ) -> List[List[ParsedStatementDTO]]:
         tasks = list(enumerate(data))
 
         def processor(task: WorkerTaskDTO) -> List[ParsedStatementDTO]:
@@ -50,9 +52,7 @@ class ParseStatementsProcessor(BaseProcessor):
             return [self.parse_usecase.parse_and_store_row(r) for r in rows]
 
         result = self.worker_pool_executor.run(
-            tasks=tasks,
-            processor=processor,
-            logger=self.logger
+            tasks=tasks, processor=processor, logger=self.logger
         )
         return result.items
 
@@ -63,15 +63,15 @@ class ParseStatementsProcessor(BaseProcessor):
         return fetched
 
     def transform(
-        self, data : List[Tuple[NsdDTO, List[RawStatementDTO]]]
+        self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]
     ) -> List[List[ParsedStatementDTO]]:
         """Parse fetched rows in parallel."""
-        if not data :
+        if not data:
             return []
-        return self._parse_all(data )
+        return self._parse_all(data)
 
     def persist(
-        self, data : List[List[ParsedStatementDTO]]
+        self, data: List[List[ParsedStatementDTO]]
     ) -> List[List[ParsedStatementDTO]]:
         """Finalize parse use case and return parsed data."""
         self.parse_usecase.finalize()

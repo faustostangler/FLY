@@ -7,9 +7,9 @@ from domain.dto import SyncCompanyDataResultDTO
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.raw_company_data_dto import CompanyDataRawDTO
 from domain.ports import (
+    CompanyDataRepositoryPort,
     CompanyDataScraperPort,
     LoggerPort,
-    SqlAlchemyCompanyDataRepositoryPort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -20,7 +20,7 @@ class SyncCompanyDataUseCase:
     def __init__(
         self,
         logger: LoggerPort,
-        repository: SqlAlchemyCompanyDataRepositoryPort,
+        repository: CompanyDataRepositoryPort,
         scraper: CompanyDataScraperPort,
         max_workers: int = 1,
     ):
@@ -46,9 +46,9 @@ class SyncCompanyDataUseCase:
         start = time.perf_counter()
 
         # busca todos os company_name que já estão na tabela
-        raw = self.repository.get_existing_by_columns("company_name")
-        # get_existing_by_columns devolve List[Tuple], ex: [("900049",),("900642",)…]
-        skip_codes = [code for (code,) in raw]
+        skip_codes = [
+            code for (code,) in self.repository.iter_existing_by_columns("company_name")
+        ]
 
         # self.logger.log("Call Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
         # Fetch all companies from the scraper and persist them batch-wise.
@@ -74,7 +74,9 @@ class SyncCompanyDataUseCase:
     def _save_batch(self, buffer: List[CompanyDataRawDTO]) -> None:
         """Convert raw companies to domain DTOs before saving."""
         # primeiro “desembrulha” qualquer nível de listas aninhadas
-        flat_items = ListFlattener.flatten(buffer)  # recebe nested lists, devolve flat list
+        flat_items = ListFlattener.flatten(
+            buffer
+        )  # recebe nested lists, devolve flat list
 
         # Transform raw DTOs from the scraper to domain DTOs.
         dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]

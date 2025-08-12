@@ -4,12 +4,10 @@ from typing import List
 
 from domain.dto import ParsedStatementDTO
 
-from .base_repository_port import SqlAlchemyRepositoryBasePort
+from .base_repository_port import RepositoryBasePort
 
 
-class SqlAlchemyParsedStatementRepositoryPort(
-    SqlAlchemyRepositoryBasePort[ParsedStatementDTO, int]
-):
+class ParsedStatementRepositoryPort(RepositoryBasePort[ParsedStatementDTO, int]):
     """Port for persisting parsed statement rows."""
 
     def exists_with_hash(self, company_name: str, hash_: str) -> bool:
