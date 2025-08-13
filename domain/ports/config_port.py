@@ -96,7 +96,10 @@ class TransformersConfigPort(Protocol):
     #     self,
     # ) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
     @property
-    def intel_section_criteria(self) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
+    def intel_section_criteria(
+        self,
+    ) -> Sequence[tuple[str, Sequence[dict[str, object]]]]: ...
+
 
 @runtime_checkable
 class ExchangeApiConfigPort(Protocol):
@@ -110,6 +113,7 @@ class ExchangeApiConfigPort(Protocol):
 
     @property
     def language(self) -> str: ...
+
 
 @runtime_checkable
 class StatementsConfigPort(Protocol):
@@ -133,13 +137,21 @@ class StatementsConfigPort(Protocol):
 
 @runtime_checkable
 class HttpConfigPort(Protocol):
-    session_pool_size: int
-    timeout_connect: float
-    timeout_read: float
-    rate_per_sec: float
-    burst: int
-    circuit_failures: int
-    circuit_open_seconds: float
+    @property
+    def session_pool_size(self) -> int: ...
+    @property
+    def timeout_connect(self) -> float: ...
+    @property
+    def timeout_read(self) -> float: ...
+    @property
+    def rate_per_sec(self) -> float: ...
+    @property
+    def burst(self) -> int: ...
+    @property
+    def circuit_failures(self) -> int: ...
+    @property
+    def circuit_open_seconds(self) -> float: ...
+
 
 @runtime_checkable
 class ConfigPort(Protocol):
@@ -166,6 +178,7 @@ class ConfigPort(Protocol):
     @property
     def http(self) -> HttpConfigPort: ...
 
+
 __all__ = [
     "ConfigPort",
     "GlobalSettingsPort",
@@ -174,5 +187,5 @@ __all__ = [
     "DatabaseConfigPort",
     "ExchangeApiConfigPort",
     "StatementsConfigPort",
-    "HttpConfigPort", 
+    "HttpConfigPort",
 ]

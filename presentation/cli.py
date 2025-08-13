@@ -24,9 +24,10 @@ from infrastructure.repositories.http_cache_repository import HttpCacheRepositor
 from infrastructure.scrapers import (
     CompanyDataScraper,
     NsdScraper,
-    RequestsRawStatementScraper,
-    RawStatementScraper, 
+    RawStatementScraper,  # scraper de alto nível (port da aplicação)
+    RequestsRawStatementScraper,  # cliente HTTP de baixo nível
 )
+
 
 class CLIAdapter:
     """Orchestrate FLY application flows via the command line."""
@@ -65,15 +66,7 @@ class CLIAdapter:
             burst=self.config.http.burst,
         )
         limited = RateLimitedScraper(base_scraper, bucket, self.logger)
-        self.http_client = CircuitBreakerScraper(
-            limited_http,
-            self.logger,
-            policy=BreakerPolicy(
-                failure_threshold=self.config.http.circuit_failures,
-                open_seconds=self.config.http.circuit_open_seconds,
-            ),
-        )
-        breaker = CircuitBreakerScraper(
+        self.breaker = CircuitBreakerScraper(
             limited,
             self.logger,
             policy=BreakerPolicy(
@@ -81,7 +74,7 @@ class CLIAdapter:
                 open_seconds=self.config.http.circuit_open_seconds,
             ),
         )
-        self.scraper = breaker
+        # self.http_client = breaker
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
@@ -157,10 +150,10 @@ class CLIAdapter:
         raw_statements_scraper = RawStatementScraper(
             config=self.config,
             logger=self.logger,
-            http_client=self.http_client,
             data_cleaner=self.data_cleaner,
             metrics_collector=self.collector,
-            worker_pool=self.worker_pool_executor,
+            http_client=self.breaker,
+            worker_pool_executor=self.worker_pool_executor,
         )
 
         fetch_processor = FetchStatementsProcessor(

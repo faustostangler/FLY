@@ -1,6 +1,7 @@
 from typing import Any, Generic, Iterable, Iterator, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class ListFlattener(Generic[T]):
     """

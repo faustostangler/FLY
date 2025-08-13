@@ -17,6 +17,7 @@ from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
 if TYPE_CHECKING:
+
     class ScrapingConfigProtocol(Protocol):
         user_agents: list[str]
         referers: list[str]
@@ -26,6 +27,8 @@ if TYPE_CHECKING:
 
     class ConfigWithScraping(ConfigPort, Protocol):
         scraping: ScrapingConfigProtocol
+
+
 class FetchUtils:
     """Utility class for HTTP operations with retry and randomized headers."""
 
@@ -133,7 +136,9 @@ class FetchUtils:
 
         return scraper
 
-    def test_internet(self, url: Optional[str] = None, timeout: Optional[int] = None) -> bool:
+    def test_internet(
+        self, url: Optional[str] = None, timeout: Optional[int] = None
+    ) -> bool:
         """Checks if internet connection is active via HTTP GET request."""
         cfg = self._scraping()
         url = url or cfg.test_internet or "https://www.google.com"

@@ -16,6 +16,7 @@ class _QuarterLike(Protocol):
     @property
     def quarter(self) -> Optional[str]: ...
 
+
 def validate_quarter_completeness(
     rows: Sequence[_QuarterLike],
 ) -> Dict[Tuple[str, str, str, str, str], List[datetime]]:

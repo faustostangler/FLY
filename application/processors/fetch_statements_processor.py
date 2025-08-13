@@ -80,7 +80,8 @@ class FetchStatementsProcessor(
             return []
 
         nsd_rows_processed = {
-            int(row[0]) for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
+            int(row[0])
+            for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
         }
         valid_types = set(self.config.domain.statements_types)
 

@@ -18,7 +18,7 @@ class TimeUtils:
         wait: Optional[float] = None,
         cpu_interval: Optional[float] = None,
         multiplier: Optional[int] = 1,
-    ) -> None:
+    ) -> float:
         """Sleep for a dynamically adjusted time based on CPU utilization.
 
         The logic adjusts the delay as follows:
@@ -44,3 +44,5 @@ class TimeUtils:
         wait_multiplier = wait * multiplier if multiplier else wait
 
         time.sleep(wait_multiplier)
+
+        return float(wait_multiplier)

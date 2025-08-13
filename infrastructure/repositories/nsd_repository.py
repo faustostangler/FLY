@@ -87,4 +87,7 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDReposito
                 ~NSDModel.nsd.in_(exclude_nsd),
             )
             results = query.all()
-        return sorted([nsd.to_dto() for nsd in results], key=lambda dto: (dto.company_name, dto.quarter, dto.version))
+        return sorted(
+            [nsd.to_dto() for nsd in results],
+            key=lambda dto: (dto.company_name, dto.quarter, dto.version),
+        )

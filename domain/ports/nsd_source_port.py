@@ -13,6 +13,7 @@ T = TypeVar("T")
 
 class NSDSourcePort(BaseScraperPort[NsdDTO]):
     """Port for external NSD data providers."""
+
     def fetch_all(
         self,
         threshold: Optional[int] = None,
@@ -22,5 +23,4 @@ class NSDSourcePort(BaseScraperPort[NsdDTO]):
         max_nsd: Optional[int] = None,
         **kwargs,
     ) -> ExecutionResultDTO[NsdDTO]:
-
         raise NotImplementedError

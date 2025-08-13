@@ -61,12 +61,15 @@ class DetailFetcher:
         token = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
         url = self.endpoint_detail + token
-        response, self.session = self.fetch_utils.fetch_with_retry(self.session, url, cache_bypass=False)
+        response, self.session = self.fetch_utils.fetch_with_retry(
+            self.session, url, cache_bypass=False
+        )
 
         self.metrics_collector.record_network_bytes(len(response.content))
         raw = response.json()
 
         return raw
+
 
 class CompanyDataMerger:
     """Merge base and detail DTOs."""

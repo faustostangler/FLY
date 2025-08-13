@@ -48,14 +48,15 @@ class StatementClassificationService:
         hits = [r for r in rows if self._matches(r, node.criteria)]
         parsed = [self._to_parsed(r, node.target_line) for r in hits]
 
-        parents = {
-            self._normalize_account(dto.account)
-            for dto in parsed
-        }
+        parents = {self._normalize_account(dto.account) for dto in parsed}
         if not parents:
             return parsed
 
-        children_rows = [r for r in rows if any(self._normalize_account(r.account).startswith(p) for p in parents)]
+        children_rows = [
+            r
+            for r in rows
+            if any(self._normalize_account(r.account).startswith(p) for p in parents)
+        ]
         for child_node in node.children:
             parsed.extend(self._process_node(children_rows, child_node))
         return parsed
@@ -85,9 +86,7 @@ class StatementClassificationService:
         # depois preenche para ter sempre 2 dígitos
         return ".".join(part.zfill(2) for part in parts)
 
-    def _matches(
-        self, row: _RowLike, criteria: List[Tuple[str, str, Any]]
-    ) -> bool:
+    def _matches(self, row: _RowLike, criteria: List[Tuple[str, str, Any]]) -> bool:
         for column, condition, account in criteria:
             value = str(getattr(row, column, "") or "").lower()
 

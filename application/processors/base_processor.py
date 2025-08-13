@@ -44,5 +44,5 @@ class BaseProcessor(ABC, Generic[L, T, P]):
         """Apply domain logic and mapping."""
 
     @abstractmethod
-    def persist(self, data:T) -> P:
+    def persist(self, data: T) -> P:
         """Persist transformed data or emit events."""

@@ -9,4 +9,3 @@ from .base_scraper_port import BaseScraperPort
 
 class CompanyDataScraperPort(BaseScraperPort[CompanyDataRawDTO]):
     """Port for external company data providers."""
-

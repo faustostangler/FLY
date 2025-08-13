@@ -19,7 +19,11 @@ def save_dtos_to_csv(dtos: Sequence[Any], filepath: str) -> None:
         headers = list(vars(first).keys())
     else:
         # Fallback: use dir() to find public attributes
-        headers = [attr for attr in dir(first) if not attr.startswith("_") and not callable(getattr(first, attr))]
+        headers = [
+            attr
+            for attr in dir(first)
+            if not attr.startswith("_") and not callable(getattr(first, attr))
+        ]
 
     # Write CSV
     with open(filepath, mode="w", newline="", encoding="utf-8") as csvfile:
@@ -29,6 +33,6 @@ def save_dtos_to_csv(dtos: Sequence[Any], filepath: str) -> None:
             row = {h: getattr(dto, h) for h in headers}
             writer.writerow(row)
 
+
 # Example usage:
 # save_dtos_to_csv(raws_dto, "raws_statements.csv")
-

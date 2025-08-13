@@ -151,8 +151,8 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
         return ""
 
     def _build_urls(
-            self, row: NsdDTO, items: Sequence[Mapping[str, object]], hash_value: str
-        ) -> list[dict[str, str]]:
+        self, row: NsdDTO, items: Sequence[Mapping[str, object]], hash_value: str
+    ) -> list[dict[str, str]]:
         """Construct statement URLs using ``row`` data and the given hash."""
         nsd_type_map = self.statements_config.nsd_type_map
 
@@ -176,7 +176,9 @@ class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
                     "Quadro": str(item["quadro"]),
                     "NomeTipoDocumento": doctype_name,
                     "Empresa": row.company_name,
-                    "DataReferencia": row.quarter.strftime("%Y-%m-%d") if row.quarter is not None else "",
+                    "DataReferencia": row.quarter.strftime("%Y-%m-%d")
+                    if row.quarter is not None
+                    else "",
                     "Versao": row.version,
                     "CodTipoDocumento": str(doctype_code),
                     "NumeroSequencialDocumento": str(row.nsd),

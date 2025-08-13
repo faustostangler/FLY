@@ -1,18 +1,14 @@
 """Scrapers: low-level HTTP fetcher with caching, and domain-level statements scraper."""
+
 from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Sequence
 from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup, Tag
 from requests import Response
-
-# Low-level infra deps
-from infrastructure.http.session_pool import SessionPool
-from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 
 # Domain deps
 from domain.dto import WorkerTaskDTO
@@ -23,6 +19,11 @@ from domain.ports.scraper_ports import RawStatementScraperPort
 from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
 from infrastructure.helpers.time_utils import TimeUtils
+
+# Low-level infra deps
+from infrastructure.helpers.worker_pool import WorkerPool
+from infrastructure.http.session_pool import SessionPool
+from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.utils.id_generator import IdGenerator
 
 
@@ -58,7 +59,9 @@ class RequestsRawStatementScraper:
 
         s = self._pool.acquire()
         try:
-            r: Response = s.get(url, headers=hdrs, timeout=self._timeout, allow_redirects=True)
+            r: Response = s.get(
+                url, headers=hdrs, timeout=self._timeout, allow_redirects=True
+            )
         finally:
             self._pool.release(s)
 
@@ -95,13 +98,19 @@ class RawStatementScraper(RawStatementScraperPort):
         logger: LoggerPort,
         data_cleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
-        http_client,  # must have .fetch(url: str, headers: dict | None) -> bytes
+        http_client: Any,  # objeto com fetch(url: str, headers: dict | None) -> bytes
+        worker_pool_executor: WorkerPool,
     ) -> None:
+        # super().__init__(config.database.connection_string, logger)
         self._config = config
         self.logger = logger
+        self.http_client = http_client
         self.data_cleaner = data_cleaner
-        self._metrics = metrics_collector
-        self.http = http_client
+        self._metrics_collector = metrics_collector
+        self.worker_pool_executor = worker_pool_executor
+        self.time_utils = TimeUtils(config)
+        self.endpoint = config.exchange.nsd_endpoint
+        self.statements_config = config.statements
 
         self.fetch_utils = FetchUtils(config, logger)
         self.time_utils = TimeUtils(config)
@@ -111,7 +120,7 @@ class RawStatementScraper(RawStatementScraperPort):
 
     @property
     def metrics_collector(self) -> MetricsCollectorPort:
-        return self._metrics
+        return self._metrics_collector
 
     @property
     def config(self) -> ConfigPort:
@@ -152,7 +161,9 @@ class RawStatementScraper(RawStatementScraperPort):
                 "Quadro": str(item["quadro"]),
                 "NomeTipoDocumento": doctype_name,
                 "Empresa": row.company_name,
-                "DataReferencia": row.quarter.strftime("%Y-%m-%d") if row.quarter is not None else "",
+                "DataReferencia": row.quarter.strftime("%Y-%m-%d")
+                if row.quarter is not None
+                else "",
                 "Versao": row.version,
                 "CodTipoDocumento": str(doctype_code),
                 "NumeroSequencialDocumento": str(row.nsd),
@@ -174,7 +185,9 @@ class RawStatementScraper(RawStatementScraperPort):
             )
         return result
 
-    def _parse_statement_page(self, soup: BeautifulSoup, group: str) -> List[Dict[str, Any]]:
+    def _parse_statement_page(
+        self, soup: BeautifulSoup, group: str
+    ) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []
         if group == "Dados da Empresa":
             thousand = 1
@@ -226,7 +239,8 @@ class RawStatementScraper(RawStatementScraperPort):
                     {
                         "account": account,
                         "description": account_description,
-                        "value": (self.data_cleaner.clean_number(account_value) or 0.0) * thousand,
+                        "value": (self.data_cleaner.clean_number(account_value) or 0.0)
+                        * thousand,
                     }
                 )
         return rows
@@ -236,7 +250,7 @@ class RawStatementScraper(RawStatementScraperPort):
         row: NsdDTO = task.data
         # First request: load NSD page to extract hash
         nsd_url = self.endpoint.format(nsd=row.nsd)
-        body = self.http.fetch(nsd_url)
+        body = self.http_client.fetch(nsd_url)
         html = body.decode("utf-8", errors="ignore")
         hash_value = self._extract_hash(html)
 
@@ -248,23 +262,26 @@ class RawStatementScraper(RawStatementScraperPort):
             attempt = 0
             while True:
                 attempt += 1
-                content = self.http.fetch(item["url"])
-                self._metrics.record_network_bytes(len(content))
-                soup = BeautifulSoup(content.decode("utf-8", errors="ignore"), "html.parser")
+                content = self.http_client.fetch(item["url"])
+                self.metrics_collector.record_network_bytes(len(content))
+                soup = BeautifulSoup(
+                    content.decode("utf-8", errors="ignore"), "html.parser"
+                )
                 blocked = (
                     "MensagemModal" in soup.get_text()
-                    or "acesse este conteúdo pela página principal dos documentos" in soup.get_text()
+                    or "acesse este conteúdo pela página principal dos documentos"
+                    in soup.get_text()
                 )
                 if not blocked:
                     break
                 # Blocked: backoff and retry
-                time.sleep(self.time_utils.get_dynamic_sleep(attempt))
+                time.sleep(self.time_utils.sleep_dynamic(multiplier=attempt))
 
             rows = self._parse_statement_page(soup, item["grupo"])
             quarter = row.quarter.strftime("%Y-%m-%d") if row.quarter else None
             for r in rows:
                 dto = RawStatementDTO(
-                    nsd=row.nsd,
+                    nsd=str(row.nsd),
                     company_name=row.company_name,
                     quarter=quarter,
                     version=row.version,

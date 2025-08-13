@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import os
 import shutil
-import sys
 import subprocess
+import sys
 from functools import lru_cache
-from typing import Optional, List
+from typing import List, Optional
 
 
 def _git_available() -> bool:
     return shutil.which("git") is not None
+
 
 def _run_git(args: List[str], timeout: float = 2.0) -> Optional[str]:
     if not _git_available():
@@ -31,6 +32,7 @@ def current_branch() -> Optional[str]:
     name = _run_git(["rev-parse", "--abbrev-ref", "HEAD"])
     return None if not name or name == "HEAD" else name
 
+
 @lru_cache(maxsize=1)
 def list_local_branches() -> Optional[List[str]]:
     out = _run_git(["for-each-ref", "--format=%(refname:short)", "refs/heads"])
@@ -41,6 +43,7 @@ def list_local_branches() -> Optional[List[str]]:
     # names.sort()
     return names
 
+
 def branch_index_1based(branch: Optional[str], branches: Optional[List[str]]) -> int:
     if not branch or not branches:
         return 0
@@ -49,10 +52,12 @@ def branch_index_1based(branch: Optional[str], branches: Optional[List[str]]) ->
     except ValueError:
         return 0
 
+
 @lru_cache(maxsize=1)
 def _base_branch() -> str:
     # branch base usada para calcular o ponto de criação; default 'main'
     return os.getenv("FLY_BASE_BRANCH", "main")
+
 
 @lru_cache(maxsize=1)
 def _fork_point_with_base() -> Optional[str]:
@@ -63,6 +68,7 @@ def _fork_point_with_base() -> Optional[str]:
         return fp
     # fallback para merge-base simples, caso o fork-point não esteja disponível
     return _run_git(["merge-base", base, "HEAD"])
+
 
 @lru_cache(maxsize=1)
 def commit_count_from_branch_start() -> Optional[int]:
@@ -85,6 +91,7 @@ def _resolve_state_override(override: Optional[int]) -> Optional[int]:
         except Exception:
             pass
     return override
+
 
 def _is_dev_env() -> bool:
     """
@@ -143,8 +150,10 @@ def compute_version(state_override: Optional[int] = None) -> str:
 
     return f"{x}.{y}.{z} {branch_name}/{commit_hash}"
 
-def get_version(fallback_release: str = "0.0.0",
-                state_override: Optional[int] = None) -> str:
+
+def get_version(
+    fallback_release: str = "0.0.0", state_override: Optional[int] = None
+) -> str:
     """
     Prioridade:
       1) FLY_RELEASE: retorna o valor literal (ex.: '1.4.12')

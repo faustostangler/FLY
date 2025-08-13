@@ -21,7 +21,6 @@ def main() -> None:
     logger = Logger(config)
 
     try:
-
         # Load CLI
         logger.log(
             "Run Project FLY",

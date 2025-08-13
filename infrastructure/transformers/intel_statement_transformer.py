@@ -26,13 +26,18 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
     def transform(self, rows: Sequence[ParsedStatementDTO]) -> List[ParsedStatementDTO]:
         """Run the Intel transformation pipeline."""
         from infrastructure.utils.csv_utils import save_dtos_to_csv
+
         save_dtos_to_csv(rows, "raws_statements_stage_4_0.csv")
 
-        transformed1 = self.classification_service.classify(list(rows), self.criteria_tree)
+        transformed1 = self.classification_service.classify(
+            list(rows), self.criteria_tree
+        )
         save_dtos_to_csv(transformed1, "raws_statements_stage_4_1_standardized.csv")
 
         transformed2 = self.detect_and_correct_outliers(transformed1)
-        save_dtos_to_csv(transformed2, "raws_statements_stage_4_2_corrected_outliers.csv")
+        save_dtos_to_csv(
+            transformed2, "raws_statements_stage_4_2_corrected_outliers.csv"
+        )
 
         return transformed2
 
@@ -79,7 +84,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
                 # Listas de vizinhos
                 vals_prev = [r.value for r in items[window_start:i]]
-                vals_next = [r.value for r in items[i+1:window_end]]
+                vals_next = [r.value for r in items[i + 1 : window_end]]
 
                 # Se não houver nenhum vizinho, mantém valor
                 if not vals_prev and not vals_next:
@@ -87,7 +92,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
                     continue
 
                 # Vamos testar janelas regressivamente (maior -> menor)
-                windows_max = min(neighbor_count, len(items)-1)
+                windows_max = min(neighbor_count, len(items) - 1)
                 new_val = val
 
                 for n in range(windows_max, 0, -1):
@@ -115,4 +120,3 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
             results.extend(corrected)
 
         return results
-

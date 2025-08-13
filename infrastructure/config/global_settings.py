@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+
 from infrastructure.config.version import get_version
 
 VERSION = get_version(fallback_release="0.0.1")
@@ -7,7 +8,9 @@ APP_NAME = "FLY" + "/" + VERSION  # Application name
 WAIT = 2  # Default wait time in seconds
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
 MAX_WORKERS = 1  # 20 Default number of threads for sync operations
-THRESHOLD = MAX_WORKERS # max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
+THRESHOLD = (
+    MAX_WORKERS  # max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
+)
 QUEUE_SIZE = 2 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
 BATCH_SIZE = 100  # Number of items per repository batch
 REQUEST_TIMEOUT_SEC = 5.0

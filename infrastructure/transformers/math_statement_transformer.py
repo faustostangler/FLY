@@ -7,7 +7,9 @@ from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import ConfigPort, StatementTransformerPort
 
 
-class MathStatementTransformerAdapter(StatementTransformerPort[ParsedStatementDTO, ParsedStatementDTO]):
+class MathStatementTransformerAdapter(
+    StatementTransformerPort[ParsedStatementDTO, ParsedStatementDTO]
+):
     """Adjust quarterly statement values."""
 
     def __init__(self, config: ConfigPort) -> None:
@@ -23,7 +25,7 @@ class MathStatementTransformerAdapter(StatementTransformerPort[ParsedStatementDT
             row.grupo,
             row.quadro,
             str(year),
-            "" # row.version or "",
+            "",  # row.version or "",
         )
 
     def _parse(self, quarter: str | None) -> datetime | None:
