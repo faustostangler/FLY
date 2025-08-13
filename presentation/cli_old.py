@@ -25,8 +25,8 @@ from infrastructure.scrapers import (
     CompanyDataScraper,
     NsdScraper,
     RequestsRawStatementScraper,
-    RawStatementScraper, 
 )
+
 
 class CLIAdapter:
     """Orchestrate FLY application flows via the command line."""
@@ -65,14 +65,6 @@ class CLIAdapter:
             burst=self.config.http.burst,
         )
         limited = RateLimitedScraper(base_scraper, bucket, self.logger)
-        self.http_client = CircuitBreakerScraper(
-            limited_http,
-            self.logger,
-            policy=BreakerPolicy(
-                failure_threshold=self.config.http.circuit_failures,
-                open_seconds=self.config.http.circuit_open_seconds,
-            ),
-        )
         breaker = CircuitBreakerScraper(
             limited,
             self.logger,
@@ -85,8 +77,8 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-        self._company_service()
-        self._nsd_service()
+        # self._company_service()
+        # self._nsd_service()
         self._statement_service()
 
     def _company_service(self) -> None:
@@ -154,19 +146,10 @@ class CLIAdapter:
             logger=self.logger,
         )
 
-        raw_statements_scraper = RawStatementScraper(
-            config=self.config,
-            logger=self.logger,
-            http_client=self.http_client,
-            data_cleaner=self.data_cleaner,
-            metrics_collector=self.collector,
-            worker_pool=self.worker_pool_executor,
-        )
-
         fetch_processor = FetchStatementsProcessor(
             logger=self.logger,
             config=self.config,
-            source=raw_statements_scraper,
+            source=self.scraper,
             company_repo=company_repo,
             nsd_repo=nsd_repo,
             raw_statement_repo=raw_statement_repo,
@@ -179,7 +162,7 @@ class CLIAdapter:
         parse_pool = WorkerPool(
             config=self.config,
             metrics_collector=self.collector,
-            max_workers=self.config.global_settings.max_workers or 1,
+            max_workers=self.config.global_settings.max_workers,
         )
 
         parse_processor = ParseStatementsProcessor(

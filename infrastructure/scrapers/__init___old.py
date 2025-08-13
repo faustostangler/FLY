@@ -7,7 +7,7 @@ from .company_data_processors import (
 )
 from .nsd_scraper import NsdScraper
 from .requests_raw_statement_scraper import (
-    RawStatementScraper,
+    RawStatementScraper,  # alias for backward compatibility
     RequestsRawStatementScraper,
 )
 

@@ -132,6 +132,16 @@ class StatementsConfigPort(Protocol):
 
 
 @runtime_checkable
+class HttpConfigPort(Protocol):
+    session_pool_size: int
+    timeout_connect: float
+    timeout_read: float
+    rate_per_sec: float
+    burst: int
+    circuit_failures: int
+    circuit_open_seconds: float
+
+@runtime_checkable
 class ConfigPort(Protocol):
     """Structural contract for configuration objects used across layers."""
 
@@ -153,6 +163,9 @@ class ConfigPort(Protocol):
     @property
     def statements(self) -> StatementsConfigPort: ...
 
+    @property
+    def http(self) -> HttpConfigPort: ...
+
 __all__ = [
     "ConfigPort",
     "GlobalSettingsPort",
@@ -161,4 +174,5 @@ __all__ = [
     "DatabaseConfigPort",
     "ExchangeApiConfigPort",
     "StatementsConfigPort",
+    "HttpConfigPort", 
 ]
