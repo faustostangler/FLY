@@ -6,6 +6,7 @@ from .database import DatabaseConfig, load_database_config
 from .domain import DomainConfig, load_domain_config
 from .exchange_api import ExchangeApiConfig, load_exchange_api_config
 from .global_settings import GlobalSettingsConfig, load_global_settings_config
+from .http import HttpConfig, load_http_config
 from .logging import LoggingConfig, load_logging_config
 from .paths import PathConfig, load_paths
 from .scraping import ScrapingConfig, load_scraping_config
@@ -28,3 +29,4 @@ class ConfigAdapter:
     domain: DomainConfig = field(default_factory=load_domain_config)
     statements: StatementsConfig = field(default_factory=load_statements_config)
     transformers: TransformersConfig = field(default_factory=load_transformers_config)
+    http: HttpConfig = field(default_factory=load_http_config)

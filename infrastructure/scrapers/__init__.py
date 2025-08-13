@@ -6,7 +6,10 @@ from .company_data_processors import (
     EntryCleaner,
 )
 from .nsd_scraper import NsdScraper
-from .requests_raw_statement_scraper import RawStatementScraper
+from .requests_raw_statement_scraper import (
+    RawStatementScraper,  # alias for backward compatibility
+    RequestsRawStatementScraper,
+)
 
 __all__ = [
     "CompanyDataScraper",
@@ -15,5 +18,6 @@ __all__ = [
     "DetailFetcher",
     "CompanyDataMerger",
     "CompanyDataDetailProcessor",
+    "RequestsRawStatementScraper",
     "RawStatementScraper",
 ]

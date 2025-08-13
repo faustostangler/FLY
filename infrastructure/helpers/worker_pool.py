@@ -1,5 +1,8 @@
+"""Simple thread pool implementation for executing tasks."""
+
 from __future__ import annotations
 
+import random
 import threading
 import time
 import uuid
@@ -82,6 +85,7 @@ class WorkerPool(WorkerPoolPort):
             ]
 
             for task in tasks:
+                time.sleep(random.uniform(0.0, 0.12))
                 queue.put(task)
 
             for _ in range(self.max_workers):

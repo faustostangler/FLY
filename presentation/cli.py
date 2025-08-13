@@ -11,15 +11,21 @@ from application.services.nsd_service import NsdService
 from domain.ports import ConfigPort, LoggerPort
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.metrics_collector import MetricsCollector
+from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerScraper
+from infrastructure.http.rate_limiter import RateLimitedScraper, TokenBucket
+from infrastructure.http.session_pool import SessionPool
 from infrastructure.repositories import (
     SqlAlchemyCompanyDataRepository,
     SqlAlchemyNsdRepository,
     SqlAlchemyParsedStatementRepository,
     SqlAlchemyRawStatementRepository,
 )
-from infrastructure.scrapers.company_data_exchange_scraper import CompanyDataScraper
-from infrastructure.scrapers.nsd_scraper import NsdScraper
-from infrastructure.scrapers.requests_raw_statement_scraper import RawStatementScraper
+from infrastructure.repositories.http_cache_repository import HttpCacheRepository
+from infrastructure.scrapers import (
+    CompanyDataScraper,
+    NsdScraper,
+    RequestsRawStatementScraper,
+)
 
 
 class CLIAdapter:
@@ -35,6 +41,39 @@ class CLIAdapter:
             metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
+        self.company_repo = SqlAlchemyCompanyDataRepository(
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
+        self.session_pool = SessionPool(
+            self.config, self.logger, size=self.config.http.session_pool_size
+        )
+        self.http_cache = HttpCacheRepository(self.company_repo.session_factory)
+        base_scraper = RequestsRawStatementScraper(
+            pool=self.session_pool,
+            cache=self.http_cache,
+            timeout=(
+                self.config.http.timeout_connect,
+                self.config.http.timeout_read,
+            ),
+            logger=self.logger,
+            metrics=self.collector,
+        )
+        bucket = TokenBucket(
+            rate_per_sec=self.config.http.rate_per_sec,
+            burst=self.config.http.burst,
+        )
+        limited = RateLimitedScraper(base_scraper, bucket, self.logger)
+        breaker = CircuitBreakerScraper(
+            limited,
+            self.logger,
+            policy=BreakerPolicy(
+                failure_threshold=self.config.http.circuit_failures,
+                open_seconds=self.config.http.circuit_open_seconds,
+            ),
+        )
+        self.scraper = breaker
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
@@ -45,11 +84,7 @@ class CLIAdapter:
     def _company_service(self) -> None:
         """Build and execute the company data synchronization flow."""
         mapper = CompanyDataMapper(self.data_cleaner)
-        company_repo = SqlAlchemyCompanyDataRepository(
-            database_url=self.config.database.connection_string,
-            config=self.config,
-            logger=self.logger,
-        )
+        company_repo = self.company_repo
         company_scraper = CompanyDataScraper(
             config=self.config,
             logger=self.logger,
@@ -68,11 +103,7 @@ class CLIAdapter:
 
     def _nsd_service(self) -> None:
         """Build and execute the NSD data synchronization flow."""
-        company_repo = SqlAlchemyCompanyDataRepository(
-            database_url=self.config.database.connection_string,
-            config=self.config,
-            logger=self.logger,
-        )
+        company_repo = self.company_repo
         nsd_repo = SqlAlchemyNsdRepository(
             database_url=self.config.database.connection_string,
             config=self.config,
@@ -98,11 +129,7 @@ class CLIAdapter:
 
     def _statement_service(self) -> None:
         """Build and execute the financial statement pipeline."""
-        company_repo = SqlAlchemyCompanyDataRepository(
-            database_url=self.config.database.connection_string,
-            config=self.config,
-            logger=self.logger,
-        )
+        company_repo = self.company_repo
         nsd_repo = SqlAlchemyNsdRepository(
             database_url=self.config.database.connection_string,
             config=self.config,
@@ -119,18 +146,10 @@ class CLIAdapter:
             logger=self.logger,
         )
 
-        raw_statements_scraper = RawStatementScraper(
-            config=self.config,
-            logger=self.logger,
-            data_cleaner=self.data_cleaner,
-            metrics_collector=self.collector,
-            worker_pool_executor=self.worker_pool_executor,
-        )
-
         fetch_processor = FetchStatementsProcessor(
             logger=self.logger,
             config=self.config,
-            source=raw_statements_scraper,
+            source=self.scraper,
             company_repo=company_repo,
             nsd_repo=nsd_repo,
             raw_statement_repo=raw_statement_repo,
@@ -143,7 +162,7 @@ class CLIAdapter:
         parse_pool = WorkerPool(
             config=self.config,
             metrics_collector=self.collector,
-            max_workers=self.config.global_settings.max_workers
+            max_workers=self.config.global_settings.max_workers,
         )
 
         parse_processor = ParseStatementsProcessor(
