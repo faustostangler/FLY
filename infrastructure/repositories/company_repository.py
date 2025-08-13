@@ -19,11 +19,10 @@ class SqlAlchemyCompanyDataRepository(
     SqlAlchemyRepositoryBase[CompanyDataDTO, int],
     CompanyDataRepositoryPort,
 ):
-    """Concrete repository implementation for CompanyDataDTO using SQLite and
-    SQLAlchemy.
+    """SQLite/SQLAlchemy repository for ``CompanyDataDTO``.
 
-    This adapter implements the CompanyDataRepositoryPort interface, providing persistence
-    operations for company data via a local SQLite database.
+    This adapter implements the CompanyDataRepositoryPort interface, providing
+    persistence operations for company data via a local SQLite database.
 
     Note:
         Uses `check_same_thread=False` to support multithreading. Make sure session
@@ -40,6 +39,13 @@ class SqlAlchemyCompanyDataRepository(
 
         self.config = config
         self.logger = logger
+
+    # Provide a canonical factory the rest of infra can depend on.
+    @property
+    def session_factory(self):
+        """Return the configured SQLAlchemy ``sessionmaker``."""
+        # self.Session is the sessionmaker from SqlAlchemyEngineMixin
+        return self.Session
 
     def save_all(self, items: List[CompanyDataDTO]) -> None:
         """Persist ``CompanyDataDTO`` objects using SQLite upserts."""
