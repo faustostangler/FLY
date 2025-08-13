@@ -161,7 +161,7 @@ class FetchStatementsUseCase:
             self.logger.info(
                 f"Statement {task.index + 1}/{len(tasks)}",
                 progress={
-                    "index": task.index + 1,
+                    "index": task.index,
                     "size": len(tasks),
                     "start_time": start_time,
                 },
