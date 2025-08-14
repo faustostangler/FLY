@@ -4,6 +4,7 @@ import random
 import ssl
 import time
 from typing import TYPE_CHECKING, Optional, Protocol, cast
+from wsgiref import headers
 
 import certifi
 import cloudscraper
@@ -108,6 +109,8 @@ class FetchUtils:
         self.test_internet()
 
         headers = self.header_random()
+        # Fewer TCP teardowns; plays nicer with anti-bot heuristics
+        headers["Connection"] = "keep-alive"
 
         if insecure:
             context = ssl.create_default_context()

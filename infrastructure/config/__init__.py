@@ -2,7 +2,4 @@
 
 from .adapter import ConfigAdapter
 
-# Backwards compatibility alias
-Config = ConfigAdapter
-
-__all__ = ["ConfigAdapter", "Config"]
+__all__ = ["ConfigAdapter"]

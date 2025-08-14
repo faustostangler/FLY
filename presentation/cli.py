@@ -52,14 +52,15 @@ class CLIAdapter:
         )
         self.http_cache = HttpCacheRepository(self.company_repo.session_factory)
         base_scraper = RequestsRawStatementScraper(
+            config=self.config,
+            logger=self.logger,
+            metrics=self.collector,
             pool=self.session_pool,
             cache=self.http_cache,
             timeout=(
                 self.config.http.timeout_connect,
                 self.config.http.timeout_read,
             ),
-            logger=self.logger,
-            metrics=self.collector,
         )
         bucket = TokenBucket(
             rate_per_sec=self.config.http.rate_per_sec,
@@ -78,8 +79,8 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-        self._company_service()
-        self._nsd_service()
+        # self._company_service()
+        # self._nsd_service()
         self._statement_service()
 
     def _company_service(self) -> None:

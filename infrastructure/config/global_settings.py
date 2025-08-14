@@ -7,14 +7,11 @@ APP_NAME = "FLY" + "/" + VERSION  # Application name
 
 WAIT = 2  # Default wait time in seconds
 MAX_LINEAR_HOLES = 200  # Maximum number of linear holes allowed
-MAX_WORKERS = 1  # 20 Default number of threads for sync operations
-THRESHOLD = (
-    MAX_WORKERS  # max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
-)
+MAX_WORKERS = 60 # 20 Default number of threads for sync operations
+THRESHOLD = 10 # (MAX_WORKERS)  # max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
 QUEUE_SIZE = 2 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
 BATCH_SIZE = 100  # Number of items per repository batch
 REQUEST_TIMEOUT_SEC = 5.0
-RETRIES = 3
 
 
 @dataclass(frozen=True)
@@ -41,7 +38,6 @@ class GlobalSettingsConfig:
     queue_size: int = field(default=QUEUE_SIZE)
     request_timeout_sec: float = field(default=REQUEST_TIMEOUT_SEC)
     user_agent: str = field(default=APP_NAME)
-    retries: int = field(default=RETRIES)
 
 
 def load_global_settings_config() -> GlobalSettingsConfig:
@@ -67,5 +63,4 @@ def load_global_settings_config() -> GlobalSettingsConfig:
         queue_size=QUEUE_SIZE,
         request_timeout_sec=REQUEST_TIMEOUT_SEC,
         user_agent=APP_NAME,
-        retries=RETRIES,
     )

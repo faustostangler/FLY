@@ -45,9 +45,6 @@ class GlobalSettingsPort(Protocol):
     @property
     def user_agent(self) -> str: ...
 
-    @property
-    def retries(self) -> int: ...
-
 
 @runtime_checkable
 class DomainConfigPort(Protocol):
@@ -139,18 +136,42 @@ class StatementsConfigPort(Protocol):
 class HttpConfigPort(Protocol):
     @property
     def session_pool_size(self) -> int: ...
+    
     @property
     def timeout_connect(self) -> float: ...
+    
     @property
     def timeout_read(self) -> float: ...
+    
     @property
     def rate_per_sec(self) -> float: ...
+    
     @property
     def burst(self) -> int: ...
+    
     @property
     def circuit_failures(self) -> int: ...
+    
     @property
     def circuit_open_seconds(self) -> float: ...
+    
+    @property
+    def retries(self) -> int: ...
+    
+    @property
+    def backoff_factor(self) -> float: ...
+    
+    @property
+    def status_forcelist(self) -> list[int]: ...
+    
+    @property
+    def respect_retry_after_header(self) -> bool: ...
+    
+    @property
+    def pool_connections(self) -> int: ...
+    
+    @property
+    def pool_maxsize(self) -> int: ...
 
 
 @runtime_checkable
