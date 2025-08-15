@@ -2,4 +2,7 @@
 
 from .adapter import ConfigAdapter
 
-__all__ = ["ConfigAdapter"]
+# Backward-compatible alias expected by some tests
+Config = ConfigAdapter
+
+__all__ = ["ConfigAdapter", "Config"]

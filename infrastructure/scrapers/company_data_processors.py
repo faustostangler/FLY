@@ -8,9 +8,9 @@ from typing import Dict, List, Optional, Type, Union, cast
 
 from application import CompanyDataMapper
 from domain.dto import CompanyDataDetailDTO, CompanyDataListingDTO, CompanyDataRawDTO
-from domain.ports import LoggerPort, MetricsCollectorPort
-from infrastructure.helpers import FetchUtils
+from domain.ports import LoggerPort
 from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.http.affinity_port import AffinityHttpClient
 
 
 class EntryCleaner:
@@ -36,37 +36,27 @@ class EntryCleaner:
 
 
 class DetailFetcher:
-    """Fetch and clean detailed company information."""
+    """Fetch and clean detailed company information using an HTTP client."""
 
     def __init__(
         self,
-        fetch_utils: FetchUtils,
-        session,
+        http_client: AffinityHttpClient,
         endpoint_detail: str,
         language: str,
-        metrics_collector: MetricsCollectorPort,
-        data_cleaner: DataCleaner,
     ) -> None:
-        """Store HTTP utilities and configuration."""
-        self.fetch_utils = fetch_utils
-        self.session = session
+        """Store HTTP client and configuration."""
+        self.http_client = http_client
         self.endpoint_detail = endpoint_detail
         self.language = language
-        self.metrics_collector = metrics_collector
-        self.data_cleaner = data_cleaner
 
-    def fetch_detail(self, cvm_code: str) -> Dict:
-        """Fetch detail JSON and normalize fields."""
+    def fetch_detail(self, session, cvm_code: str) -> Dict:
+        """Fetch detail JSON and return the raw dict."""
         payload = {"codeCVM": cvm_code, "language": self.language}
         token = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
         url = self.endpoint_detail + token
-        response, self.session = self.fetch_utils.fetch_with_retry(
-            self.session, url, cache_bypass=False
-        )
-
-        self.metrics_collector.record_network_bytes(len(response.content))
-        raw = response.json()
+        body = self.http_client.fetch_with(session, url)
+        raw = json.loads(body.decode("utf-8"))
 
         return raw
 
@@ -127,7 +117,8 @@ class CompanyDataDetailProcessor:
                 ),
             )
 
-            detail = self.fetcher.fetch_detail(str(listing.cvm_code))
+            with self.fetcher.http_client.borrow_session() as session:
+                detail = self.fetcher.fetch_detail(session, str(listing.cvm_code))
             text_keys = [
                 "issuingCompany",
                 "companyName",

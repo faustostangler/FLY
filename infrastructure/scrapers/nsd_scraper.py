@@ -18,8 +18,9 @@ from domain.ports import (
     NSDSourcePort,
     WorkerPoolPort,
 )
-from infrastructure.helpers import ByteFormatter, FetchUtils, SaveStrategy
+from infrastructure.helpers import ByteFormatter, SaveStrategy
 from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.http.affinity_port import AffinityHttpClient
 
 
 class NsdScraper(NSDSourcePort):
@@ -33,6 +34,7 @@ class NsdScraper(NSDSourcePort):
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
         repository: NSDRepositoryPort,
+        http_client: AffinityHttpClient,
     ):
         """Set up configuration, logger, and helper utilities for the
         scraper."""
@@ -44,10 +46,8 @@ class NsdScraper(NSDSourcePort):
         self._metrics_collector = metrics_collector
         self.repository = repository
 
-        self.fetch_utils = FetchUtils(config, logger)
-        self.session = self.fetch_utils.create_scraper()
-
         self.nsd_endpoint = self.config.exchange.nsd_endpoint
+        self.http_client = http_client
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
@@ -115,16 +115,9 @@ class NsdScraper(NSDSourcePort):
             url = self.nsd_endpoint.format(nsd=nsd)
 
             try:
-                response, self.session = self.fetch_utils.fetch_with_retry(
-                    self.session, url
-                )
-                self.metrics_collector.record_network_bytes(len(response.content))
-
-                # self.logger.log(
-                #     "Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()_parse_html()",
-                #     level="info",
-                # )
-                parsed = self._parse_html(nsd, response.text)
+                with self.http_client.borrow_session() as session:
+                    body = self.http_client.fetch_with(session, url)
+                parsed = self._parse_html(nsd, body.decode("utf-8"))
                 # we now persist by company_name, no CVM lookup needed
             # ————————————————————————————————————————————————————————————————
 
@@ -142,10 +135,8 @@ class NsdScraper(NSDSourcePort):
                 return None
 
             if parsed:
-                download_bytes = len(response.content)
-                self.metrics_collector.record_network_bytes(download_bytes)
+                download_bytes = len(body)
                 extra_info = [
-                    # f"{parsed.get('nsd', nsd)}",
                     parsed["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
                     if parsed.get("sent_date") is not None
                     else "",
@@ -341,10 +332,8 @@ class NsdScraper(NSDSourcePort):
         try:
             # Request the NSD page and parse its HTML
             url = self.nsd_endpoint.format(nsd=nsd)
-            response, self.session = self.fetch_utils.fetch_with_retry(
-                self.session, url
-            )
-            parsed = self._parse_html(nsd, response.text)
+            body = self.http_client.fetch(url)
+            parsed = self._parse_html(nsd, body.decode("utf-8"))
 
             # Only return results if the page contains a "sent_date" field
             return parsed if parsed.get("sent_date") else None
