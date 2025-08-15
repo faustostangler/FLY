@@ -21,9 +21,10 @@ from domain.ports import (
     MetricsCollectorPort,
     WorkerPoolPort,
 )
-from infrastructure.helpers import FetchUtils, SaveStrategy
+from infrastructure.helpers import SaveStrategy
 from infrastructure.helpers.byte_formatter import ByteFormatter
 from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.http.affinity_port import AffinityHttpClient
 from infrastructure.scrapers.company_data_processors import (
     CompanyDataDetailProcessor,
     CompanyDataMerger,
@@ -47,6 +48,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         mapper: CompanyDataMapper,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
+        http_client: AffinityHttpClient,
     ):
         """Set up configuration, logger and helper utilities for the scraper.
 
@@ -57,12 +59,10 @@ class CompanyDataScraper(CompanyDataScraperPort):
         Attributes:
             config (Config): Stored configuration instance.
             logger (Logger): Stored logger instance.
-            fetch_utils (FetchUtils): Utility for HTTP requests with retries.
             language (str): Language code for API requests.
             endpoint_companies_list (str): URL for the companies list endpoint.
             endpoint_detail (str): URL for the company detail endpoint.
             endpoint_financial (str): URL for the financial data endpoint.
-            session (requests.Session): Reusable HTTP session.
 
         Returns:
             None
@@ -80,17 +80,14 @@ class CompanyDataScraper(CompanyDataScraperPort):
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
 
-        # Initialize FetchUtils for HTTP request utilities
-        self.fetch_utils = FetchUtils(config, logger)
+        # Shared HTTP client providing connection reuse, limiter and cache
+        self.http_client = http_client
 
         # Set language and API company_data_endpoint from configuration
         self.language = config.exchange.language
         self.endpoint_companies_list = config.exchange.company_data_endpoint["initial"]
         self.endpoint_detail = config.exchange.company_data_endpoint["detail"]
         self.endpoint_financial = config.exchange.company_data_endpoint["financial"]
-
-        # Initialize a requests session for HTTP requests
-        self.session = self.fetch_utils.create_scraper()
 
         self.byte_formatter = ByteFormatter()
 
@@ -99,12 +96,9 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
         self.entry_cleaner = EntryCleaner(self.data_cleaner)
         self.detail_fetcher = DetailFetcher(
-            fetch_utils=self.fetch_utils,
-            session=self.session,
+            http_client=self.http_client,
             endpoint_detail=self.endpoint_detail,
             language=self.language,
-            metrics_collector=self.metrics_collector,
-            data_cleaner=self.data_cleaner,
         )
         self.company_data_merger = CompanyDataMerger(self.mapper, self.logger)
         self.detail_processor = CompanyDataDetailProcessor(
@@ -424,13 +418,10 @@ class CompanyDataScraper(CompanyDataScraperPort):
         token = self._encode_payload(payload)
 
         url = self.endpoint_companies_list + token
-        response, self.session = self.fetch_utils.fetch_with_retry(
-            self.session, url, cache_bypass=False
-        )
-
-        bytes_downloaded = len(response.content if response else b"")
-        self.metrics_collector.record_network_bytes(bytes_downloaded)
-        data = response.json()
+        with self.http_client.borrow_session() as session:
+            body = self.http_client.fetch_with(session, url)
+        bytes_downloaded = len(body)
+        data = json.loads(body.decode("utf-8"))
 
         results = data.get("results", [])
         total_pages = data.get("page", {}).get("totalPages", 1)

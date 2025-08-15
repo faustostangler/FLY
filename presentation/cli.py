@@ -67,7 +67,7 @@ class CLIAdapter:
             burst=self.config.http.burst,
         )
         limited = RateLimitedScraper(base_scraper, bucket, self.logger)
-        self.breaker = CircuitBreakerScraper(
+        self.http_client = CircuitBreakerScraper(
             limited,
             self.logger,
             policy=BreakerPolicy(
@@ -75,7 +75,6 @@ class CLIAdapter:
                 open_seconds=self.config.http.circuit_open_seconds,
             ),
         )
-        # self.http_client = breaker
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
@@ -94,6 +93,7 @@ class CLIAdapter:
             mapper=mapper,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
+            http_client=self.http_client,
         )
         company_service = CompanyDataService(
             config=self.config,
@@ -115,9 +115,10 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
             data_cleaner=self.data_cleaner,
-            repository=nsd_repo,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
+            repository=nsd_repo,
+            http_client=self.http_client,
         )
         nsd_service = NsdService(
             config=self.config,
@@ -153,7 +154,7 @@ class CLIAdapter:
             logger=self.logger,
             data_cleaner=self.data_cleaner,
             metrics_collector=self.collector,
-            http_client=self.breaker,
+            http_client=self.http_client,
             worker_pool_executor=self.worker_pool_executor,
         )
 
