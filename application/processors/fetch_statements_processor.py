@@ -104,8 +104,8 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         threshold: Optional[int] = None,
     ) -> RowsByNsd:
         """Run the fetch pipeline."""
-        # data: LoadPayload = self.load(save_callback=save_callback, threshold=threshold)
-        # transformed: RowsByNsd = self.transform(data)
+        data: LoadPayload = self.load(save_callback=save_callback, threshold=threshold)
+        transformed: RowsByNsd = self.transform(data)
         transformed: RowsByNsd = self._load_transformed()
         result: PersistedPayload = self.persist(transformed)
         return result
