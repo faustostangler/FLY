@@ -21,7 +21,7 @@ class SessionPool:
         self._q = queue.LifoQueue(maxsize=size)
         self._size = config.http.session_pool_size or size
         self._utils = FetchUtils(self._config, self._logger)
-        
+
         self._bootstrap()
 
     def _bootstrap(self) -> None:

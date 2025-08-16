@@ -81,11 +81,19 @@ class NsdScraper(NSDSourcePort):
         max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
         max_nsd = max(start, max_nsd_existing, max_nsd_probable)
 
+        nsd_diff = max_nsd - start
+
         threshold = threshold or self.config.global_settings.threshold or 50
 
         self.logger.log("Fetch NSD list", level="info")
 
-        tasks = list(enumerate(range(start, max_nsd + 1)))
+        if len(self.skip_codes) > nsd_diff:
+            codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
+            codes = [c for c in codes if c not in self.skip_codes]
+        else:
+            codes = list(range(start, max_nsd + 1))
+
+        tasks = list(enumerate(codes))
 
         strategy: SaveStrategy[NsdDTO] = SaveStrategy(
             save_callback, threshold, config=self.config
@@ -116,7 +124,7 @@ class NsdScraper(NSDSourcePort):
 
             try:
                 with self.http_client.borrow_session() as session:
-                    body = self.http_client.fetch_with(session, url)
+                    body = self.http_client.fetch_with(session, url, headers=session.headers)
                 parsed = self._parse_html(nsd, body.decode("utf-8"))
                 # we now persist by company_name, no CVM lookup needed
             # ————————————————————————————————————————————————————————————————
@@ -318,6 +326,7 @@ class NsdScraper(NSDSourcePort):
             nsd_mid = (
                 nsd_low + nsd_high + 1
             ) // 2  # arredonda para cima para evitar loop infinito
+            # nsd_diff = nsd_high - nsd_low
             parsed = self._try_nsd(nsd_mid)
 
             if parsed:

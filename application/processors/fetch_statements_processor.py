@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, DefaultDict, Dict, List, Optional, Tuple, TypeAlias
+from collections import defaultdict
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
@@ -22,17 +23,16 @@ from domain.ports.scraper_ports import RawStatementScraperPort
 from .base_processor import BaseProcessor
 
 
-class FetchStatementsProcessor(
-    BaseProcessor[
-        Tuple[
-            List[NsdDTO],
-            Optional[Callable[[List[RawStatementDTO]], None]],
-            Optional[int],
-        ],  # TypeVar("L")
-        List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("T")
-        List[Tuple[NsdDTO, List[RawStatementDTO]]],  # TypeVar("P")
-    ]
-):
+LoadPayload: TypeAlias = Tuple[
+    List[NsdDTO],
+    Optional[Callable[[List[RawStatementDTO]], None]],
+    Optional[int],
+]
+RowsByNsd: TypeAlias = List[Tuple[NsdDTO, List[RawStatementDTO]]]
+PersistedPayload: TypeAlias = RowsByNsd
+
+
+class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPayload]):
     """Fetch raw statements for pending NSDs."""
 
     def __init__(
@@ -79,7 +79,7 @@ class FetchStatementsProcessor(
         if not company_names:
             return []
 
-        nsd_rows_processed = {
+        raw_statement_rows_with_nsd_processed = {
             int(row[0])
             for row in self.raw_statement_repo.iter_existing_by_columns("nsd")
         }
@@ -91,7 +91,7 @@ class FetchStatementsProcessor(
                 nsd.company_name
                 and nsd.company_name in company_names
                 and nsd.nsd_type in valid_types
-                and nsd.nsd not in nsd_rows_processed
+                and nsd.nsd not in raw_statement_rows_with_nsd_processed
             ):
                 results.append(nsd)
         results.sort(key=lambda nsd: (nsd.company_name, nsd.quarter, nsd.version))
@@ -102,14 +102,18 @@ class FetchStatementsProcessor(
         self,
         save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
         threshold: Optional[int] = None,
-    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+    ) -> RowsByNsd:
         """Run the fetch pipeline."""
-        return super().run(save_callback=save_callback, threshold=threshold)
+        # data: LoadPayload = self.load(save_callback=save_callback, threshold=threshold)
+        # transformed: RowsByNsd = self.transform(data)
+        transformed: RowsByNsd = self._load_transformed()
+        result: PersistedPayload = self.persist(transformed)
+        return result
 
     def load(
         self,
-        save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
-        threshold: Optional[int] = None,
+        save_callback = None,
+        threshold = None,
     ) -> Tuple[
         List[NsdDTO], Optional[Callable[[List[RawStatementDTO]], None]], Optional[int]
     ]:
@@ -124,7 +128,7 @@ class FetchStatementsProcessor(
             Optional[Callable[[List[RawStatementDTO]], None]],
             Optional[int],
         ],
-    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+    ) -> PersistedPayload:
         """Fetch statement rows for ``targets`` using the use case."""
         targets, save_callback, threshold = data
         if not targets:
@@ -134,7 +138,45 @@ class FetchStatementsProcessor(
         )
 
     def persist(
-        self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]
-    ) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+        self, data: PersistedPayload
+    ) -> PersistedPayload:
         """No-op persist step; the use case already saves rows."""
         return data
+
+    def _load_transformed(self) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
+        """Lê o DB e monta [(NsdDTO, [RawStatementDTO, ...])] apenas para o primeiro nsd encontrado."""
+        company_names = [company.company_name for company in self.company_repo.iter_all()]
+        company_name = '2W ECOBANK SA'
+
+        raw_statements = self.raw_statement_repo.get_by_company_name(company_name=company_name)
+
+        # 2) agrupa por nsd (normalizando para int) e reforça o filtro por companhia
+        buckets: Dict[int, List[RawStatementDTO]] = defaultdict(list)
+        for row in raw_statements:
+            if getattr(row, "company_name", None) != company_name:
+                continue
+            try:
+                nsd_id = int(getattr(row, "nsd"))
+            except (TypeError, ValueError):
+                continue
+            buckets[nsd_id].append(row)
+        if not buckets:
+            return []
+
+        # 3) indexa NsdDTO por nsd, apenas desta companhia
+        nsd_index: Dict[int, NsdDTO] = {}
+        for nsd in self.nsd_repo.iter_all():
+            if nsd.company_name == company_name:
+                nsd_index[nsd.nsd] = nsd
+
+        # 4) monta os pares apenas quando existir NsdDTO correspondente
+        pairs: List[Tuple[NsdDTO, List[RawStatementDTO]]] = [
+            (nsd_index[nsd_id], rows)
+            for nsd_id, rows in buckets.items()
+            if nsd_id in nsd_index
+        ]
+
+        # 5) ordena como no _build_targets para previsibilidade
+        pairs.sort(key=lambda p: (p[0].company_name or "", p[0].quarter, p[0].version))
+
+        return pairs

@@ -95,13 +95,15 @@ class RequestsRawStatementScraper:
 
     def fetch_with(self, session: requests.Session, url: str, headers: dict[str, str] | None = None) -> bytes:
         """GET using a provided session (affinity). Applies conditional headers & cache update."""
-        cached = self._cache.get(url)
+        cached = None
         hdrs = dict(headers or {})
-        if cached and cached.etag:
-            hdrs["If-None-Match"] = cached.etag
-        if cached and cached.last_modified:
-            hdrs["If-Modified-Since"] = cached.last_modified
-
+        # cached = self._cache.get(url)
+        # if cached and cached.etag:
+        #     hdrs["If-None-Match"] = cached.etag
+        # if cached and cached.last_modified:
+        #     hdrs["If-Modified-Since"] = cached.last_modified
+        # if cached and not cached.last_modified:
+        #     self._logger.log(f"etag failed: url {cached.url} last fetched at {cached.fetched_at}", level="info")
         r: Response = session.get(url, headers=hdrs, timeout=self._timeout, allow_redirects=True)
 
         if r.status_code == 304 and cached and cached.body is not None:
@@ -113,7 +115,9 @@ class RequestsRawStatementScraper:
         r.raise_for_status()
 
         body = r.content or b""
-        self._cache.upsert(url, etag=r.headers.get("ETag"), last_modified=r.headers.get("Last-Modified"), body=body)
+
+        # self._cache.upsert(url, etag=r.headers.get("ETag"), last_modified=r.headers.get("Last-Modified"), body=body)
+
         if self._metrics:
             self._metrics.record_network_bytes(len(body))
         return body
@@ -283,9 +287,9 @@ class RawStatementScraper(RawStatementScraperPort):
                     text = soup.get_text()
                     blocked = ("MensagemModal" in text or "acesse este conteúdo pela página principal dos documentos" in text)
                     has_table = bool(soup.find("table", id="ctl00_cphPopUp_tbDados")) or (item["grupo"] == "Dados da Empresa" and soup.find("div", id="UltimaTabela"))
-                    if not blocked and has_table:
-                        break
-                    time.sleep(self.time_utils.sleep_dynamic(multiplier=attempt))
+                    if blocked and has_table:
+                        time.sleep(self.time_utils.sleep_dynamic(multiplier=attempt))
+                    break
 
                 rows = self._parse_statement_page(soup, item["grupo"])  # list[dict]
                 quarter = row.quarter.strftime("%Y-%m-%d") if row.quarter else None

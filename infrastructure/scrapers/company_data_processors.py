@@ -145,5 +145,6 @@ class CompanyDataDetailProcessor:
             )
 
             return self.merger.merge_details(listing, detail)
-        except Exception:
+        except Exception as e:  # noqa: F841
+            # print(e)
             pass
