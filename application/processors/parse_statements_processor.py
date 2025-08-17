@@ -81,4 +81,6 @@ class ParseStatementsProcessor(BaseProcessor):
         self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
     ) -> List[List[ParsedStatementDTO]]:
         """Run the parse pipeline."""
-        return super().run(fetched)
+        
+        results: List[List[ParsedStatementDTO]] = self._parse_all(fetched)
+        return results

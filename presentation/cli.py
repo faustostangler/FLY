@@ -169,7 +169,7 @@ class CLIAdapter:
             metrics_collector=self.collector,
             worker_pool_executor=self.worker_pool_executor,
         )
-        raw_rows = fetch_processor.run()
+        # raw_rows = fetch_processor.run()
 
         parse_pool = WorkerPool(
             config=self.config,
@@ -186,6 +186,7 @@ class CLIAdapter:
             max_workers=self.config.global_settings.max_workers or 1,
         )
 
+        raw_rows = self._load_transformed()  # mock
         parsed_groups = parse_processor.run(raw_rows)
 
         transform_processor = TransformStatementsProcessor(
@@ -194,3 +195,57 @@ class CLIAdapter:
             parsed_repo=parsed_statement_repo,
         )
         transform_processor.run(parsed_groups)
+
+    def _load_transformed(self):
+        from typing import  Dict, List, Tuple
+        from collections import defaultdict
+        from domain.dto import NsdDTO
+        from domain.dto.raw_statement_dto import RawStatementDTO
+
+        raw_statement_repo = SqlAlchemyRawStatementRepository(
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
+
+        nsd_repo = SqlAlchemyNsdRepository(
+            database_url=self.config.database.connection_string,
+            config=self.config,
+            logger=self.logger,
+        )
+        company_names = [company.company_name for company in self.company_repo.iter_all()]
+        company_name = '2W ECOBANK SA'
+
+        raw_statements = raw_statement_repo.get_by_company_name(company_name=company_name)
+
+        # 2) agrupa por nsd (normalizando para int) e reforça o filtro por companhia
+        buckets: Dict[int, List[RawStatementDTO]] = defaultdict(list)
+        for row in raw_statements:
+            if getattr(row, "company_name", None) != company_name:
+                continue
+            try:
+                nsd_id = int(getattr(row, "nsd"))
+            except (TypeError, ValueError):
+                continue
+            buckets[nsd_id].append(row)
+        if not buckets:
+            return []
+
+        # 3) indexa NsdDTO por nsd, apenas desta companhia
+        nsd_index: Dict[int, NsdDTO] = {}
+        criteria: str | List = 'company_name'
+        values: str | List[str | List] = company_name
+        nsd_index = {n.nsd: n for n in nsd_repo.get_by_column_values('company_name', values)}
+        
+        # 4) monta os pares apenas quando existir NsdDTO correspondente
+        pairs: List[Tuple[NsdDTO, List[RawStatementDTO]]] = [
+            (nsd_index[nsd_id], rows)
+            for nsd_id, rows in buckets.items()
+            if nsd_id in nsd_index
+        ]
+
+        # 5) ordena como no _build_targets para previsibilidade
+        pairs.sort(key=lambda p: (p[0].company_name or "", p[0].quarter, p[0].version))
+
+        return pairs
+    

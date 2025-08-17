@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, DefaultDict, Dict, List, Optional, Tuple, TypeAlias
-from collections import defaultdict
+from typing import Callable, List, Optional, Tuple, TypeAlias
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
@@ -106,7 +105,6 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         """Run the fetch pipeline."""
         data: LoadPayload = self.load(save_callback=save_callback, threshold=threshold)
         transformed: RowsByNsd = self.transform(data)
-        transformed: RowsByNsd = self._load_transformed()
         result: PersistedPayload = self.persist(transformed)
         return result
 
@@ -143,40 +141,3 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         """No-op persist step; the use case already saves rows."""
         return data
 
-    def _load_transformed(self) -> List[Tuple[NsdDTO, List[RawStatementDTO]]]:
-        """Lê o DB e monta [(NsdDTO, [RawStatementDTO, ...])] apenas para o primeiro nsd encontrado."""
-        company_names = [company.company_name for company in self.company_repo.iter_all()]
-        company_name = '2W ECOBANK SA'
-
-        raw_statements = self.raw_statement_repo.get_by_company_name(company_name=company_name)
-
-        # 2) agrupa por nsd (normalizando para int) e reforça o filtro por companhia
-        buckets: Dict[int, List[RawStatementDTO]] = defaultdict(list)
-        for row in raw_statements:
-            if getattr(row, "company_name", None) != company_name:
-                continue
-            try:
-                nsd_id = int(getattr(row, "nsd"))
-            except (TypeError, ValueError):
-                continue
-            buckets[nsd_id].append(row)
-        if not buckets:
-            return []
-
-        # 3) indexa NsdDTO por nsd, apenas desta companhia
-        nsd_index: Dict[int, NsdDTO] = {}
-        for nsd in self.nsd_repo.iter_all():
-            if nsd.company_name == company_name:
-                nsd_index[nsd.nsd] = nsd
-
-        # 4) monta os pares apenas quando existir NsdDTO correspondente
-        pairs: List[Tuple[NsdDTO, List[RawStatementDTO]]] = [
-            (nsd_index[nsd_id], rows)
-            for nsd_id, rows in buckets.items()
-            if nsd_id in nsd_index
-        ]
-
-        # 5) ordena como no _build_targets para previsibilidade
-        pairs.sort(key=lambda p: (p[0].company_name or "", p[0].quarter, p[0].version))
-
-        return pairs

@@ -11,9 +11,8 @@ from typing import (
     TypeVar,
     Union,
 )
-
+from itertools import product
 from sqlalchemy import tuple_ as sa_tuple
-
 from domain.ports import ConfigPort, LoggerPort
 from domain.ports.base_repository_port import RepositoryBasePort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
@@ -101,33 +100,33 @@ class SqlAlchemyRepositoryBase(
             # Ensure the session is always closed after execution
             session.close()
 
-    def get_all_old(self) -> List[T]:
-        """Retrieve all persisted DTOs from the database.
+    # def get_all_old(self) -> List[T]:
+    #     """Retrieve all persisted DTOs from the database.
 
-        This method loads all records from the table corresponding to the DTO's
-        associated ORM model and converts them into DTO instances.
+    #     This method loads all records from the table corresponding to the DTO's
+    #     associated ORM model and converts them into DTO instances.
 
-        Returns:
-            List[T]: A list of DTOs retrieved from the database.
-        """
-        # Create a new SQLAlchemy session
-        session = self.Session()
+    #     Returns:
+    #         List[T]: A list of DTOs retrieved from the database.
+    #     """
+    #     # Create a new SQLAlchemy session
+    #     session = self.Session()
 
-        # Get the SQLAlchemy model class linked to the current DTO type
-        model, pk_columns = self.get_model_class()
+    #     # Get the SQLAlchemy model class linked to the current DTO type
+    #     model, pk_columns = self.get_model_class()
 
-        try:
-            # Query all rows from the corresponding table
-            results = session.query(model).order_by(*pk_columns).all()
+    #     try:
+    #         # Query all rows from the corresponding table
+    #         results = session.query(model).order_by(*pk_columns).all()
 
-            # Sort py PK
-            results.sort(key=lambda obj: self._sort_key(obj, pk_columns))
+    #         # Sort py PK
+    #         results.sort(key=lambda obj: self._sort_key(obj, pk_columns))
 
-            # Convert each ORM instance into a DTO
-            return [model.to_dto() for model in results]
-        finally:
-            # Ensure the session is closed even if an error occurs
-            session.close()
+    #         # Convert each ORM instance into a DTO
+    #         return [model.to_dto() for model in results]
+    #     finally:
+    #         # Ensure the session is closed even if an error occurs
+    #         session.close()
 
     def get_all(self, batch_size: int = 100) -> List[T]:
         """Retrieve all DTOs from the database using paginated cursor-based
@@ -452,6 +451,72 @@ class SqlAlchemyRepositoryBase(
             return obj.to_dto()
         finally:
             # Ensure the session is closed in all cases
+            session.close()
+
+    def get_by_column_values(
+        self,
+        column_names: Union[str, List[str]],
+        values: Union[Any, List[Any]],
+    ) -> List[T]:
+        """
+        Filtra registros com múltiplas colunas. Se o valor de alguma coluna for vazio (None, '', []),
+        ela será ignorada do filtro — equivalente a "qualquer valor".
+
+        - Para 1 coluna: filtro simples com .in_()
+        - Para várias colunas: gera produto cartesiano das colunas ativas
+        - Colunas com filtro vazio são removidas da condição
+
+        Exemplo:
+            get_by_column_values(
+                ["company_name", "nsd_type"],
+                [["ACME", "ROMI"], ""]
+            ) ⇒ WHERE company_name IN ('ACME', 'ROMI')
+        """
+        session = self.Session()
+        model, _ = self.get_model_class()
+
+        try:
+            if isinstance(column_names, str):
+                column_names = [column_names]
+                
+            if not isinstance(values, list):
+                values = [values]
+
+            # 👇 ajuste: se só tem 1 coluna e a lista não é uma lista de listas, encapsula
+            if len(column_names) == 1 and (not any(isinstance(v, list) for v in values)):
+                values = [values]
+
+            # Normaliza: sempre listas
+            normalized_values = []
+            active_columns = []
+            for col, val in zip(column_names, values):
+                if isinstance(val, list):
+                    clean = [v for v in val if v not in (None, '')]
+                else:
+                    clean = [val] if val not in (None, '') else []
+
+                if clean:
+                    active_columns.append(col)
+                    normalized_values.append(clean)
+
+            if not active_columns:
+                # nenhum filtro => retorna tudo
+                return [obj.to_dto() for obj in session.query(model).all()]
+
+            if len(active_columns) == 1:
+                col = getattr(model, active_columns[0])
+                query_filter = col.in_(normalized_values[0])
+            else:
+                cols = [getattr(model, c) for c in active_columns]
+                combinations = list(product(*normalized_values))
+                if not combinations:
+                    return []
+                query_filter = sa_tuple(*cols).in_(combinations)
+
+            results = session.query(model).filter(query_filter).all()
+            return [obj.to_dto() for obj in results]
+
+        finally:
             session.close()
 
     def get_page_after(self, last_id: int, limit: int) -> List[T]:

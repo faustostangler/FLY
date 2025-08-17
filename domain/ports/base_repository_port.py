@@ -126,6 +126,26 @@ class RepositoryBasePort(ABC, Generic[T, K]):
         raise NotImplementedError
 
     @abstractmethod
+    def get_by_column_values(
+        self,
+        column_names: Union[str, List[str]],
+        values: Union[Any, List[Any]],
+    ) -> List[T]:
+        """Retrieve all records where the given column(s) match the provided value(s).
+
+        - If a single column is provided, returns rows where column IN (values).
+        - If multiple columns are provided, values must be a list of tuples.
+        
+        Args:
+            column_names (Union[str, List[str]]): Column name or list of column names.
+            values (Union[Any, List[Any]]): Single value or list of values/tuples.
+
+        Returns:
+            List[T]: List of matching DTOs.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_page_after(self, last_id: int, limit: int) -> List[T]:
         """Return a page of items with id greater than ``last_id``."""
         raise NotImplementedError

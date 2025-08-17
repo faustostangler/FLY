@@ -20,7 +20,20 @@ class BaseProcessor(ABC, Generic[L, T, P]):
 
     @abstractmethod
     def run(self, *args, **kwargs) -> P:
-        """Execute processing pipeline with logging and timing."""
+        start_time = time.monotonic()
+        processor_name = self.__class__.__name__
+        self.logger.info(f"Starting {processor_name}")
+        try:
+            data: L = self.load(*args, **kwargs)
+            transformed: T = self.transform(data)
+            result: P = self.persist(transformed)
+        except Exception as exc:  # pragma: no cover - pass through
+            self.logger.error(f"{processor_name} failed: {exc!r}")
+            raise
+        finally:
+            elapsed = time.monotonic() - start_time
+            self.logger.info(f"Finished {processor_name} in {elapsed:.2f}s")
+        return result
 
     @abstractmethod
     def load(self, *args, **kwargs) -> L:
