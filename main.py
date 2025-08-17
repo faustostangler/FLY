@@ -1,6 +1,10 @@
+print("Start!")
+from infrastructure.config import ConfigAdapter
+
 def main() -> None:
     try:
-        pass
+        config = ConfigAdapter()
+
     except Exception as e:
         print(e)
 
