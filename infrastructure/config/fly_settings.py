@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 
-VERSION = "0"
-# VERSION = get_version(fallback_release="0.0.1")
+from infrastructure.utils import get_version
+
+VERSION = get_version(fallback_release="0.0.1")
 APP_NAME = "FLY" + "/" + VERSION  # Application name
 
 @dataclass(frozen=True)

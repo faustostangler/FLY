@@ -1,15 +1,17 @@
+# infrastructure/logging/std_logger_adapter.py
+from __future__ import annotations
+
 import logging
 from typing import Any, MutableMapping, Optional
 
-from domain.ports.logger_port import LoggerPort
+from domain.ports.logger_ports import LoggerPort
 from infrastructure.config import ConfigAdapter
 from infrastructure.logging.context_tracker import ContextTracker
 from infrastructure.logging.progress_formatter import ProgressFormatter
+from infrastructure.utils.id_generator import IdGenerator
 
 
-class Logger(LoggerPort):
-    """Application logger wrapping Python's ``logging`` module."""
-
+class Logger:
     def __init__(
         self,
         config: ConfigAdapter,
@@ -17,7 +19,7 @@ class Logger(LoggerPort):
         logger_name: Optional[str] = None,
     ) -> None:
         self.config = config
-        self.logger_name = logger_name or self.config.global_settings.app_name or "FLY"
+        self.logger_name = logger_name or self.config.fly_settings.app_name or "FLY"
         self.progress_formatter = ProgressFormatter()
         self.context_tracker = ContextTracker(config.paths.root_dir)
 
