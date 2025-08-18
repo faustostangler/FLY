@@ -36,6 +36,7 @@ class CLIAdapter:
         self.config = config
         self.logger = logger
         self.data_cleaner = data_cleaner
+
         self.collector = MetricsCollector()
         self.worker_pool_executor = WorkerPool(
             self.config,
@@ -78,8 +79,8 @@ class CLIAdapter:
 
     def start_fly(self) -> None:
         """Trigger all main processing pipelines for the FLY system."""
-        # self._company_service()
-        # self._nsd_service()
+        self._company_service()
+        self._nsd_service()
         self._statement_service()
 
     def _company_service(self) -> None:

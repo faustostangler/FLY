@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import string
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Mapping, Optional
 
 import unidecode
 
@@ -14,7 +14,7 @@ from domain.ports import LoggerPort
 
 def clean_text(
     text: Optional[str],
-    words_to_remove: Optional[List[str]] = None,
+    words_to_remove: Optional[Iterable[str]] = None,
     logger: Optional[LoggerPort] = None,
 ) -> Optional[str]:
     """Normalize a text string.
@@ -103,31 +103,41 @@ def clean_date(
 
 
 def clean_dict_fields(
-    entry: Dict,
-    text_keys: List[str],
-    date_keys: List[str],
-    number_keys: Optional[List[str]] = None,
+    entry: Mapping[str, object],
+    text_keys: Iterable[str],
+    date_keys: Iterable[str],
+    number_keys: Optional[Iterable[str]] = None,
     *,
-    logger: Optional[LoggerPort] = None,
-    words_to_remove: Optional[List[str]] = None,
+    logger,
+    words_to_remove: Optional[Iterable[str]] = None,
 ) -> Dict:
     """Return a cleaned copy of ``entry``.
 
     Normalize its text, date and number fields.
     """
     number_keys = number_keys or []
-    cleaned = entry.copy()
+    cleaned = dict(entry)
 
-    for key in text_keys:
+    for key in text_keys or []:
         if key in cleaned:
-            cleaned[key] = clean_text(cleaned.get(key), words_to_remove, logger)
+            val = entry.get(key)
+            cleaned[key] = clean_text(
+                text=val if isinstance(val, str) else None,
+                words_to_remove=words_to_remove,
+                logger=logger,
+            )
 
-    for key in date_keys:
+    for key in date_keys or []:
         if key in cleaned:
-            cleaned[key] = clean_date(cleaned.get(key), logger)
+            val = entry.get(key)
+            cleaned[key] = clean_date(
+                text=val if isinstance(val, str) else None,
+                logger=logger,
+            )
 
-    for key in number_keys:
+    for key in number_keys or []:
         if key in cleaned:
-            cleaned[key] = clean_number(cleaned.get(key), logger)
+            val = entry.get(key)
+            cleaned[key] = clean_number(val, logger=logger)
 
     return cleaned

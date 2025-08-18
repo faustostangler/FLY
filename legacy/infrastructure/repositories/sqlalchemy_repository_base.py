@@ -14,7 +14,7 @@ from typing import (
 from itertools import product
 from sqlalchemy import tuple_ as sa_tuple
 from domain.ports import ConfigPort, LoggerPort
-from domain.ports.base_repository_port import RepositoryBasePort
+from domain.ports.repository_base_port import RepositoryBasePort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers.list_flattener import ListFlattener
 
