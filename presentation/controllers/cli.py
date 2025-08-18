@@ -12,7 +12,8 @@ from domain.ports import (
 class Cli():
     def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner: DataCleanerPort,
                  metrics_collector: MetricsCollectorPort, worker_pool: WorkerPoolPort,
-                 company_repository: CompanyDataRepositoryPort
+                 company_repository: CompanyDataRepositoryPort,
+                 company_scraper:
                  ) -> None:
         self.config = config
         self.logger = logger
