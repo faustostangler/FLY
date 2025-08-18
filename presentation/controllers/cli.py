@@ -1,8 +1,14 @@
-from domain.ports import ConfigPort, DataCleanerPort, LoggerPort, MetricsCollectorPort
+from domain.ports import (
+    ConfigPort,
+    DataCleanerPort,
+    LoggerPort,
+    MetricsCollectorPort,
+    WorkerPoolPort,
+)
 
 
 class Cli():
-    def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner: DataCleanerPort, metrics_collector: MetricsCollectorPort) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner: DataCleanerPort, metrics_collector: MetricsCollectorPort, worker_pool: WorkerPoolPort) -> None:
         self.config = config
         self.logger = logger
         self.datacleaner = datacleaner

@@ -4,19 +4,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Iterable, Mapping, Optional, cast
 
 import infrastructure.utils.normalization as norm
-from domain.ports import DataCleanerPort, LoggerPort
+from domain.ports import ConfigPort, DataCleanerPort, LoggerPort
 
 if TYPE_CHECKING:
-    from infrastructure.config.config_adapter import ConfigAdapter
     from infrastructure.logging.logger_adapter import Logger
 
 
 class DataCleaner(DataCleanerPort):
     """Utility class for normalizing raw text, dates and numbers."""
 
-    def __init__(self, config: ConfigAdapter, logger: LoggerPort) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort) -> None:
         self.config = config
-        self.logger = logger  # (typo corrigido)
+        self.logger = logger
 
     def clean_text(
         self,
@@ -53,7 +52,7 @@ class DataCleaner(DataCleanerPort):
         )
 
 
-def datacleaner_factory(config: ConfigAdapter, logger: LoggerPort) -> DataCleaner:
+def datacleaner_factory(config: ConfigPort, logger: LoggerPort) -> DataCleaner:
     """Factory that builds a ready-to-use ``DataCleaner`` instance."""
     return DataCleaner(config, logger)
 

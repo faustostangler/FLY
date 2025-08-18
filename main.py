@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from infrastructure.config.config_adapter import ConfigAdapter
+from infrastructure.config.config import ConfigAdapter
 from infrastructure.factories import cli_factory
 from infrastructure.logging import Logger
 from presentation.controllers import Cli

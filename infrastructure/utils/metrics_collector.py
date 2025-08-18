@@ -7,7 +7,7 @@ class MetricsCollector(MetricsCollectorPort):
     def __init__(self) -> None:
         self._network_bytes = 0
 
-    def record_network_bytes(self, n: int) -> None:
+    def add_network_bytes(self, n: int) -> None:
         """Accumulate ``n`` bytes transferred over the network."""
         self._network_bytes += n
 

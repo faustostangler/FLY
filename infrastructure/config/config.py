@@ -7,6 +7,7 @@ from .domain import DomainConfig, load_domain_config
 from .fly_settings import FlyConfig, load_fly_config
 from .logger import LoggerConfig, load_logger_config
 from .paths import PathConfig, load_paths
+from .scraping import ScrapingConfig, load_scraping_config
 
 
 @dataclass(frozen=True)
@@ -16,3 +17,4 @@ class ConfigAdapter:
     database: DatabaseConfig = field(default_factory=load_database_config)
     logging: LoggerConfig = field(default_factory=load_logger_config)
     domain: DomainConfig = field(default_factory=load_domain_config)
+    scraping: ScrapingConfig = field(default_factory=load_scraping_config)
