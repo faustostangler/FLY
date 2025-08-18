@@ -1,3 +1,4 @@
+from application.mappers import CompanyDataMapper
 from domain.ports import (
     ConfigPort,
     DataCleanerPort,
@@ -21,7 +22,8 @@ class Cli():
 
     def _company_service(self) -> None:
         """Build and execute the company data synchronization flow."""
-        mapper = CompanyDataMapper(self.data_cleaner)
+
+        mapper = CompanyDataMapper(self.datacleaner)
         company_repo = self.company_repo
         company_scraper = CompanyDataScraper(
             config=self.config,

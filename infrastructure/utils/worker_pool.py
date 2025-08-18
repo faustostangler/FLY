@@ -12,7 +12,6 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from domain.dtos import WorkerTaskDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort, WorkerPoolPort
-from infrastructure.utils import ByteFormatter
 
 R = TypeVar("R")
 
@@ -32,7 +31,6 @@ class WorkerPool(WorkerPoolPort):
         self.config = config
         self.metrics_collector = metrics_collector
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.byte_formatter = ByteFormatter()
 
     def run(
         self,
@@ -41,30 +39,24 @@ class WorkerPool(WorkerPoolPort):
         logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
-    ) -> ExecutionResultDTO[R]:
+    ) -> List[R]:
         """Process ``tasks`` concurrently using ``processor``."""
-
-        # Inform about the worker pool startup
-        # logger.log("Run  Method worker_pool_executor().run()", level="info")
-
         results: List[R] = []
         queue: Queue = Queue(self.config.worker_pool.queue_size)
         lock = threading.Lock()
         sentinel = object()
-        start_time = time.perf_counter()
 
         def worker(worker_id: str) -> None:
-            # logger.log("Run  Method worker_pool_executor().worker()", level="info")
             while True:
                 item = queue.get()
                 if item is sentinel:
                     queue.task_done()
-                    # logger.log("End  Method worker_pool_executor().worker()", level="info")
                     break
                 index, entry = item
                 task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id)
-                # logger.log(f"task: {task}", level="info")
                 result = processor(task)
+                if isinstance(result, (bytes, str)):
+                    self.metrics_collector.add_network_bytes(len(result))
                 try:
                     with lock:
                         results.append(result)
@@ -95,13 +87,9 @@ class WorkerPool(WorkerPoolPort):
             for future in futures:
                 future.result()
 
-        # Package execution metrics (network and processing bytes)
-        metrics = self.metrics_collector.add_network_bytes(1)
-
         # Final callback after all tasks are done
         if callable(post_callback):
             logger.log("Callable found", level="info")
             post_callback(results)
 
-        # logger.log("End  Method worker_pool_executor().run()", level="info")
-        return ExecutionResultDTO(items=results, metrics=metrics)
+        return results

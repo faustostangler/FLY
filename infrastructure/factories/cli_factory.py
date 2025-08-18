@@ -7,7 +7,7 @@ from presentation.controllers import Cli
 def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     datacleaner = datacleaner_factory(config, logger)
     metrics_collector = MetricsCollector()
-    worker_pool = (config, metrics_collector, max_workers=None)
+    worker_pool = (config, metrics_collector, max_workers)
     # worker_pool = WorkerPool(config, metrics_collector=collector, ...)
     # ...
     # return Cli(
