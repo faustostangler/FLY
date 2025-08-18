@@ -1,6 +1,8 @@
-print("Start!")
-from infrastructure.config import ConfigAdapter
+from __future__ import annotations
+
+from infrastructure.config.config_adapter import ConfigAdapter
 from infrastructure.logging import Logger
+from infrastructure.utils import datacleaner_factory
 
 # Uso na Application
 # from domain.ports.logger_port import LoggerPort
@@ -14,7 +16,8 @@ def main() -> None:
     try:
         config = ConfigAdapter()
         logger = Logger(config)
-
+        datacleaner = datacleaner_factory(config, logger)
+        datacleaner.
         logger.log(
             f"Run Project {config.fly_settings.app_name}",
             level="info",

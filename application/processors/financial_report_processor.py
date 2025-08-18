@@ -1,0 +1,64 @@
+# from domain.policies.parsing_policy import ParsingPolicy
+from domain.dtos import RawStatementDTO
+from domain.ports import (
+    # NsdRepositoryPort,
+    # RawRepositoryPort,
+    # ParsedRepositoryPort,
+    # ScraperPort,
+    LoggerPort,
+)
+
+# from application.transformers import StatementTransformer
+
+
+class FinancialReportProcessor:
+    def __init__(
+        self,
+        nsd_repo: NsdRepositoryPort,
+        raw_repo: RawRepositoryPort,
+        parsed_repo: ParsedRepositoryPort,
+        scraper: ScraperPort,
+        transformer: StatementTransformer,
+        logger: LoggerPort,
+    ) -> None:
+        self.nsd_repo = nsd_repo
+        self.raw_repo = raw_repo
+        self.parsed_repo = parsed_repo
+        self.scraper = scraper
+        self.transformer = transformer
+        self.logger = logger
+
+    def process(self, nsd_id: int) -> None:
+        nsd = self.nsd_repo.get_by_id(nsd_id)
+        if not nsd:
+            self.logger.log(f"NSD {nsd_id} not found", level="warning")
+            return
+
+        # 1. Scraping: sempre salvar RAW
+        raw_doc = self.scraper.fetch(nsd)
+        raw_dto = RawStatementDTO.from_nsd(nsd, raw_doc)
+        self.raw_repo.insert_or_update(raw_dto)
+
+        # 2. Validação de tipo
+        if not nsd.is_supported_type():
+            self.logger.log(f"NSD {nsd_id} ignored (unsupported type)", level="info")
+            return
+
+        # 3. Política
+        policy = ParsingPolicy.from_nsd(nsd)
+        if not policy.should_parse():
+            self.logger.log(f"NSD {nsd_id} skipped by policy", level="info")
+            return
+
+        # 4. Transformação
+        parsed_dto = self.transformer.transform(raw_dto)
+
+        # 5. Idempotência
+        current = self.parsed_repo.get_latest_by_key(parsed_dto.key())
+        if current and current.hash == parsed_dto.hash:
+            self.logger.log(f"NSD {nsd_id} unchanged, no new parsed", level="info")
+            return
+
+        # 6. Persistência
+        self.parsed_repo.upsert(parsed_dto)
+        self.logger.log(f"NSD {nsd_id} parsed and saved", level="info")

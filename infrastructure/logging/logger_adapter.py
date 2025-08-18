@@ -1,11 +1,10 @@
-# infrastructure/logging/std_logger_adapter.py
 from __future__ import annotations
 
 import logging
-from typing import Any, MutableMapping, Optional
+from typing import Any, Mapping, MutableMapping, Optional
 
-from domain.ports.logger_ports import LoggerPort
-from infrastructure.config import ConfigAdapter
+# from domain.ports.logger_ports import LoggerPort
+from infrastructure.config.config_adapter import ConfigAdapter
 from infrastructure.logging.context_tracker import ContextTracker
 from infrastructure.logging.progress_formatter import ProgressFormatter
 from infrastructure.utils.id_generator import IdGenerator
@@ -62,8 +61,8 @@ class Logger:
         self,
         message: str,
         level: str = "info",
-        progress: Optional[dict] = None,
-        extra: Optional[dict] = None,
+        progress: Optional[Mapping[str, Any]] = None,
+        extra: Optional[Mapping[str, Any]] = None,
         worker_id: Optional[str] = None,
         show_path: Optional[bool] = None,
     ) -> None:

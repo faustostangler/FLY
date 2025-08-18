@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import time
+from typing import Any, Mapping
 
 
 class ProgressFormatter:
     """Format progress information for logging."""
 
-    def format(self, progress: dict) -> str:
+    def format(self, progress: Mapping[str, Any]) -> str:
         """Return a formatted progress string like ``"15/100 | 15.00% | 0h00m10s + 0h01m00s = 0h01m10s"``."""
         try:
             index = progress.get("index", 0)
