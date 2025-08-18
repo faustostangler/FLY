@@ -1,6 +1,7 @@
 from application.mappers import CompanyDataMapper
 from domain.ports import (
     CompanyDataRepositoryPort,
+    CompanyDataScraperPort,
     ConfigPort,
     DataCleanerPort,
     LoggerPort,
@@ -13,7 +14,7 @@ class Cli():
     def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner: DataCleanerPort,
                  metrics_collector: MetricsCollectorPort, worker_pool: WorkerPoolPort,
                  company_repository: CompanyDataRepositoryPort,
-                 company_scraper:
+                 company_scraper: CompanyDataScraperPort
                  ) -> None:
         self.config = config
         self.logger = logger

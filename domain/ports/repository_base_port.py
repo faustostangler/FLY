@@ -19,7 +19,7 @@ K = TypeVar("K", contravariant=True)  # Key type (e.g., str, int)
 
 
 @runtime_checkable
-class RepositoryBasePort(Generic[T, K], Protocol):
+class RepositoryBasePort(Protocol, Generic[T, K]):
     """Generic interface (port) for basic repository operations.
 
     This protocol defines the standard CRUD-like operations expected from any

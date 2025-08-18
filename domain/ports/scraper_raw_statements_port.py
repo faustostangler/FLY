@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Mapping, Protocol, runtime_checkable
 
 from domain.dtos import WorkerTaskDTO
-from domain.ports import ConfigPort
+
+# from domain.ports import ConfigPort
 
 
 @runtime_checkable
