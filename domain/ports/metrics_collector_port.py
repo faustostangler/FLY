@@ -1,14 +1,11 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class MetricsCollectorPort(Protocol):
     """Port for collecting network byte metrics only."""
 
-    def add_network_bytes(self, n: int) -> None:
-        """Accumulate `n` bytes transferred over the network."""
-        ...
+    def add_network_bytes(self, n: int) -> None: ...
 
     @property
-    def network_bytes(self) -> int:
-        """Return the total network bytes."""
-        ...
+    def network_bytes(self) -> int: ...

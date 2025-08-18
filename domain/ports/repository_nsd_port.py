@@ -1,24 +1,19 @@
-"""Port definitions for NSD persistence repositories."""
-
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import List, Set
+from typing import List, Protocol, Set, runtime_checkable
 
 from domain.dtos import NsdDTO
 
 from .repository_base_port import RepositoryBasePort
 
 
-class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int]):
+@runtime_checkable
+class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int], Protocol):
     """Port for NSD persistence operations."""
 
-    @abstractmethod
     def get_all_pending(
         self,
         company_names: Set[str],
         valid_types: Set[str],
         exclude_nsd: Set[str],
-    ) -> List[NsdDTO]:
-        """Retorna todos os NSDs válidos ainda não processados."""
-        raise NotImplementedError
+    ) -> List[NsdDTO]: ...

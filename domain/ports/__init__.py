@@ -1,4 +1,5 @@
 from .cli_port import CliPort
+from .repository_company_data_port import CompanyDataRepositoryPort
 from .config_port import ConfigPort
 from .datacleaner_port import DataCleanerPort
 from .logger_port import LoggerPort
@@ -10,7 +11,7 @@ from .repository_statements_raw_port import RawStatementsRepositoryPort
 from .scraper_port import RawStatementScraperPort
 from .worker_pool_port import WorkerPoolPort
 
-__all__ = ["ConfigPort", "DataCleanerPort", "LoggerPort",
+__all__ = ["CliPort","CompanyDataRepositoryPort", "ConfigPort", "DataCleanerPort", "LoggerPort",
            "RepositoryBasePort", "RepositoryNsdPort",
            "RawStatementsRepositoryPort", "ParsedStatementRepositoryPort",
-           "RawStatementScraperPort", "CliPort","MetricsCollectorPort", "WorkerPoolPort"]
+           "RawStatementScraperPort", "MetricsCollectorPort", "WorkerPoolPort"]

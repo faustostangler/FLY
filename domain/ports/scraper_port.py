@@ -10,7 +10,7 @@ from domain.ports import ConfigPort
 class RawStatementScraperPort(Protocol):
     """Port for fetching raw statement HTML."""
 
-    @property
-    def config(self) -> ConfigPort: ...
-
     def fetch(self, task: WorkerTaskDTO) -> Mapping[str, Any]: ...
+
+    # @property
+    # def config(self) -> ConfigPort: ...
