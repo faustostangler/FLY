@@ -32,10 +32,10 @@ class SqlAlchemyCompanyDataRepository(
     """
 
     def __init__(
-        self, database_url: str, config: ConfigPort, logger: LoggerPort
+        self, connection_string: str, config: ConfigPort, logger: LoggerPort
     ) -> None:
         """Initialize the SQLite-backed company repository."""
-        super().__init__(database_url, config, logger)
+        super().__init__(connection_string, config, logger)
 
         self.config = config
         self.logger = logger

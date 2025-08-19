@@ -1,0 +1,9 @@
+from __future__ import annotations
+
+from typing import Any, ContextManager, Protocol
+
+
+class AffinityHttpClientPort(Protocol):
+    def fetch(self, url: str, headers: dict[str, str] | None = None) -> bytes: ...
+    def fetch_with(self, session: Any, url: str, headers: dict[str, str] | None = None) -> bytes: ...
+    def borrow_session(self) -> ContextManager[Any]: ...

@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
+from itertools import product
 from typing import (
     Any,
     Generator,
-    Generic,
     Iterator,
     List,
     Optional,
@@ -11,32 +10,30 @@ from typing import (
     TypeVar,
     Union,
 )
-from itertools import product
+
 from sqlalchemy import tuple_ as sa_tuple
+
 from domain.ports import ConfigPort, LoggerPort
 from domain.ports.repository_base_port import RepositoryBasePort
-from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
-from infrastructure.helpers.list_flattener import ListFlattener
+from infrastructure.adapters import EngineSetup
+from infrastructure.utils import ListFlattener
 
 T = TypeVar("T")  # T any DTO.
-K = TypeVar("K")  # Primary key type (e.g., str, int)
+K = TypeVar("K", contravariant=True)  # Primary key type (e.g., str, int)
 
 
-class SqlAlchemyRepositoryBase(
-    RepositoryBasePort[T, K], SqlAlchemyEngineMixin, ABC, Generic[T, K]
-):
+class BaseRepository(RepositoryBasePort[T, K], EngineSetup):
     """
     Contract - Interface genérica para repositórios de leitura/escrita.
     Pode ser especializada para qualquer tipo de DTO.
     """
 
-    def __init__(
-        self, connection_string: str, config: ConfigPort, logger: LoggerPort
-    ) -> None:
-        self.config = config
-        super().__init__(connection_string, logger)
+    def __init__(self, config: ConfigPort, logger: LoggerPort) -> None:
+        super().__init__(config.database.connection_string, logger)
 
-    @abstractmethod
+        self.config = config
+        self.logger = logger
+
     def get_model_class(self) -> Tuple[type, tuple]:
         """Return the SQLAlchemy model class associated with the DTO.
 
@@ -100,34 +97,6 @@ class SqlAlchemyRepositoryBase(
             # Ensure the session is always closed after execution
             session.close()
 
-    # def get_all_old(self) -> List[T]:
-    #     """Retrieve all persisted DTOs from the database.
-
-    #     This method loads all records from the table corresponding to the DTO's
-    #     associated ORM model and converts them into DTO instances.
-
-    #     Returns:
-    #         List[T]: A list of DTOs retrieved from the database.
-    #     """
-    #     # Create a new SQLAlchemy session
-    #     session = self.Session()
-
-    #     # Get the SQLAlchemy model class linked to the current DTO type
-    #     model, pk_columns = self.get_model_class()
-
-    #     try:
-    #         # Query all rows from the corresponding table
-    #         results = session.query(model).order_by(*pk_columns).all()
-
-    #         # Sort py PK
-    #         results.sort(key=lambda obj: self._sort_key(obj, pk_columns))
-
-    #         # Convert each ORM instance into a DTO
-    #         return [model.to_dto() for model in results]
-    #     finally:
-    #         # Ensure the session is closed even if an error occurs
-    #         session.close()
-
     def get_all(self, batch_size: int = 100) -> List[T]:
         """Retrieve all DTOs from the database using paginated cursor-based
         fetching.
@@ -167,7 +136,7 @@ class SqlAlchemyRepositoryBase(
         #     all_results.extend([m.to_dto() for m in batch])
         #     last_id = batch[-1].id
         # return all_results
-        batch_size = batch_size or self.config.global_settings.batch_size
+        batch_size = batch_size or self.config.repository.batch_size or 50
         model, pk_columns = self.get_model_class()
         all_results: List[T] = []
         last_key: Optional[Union[int, str]] = None
@@ -191,7 +160,7 @@ class SqlAlchemyRepositoryBase(
 
     def iter_all(self, batch_size: int | None = None) -> Generator[T, None, None]:
         """Yield all DTOs sequentially using keyset pagination over the PK."""
-        size = batch_size or self.config.global_settings.batch_size
+        size = batch_size or self.config.repository.batch_size or 50
         model, pk_columns = self.get_model_class()
         # self.logger.log(
         #     f"iter_all start batch_size={size}",
@@ -302,7 +271,7 @@ class SqlAlchemyRepositoryBase(
         loaded into memory. ``stream_results=True`` is retained for
         compatibility but does not enable server-side cursors on SQLite.
         """
-        size = batch_size or self.config.global_settings.batch_size
+        size = batch_size or self.config.repository.batch_size or 50
         model, _ = self.get_model_class()
         if isinstance(column_names, str):
             column_names = [column_names]
@@ -478,7 +447,7 @@ class SqlAlchemyRepositoryBase(
         try:
             if isinstance(column_names, str):
                 column_names = [column_names]
-                
+
             if not isinstance(values, list):
                 values = [values]
 

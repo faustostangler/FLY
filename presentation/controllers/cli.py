@@ -21,6 +21,7 @@ class Cli():
         self.datacleaner = datacleaner
         self.metrics_collector = metrics_collector
         self.company_repository = company_repository
+        self.company_scraper = company_scraper
 
     def run(self) -> None:
         self.logger.log("Start FLY", level="info")

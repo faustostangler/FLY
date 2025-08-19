@@ -9,18 +9,18 @@ from infrastructure.models import BaseModel
 class SqlAlchemyEngineMixin:
     """Reusable mixin for adapters that need SQLAlchemy engine setup."""
 
-    def __init__(self, database_url: str, logger: LoggerPort) -> None:
+    def __init__(self, connection_string: str, logger: LoggerPort) -> None:
         """Initialize engine, session factory and schema.
 
         Args:
-            database_url: Connection string for the target database.
+            connection_string: Connection string for the target database.
             logger: Logger adapter for emitting lifecycle messages.
         """
         self.logger = logger
 
         # Create SQLAlchemy engine for SQLite with thread-safe settings
         self.engine = create_engine(
-            database_url,
+            connection_string,
             connect_args={
                 "check_same_thread": False
             },  # allow usage from multiple threads

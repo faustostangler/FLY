@@ -6,19 +6,16 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto.company_data_dto import CompanyDataDTO
+from domain.dtos import CompanyDataDTO
 from domain.ports import CompanyDataRepositoryPort, ConfigPort, LoggerPort
-from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.company_data_model import CompanyDataModel
-from infrastructure.repositories.sqlalchemy_repository_base import (
-    SqlAlchemyRepositoryBase,
-)
+from infrastructure.repositories import BaseRepository
+from infrastructure.utils import ListFlattener
 
 
-class SqlAlchemyCompanyDataRepository(
-    SqlAlchemyRepositoryBase[CompanyDataDTO, int],
-    CompanyDataRepositoryPort,
-):
+class CompanyDataRepository(
+    BaseRepository[CompanyDataDTO, int],
+    CompanyDataRepositoryPort):
     """SQLite/SQLAlchemy repository for ``CompanyDataDTO``.
 
     This adapter implements the CompanyDataRepositoryPort interface, providing
@@ -32,10 +29,10 @@ class SqlAlchemyCompanyDataRepository(
     """
 
     def __init__(
-        self, connection_string: str, config: ConfigPort, logger: LoggerPort
+        self, config: ConfigPort, logger: LoggerPort
     ) -> None:
         """Initialize the SQLite-backed company repository."""
-        super().__init__(connection_string, config, logger)
+        super().__init__(config, logger)
 
         self.config = config
         self.logger = logger

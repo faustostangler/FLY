@@ -2,11 +2,11 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from domain.ports import LoggerPort
+from domain.ports import ConfigPort, LoggerPort
 from infrastructure.models import BaseModel
 
 
-class SqlAlchemyEngineMixin:
+class EngineSetup:
     """Reusable mixin for adapters that need SQLAlchemy engine setup."""
 
     def __init__(self, connection_string: str, logger: LoggerPort) -> None:
@@ -16,6 +16,7 @@ class SqlAlchemyEngineMixin:
             connection_string: Connection string for the target database.
             logger: Logger adapter for emitting lifecycle messages.
         """
+
         self.logger = logger
 
         # Create SQLAlchemy engine for SQLite with thread-safe settings

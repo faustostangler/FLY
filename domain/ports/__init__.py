@@ -3,6 +3,7 @@ from __future__ import annotations
 from .cli_port import CliPort
 from .config_port import ConfigPort
 from .datacleaner_port import DataCleanerPort
+from .http_client_port import AffinityHttpClientPort
 from .logger_port import LoggerPort
 from .metrics_collector_port import MetricsCollectorPort
 from .repository_base_port import RepositoryBasePort
@@ -15,7 +16,8 @@ from .scraper_company_data_port import CompanyDataScraperPort
 from .scraper_raw_statements_port import RawStatementScraperPort
 from .worker_pool_port import WorkerPoolPort
 
-__all__ = ["CliPort","CompanyDataRepositoryPort", "ConfigPort", "DataCleanerPort", "LoggerPort",
+__all__ = ["CliPort","CompanyDataRepositoryPort", "ConfigPort", "DataCleanerPort", 
+           "AffinityHttpClientPort", "LoggerPort",
            "RepositoryBasePort", "RepositoryNsdPort",
            "RawStatementsRepositoryPort", "ParsedStatementRepositoryPort",
            "BaseScraperPort", "CompanyDataScraperPort",

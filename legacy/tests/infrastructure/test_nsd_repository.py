@@ -9,7 +9,7 @@ from tests.conftest import DummyConfig, DummyLogger
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
     repo = SqlAlchemyNsdRepository(
-        database_url=cfg.database.connection_string,
+        connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
     )

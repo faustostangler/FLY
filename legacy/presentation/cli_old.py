@@ -42,7 +42,7 @@ class CLIAdapter:
             max_workers=self.config.global_settings.max_workers or 1,
         )
         self.company_repo = SqlAlchemyCompanyDataRepository(
-            database_url=self.config.database.connection_string,
+            connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
@@ -105,7 +105,7 @@ class CLIAdapter:
         """Build and execute the NSD data synchronization flow."""
         company_repo = self.company_repo
         nsd_repo = SqlAlchemyNsdRepository(
-            database_url=self.config.database.connection_string,
+            connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
@@ -131,17 +131,17 @@ class CLIAdapter:
         """Build and execute the financial statement pipeline."""
         company_repo = self.company_repo
         nsd_repo = SqlAlchemyNsdRepository(
-            database_url=self.config.database.connection_string,
+            connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
         raw_statement_repo = SqlAlchemyRawStatementRepository(
-            database_url=self.config.database.connection_string,
+            connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
         parsed_statement_repo = SqlAlchemyParsedStatementRepository(
-            database_url=self.config.database.connection_string,
+            connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )

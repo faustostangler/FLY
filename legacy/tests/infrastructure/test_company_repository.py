@@ -11,7 +11,7 @@ from tests.conftest import DummyConfig, DummyLogger
 def test_save_all(SessionLocal, engine):
     cfg = DummyConfig()
     repo = SqlAlchemyCompanyDataRepository(
-        database_url=cfg.database.connection_string,
+        connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
     )
@@ -34,7 +34,7 @@ def test_save_all(SessionLocal, engine):
 def test_save_all_json_string(SessionLocal, engine):
     cfg = DummyConfig()
     repo = SqlAlchemyCompanyDataRepository(
-        database_url=cfg.database.connection_string,
+        connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
     )
@@ -65,7 +65,7 @@ def test_save_all_json_string(SessionLocal, engine):
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
     repo = SqlAlchemyCompanyDataRepository(
-        database_url=cfg.database.connection_string,
+        connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
     )
