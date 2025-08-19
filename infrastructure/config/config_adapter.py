@@ -10,7 +10,7 @@ from .logger import LoggerConfig, load_logger_config
 from .paths import PathConfig, load_paths
 from .repository import RepositoryConfig, load_repository_config
 from .scraping import ScrapingConfig, load_scraping_config
-
+from .worker_pool import WorkerPoolConfig, load_worker_pool_config
 
 @dataclass(frozen=True)
 class ConfigAdapter:
@@ -22,3 +22,4 @@ class ConfigAdapter:
     scraping: ScrapingConfig = field(default_factory=load_scraping_config)
     repository: RepositoryConfig = field(default_factory=load_repository_config)
     exchange: ExchangeApiConfig = field(default_factory=load_exchange_api_config)
+    worker_pool: WorkerPoolConfig = field(default_factory=load_worker_pool_config)

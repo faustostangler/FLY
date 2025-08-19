@@ -32,7 +32,7 @@ class CompanyDataService:
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
-    def sync_companies(self) -> SyncCompanyDataResultDTO:
+    def sync_companies(self) -> None:
         """Execute company synchronization using the injected use case."""
         # Delegate execution to the underlying use case and return the result.
         # self.logger.log(

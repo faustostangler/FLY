@@ -14,7 +14,7 @@ from domain.ports.logger_port import LoggerPort
 
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.base_repository import BaseRepository
-from infrastructure.utils.list_flattener import ListFlattener
+# from infrastructure.uils.list_flattener import ListFlattener
 
 
 class CompanyDataRepository(

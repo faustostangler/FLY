@@ -42,9 +42,24 @@ def load_scraping_config() -> ScrapingConfig:
 
     base = Path(__file__).parent
 
-    user_agents = json.loads((base / USER_AGENTS_JSON).read_text(encoding="utf-8"))
-    referers = json.loads((base / REFERERS_JSON).read_text(encoding="utf-8"))
-    languages = json.loads((base / LANGUAGES_JSON).read_text(encoding="utf-8"))
+    def load_json(path: Path, default):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return default
+        except json.JSONDecodeError:
+            # if file exists but is broken
+            return default
+
+    base = Path(__file__).parent
+
+    USER_AGENTS_JSON = "user_agents.json"
+    REFERERS_JSON = "referers.json"
+    LANGUAGES_JSON = "languages.json"
+
+    user_agents = load_json(base / USER_AGENTS_JSON, ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.110 Safari/537.36 FLYBot/1.0"])
+    referers    = load_json(base / REFERERS_JSON,    ["https://google.com"])
+    languages   = load_json(base / LANGUAGES_JSON,   ["en-US,en;q=1.0"])
 
     return ScrapingConfig(
         user_agents=user_agents,

@@ -70,6 +70,11 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
         self.byte_formatter = ByteFormatter()
 
+        from application.mappers.company_data_merger import CompanyDataMerger
+        from application.processors.entry_cleaner import EntryCleaner
+        from infrastructure.scrapers.company_detail_scraper import DetailFetcher
+        
+
         self.company_data_merger = CompanyDataMerger(self.mapper, self.logger)
         self.entry_cleaner = EntryCleaner(self.data_cleaner)
         self.detail_fetcher = DetailFetcher(http_client=self.http_client, endpoint_detail=self.endpoint_detail, language=self.language)
@@ -85,7 +90,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         # Ensure skip_codes is a set (to avoid None and allow fast lookup)
         self.skip_codes = skip_codes or set()
         # Determine the save threshold (number of companies before saving buffer)
-        self.threshold = threshold or self.config.repository.persistance_threshold or 50
+        self.threshold = threshold or self.config.repository.persistence_threshold or 50
         # Determine the number of simultaneous process
 
         def noop(_buffer: List[Dict]) -> None:

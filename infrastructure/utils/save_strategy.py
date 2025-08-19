@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
-from domain.ports.logger_port import ConfigPort
+from domain.ports.config_port import ConfigPort
 
 T = TypeVar("T")
 
@@ -21,7 +21,7 @@ class SaveStrategy(Generic[T]):
         config: Optional[ConfigPort] = None,
     ) -> "SaveStrategy[T]":
         cb = save_callback or (lambda _: None)
-        th = threshold or (config.repository.persistance_threshold if config else 50)
+        th = threshold or (config.repository.persistence_threshold if config else 50)
         return cls(cb, th)
 
     def handle(self, item: T) -> None:

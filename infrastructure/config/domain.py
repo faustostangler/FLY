@@ -17,7 +17,7 @@ STATEMENTS_TYPES: Tuple[str, ...] = (
     "DEMONSTRACOES FINANCEIRAS PADRONIZADAS",
     "INFORMACOES TRIMESTRAIS",
 )
-
+BASE_CURRENCY = "BRL"
 
 @dataclass(frozen=True)
 class DomainConfig:
@@ -46,6 +46,6 @@ def load_domain_config() -> DomainConfig:
     return DomainConfig(
         words_to_remove=WORDS_TO_REMOVE,
         statements_types=STATEMENTS_TYPES,
-        base_currency="BRL",
+        base_currency=BASE_CURRENCY,
         nsd_gap_days=0,
     )
