@@ -5,7 +5,7 @@ from domain.dtos import (
     CompanyDataDTO,
     CompanyDataListingDTO,
 )
-from domain.ports import DataCleanerPort
+from domain.ports.datacleaner_port import DataCleanerPort
 
 
 class CompanyDataMapper:

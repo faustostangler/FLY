@@ -1,13 +1,11 @@
 # from domain.policies.parsing_policy import ParsingPolicy
-from application.usecases import StatementTransformer
-from domain.dtos import RawStatementDTO
-from domain.ports import (
-    LoggerPort,
-    ParsedStatementRepositoryPort,
-    RawStatementScraperPort,
-    RawStatementsRepositoryPort,
-    RepositoryNsdPort,
-)
+from application.usecases.statements_transformer import StatementTransformer
+from domain.dtos.raw_statement_dto import RawStatementDTO
+from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_statements_parsed_port import ParsedStatementRepositoryPort
+from domain.ports.repository_statements_raw_port import RawStatementsRepositoryPort
+from domain.ports.scraper_raw_statements_port import RawStatementScraperPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
 
 
 class FinancialReportProcessor:

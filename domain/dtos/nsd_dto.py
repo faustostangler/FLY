@@ -1,6 +1,3 @@
-"""DTO definitions for normalized NSD (Sequential Document Number, in
-Portuguese) data."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

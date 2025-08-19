@@ -4,7 +4,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Iterable, Mapping, Optional, cast
 
 import infrastructure.utils.normalization as norm
-from domain.ports import ConfigPort, DataCleanerPort, LoggerPort
+from domain.ports.config_port import ConfigPort
+from domain.ports.datacleaner_port import DataCleanerPort
+from domain.ports.logger_port import LoggerPort
 
 if TYPE_CHECKING:
     from infrastructure.logging.logger_adapter import Logger

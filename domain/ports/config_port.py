@@ -58,16 +58,16 @@ class PathConfigPort(Protocol):
 class WorkerPoolConfig(Protocol):
     @property
     def max_workers(self) -> int: ...
-    @propertyH
-    def queue_size(self) -> int: ...
     @property
-    def persistance_threeshold(self) -> int: ...
+    def queue_size(self) -> int: ...
 
 
 @runtime_checkable
 class RepositoryConfig(Protocol):
     @property
     def batch_size(self) -> int: ...
+    @property
+    def persistance_threshold(self) -> int: ...
 
 @runtime_checkable
 class ExchangeApiConfig(Protocol):

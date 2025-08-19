@@ -9,7 +9,7 @@ from typing import Dict, Iterable, List, Mapping, Optional
 
 import unidecode
 
-from domain.ports import LoggerPort
+from domain.ports.logger_port import LoggerPort
 
 
 def clean_text(

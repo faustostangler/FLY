@@ -1,16 +1,8 @@
 from __future__ import annotations
 
 from infrastructure.config.config import ConfigAdapter
-from infrastructure.factories import cli_factory
-from infrastructure.logging import Logger
-from presentation.controllers import Cli
-
-# Uso na Application
-# from domain.ports.logger_port import LoggerPort
-# from infrastructure.logging.std_logger_adapter import StdLoggerAdapter
-# logger: LoggerPort = StdLoggerAdapter()
-# facade = LoggerFacade(logger)
-# facade.info("Starting ParseStatementsProcessor")
+from infrastructure.factories.cli_factory import cli_factory
+from infrastructure.logging.logger_adapter import Logger
 
 
 def main() -> None:

@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 MAX_WORKERS = 1 # 20 Default number of threads for sync operations
 QUEUE_SIZE = 2 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
-PERSISTANCE_THRESHOLD = 10 # (MAX_WORKERS)  # max(int(50 / MAX_WORKERS), 1)  # Default threshold for saving data
 
 
 @dataclass(frozen=True)
@@ -22,7 +21,6 @@ class WorkerPoolConfig:
 
     max_workers: int = field(default=MAX_WORKERS)
     queue_size: int = field(default=QUEUE_SIZE)
-    persistance_threeshold: int = field(default=PERSISTANCE_THRESHOLD)
 
 
 def load_worker_pool_config() -> WorkerPoolConfig:
@@ -30,5 +28,4 @@ def load_worker_pool_config() -> WorkerPoolConfig:
     return WorkerPoolConfig(
         max_workers=MAX_WORKERS,
         queue_size=QUEUE_SIZE,
-        persistance_threeshold=PERSISTANCE_THRESHOLD,
     )

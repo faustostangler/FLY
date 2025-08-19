@@ -1,5 +1,3 @@
-"""Data transfer objects for raw company information."""
-
 from __future__ import annotations
 
 import json

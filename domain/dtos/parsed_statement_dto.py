@@ -1,5 +1,3 @@
-"""DTO for transformed statement rows."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

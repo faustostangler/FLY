@@ -13,10 +13,12 @@ from typing import (
 
 from sqlalchemy import tuple_ as sa_tuple
 
-from domain.ports import ConfigPort, LoggerPort
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_base_port import RepositoryBasePort
-from infrastructure.adapters import EngineSetup
-from infrastructure.utils import ListFlattener
+
+from infrastructure.adapters.engine_setup import EngineSetup
+from infrastructure.utils.list_flattener import ListFlattener
 
 T = TypeVar("T")  # T any DTO.
 K = TypeVar("K", contravariant=True)  # Primary key type (e.g., str, int)

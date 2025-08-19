@@ -2,7 +2,8 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from domain.ports import ConfigPort, LoggerPort
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
 from infrastructure.models import BaseModel
 
 

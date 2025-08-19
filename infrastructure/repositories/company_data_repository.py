@@ -6,11 +6,15 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dtos import CompanyDataDTO
-from domain.ports import CompanyDataRepositoryPort, ConfigPort, LoggerPort
+from domain.dtos.company_data_dto import CompanyDataDTO
+
+from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+
 from infrastructure.models.company_data_model import CompanyDataModel
-from infrastructure.repositories import BaseRepository
-from infrastructure.utils import ListFlattener
+from infrastructure.repositories.base_repository import BaseRepository
+from infrastructure.utils.list_flattener import ListFlattener
 
 
 class CompanyDataRepository(

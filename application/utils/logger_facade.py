@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
-from domain.ports import LoggerPort
+from domain.ports.logger_port import LoggerPort
 
 
 @dataclass(frozen=True)
