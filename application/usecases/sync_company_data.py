@@ -1,5 +1,3 @@
-"""Use case for synchronizing company data between scraper and repository."""
-
 from typing import List
 
 from domain.dtos import CompanyDataDTO
@@ -12,7 +10,7 @@ from domain.ports.logger_port import LoggerPort
 
 
 class SyncCompanyDataUseCase:
-    """Synchronize company data from the scraper to the repository."""
+    """Use case for synchronizing company data between scraper and repository."""
 
     def __init__(
         self,
@@ -22,42 +20,47 @@ class SyncCompanyDataUseCase:
         scraper: CompanyDataScraperPort,
         max_workers: int = 1,
     ):
-        """Store dependencies and configure use case execution."""
+        """Initialize the use case with its dependencies.
+
+        Args:
+            config (ConfigPort): Application configuration provider.
+            logger (LoggerPort): Logger interface for capturing messages.
+            repository (CompanyDataRepositoryPort): Repository for persisting company data.
+            scraper (CompanyDataScraperPort): Scraper used to fetch company data.
+            max_workers (int, optional): Maximum number of workers for parallel execution.
+                Defaults to 1, or falls back to the value in the config worker pool.
+        """
         self.config = config
         self.logger = logger
         self.repository = repository
         self.scraper = scraper
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
-        # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
-
     def synchronize_companies(self) -> CompanyDataDTO:
-        """Start the full synchronization pipeline.
+        """Run the full company synchronization pipeline.
 
         Steps:
-            1. Fetch data from the scraper.
-            2. Convert results into ``CompanyDataDTO`` objects.
-            3. Persist them using the repository.
-        """
-        # self.logger.log("Run  Method sync_companies_usecase.run()", level="info")
+            1. Retrieve company data from the scraper.
+            2. Transform results into ``CompanyDataDTO`` objects.
+            3. Save them into the repository in batches.
 
-        # busca todos os company_name que já estão na tabela
+        Returns:
+            SyncCompanyDataResultDTO: Summary of the synchronization process,
+            including counts and network usage metrics.
+        """
+        # Collect company identifiers already stored in the repository
         skip_codes = [
             code for (code,) in self.repository.iter_existing_by_columns("company_name")
         ]
 
-        # self.logger.log("Call Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
-        # Fetch all companies from the scraper and persist them batch-wise.
+        # Fetch companies from scraper and persist them in batch mode
         results = self.scraper.fetch_all(
             skip_codes=skip_codes,
             save_callback=self._save_batch,
         )
-        # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
 
-        # Measure download time and network usage.
+        # Collect metrics from the scraper (downloaded bytes, timings, etc.)
         bytes_downloaded = self.scraper.metrics_collector.add_network_byte()
-
-        # self.logger.log("End  Method sync_companies_usecase.run()", level="info")
 
         return SyncCompanyDataResultDTO(
             processed_count=len(results.items),
@@ -67,16 +70,16 @@ class SyncCompanyDataUseCase:
         )
 
     def _save_batch(self, buffer: List[CompanyDataDTO]) -> None:
-        """Convert raw companies to domain DTOs before saving."""
-        # primeiro “desembrulha” qualquer nível de listas aninhadas
-        flat_items = ListFlattener.flatten(
-            buffer
-        )  # recebe nested lists, devolve flat list
+        """Transform and persist a batch of company data.
 
-        # Transform raw DTOs from the scraper to domain DTOs.
+        Args:
+            buffer (List[CompanyDataDTO]): Raw or nested DTOs retrieved by the scraper.
+        """
+        # Flatten potential nested lists from scraper output
+        flat_items = ListFlattener.flatten(buffer)
+
+        # Convert raw scraper DTOs into domain-level DTOs
         dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
 
-        # Persist the converted DTOs in bulk for efficiency.
+        # Persist the transformed DTOs in bulk
         self.repository.save_all(dtos)
-
-        # self.logger.log("End  Method _save_batch() in SyncCompanyDataUseCase in CompanyDataService", level="info")

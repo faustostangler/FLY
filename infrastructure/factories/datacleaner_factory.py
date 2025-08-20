@@ -5,6 +5,14 @@ from infrastructure.adapters.datacleaner_adapter import DataCleaner
 
 
 def datacleaner_factory(config: ConfigPort, logger: LoggerPort) -> DataCleaner:
-    """Factory that builds a ready-to-use ``DataCleaner`` instance."""
-    return DataCleaner(config, logger)
+    """Factory function to create a configured DataCleaner instance.
 
+    Args:
+        config (ConfigPort): Provides access to application configuration.
+        logger (LoggerPort): Logging interface for monitoring and debugging.
+
+    Returns:
+        DataCleaner: A fully initialized DataCleaner instance ready for use.
+    """
+    # Build and return a DataCleaner wired with configuration and logging
+    return DataCleaner(config, logger)

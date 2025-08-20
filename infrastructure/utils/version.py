@@ -9,10 +9,24 @@ from typing import List, Optional
 
 
 def _git_available() -> bool:
+    """Check whether the `git` executable is available in PATH.
+
+    Returns:
+        bool: True if `git` is found, otherwise False.
+    """
     return shutil.which("git") is not None
 
 
 def _run_git(args: List[str], timeout: float = 2.0) -> Optional[str]:
+    """Run a git command and return its stdout as a decoded string.
+
+    Args:
+        args (List[str]): Arguments passed to the `git` command.
+        timeout (float): Maximum time in seconds to wait for the command.
+
+    Returns:
+        Optional[str]: Decoded output on success, or None on failure.
+    """
     if not _git_available():
         return None
     try:
@@ -28,61 +42,114 @@ def _run_git(args: List[str], timeout: float = 2.0) -> Optional[str]:
 
 @lru_cache(maxsize=1)
 def current_branch() -> Optional[str]:
+    """Return the current Git branch name, or None if detached/unknown.
+
+    Returns:
+        Optional[str]: Branch name if available and not 'HEAD', else None.
+    """
     name = _run_git(["rev-parse", "--abbrev-ref", "HEAD"])
     return None if not name or name == "HEAD" else name
 
 
 @lru_cache(maxsize=1)
 def list_local_branches() -> Optional[List[str]]:
+    """List local Git branches as short names.
+
+    Returns:
+        Optional[List[str]]: List of local branch names, or None if unavailable.
+    """
     out = _run_git(["for-each-ref", "--format=%(refname:short)", "refs/heads"])
     if out is None:
         return None
+
+    # Normalize and filter empty lines
     names = [ln.strip() for ln in out.splitlines() if ln.strip()]
-    # ordenação determinística para que o índice seja estável
+
+    # Keep deterministic ordering if desired in the future
     # names.sort()
+
     return names
 
 
 def branch_index_1based(branch: Optional[str], branches: Optional[List[str]]) -> int:
+    """Return the 1-based index of `branch` within `branches`.
+
+    Args:
+        branch (Optional[str]): Branch name to locate.
+        branches (Optional[List[str]]): Ordered list of branch names.
+
+    Returns:
+        int: 1-based index if found; 0 otherwise.
+    """
     if not branch or not branches:
         return 0
     try:
-        return branches.index(branch) + 1  # 1-based
+        # Convert zero-based index to one-based for version semantics
+        return branches.index(branch) + 1
     except ValueError:
         return 0
 
 
 @lru_cache(maxsize=1)
 def _base_branch() -> str:
-    # branch base usada para calcular o ponto de criação; default 'main'
+    """Resolve the base branch used to compute the fork point.
+
+    Returns:
+        str: Base branch name, defaulting to 'main' if not overridden.
+    """
+    # Use environment override to allow repositories that don't use 'main'
     return os.getenv("FLY_BASE_BRANCH", "main")
 
 
 @lru_cache(maxsize=1)
 def _fork_point_with_base() -> Optional[str]:
+    """Find the commit hash where the current branch diverged from base.
+
+    It first attempts `merge-base --fork-point` and falls back to `merge-base`
+    if the fork-point heuristic is unavailable.
+
+    Returns:
+        Optional[str]: Commit hash of the fork point, or None if not found.
+    """
     base = _base_branch()
-    # tenta o fork-point (melhor aproximação do "ponto em que a branch começou")
+
+    # Try the fork-point heuristic (best approximation of branch start)
     fp = _run_git(["merge-base", "--fork-point", base, "HEAD"])
     if fp:
         return fp
-    # fallback para merge-base simples, caso o fork-point não esteja disponível
+
+    # Fallback to the common ancestor if fork-point is not supported
     return _run_git(["merge-base", base, "HEAD"])
 
 
 @lru_cache(maxsize=1)
 def commit_count_from_branch_start() -> Optional[int]:
-    """
-    Conta os commits que existem em HEAD desde o ponto de criação da branch,
-    sem contar os commits anteriores da base.
+    """Count commits on HEAD since the branch diverged from its base.
+
+    The count excludes commits that belong to the base branch history.
+
+    Returns:
+        Optional[int]: Number of commits since the fork point, or 0 if unknown.
     """
     fork = _fork_point_with_base()
     if not fork:
-        return 0  # não conseguiu detectar; opta por 0 para comportamento previsível
+        # Return a predictable value if detection fails
+        return 0
     out = _run_git(["rev-list", "--count", f"{fork}..HEAD"])
     return int(out) if out and out.isdigit() else 0
 
 
 def _resolve_state_override(override: Optional[int]) -> Optional[int]:
+    """Resolve version state override from env or parameter.
+
+    Env var `FLY_RELEASE_NUMBER` takes precedence over the function parameter.
+
+    Args:
+        override (Optional[int]): Optional state override provided by caller.
+
+    Returns:
+        Optional[int]: Final override value if present; otherwise None.
+    """
     env_num = os.getenv("FLY_RELEASE_NUMBER")
     if env_num and env_num.isdigit():
         try:
@@ -93,11 +160,15 @@ def _resolve_state_override(override: Optional[int]) -> Optional[int]:
 
 
 def _is_dev_env() -> bool:
-    """
-    Detecta se está em ambiente de desenvolvimento/debug:
-    - FLY_ENV=dev|development
-    - FLY_DEBUG=true|1
-    - Depurador ativo (sys.gettrace() não é None)
+    """Detect development/debug environment conditions.
+
+    Considered "dev" if any of the following is true:
+      - FLY_ENV is 'dev' or 'development'
+      - FLY_DEBUG is 'true' or '1' (case-insensitive)
+      - A debugger is attached (i.e., sys.gettrace() is not None)
+
+    Returns:
+        bool: True if running in a development/debug environment.
     """
     env = os.getenv("FLY_ENV", "").lower()
     debug_flag = os.getenv("FLY_DEBUG", "").lower()
@@ -115,35 +186,50 @@ def _is_dev_env() -> bool:
 
 @lru_cache(maxsize=1)
 def current_commit_hash() -> Optional[str]:
-    """Return the full (40-char) commit hash for HEAD."""
+    """Return the full 40-character commit hash for HEAD.
+
+    Returns:
+        Optional[str]: Commit hash if available, otherwise None.
+    """
     return _run_git(["rev-parse", "HEAD"])
 
 
 def compute_version(state_override: Optional[int] = None) -> str:
+    """Compute a semantic-ish version string based on Git state.
+
+    Format:
+        'x.y.z {branch}/{commit}'
+
+    Where:
+        x: Environment state (0 in dev, 1 outside dev), or an explicit override
+           provided by env var `FLY_RELEASE_NUMBER` or the function parameter.
+        y: 1-based index of the current branch among local branches.
+        z: Number of commits since the branch forked from the base branch.
+        branch: Current branch name, or 'unknown' if not resolvable.
+        commit: Full 40-character commit hash, or 'unknown' if not resolvable.
+
+    Args:
+        state_override (Optional[int]): Optional numeric override for `x`.
+
+    Returns:
+        str: Version string reflecting the current repository state.
     """
-    Returns 'x.y.z {branch}-{commit}' where:
-      x = 0 if development environment, 1 if not, or N if overridden (env/param)
-      y = 1-based index of the current branch in the local branch list
-      z = number of commits since the branch forked from base
-      {branch} = current branch name
-      {commit} = full 40-character commit hash
-    """
-    # x (state)
+    # Resolve x (environment state)
     ov = _resolve_state_override(state_override)
     if ov is not None:
         x = ov
     else:
         x = 0 if _is_dev_env() else 1
 
-    # y (branch index)
+    # Resolve y (1-based branch index)
     br = current_branch()
     branches = list_local_branches()
     y = branch_index_1based(br, branches)
 
-    # z (commits from fork)
+    # Resolve z (commit count since fork point)
     z = commit_count_from_branch_start() or 0
 
-    # branch and commit hash
+    # Resolve identifiers for display
     branch_name = br or "unknown"
     commit_hash = current_commit_hash() or "unknown"
 
@@ -153,11 +239,19 @@ def compute_version(state_override: Optional[int] = None) -> str:
 def get_version(
     fallback_release: str = "0.0.0", state_override: Optional[int] = None
 ) -> str:
-    """
-    Prioridade:
-      1) FLY_RELEASE: retorna o valor literal (ex.: '1.4.12')
-      2) compute_version(state_override)
-      3) fallback_release
+    """Return the release string honoring explicit overrides and fallbacks.
+
+    Precedence:
+      1) If `FLY_RELEASE` is set, return its literal value (e.g., '1.4.12').
+      2) Otherwise, compute a version via `compute_version(state_override)`.
+      3) On any failure, return `fallback_release`.
+
+    Args:
+        fallback_release (str): Value returned if computation fails.
+        state_override (Optional[int]): Optional numeric override for `x`.
+
+    Returns:
+        str: Final version string.
     """
     explicit = os.getenv("FLY_RELEASE")
     if explicit:

@@ -1,5 +1,3 @@
-"""Simple thread pool implementation for executing tasks."""
-
 from __future__ import annotations
 
 import random
@@ -16,12 +14,23 @@ from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.metrics_collector_port import MetricsCollectorPort
 from domain.ports.worker_pool_port import WorkerPoolPort
+
+# Generic type variable representing the processor's return type
 R = TypeVar("R")
 
 
 class WorkerPool(WorkerPoolPort):
-    """Simple thread pool implementation tied to the domain
-    ``WorkerPoolPort``."""
+    """Thread-based worker pool tied to the domain ``WorkerPoolPort``.
+
+    This implementation uses a bounded queue and a fixed-size
+    ThreadPoolExecutor to process tasks concurrently. Results are
+    accumulated in-memory and optionally streamed via callbacks.
+
+    Notes:
+        - Result order is not guaranteed; items are appended as they complete.
+        - If the processor returns ``bytes`` or ``str``, their lengths are
+          forwarded to ``MetricsCollectorPort`` as network byte counts.
+    """
 
     def __init__(
         self,
@@ -29,10 +38,21 @@ class WorkerPool(WorkerPoolPort):
         metrics_collector: MetricsCollectorPort,
         max_workers: Optional[int] = None,
     ) -> None:
-        """Initialize the worker pool with configuration and metrics."""
+        """Initialize the worker pool.
 
+        Args:
+            config (ConfigPort): Configuration provider used to resolve
+                queue sizing and default worker count.
+            metrics_collector (MetricsCollectorPort): Collector used to
+                record simple network byte metrics.
+            max_workers (Optional[int]): Explicit worker count. If omitted,
+                falls back to ``config.worker_pool.max_workers`` and then to ``1``.
+        """
+        # Store configuration and metrics collaborators
         self.config = config
         self.metrics_collector = metrics_collector
+
+        # Resolve the effective worker count with safe fallbacks
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
 
     def run(
@@ -43,56 +63,109 @@ class WorkerPool(WorkerPoolPort):
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
     ) -> List[R]:
-        """Process ``tasks`` concurrently using ``processor``."""
+        """Process tasks concurrently using the provided processor.
+
+        Each task is a tuple ``(index, data)`` that is wrapped into a
+        ``WorkerTaskDTO`` and passed to ``processor``. Results are collected
+        and optionally emitted via callbacks.
+
+        Args:
+            tasks (Iterable[Tuple[int, Any]]): Iterable of task items as
+                ``(index, data)`` pairs to be processed.
+            processor (Callable[[WorkerTaskDTO], R]): Function that handles a
+                single task DTO and returns a result of type ``R``.
+            logger (LoggerPort): Logger used for warnings and informational messages.
+            on_result (Optional[Callable[[R], None]]): Optional per-result callback
+                invoked immediately after the result is appended.
+            post_callback (Optional[Callable[[List[R]], None]]): Optional callback
+                invoked once after all tasks are completed, receiving the full list
+                of results.
+
+        Returns:
+            List[R]: The list of results produced by the processor. The order
+            reflects completion timing, not the original task order.
+
+        Notes:
+            - Exceptions raised inside the ``processor`` are not caught here and
+              will terminate the worker executing that task.
+            - The queue is bounded by ``config.worker_pool.queue_size`` to avoid
+              unbounded memory growth.
+        """
+        # Container for processed results
         results: List[R] = []
+
+        # Bounded queue to apply backpressure to producers
         queue: Queue = Queue(self.config.worker_pool.queue_size)
+
+        # Lock to protect shared writes to the results list and callbacks
         lock = threading.Lock()
+
+        # Sentinel used to signal graceful worker shutdown
         sentinel = object()
 
+        # Worker routine executed by each thread
         def worker(worker_id: str) -> None:
+            # Process items until a sentinel is encountered
             while True:
                 item = queue.get()
                 if item is sentinel:
                     queue.task_done()
                     break
+
+                # Unpack the work item and build a task DTO
                 index, entry = item
                 task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id)
+
+                # Execute the task-specific processor
                 result = processor(task)
+
+                # Forward simple byte metrics when applicable
                 if isinstance(result, (bytes, str)):
                     self.metrics_collector.add_network_bytes(len(result))
+
+                # Append result and emit optional per-result callback
                 try:
                     with lock:
                         results.append(result)
                         if callable(on_result):
                             on_result(result)
                 except Exception as exc:  # noqa: BLE001
+                    # Log any callback/list append issues without crashing the worker
                     logger.log(
                         f"worker error: {exc}", level="warning", worker_id=worker_id
                     )
                 finally:
+                    # Mark the queue task as done regardless of outcome
                     queue.task_done()
 
+        # Create a fixed-size pool of worker threads
         with ThreadPoolExecutor(max_workers=self.max_workers) as worker_pool_executor:
+            # Launch workers with short identifiers for easier logging
             futures = [
                 worker_pool_executor.submit(worker, uuid.uuid4().hex[:8])
                 for _ in range(self.max_workers)
             ]
 
+            # Enqueue all incoming tasks with a small jitter to reduce lock contention
             for task in tasks:
                 time.sleep(random.uniform(0.0, 0.12))
                 queue.put(task)
 
+            # Signal workers to shut down after all tasks are queued
             for _ in range(self.max_workers):
                 queue.put(sentinel)
 
+            # Block until the queue is fully drained
             queue.join()
 
+            # Propagate any worker exceptions to the main thread
             for future in futures:
                 future.result()
 
-        # Final callback after all tasks are done
+        # Invoke the final callback once all results are ready
         if callable(post_callback):
             logger.log("Callable found", level="info")
             post_callback(results)
 
+        # Return the collected results to the caller
         return results

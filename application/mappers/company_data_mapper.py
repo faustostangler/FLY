@@ -9,10 +9,15 @@ from domain.ports.datacleaner_port import DataCleanerPort
 
 
 class CompanyDataMapper:
-    """Merge base and detail company data into a parsed DTO."""
+    """Mapper that merges company listing and detail data into a parsed DTO."""
 
     def __init__(self, data_cleaner: DataCleanerPort) -> None:
-        """Create a new mapper using the provided data cleaner utility."""
+        """Initialize the mapper with a data cleaning utility.
+
+        Args:
+            data_cleaner (DataCleanerPort): Utility responsible for cleaning
+                free-text fields before mapping into DTOs.
+        """
         self.data_cleaner = data_cleaner
 
     def create_company_data_dto(
@@ -20,13 +25,24 @@ class CompanyDataMapper:
         listing: CompanyDataListingDTO,
         detail: CompanyDataDetailDTO,
     ) -> CompanyDataDTO:
-        """Combine listing and detail information into a single DTO."""
-        # Extract the list of extra codes, falling back to an empty list.
+        """Build a unified company DTO from listing and detail information.
+
+        Args:
+            listing (CompanyDataListingDTO): Basic listing data about the company.
+            detail (CompanyDataDetailDTO): Detailed data about the company.
+
+        Returns:
+            CompanyDataDTO: Fully populated data transfer object combining
+            both listing and detail sources.
+        """
+        # Collect any extra codes provided in the detail object
         codes = detail.other_codes or []
 
-        # Parse the industry classification string into separate segments.
+        # Extract and normalize the industry classification hierarchy
         industry_classification = detail.industry_classification or ""
         parts = [p.strip() for p in industry_classification.split("/")]
+
+        # Map each classification level safely, cleaning the text if present
         industry_sector = (
             self.data_cleaner.clean_text(parts[0]) if len(parts) > 0 else None
         )
@@ -37,7 +53,7 @@ class CompanyDataMapper:
             self.data_cleaner.clean_text(parts[2]) if len(parts) > 2 else None
         )
 
-        # Build the raw company DTO with all collected information.
+        # Construct and return the aggregated company DTO
         return CompanyDataDTO(
             cvm_code=detail.cvm_code or listing.cvm_code,
             issuing_company=detail.issuing_company or listing.issuing_company,

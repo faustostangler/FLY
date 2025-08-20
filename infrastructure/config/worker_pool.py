@@ -2,29 +2,38 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-MAX_WORKERS = 1 # 20 Default number of threads for sync operations
-QUEUE_SIZE = 2 * MAX_WORKERS  # Max queue size for producer/consumer pipeline
+# Default maximum number of concurrent worker threads or processes
+MAX_WORKERS = 1
+
+# Default queue size for producer/consumer pipelines (commonly 2× workers)
+QUEUE_SIZE = 2 * MAX_WORKERS
 
 
 @dataclass(frozen=True)
 class WorkerPoolConfig:
-    """General settings for web scraping.
+    """Immutable configuration for local worker pools.
 
     Attributes:
-        test_internet: URL used to check connectivity.
-        timeout: Maximum wait time for each request.
-        max_attempts: Maximum retry attempts if a request fails.
-        user_agents: List of user-agent strings loaded from ``user_agents.json``.
-        referers: List of referer strings loaded from ``referers.json``.
-        languages: List of Accept-Language headers from ``languages.json``.
+        max_workers (int): Maximum number of concurrent workers allowed.
+        queue_size (int): Maximum number of items that can be queued
+            for processing at once.
     """
 
+    # Number of workers available for concurrency
     max_workers: int = field(default=MAX_WORKERS)
+
+    # Maximum queue capacity for pending tasks
     queue_size: int = field(default=QUEUE_SIZE)
 
 
 def load_worker_pool_config() -> WorkerPoolConfig:
-    """Create a :class:`ScrapingConfig` from bundled JSON files."""
+    """Factory function to load worker pool configuration.
+
+    Returns:
+        WorkerPoolConfig: Initialized with default values for workers
+        and queue size.
+    """
+    # Construct and return the worker pool configuration
     return WorkerPoolConfig(
         max_workers=MAX_WORKERS,
         queue_size=QUEUE_SIZE,
