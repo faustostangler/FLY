@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
 
@@ -105,6 +105,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         self.entry_cleaner = EntryCleaner(self.datacleaner)
         self.detail_fetcher = DetailFetcher(
             http_client=self.http_client,
+            metrics_collector=self._metrics_collector,
             endpoint_detail=self.endpoint_detail,
             language=self.language,
         )
@@ -150,11 +151,11 @@ class CompanyDataScraper(CompanyDataScraperPort):
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
-        companies_list = self._fetch_companies_list(save_callback=noop)
+        companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
 
         # 2) Fetch and parse detailed data for each company
-        companies = self._fetch_companies_details(
-            companies_list=companies_list.items,
+        companies: List[CompanyDataDTO] = self._fetch_companies_details(
+            companies_list=companies_entries,
             save_callback=save_callback,
         )
 
@@ -164,7 +165,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
     def _fetch_companies_list(
         self,
         save_callback: Optional[Callable[[List[Dict]], None]] = None,
-    ) -> List[CompanyDataDTO]:
+    ) -> List[Dict[str, Any]]:
         """Fetch the initial set of companies available on the exchange.
 
         The method handles pagination, incremental buffering (via SaveStrategy),
@@ -178,80 +179,75 @@ class CompanyDataScraper(CompanyDataScraperPort):
             List[CompanyDataDTO]: Container with items and pagination metadata.
                 (Assumes a DTO with ``items`` and ``total_pages`` attributes.)
         """
+        # time counter
+        start_time = time.perf_counter()
+
         # Build a save strategy to flush items while iterating pages
         strategy: SaveStrategy[Dict] = SaveStrategy.from_config(
             save_callback, self.threshold, config=self.config
         )
 
         # Accumulate all page results for the final merged list
-        results = []
+        companies_list: List[Dict[str, Any]] = []
 
         # Start from the first page (API is 1-based)
         page = 1
 
         # Fetch first page to discover total pages and seed results
-        fetch = self._fetch_page(page)
-        # Read total pages from the first response
-        total_pages = fetch.total_pages
+        fetch_first = self._fetch_page(page)
+
+        # Include FetchResultDTO items in items list
+        companies_list.extend(fetch_first.items)
 
         # Seed the aggregate results and stream to the strategy
-        for item in fetch.items:
+        for item in fetch_first.items:
             strategy.handle(item)
 
         # Extra diagnostic info for logging and progress observers
         extra_info = {
-            "Download": self.byte_formatter.format_bytes(fetch.download_size),
+            "Download": self.byte_formatter.format_bytes(fetch_first.download_size),
             "Total download": self.byte_formatter.format_bytes(
                 self._metrics_collector.network_bytes
             ),
         }
 
-        # NOTE: start_time is used here, assumed to be defined by the caller context.
-        # If undefined at runtime, this will raise; preserved intentionally (no code changes).
+        # Log Progress
         self.logger.log(
-            f"Page {page}/{total_pages}",
+            f"Page {page}/{fetch_first.total_pages}",
             level="info",
             progress={
                 "index": 0,
-                "size": total_pages,
+                "size": fetch_first.total_pages,
                 "start_time": start_time,  # noqa: F821 (assumed provided in context)
             },
             extra=extra_info,
         )
 
         # If more pages exist, dispatch them through the worker pool
-        if total_pages > 1:
+        if fetch_first.total_pages > 1:
             # Prepare (index, page_number) tasks for pages 2..N
-            tasks = list(enumerate(range(2, total_pages + 1)))
+            tasks = list(enumerate(range(2, fetch_first.total_pages + 1)))
 
             # Worker function that fetches and logs one page
-            def processor(task: WorkerTaskDTO) -> PageResultDTO:  # noqa: F821 (assumed DTO)
-                # Track network bytes for this page
-                download_bytes_pre = self._metrics_collector.network_bytes
-
+            def processor(task: WorkerTaskDTO) -> FetchResultDTO:
                 # Fetch the requested page
-                fetch = self._fetch_page(task.data)
-
-                # Compute bytes downloaded for this page
-                download_bytes_pos = (
-                    self._metrics_collector.network_bytes - download_bytes_pre
-                )
+                fetch_next = self._fetch_page(task.data)
 
                 # Prepare diagnostics for this worker's page
                 extra_info = {
-                    "Download": self.byte_formatter.format_bytes(download_bytes_pos),
+                    "Download": self.byte_formatter.format_bytes(fetch_next.download_size),
                     "Total download": self.byte_formatter.format_bytes(
-                        self.metrics_collector.network_bytes
+                        self._metrics_collector.network_bytes
                     ),
                 }
 
                 # Report progress for this page
                 self.logger.log(
-                    f"Page {task.data}/{total_pages}",
+                    f"Page {task.data}/{fetch_next.total_pages}",
                     level="info",
                     progress={
                         "index": task.index + 1,
-                        "size": total_pages,
+                        "size": fetch_next.total_pages,
                         "start_time": start_time,  # noqa: F821
                     },
                     extra=extra_info,
@@ -259,24 +255,24 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 )
 
                 # Return the page payload to be merged by the caller
-                return fetch
+                return fetch_next
 
             # Execute worker tasks concurrently
-            page_exec = self.worker_pool_executor.run(
+            results: List[FetchResultDTO] = self.worker_pool_executor.run(
                 tasks=tasks,
                 processor=processor,
                 logger=self.logger,
             )
 
             # Merge items from each fetched page into the result set
-            for page_data in page_exec.items:
-                results.extend(page_data.items)
+            for fetch_results_dto in results:
+                companies_list.extend(fetch_results_dto.items)
 
         # Finalize the save strategy to flush any remaining buffered items
         strategy.finalize()
 
         # Return a typed container as declared by the signature (assumed framework-provided)
-        return List[CompanyDataDTO]
+        return companies_list
 
     def _fetch_companies_details(
         self,
@@ -306,14 +302,9 @@ class CompanyDataScraper(CompanyDataScraperPort):
             No behavior is changed here; comments clarify intent only.
         """
         # Build a save strategy that buffers detail DTOs and flushes on threshold
-        strategy: SaveStrategy[CompanyDataRawDTO] = SaveStrategy(  # noqa: F821 (assumed type)
+        strategy: SaveStrategy[CompanyDataDTO] = SaveStrategy.from_config(
             save_callback, self.threshold, config=self.config
-        )
-
-        # Initialize execution result with baseline metrics
-        detail_exec: ExecutionResultDTO[Optional[CompanyDataRawDTO]] = (  # noqa: F821
-            ExecutionResultDTO(items=[], metrics=self.metrics_collector.get_metrics(0))  # noqa: F821
-        )
+            )
 
         # Pair each entry with its index for progress reporting
         tasks = list(enumerate(companies_list))
@@ -322,13 +313,13 @@ class CompanyDataScraper(CompanyDataScraperPort):
         start_time = time.perf_counter()
 
         # Worker that processes a single company entry through the detail pipeline
-        def processor(task: WorkerTaskDTO) -> Optional[CompanyDataRawDTO]:  # noqa: F821
+        def processor(task: WorkerTaskDTO) -> Optional[CompanyDataDTO]:  # noqa: F821
             index = task.index
             entry = task.data
             worker_id = task.worker_id
 
             # Normalize the company name before comparisons/logging
-            company_name = self.data_cleaner.clean_text(entry.get("companyName"))
+            company_name = self.datacleaner.clean_text(entry.get("companyName"))
 
             # Skip if company is already persisted or filtered out
             if company_name in self.skip_codes:
@@ -350,16 +341,8 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 )
                 return None
 
-            # Track network bytes prior to detail fetch
-            download_bytes_pre = self._metrics_collector.network_bytes
-
             # Process one entry through fetch + clean + merge
             result = self.detail_processor.process_entry(entry)
-
-            # Compute per-item bytes downloaded
-            download_bytes_pos = (
-                self._metrics_collector.network_bytes - download_bytes_pre
-            )
 
             # Prepare diagnostic metadata for logs
             issuingCompany = entry.get("issuingCompany")
@@ -390,7 +373,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
             return result
 
         # Handler that buffers items and triggers flushes via the strategy
-        def handle_batch(item: Optional[CompanyDataRawDTO]) -> None:  # noqa: F821
+        def handle_batch(item: Optional[CompanyDataDTO]) -> None:  # noqa: F821
             # Only buffer non-empty results
             if item is not None:
                 strategy.handle([item])
@@ -472,9 +455,3 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
         # Return the raw results list; callers may also access other metadata
         return FetchResultDTO(items=items, total_pages=total_pages, download_size=download_size)
-
-    # @property
-    # def metrics_collector(self) -> MetricsCollectorPort:
-    #     """Metrics collector used by the scraper."""
-    #
-    #     return self._metrics_collector

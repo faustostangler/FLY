@@ -6,6 +6,7 @@ import base64
 from typing import Dict
 
 from domain.ports.http_client_port import AffinityHttpClientPort
+from domain.ports.metrics_collector_port import MetricsCollectorPort
 
 
 class DetailFetcher:
@@ -23,6 +24,7 @@ class DetailFetcher:
     def __init__(
         self,
         http_client: AffinityHttpClientPort,
+        metrics_collector: MetricsCollectorPort,
         endpoint_detail: str,
         language: str,
     ) -> None:
@@ -34,8 +36,9 @@ class DetailFetcher:
             language (str): Language/locale string to include in the payload.
 
         """
-        # Keep a reference to the HTTP client used for all requests
+        # Store core collaborators for use throughout the scraper
         self.http_client = http_client
+        self._metrics_collector = metrics_collector
 
         # Save the detail endpoint where the token will be appended
         self.endpoint_detail = endpoint_detail
@@ -43,7 +46,7 @@ class DetailFetcher:
         # Persist the language so it can be embedded in each request payload
         self.language = language
 
-    def fetch_detail(self, session, cvm_code: str) -> Dict:
+    def fetch_detail(self, session, cvm_code: str, metrics_collector: MetricsCollectorPort) -> Dict:
         """Fetch the raw detail JSON for a given CVM code.
 
         Builds a base64-encoded JSON token with the required fields,
@@ -71,7 +74,13 @@ class DetailFetcher:
         url = self.endpoint_detail + token
 
         # Execute the HTTP request using the shared client/session
-        body = self.http_client.fetch_with(session, url)
+        with self.http_client.borrow_session() as session:
+            body = self.http_client.fetch_with(session, url)
+
+        print("FALTA PASSAR o self.metrics_collector para add download_size")
+        # Update network metrics with the size of the downloaded payload
+        download_size = len(body)
+        self._metrics_collector.add_network_bytes(download_size)
 
         # Decode the response body and parse it as JSON
         raw = json.loads(body.decode("utf-8"))

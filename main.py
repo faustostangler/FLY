@@ -14,16 +14,16 @@ def main() -> None:
         3. Build controller
         4. Run controller
     """
+    # Load configuration
+    config = ConfigAdapter()
+
+    # Setup logger
+    logger = Logger(config)
+
+    # Log startup message
+    logger.log(f"Run Project {config.fly_settings.app_name}", level="info")
+
     try:
-        # Load configuration
-        config = ConfigAdapter()
-
-        # Setup logger
-        logger = Logger(config)
-
-        # Log startup message
-        logger.log(f"Run Project {config.fly_settings.app_name}", level="info")
-
         # Build controller
         controller = cli_factory(config, logger)
 
@@ -32,7 +32,7 @@ def main() -> None:
 
     except Exception as e:
         # Print unexpected error
-        print(e)
+        logger.log(f"Critical error: {e}")
 
 
 if __name__ == "__main__":
