@@ -26,7 +26,7 @@ class CompanyDataDetailProcessor:
 
     def __init__(
         self, cleaner: EntryCleaner, fetcher: DetailFetcher, merger: CompanyDataMerger
-    ) -> None:
+    ) -> None: 
         """Initialize the processor with its collaborators.
 
         Args:
