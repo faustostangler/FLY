@@ -7,7 +7,7 @@ from domain.dtos.company_data_dto import (
     CompanyDataDetailDTO,
     CompanyDataDTO,
 )
-from infrastructure.adapters.datacleaner_adapter import DataCleaner
+from infrastructure.adapters.datacleaner_adapter import DataCleanerPort
 
 
 class EntryCleaner:
@@ -19,7 +19,7 @@ class EntryCleaner:
     explicit and testable.
     """
 
-    def __init__(self, data_cleaner: DataCleaner) -> None:
+    def __init__(self, data_cleaner: DataCleanerPort) -> None:
         """Initialize the cleaner with its data normalization dependency.
 
         Args:

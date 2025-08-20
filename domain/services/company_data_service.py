@@ -29,10 +29,11 @@ class CompanyDataService:
 
         # Initialize the use case responsible for company synchronization
         self.sync_companies_usecase = SyncCompanyDataUseCase(
+            config=self.config,
             logger=self.logger,
             repository=repository,
             scraper=scraper,
-            max_workers=self.config.global_settings.max_workers,
+            max_workers=self.config.worker_pool.max_workers,
         )
 
     def sync_companies(self) -> None:

@@ -5,7 +5,7 @@ import base64
 
 from typing import Dict
 
-from infrastructure.http.http_client import RequestsAffinityHttpClient
+from domain.ports.http_client_port import AffinityHttpClientPort
 
 
 class DetailFetcher:
@@ -22,7 +22,7 @@ class DetailFetcher:
 
     def __init__(
         self,
-        http_client: RequestsAffinityHttpClient,
+        http_client: AffinityHttpClientPort,
         endpoint_detail: str,
         language: str,
     ) -> None:

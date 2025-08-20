@@ -3,12 +3,13 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Callable, Dict, List, Optional, TypeVar
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
 
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.dtos.fetch_results_dto import FetchResultDTO
 
 from domain.ports.http_client_port import AffinityHttpClientPort
 from domain.ports.scraper_company_data_port import CompanyDataScraperPort
@@ -74,7 +75,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         # Store core collaborators for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.data_cleaner = datacleaner
+        self.datacleaner = datacleaner
         self.mapper = mapper
         self.worker_pool_executor = worker_pool
         self._metrics_collector = metrics_collector
@@ -95,12 +96,13 @@ class CompanyDataScraper(CompanyDataScraperPort):
         from application.mappers.company_data_merger import CompanyDataMerger
         from application.processors.entry_cleaner import EntryCleaner
         from infrastructure.scrapers.company_detail_scraper import DetailFetcher
+        from application.processors.company_detail_processor import CompanyDataDetailProcessor
         # Note: CompanyDataDetailProcessor is referenced below; assumed available in scope
         # via the commented import group or equivalent wiring elsewhere.
 
         # Compose processors used by the detail pipeline
         self.company_data_merger = CompanyDataMerger(self.mapper, self.logger)
-        self.entry_cleaner = EntryCleaner(self.data_cleaner)
+        self.entry_cleaner = EntryCleaner(self.datacleaner)
         self.detail_fetcher = DetailFetcher(
             http_client=self.http_client,
             endpoint_detail=self.endpoint_detail,
@@ -187,28 +189,20 @@ class CompanyDataScraper(CompanyDataScraperPort):
         # Start from the first page (API is 1-based)
         page = 1
 
-        # Track network bytes for this page to log incremental download size
-        download_bytes_pre = self._metrics_collector.network_bytes
-
         # Fetch first page to discover total pages and seed results
         fetch = self._fetch_page(page)
-
-        # Compute bytes downloaded during this call
-        download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
-
         # Read total pages from the first response
         total_pages = fetch.total_pages
 
         # Seed the aggregate results and stream to the strategy
-        results = list(fetch.items)
         for item in fetch.items:
             strategy.handle(item)
 
         # Extra diagnostic info for logging and progress observers
         extra_info = {
-            "Download": self.byte_formatter.format_bytes(download_bytes_pos),
+            "Download": self.byte_formatter.format_bytes(fetch.download_size),
             "Total download": self.byte_formatter.format_bytes(
-                self.metrics_collector.network_bytes
+                self._metrics_collector.network_bytes
             ),
         }
 
@@ -430,7 +424,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         # Convert payload to base64(JSON(payload))
         return base64.b64encode(json.dumps(payload).encode("utf-8")).decode("utf-8")
 
-    def _fetch_page(self, page_number: int) -> list[T]:
+    def _fetch_page(self, page_number: int) -> FetchResultDTO:
         """Fetch one page from the companies list endpoint.
 
         Builds the required base64 token, performs the HTTP request using the
@@ -464,19 +458,20 @@ class CompanyDataScraper(CompanyDataScraperPort):
             body = self.http_client.fetch_with(session, url)
 
         # Update network metrics with the size of the downloaded payload
-        self._metrics_collector.add_network_bytes(len(body))
+        download_size = len(body)
+        self._metrics_collector.add_network_bytes(download_size)
 
         # Decode the JSON body to extract results and pagination info
         data = json.loads(body.decode("utf-8"))
 
         # Read entries for this page
-        results = data.get("results", [])
+        items = data.get("results", [])
 
         # Read total pages (some callers expect this for progress)
         total_pages = data.get("page", {}).get("totalPages", 1)
 
         # Return the raw results list; callers may also access other metadata
-        return results
+        return FetchResultDTO(items=items, total_pages=total_pages, download_size=download_size)
 
     # @property
     # def metrics_collector(self) -> MetricsCollectorPort:

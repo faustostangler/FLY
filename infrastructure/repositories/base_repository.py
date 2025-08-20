@@ -24,7 +24,7 @@ T = TypeVar("T")  # T any DTO.
 K = TypeVar("K", contravariant=True)  # Primary key type (e.g., str, int)
 
 
-class BaseRepository(RepositoryBasePort[T, K], EngineSetup):
+class BaseRepository(EngineSetup, RepositoryBasePort[T, K]):
     """Generic read/write repository contract with keyset-based helpers.
 
     This class provides common persistence utilities for repositories that map
