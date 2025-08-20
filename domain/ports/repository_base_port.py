@@ -14,16 +14,24 @@ from typing import (
     runtime_checkable,
 )
 
-T = TypeVar("T")  # DTO type
-K = TypeVar("K", contravariant=True)  # Key type (e.g., str, int)
+# Type variable for the entity/DTO stored in the repository
+T = TypeVar("T")
+
+# Type variable for the primary key or identifier (contravariant to allow subtyping)
+K = TypeVar("K", contravariant=True)
 
 
 @runtime_checkable
 class RepositoryBasePort(Protocol, Generic[T, K]):
-    """Generic interface (port) for basic repository operations.
+    """Generic interface (port) for repository operations.
 
-    This protocol defines the standard CRUD-like operations expected from any
-    persistence adapter.
+    Defines the expected contract for any persistence adapter.
+    The design follows a CRUD-like pattern but remains flexible
+    for batch operations and column-based lookups.
+
+    Type parameters:
+        T: The entity or DTO type stored in the repository.
+        K: The type of the primary key or identifier (e.g., str, int).
     """
 
     def save_all(self, items: List[T]) -> None: ...

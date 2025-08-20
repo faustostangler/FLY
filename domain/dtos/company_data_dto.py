@@ -8,15 +8,18 @@ from typing import List, Optional
 
 @dataclass(frozen=True)
 class CodeDTO:
-    """Represents a pair of ticker/ISIN codes."""
+    """Represents a mapping between a trading code and its ISIN."""
 
+    # Trading code (e.g., ticker)
     code: Optional[str]
+
+    # International Securities Identification Number
     isin: Optional[str]
 
 
 @dataclass(frozen=True)
 class CompanyDataListingDTO:
-    """DTO for base company data from the list endpoint."""
+    """DTO for basic company information returned by the listing endpoint."""
 
     cvm_code: Optional[str]
     issuing_company: Optional[str]
@@ -34,9 +37,8 @@ class CompanyDataListingDTO:
 
     @staticmethod
     def from_dict(raw: dict) -> "CompanyDataListingDTO":
-        """Create a listing DTO from a raw dictionary."""
-
-        # Directly map the expected keys from the raw payload.
+        """Create a listing DTO from raw dictionary data."""
+        # Map payload keys directly to DTO attributes
         return CompanyDataListingDTO(
             cvm_code=raw.get("codeCVM"),
             issuing_company=raw.get("issuingCompany"),
@@ -56,7 +58,7 @@ class CompanyDataListingDTO:
 
 @dataclass(frozen=True)
 class CompanyDataDetailDTO:
-    """DTO for detailed company data from the detail endpoint."""
+    """DTO for detailed company information from the detail endpoint."""
 
     issuing_company: Optional[str]
     company_name: Optional[str]
@@ -81,24 +83,22 @@ class CompanyDataDetailDTO:
     type_bdr: Optional[str]
     company_category: Optional[str]
     date_quotation: Optional[datetime]
-
     listing_segment: Optional[str]
     registrar: Optional[str]
 
     @staticmethod
     def from_dict(raw: dict) -> "CompanyDataDetailDTO":
-        """Parse a detailed company payload into a DTO."""
-
-        # ``otherCodes`` may come as a serialized JSON string; normalize to list
+        """Parse and normalize a raw detail payload into a DTO."""
+        # Normalize "otherCodes": may arrive as JSON string or list
         other_codes = raw.get("otherCodes") or []
         if isinstance(other_codes, str):
             other_codes = json.loads(other_codes)
 
-        # Convert dictionaries to :class:`CodeDTO` instances
+        # Convert list of dicts into CodeDTO instances
         code_dtos = [CodeDTO(code=c.get("code"), isin=c.get("isin")) for c in other_codes]
 
-        # Populate the DTO using values from the payload
-        company_data_detail_dto = CompanyDataDetailDTO(
+        # Populate the DTO using payload values
+        return CompanyDataDetailDTO(
             issuing_company=raw.get("issuingCompany"),
             company_name=raw.get("companyName"),
             trading_name=raw.get("tradingName"),
@@ -125,13 +125,11 @@ class CompanyDataDetailDTO:
             listing_segment=raw.get("listingSegment"),
             registrar=raw.get("registrar"),
         )
-        # Return the populated DTO instance
-        return company_data_detail_dto
 
 
 @dataclass(frozen=True)
 class CompanyDataDTO:
-    """Parsed data returned by the scraper before mapping to the domain."""
+    """Unified company data model returned by the scraper before domain mapping."""
 
     cvm_code: Optional[str]
     issuing_company: Optional[str]
@@ -139,10 +137,12 @@ class CompanyDataDTO:
     company_name: Optional[str]
     cnpj: Optional[str]
 
+    # Codes and identifiers
     ticker_codes: List[str]
     isin_codes: List[str]
     other_codes: List[CodeDTO]
 
+    # Industry classification data
     industry_sector: Optional[str]
     industry_subsector: Optional[str]
     industry_segment: Optional[str]
@@ -150,27 +150,32 @@ class CompanyDataDTO:
     industry_classification_eng: Optional[str]
     activity: Optional[str]
 
+    # Company-level descriptors
     company_segment: Optional[str]
     company_segment_eng: Optional[str]
     company_category: Optional[str]
     company_type: Optional[str]
 
+    # Listing and registry data
     listing_segment: Optional[str]
     registrar: Optional[str]
     website: Optional[str]
     institution_common: Optional[str]
     institution_preferred: Optional[str]
 
+    # Market information
     market: Optional[str]
     status: Optional[str]
     market_indicator: Optional[str]
 
+    # Stock and BDR attributes
     code: Optional[str]
     has_bdr: Optional[bool]
     type_bdr: Optional[str]
     has_quotation: Optional[bool]
     has_emissions: Optional[bool]
 
+    # Important dates
     date_quotation: Optional[datetime]
     last_date: Optional[datetime]
     listing_date: Optional[datetime]

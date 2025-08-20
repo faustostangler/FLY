@@ -9,6 +9,14 @@ from .repository_base_port import RepositoryBasePort
 
 @runtime_checkable
 class RawStatementsRepositoryPort(RepositoryBasePort[RawStatementDTO, int], Protocol):
-    """Port for persisting raw statement rows."""
+    """Port interface for managing raw statement persistence.
+
+    Extends the base repository port to handle `RawStatementDTO` entities,
+    providing both standard CRUD operations and domain-specific queries.
+
+    Methods:
+        get_by_company_name(company_name: str) -> List[RawStatementDTO]:
+            Retrieve all raw statements belonging to the given company.
+    """
 
     def get_by_company_name(self, company_name: str) -> List[RawStatementDTO]: ...

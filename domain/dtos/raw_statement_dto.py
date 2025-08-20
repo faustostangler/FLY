@@ -8,7 +8,20 @@ from .parsed_statement_dto import ParsedStatementDTO
 
 @dataclass(frozen=True, kw_only=True)
 class RawStatementDTO:
-    """Immutable DTO representing a scraped statement row."""
+    """Immutable DTO representing a raw scraped financial statement row.
+
+    Attributes:
+        id (Optional[int]): Database ID if persisted, otherwise None.
+        nsd (str): NSD identifier (must be numeric).
+        company_name (Optional[str]): Company name, if available.
+        quarter (Optional[str]): Financial quarter reference.
+        version (Optional[str]): Version identifier of the statement.
+        grupo (str): Group classification of the statement.
+        quadro (str): Board classification of the statement.
+        account (str): Account code extracted from the statement.
+        description (str): Human-readable description of the account.
+        value (float): Numeric value associated with the statement row.
+    """
 
     id: Optional[int] = None
     nsd: str
@@ -23,13 +36,24 @@ class RawStatementDTO:
 
     @staticmethod
     def from_dict(raw: dict) -> "RawStatementDTO":
-        """Create a ``RawStatementDTO`` from a raw dictionary."""
+        """Build a ``RawStatementDTO`` from a raw dictionary.
 
+        Args:
+            raw (dict): Input dictionary containing scraped statement data.
+
+        Returns:
+            RawStatementDTO: A validated and structured DTO.
+
+        Raises:
+            ValueError: If the ``nsd`` field is missing or not numeric.
+        """
+        # Validate and normalize NSD field
         nsd_raw = raw.get("nsd", "")
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
 
+        # Construct and return a fully initialized DTO
         return RawStatementDTO(
             id=raw.get("id"),
             nsd=nsd_value,
@@ -44,14 +68,23 @@ class RawStatementDTO:
         )
 
     def to_parsed(self, target_line: str) -> "ParsedStatementDTO":
-        """Convert this raw row into a ``ParsedStatementDTO``."""
+        """Convert this raw DTO into a ``ParsedStatementDTO``.
 
+        Args:
+            target_line (str): A formatted line containing account and description,
+                separated by " - ". Example: "1234 - Cash and Equivalents".
+
+        Returns:
+            ParsedStatementDTO: The parsed statement with structured fields.
+        """
         from .parsed_statement_dto import ParsedStatementDTO
 
+        # Extract account and description from the target line
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         description = parts[1].strip() if len(parts) > 1 else self.description
 
+        # Build and return the parsed DTO
         return ParsedStatementDTO(
             id=None,
             nsd=self.nsd,

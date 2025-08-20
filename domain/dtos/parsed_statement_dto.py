@@ -6,7 +6,21 @@ from typing import Optional
 
 @dataclass(frozen=True, kw_only=True)
 class ParsedStatementDTO:
-    """Immutable representation of a cleaned statement row."""
+    """Immutable representation of a parsed and validated financial statement row.
+
+    Attributes:
+        id (Optional[int]): Unique identifier, if present in the database.
+        nsd (str): Normalized security identifier (must be numeric).
+        company_name (Optional[str]): Name of the company associated with the statement.
+        quarter (Optional[str]): Reporting quarter (e.g., "Q1", "Q2").
+        version (Optional[str]): Statement version if multiple revisions exist.
+        grupo (str): Group classification of the account.
+        quadro (str): Subsection or panel classification.
+        account (str): Account identifier.
+        description (str): Human-readable description of the account.
+        value (float): Numeric value of the account entry.
+        processing_hash (str): Optional hash used for deduplication and integrity checks.
+    """
 
     id: Optional[int] = None
     nsd: str
@@ -22,12 +36,27 @@ class ParsedStatementDTO:
 
     @staticmethod
     def from_dict(raw: dict) -> "ParsedStatementDTO":
-        """Create ``ParsedStatementDTO`` from a raw dictionary."""
+        """Convert a raw dictionary into a ``ParsedStatementDTO``.
+
+        Validates and coerces types where necessary to ensure the DTO
+        is properly structured for downstream processing.
+
+        Args:
+            raw (dict): Input dictionary containing statement fields.
+
+        Returns:
+            ParsedStatementDTO: A fully validated and normalized DTO.
+
+        Raises:
+            ValueError: If the NSD field is missing or not numeric.
+        """
+        # Extract and validate NSD, must be numeric
         nsd_raw = raw.get("nsd", "")
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
 
+        # Build and return DTO with normalized fields
         return ParsedStatementDTO(
             id=raw.get("id"),
             nsd=nsd_value,
