@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports import (
     CompanyDataRepositoryPort,

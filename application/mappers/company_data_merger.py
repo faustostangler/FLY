@@ -8,7 +8,8 @@ from domain.dtos.company_data_dto import (
     CompanyDataDTO,
     CompanyDataListingDTO,
 )
-from domain.ports.config_port import ConfigPort
+
+# from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
 
 

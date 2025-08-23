@@ -11,8 +11,6 @@ from application.processors.company_detail_processor import CompanyDataDetailPro
 from application.processors.entry_cleaner import EntryCleaner
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
-from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.worker_result_dto import ExecutionResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.datacleaner_port import DataCleanerPort

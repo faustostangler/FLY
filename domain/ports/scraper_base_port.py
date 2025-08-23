@@ -10,8 +10,6 @@ from typing import (
     runtime_checkable,
 )
 
-from domain.dtos.sync_results_dto import SyncResultsDTO
-
 # Type variable representing the entity type being scraped
 T = TypeVar("T")
 
