@@ -145,15 +145,15 @@ class CompanyDataScraper(CompanyDataScraperPort):
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
-        # companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
+        companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
         # with open("temp/companies_entries.json", "w", encoding="utf-8") as f:
         #     json.dump(companies_entries, f, ensure_ascii=False, indent=2)
-        with open("temp/companies_entries.json", "r", encoding="utf-8") as f:
-            companies_entries = json.load(f)
+        # with open("temp/companies_entries.json", "r", encoding="utf-8") as f:
+        #     companies_entries = json.load(f)
 
         # 2) Fetch and parse detailed data for each company
         companies: List[CompanyDataDTO] = self._fetch_companies_details(
-            companies_list=companies_entries[:10],
+            companies_list=companies_entries,
             save_callback=save_callback,
         )
 
@@ -260,6 +260,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 tasks=tasks,
                 processor=processor,
                 logger=self.logger,
+                max_workers=1,
             )
 
             # Merge items from each fetched page into the result set
@@ -382,6 +383,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
             processor=processor,
             logger=self.logger,
             on_result=handle_batch,
+            max_workers=self.config.worker_pool.max_workers or 1,
         )
 
         # Ensure any residual buffered items are flushed

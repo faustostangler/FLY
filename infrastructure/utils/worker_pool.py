@@ -61,6 +61,7 @@ class WorkerPool(WorkerPoolPort):
         logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
+        max_workers: int = 1
     ) -> List[R]:
         """Process tasks concurrently using the provided processor.
 
@@ -138,7 +139,7 @@ class WorkerPool(WorkerPoolPort):
                     queue.task_done()
 
         # Create a fixed-size pool of worker threads
-        with ThreadPoolExecutor(max_workers=self.max_workers) as worker_pool_executor:
+        with ThreadPoolExecutor(max_workers=max_workers or self.max_workers) as worker_pool_executor:
             # Launch workers with short identifiers for easier logging
             futures = [
                 worker_pool_executor.submit(worker, uuid.uuid4().hex[:8])

@@ -40,6 +40,7 @@ class WorkerPoolPort(Protocol):
         logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
+        max_workers: int = 1
     ) -> List[R]:
         """Run a batch of tasks using the worker pool.
 

@@ -41,7 +41,8 @@ class Cli:
         self.logger.log("Start FLY", level="info")
 
         # Kick off the company data pipeline
-        self._company_service()
+        company_results: SyncResultsDTO = self._company_service()
+        self.logger.log(f"Total Download: {company_results.metrics}")
 
         return None
 
