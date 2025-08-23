@@ -9,7 +9,6 @@ from queue import Queue
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.metrics_collector_port import MetricsCollectorPort

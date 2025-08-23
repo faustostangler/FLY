@@ -3,9 +3,13 @@ from __future__ import annotations
 from typing import Optional
 
 from application.mappers.company_data_mapper import CompanyDataMapper
+from domain.dtos.company_data_dto import (
+    CompanyDataDetailDTO,
+    CompanyDataDTO,
+    CompanyDataListingDTO,
+)
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
-from domain.dtos.company_data_dto import CompanyDataListingDTO, CompanyDataDetailDTO, CompanyDataDTO
 
 
 class CompanyDataMerger:
@@ -63,7 +67,7 @@ class CompanyDataMerger:
         # Attempt to perform the merge using the mapper
         try:
             # Return the merged DTO when the mapper is enabled
-            return None  # self.mapper.merge_company_data_dtos(listing, detail)
+            return self.mapper.create_company_data_dto(listing, detail)
         except Exception as exc:  # noqa: BLE001
             # Log the error for troubleshooting and return a safe fallback
             self.logger.log(f"erro {exc}", level="debug")

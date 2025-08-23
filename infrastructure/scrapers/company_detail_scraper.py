@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import json
 import base64
-
+import json
 from typing import Dict
 
 from domain.ports.http_client_port import AffinityHttpClientPort
@@ -77,10 +76,8 @@ class DetailFetcher:
         with self.http_client.borrow_session() as session:
             body = self.http_client.fetch_with(session, url)
 
-        print("FALTA PASSAR o self.metrics_collector para add download_size")
         # Update network metrics with the size of the downloaded payload
-        download_size = len(body)
-        self._metrics_collector.add_network_bytes(download_size)
+        self._metrics_collector.add_network_bytes(len(body))
 
         # Decode the response body and parse it as JSON
         raw = json.loads(body.decode("utf-8"))

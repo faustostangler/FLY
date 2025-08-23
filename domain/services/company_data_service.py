@@ -1,8 +1,11 @@
+from typing import List, Tuple
+
 from application.usecases import SyncCompanyDataUseCase
-from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
+from domain.ports.scraper_company_data_port import CompanyDataScraperPort
 
 
 class CompanyDataService:
@@ -36,12 +39,11 @@ class CompanyDataService:
             max_workers=self.config.worker_pool.max_workers,
         )
 
-    def sync_companies(self) -> None:
+    def sync_companies(self) -> SyncResultsDTO:
         """Trigger company synchronization workflow.
 
         Returns:
             Any: The result of the synchronization use case execution.
         """
         # Delegate execution to the underlying use case
-        result = self.sync_companies_usecase.synchronize_companies()
-        return result
+        return self.sync_companies_usecase.synchronize_companies()

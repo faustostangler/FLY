@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Protocol, TypeVar, runtime_checkable
 
+from domain.ports import BaseScraperPort
+
 # Generic type variable for scraped data results
 T = TypeVar("T")
 
-from domain.ports import BaseScraperPort
 
 
 @runtime_checkable

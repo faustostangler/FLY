@@ -13,6 +13,7 @@ from typing import (
 )
 
 from domain.dtos import WorkerTaskDTO
+
 from .logger_port import LoggerPort
 
 # Generic type variable for processor return values

@@ -37,6 +37,8 @@ class CompanyDataMapper:
         """
         # Collect any extra codes provided in the detail object
         codes = detail.other_codes or []
+        if codes:
+            pass
 
         # Extract and normalize the industry classification hierarchy
         industry_classification = detail.industry_classification or ""

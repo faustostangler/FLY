@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from typing import Dict, Optional, cast
 
-from domain.dtos.company_data_dto import CompanyDataListingDTO, CompanyDataDetailDTO, CompanyDataDTO
 from application.mappers.company_data_merger import CompanyDataMerger
-from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 from application.processors.entry_cleaner import EntryCleaner
+from domain.dtos.company_data_dto import (
+    CompanyDataDetailDTO,
+    CompanyDataDTO,
+    CompanyDataListingDTO,
+)
+from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 
 
 class CompanyDataDetailProcessor:
@@ -26,7 +30,7 @@ class CompanyDataDetailProcessor:
 
     def __init__(
         self, cleaner: EntryCleaner, fetcher: DetailFetcher, merger: CompanyDataMerger
-    ) -> None: 
+    ) -> None:
         """Initialize the processor with its collaborators.
 
         Args:
@@ -94,7 +98,7 @@ class CompanyDataDetailProcessor:
             # Borrow a shared HTTP session to perform the detail request efficiently
             with self.fetcher.http_client.borrow_session() as session:
                 # Fetch the detailed payload keyed by the company's CVM code
-                detail = self.fetcher.fetch_detail(session, str(listing.cvm_code), metrics_collector=)
+                detail = self.fetcher.fetch_detail(session, str(listing.cvm_code), metrics_collector=metrics_collector)
 
             # Define which text fields should be normalized for the detail DTO
             # Note: "market" appears twice and "institutionPreffered" seems misspelled.

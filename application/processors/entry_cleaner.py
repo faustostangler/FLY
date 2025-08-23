@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Type, Union
 
 from domain.dtos.company_data_dto import (
-    CompanyDataListingDTO,
     CompanyDataDetailDTO,
     CompanyDataDTO,
+    CompanyDataListingDTO,
 )
 from infrastructure.adapters.datacleaner_adapter import DataCleanerPort
 

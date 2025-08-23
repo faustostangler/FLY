@@ -10,6 +10,8 @@ from typing import (
     runtime_checkable,
 )
 
+from domain.dtos.sync_results_dto import SyncResultsDTO
+
 # Type variable representing the entity type being scraped
 T = TypeVar("T")
 
@@ -46,4 +48,8 @@ class BaseScraperPort(Protocol, Generic[T]):
         Returns:
             List[T]: A list of scraped domain entities.
         """
+        ...
+
+    def get_metrics(self) -> int:
+        """Retrieve metrics related to the scraping process."""
         ...

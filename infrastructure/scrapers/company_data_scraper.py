@@ -3,21 +3,25 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
-
+from application.mappers.company_data_merger import CompanyDataMerger
+from application.processors.company_detail_processor import CompanyDataDetailProcessor
+from application.processors.entry_cleaner import EntryCleaner
 from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
-
-from domain.ports.http_client_port import AffinityHttpClientPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.worker_result_dto import ExecutionResultDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.datacleaner_port import DataCleanerPort
+from domain.ports.http_client_port import AffinityHttpClientPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.metrics_collector_port import MetricsCollectorPort
+from domain.ports.scraper_company_data_port import CompanyDataScraperPort
 from domain.ports.worker_pool_port import WorkerPoolPort
+from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 
 # from infrastructure.scrapers.company_data_processors import (
 #     CompanyDataDetailProcessor,
@@ -92,14 +96,6 @@ class CompanyDataScraper(CompanyDataScraperPort):
         # Initialize helper for human-readable byte sizes
         self.byte_formatter = ByteFormatter()
 
-        # Deferred imports to avoid circular dependencies or heavy imports at module load
-        from application.mappers.company_data_merger import CompanyDataMerger
-        from application.processors.entry_cleaner import EntryCleaner
-        from infrastructure.scrapers.company_detail_scraper import DetailFetcher
-        from application.processors.company_detail_processor import CompanyDataDetailProcessor
-        # Note: CompanyDataDetailProcessor is referenced below; assumed available in scope
-        # via the commented import group or equivalent wiring elsewhere.
-
         # Compose processors used by the detail pipeline
         self.company_data_merger = CompanyDataMerger(self.mapper, self.logger)
         self.entry_cleaner = EntryCleaner(self.datacleaner)
@@ -151,11 +147,15 @@ class CompanyDataScraper(CompanyDataScraperPort):
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
-        companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
+        # companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
+        # with open("temp/companies_entries.json", "w", encoding="utf-8") as f:
+        #     json.dump(companies_entries, f, ensure_ascii=False, indent=2)
+        with open("temp/companies_entries.json", "r", encoding="utf-8") as f:
+            companies_entries = json.load(f)
 
         # 2) Fetch and parse detailed data for each company
         companies: List[CompanyDataDTO] = self._fetch_companies_details(
-            companies_list=companies_entries,
+            companies_list=companies_entries[:10],
             save_callback=save_callback,
         )
 
@@ -205,7 +205,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
         # Extra diagnostic info for logging and progress observers
         extra_info = {
-            "Download": self.byte_formatter.format_bytes(fetch_first.download_size),
+            "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
             "Total download": self.byte_formatter.format_bytes(
                 self._metrics_collector.network_bytes
             ),
@@ -235,7 +235,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
 
                 # Prepare diagnostics for this worker's page
                 extra_info = {
-                    "Download": self.byte_formatter.format_bytes(fetch_next.download_size),
+                    "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                     "Total download": self.byte_formatter.format_bytes(
                         self._metrics_collector.network_bytes
                     ),
@@ -342,17 +342,17 @@ class CompanyDataScraper(CompanyDataScraperPort):
                 return None
 
             # Process one entry through fetch + clean + merge
-            result = self.detail_processor.process_entry(entry)
+            result = self.detail_processor.process_entry(entry, metrics_collector=self._metrics_collector)
 
             # Prepare diagnostic metadata for logs
-            issuingCompany = entry.get("issuingCompany")
-            tradingName = entry.get("tradingName")
+            issuingCompany = result.issuing_company if result else entry.get("issuingCompany")
+            tradingName = result.trading_name if result else entry.get("tradingName")
             extra_info = {
                 "issuingCompany": issuingCompany,
                 "trading_name": tradingName,
-                "Download": self.byte_formatter.format_bytes(download_bytes_pos),
+                "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                 "Total download": self.byte_formatter.format_bytes(
-                    self.metrics_collector.network_bytes
+                    self._metrics_collector.network_bytes
                 ),
             }
 
@@ -376,10 +376,10 @@ class CompanyDataScraper(CompanyDataScraperPort):
         def handle_batch(item: Optional[CompanyDataDTO]) -> None:  # noqa: F821
             # Only buffer non-empty results
             if item is not None:
-                strategy.handle([item])
+                strategy.handle(item)
 
         # Execute detail processing concurrently
-        detail_exec = self.worker_pool_executor.run(
+        companies = self.worker_pool_executor.run(
             tasks=tasks,
             processor=processor,
             logger=self.logger,
@@ -390,10 +390,10 @@ class CompanyDataScraper(CompanyDataScraperPort):
         strategy.finalize()
 
         # Filter out None results from the execution
-        results = [item for item in detail_exec.items if item is not None]
+        results = [item for item in companies if item is not None]
 
         # Return aggregated results and preserve execution metrics
-        return ExecutionResultDTO(items=results, metrics=detail_exec.metrics)  # noqa: F821
+        return results
 
     def _encode_payload(self, payload: dict) -> str:
         """Encode a JSON-serializable dict into the base64 format expected by the API.
@@ -441,8 +441,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
             body = self.http_client.fetch_with(session, url)
 
         # Update network metrics with the size of the downloaded payload
-        download_size = len(body)
-        self._metrics_collector.add_network_bytes(download_size)
+        self._metrics_collector.add_network_bytes(len(body))
 
         # Decode the JSON body to extract results and pagination info
         data = json.loads(body.decode("utf-8"))
@@ -454,4 +453,7 @@ class CompanyDataScraper(CompanyDataScraperPort):
         total_pages = data.get("page", {}).get("totalPages", 1)
 
         # Return the raw results list; callers may also access other metadata
-        return FetchResultDTO(items=items, total_pages=total_pages, download_size=download_size)
+        return FetchResultDTO(items=items, total_pages=total_pages)
+
+    def get_metrics(self) -> int:
+        return self._metrics_collector.network_bytes

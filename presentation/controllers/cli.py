@@ -1,10 +1,6 @@
-"""Command-line orchestration entrypoint for the application.
+from typing import List, Tuple
 
-Exposes a thin CLI façade that wires domain services with their injected
-ports (config, logging, repository, scraper) and drives the top-level
-synchronization workflow.
-"""
-
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports import (
     CompanyDataRepositoryPort,
     CompanyDataScraperPort,
@@ -49,7 +45,9 @@ class Cli:
         # Kick off the company data pipeline
         self._company_service()
 
-    def _company_service(self) -> None:
+        return None
+
+    def _company_service(self) -> SyncResultsDTO:
         """Build and execute the company data synchronization flow."""
         # Alias injected dependencies for readability
         company_repository = self.company_repository
@@ -64,4 +62,4 @@ class Cli:
         )
 
         # Run the synchronization step
-        company_service.sync_companies()
+        return company_service.sync_companies()

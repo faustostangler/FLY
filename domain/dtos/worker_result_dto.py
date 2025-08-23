@@ -17,6 +17,3 @@ class ExecutionResultDTO(Generic[R]):
 
     # List of results produced by the worker pool
     items: List[R]
-
-    # Placeholder for tracking transferred network bytes (disabled for now)
-    # network_bytes: int = 0

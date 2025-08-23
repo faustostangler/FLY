@@ -7,7 +7,7 @@ BATCH_SIZE = 100
 
 # Default persistence threshold (how often data should be committed)
 # Originally could depend on MAX_WORKERS (e.g., max(int(50 / MAX_WORKERS), 1))
-persistence_threshold = 10
+persistence_threshold = 2
 
 
 @dataclass(frozen=True)

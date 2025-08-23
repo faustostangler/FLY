@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,6 @@ class CodeDTO:
 @dataclass(frozen=True)
 class CompanyDataListingDTO:
     """DTO for basic company information returned by the listing endpoint."""
-
     cvm_code: Optional[str]
     issuing_company: Optional[str]
     company_name: Optional[str]
@@ -36,9 +35,8 @@ class CompanyDataListingDTO:
     market: Optional[str]
 
     @staticmethod
-    def from_dict(raw: dict) -> "CompanyDataListingDTO":
-        """Create a listing DTO from raw dictionary data."""
-        # Map payload keys directly to DTO attributes
+    def from_dict(raw: dict[str, Any]) -> "CompanyDataListingDTO":
+        """Create a listing DTO from raw dictionary data (as-is mapping)."""
         return CompanyDataListingDTO(
             cvm_code=raw.get("codeCVM"),
             issuing_company=raw.get("issuingCompany"),
@@ -59,7 +57,6 @@ class CompanyDataListingDTO:
 @dataclass(frozen=True)
 class CompanyDataDetailDTO:
     """DTO for detailed company information from the detail endpoint."""
-
     issuing_company: Optional[str]
     company_name: Optional[str]
     trading_name: Optional[str]
@@ -87,17 +84,19 @@ class CompanyDataDetailDTO:
     registrar: Optional[str]
 
     @staticmethod
-    def from_dict(raw: dict) -> "CompanyDataDetailDTO":
+    def from_dict(raw: dict[str, Any]) -> "CompanyDataDetailDTO":
         """Parse and normalize a raw detail payload into a DTO."""
-        # Normalize "otherCodes": may arrive as JSON string or list
-        other_codes = raw.get("otherCodes") or []
-        if isinstance(other_codes, str):
-            other_codes = json.loads(other_codes)
+        # Normalize "otherCodes": may arrive as JSON string or list[dict]
+        other_codes_raw = raw.get("otherCodes") or []
+        if isinstance(other_codes_raw, str):
+            other_codes_raw = json.loads(other_codes_raw)
 
-        # Convert list of dicts into CodeDTO instances
-        code_dtos = [CodeDTO(code=c.get("code"), isin=c.get("isin")) for c in other_codes]
+        code_dtos = [
+            i if isinstance(i, CodeDTO) else CodeDTO(code=i.get("code"), isin=i.get("isin"))
+            for i in (other_codes_raw or [])
+            if isinstance(i, (dict, CodeDTO))
+        ]
 
-        # Populate the DTO using payload values
         return CompanyDataDetailDTO(
             issuing_company=raw.get("issuingCompany"),
             company_name=raw.get("companyName"),
@@ -129,53 +128,145 @@ class CompanyDataDetailDTO:
 
 @dataclass(frozen=True)
 class CompanyDataDTO:
-    """Unified company data model returned by the scraper before domain mapping."""
+    """Unified and normalized company data inside the hexagon."""
+    id: Optional[int] = None
+    cvm_code: Optional[str] = None
+    issuing_company: Optional[str] = None
+    trading_name: Optional[str] = None
+    company_name: Optional[str] = None
+    cnpj: Optional[str] = None
 
-    cvm_code: Optional[str]
-    issuing_company: Optional[str]
-    trading_name: Optional[str]
-    company_name: Optional[str]
-    cnpj: Optional[str]
-
-    # Codes and identifiers
-    ticker_codes: List[str]
-    isin_codes: List[str]
-    other_codes: List[CodeDTO]
+    # Collections must always be real lists in the domain
+    ticker_codes: List[str] = field(default_factory=list)
+    isin_codes: List[str] = field(default_factory=list)
+    other_codes: List[CodeDTO] = field(default_factory=list)
 
     # Industry classification data
-    industry_sector: Optional[str]
-    industry_subsector: Optional[str]
-    industry_segment: Optional[str]
-    industry_classification: Optional[str]
-    industry_classification_eng: Optional[str]
-    activity: Optional[str]
+    industry_sector: Optional[str] = None
+    industry_subsector: Optional[str] = None
+    industry_segment: Optional[str] = None
+    industry_classification: Optional[str] = None
+    industry_classification_eng: Optional[str] = None
+    activity: Optional[str] = None
 
     # Company-level descriptors
-    company_segment: Optional[str]
-    company_segment_eng: Optional[str]
-    company_category: Optional[str]
-    company_type: Optional[str]
+    company_segment: Optional[str] = None
+    company_segment_eng: Optional[str] = None
+    company_category: Optional[str] = None
+    company_type: Optional[str] = None
 
     # Listing and registry data
-    listing_segment: Optional[str]
-    registrar: Optional[str]
-    website: Optional[str]
-    institution_common: Optional[str]
-    institution_preferred: Optional[str]
+    listing_segment: Optional[str] = None
+    registrar: Optional[str] = None
+    website: Optional[str] = None
+    institution_common: Optional[str] = None
+    institution_preferred: Optional[str] = None
 
     # Market information
-    market: Optional[str]
-    status: Optional[str]
-    market_indicator: Optional[str]
+    market: Optional[str] = None
+    status: Optional[str] = None
+    market_indicator: Optional[str] = None
 
     # Stock and BDR attributes
-    code: Optional[str]
-    has_bdr: Optional[bool]
-    type_bdr: Optional[str]
-    has_quotation: Optional[bool]
-    has_emissions: Optional[bool]
+    code: Optional[str] = None
+    has_bdr: Optional[bool] = None
+    type_bdr: Optional[str] = None
+    has_quotation: Optional[bool] = None
+    has_emissions: Optional[bool] = None
 
     # Important dates
-    date_quotation: Optional[datetime]
-    last_date: Optional[datetime]
-    listing_date: Optional[datetime]
+    date_quotation: Optional[datetime] = None
+    last_date: Optional[datetime] = None
+    listing_date: Optional[datetime] = None
+
+    @staticmethod
+    def _to_str_list(x: Any) -> List[str]:
+        """Coerce None/str/list/JSON-string into List[str]."""
+        if x is None:
+            return []
+        if isinstance(x, list):
+            return [str(i) for i in x if i is not None and str(i) != ""]
+        if isinstance(x, str):
+            # If it's a JSON array string, parse it; otherwise treat as single item
+            try:
+                parsed = json.loads(x)
+                if isinstance(parsed, list):
+                    return [str(i) for i in parsed if i is not None and str(i) != ""]
+            except json.JSONDecodeError:
+                pass
+            return [x] if x != "" else []
+        return [str(x)]
+
+    @staticmethod
+    def _to_code_dtos(x: Any) -> List[CodeDTO]:
+        """Coerce None/str(JSON list)/list[dict|CodeDTO] into List[CodeDTO]."""
+        if x is None:
+            return []
+        if isinstance(x, str):
+            try:
+                x = json.loads(x)
+            except json.JSONDecodeError:
+                return []
+        if isinstance(x, list):
+            out: List[CodeDTO] = []
+            for i in x:
+                if isinstance(i, CodeDTO):
+                    out.append(i)
+                elif isinstance(i, dict):
+                    out.append(CodeDTO(code=i.get("code"), isin=i.get("isin")))
+            return out
+        return []
+
+    @staticmethod
+    def from_dict(raw: dict[str, Any]) -> "CompanyDataDTO":
+        """Normalize raw street payload into a DTO with real lists and stable keys."""
+        return CompanyDataDTO(
+            id=raw.get("id"),
+            cvm_code=raw.get("cvm_code") or raw.get("codeCVM"),
+            issuing_company=raw.get("issuing_company") or raw.get("issuingCompany"),
+            trading_name=raw.get("trading_name") or raw.get("tradingName"),
+            company_name=raw.get("company_name") or raw.get("companyName"),
+            cnpj=raw.get("cnpj"),
+            ticker_codes=CompanyDataDTO._to_str_list(raw.get("ticker_codes")),
+            isin_codes=CompanyDataDTO._to_str_list(raw.get("isin_codes")),
+            other_codes=CompanyDataDTO._to_code_dtos(raw.get("other_codes")),
+            industry_sector=raw.get("industry_sector"),
+            industry_subsector=raw.get("industry_subsector"),
+            industry_segment=raw.get("industry_segment"),
+            industry_classification=raw.get("industry_classification"),
+            industry_classification_eng=raw.get("industry_classification_eng"),
+            activity=raw.get("activity"),
+            company_segment=raw.get("company_segment"),
+            company_segment_eng=raw.get("company_segment_eng"),
+            company_category=raw.get("company_category"),
+            company_type=raw.get("company_type"),
+            listing_segment=raw.get("listing_segment"),
+            registrar=raw.get("registrar"),
+            website=raw.get("website"),
+            institution_common=raw.get("institution_common"),
+            institution_preferred=raw.get("institution_preferred"),
+            market=raw.get("market"),
+            status=raw.get("status"),
+            market_indicator=raw.get("market_indicator"),
+            code=raw.get("code"),
+            has_bdr=raw.get("has_bdr"),
+            type_bdr=raw.get("type_bdr"),
+            has_quotation=raw.get("has_quotation"),
+            has_emissions=raw.get("has_emissions"),
+            date_quotation=raw.get("date_quotation"),
+            last_date=raw.get("last_date"),
+            listing_date=raw.get("listing_date"),
+        )
+
+    @staticmethod
+    def from_raw(obj: "CompanyDataDTO" | dict[str, Any]) -> "CompanyDataDTO":
+        """
+        Idempotent entry point:
+        - if dict, delegates to from_dict;
+        - if CompanyDataDTO, returns the same object.
+        """
+        if isinstance(obj, CompanyDataDTO):
+            return obj
+        if isinstance(obj, dict):
+            return CompanyDataDTO.from_dict(obj)
+        raise TypeError(f"Unsupported type for CompanyDataDTO.from_raw: {type(obj).__name__}")

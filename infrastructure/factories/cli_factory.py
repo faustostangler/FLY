@@ -3,13 +3,13 @@ from __future__ import annotations
 from application.mappers.company_data_mapper import CompanyDataMapper
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
+from infrastructure.factories.datacleaner_factory import datacleaner_factory
 from infrastructure.http.http_client import RequestsAffinityHttpClient
 from infrastructure.repositories.company_data_repository import CompanyDataRepository
 from infrastructure.scrapers.company_data_scraper import CompanyDataScraper
 from infrastructure.utils.metrics_collector import MetricsCollector
 from infrastructure.utils.worker_pool import WorkerPool
 from presentation.controllers.cli import Cli
-from infrastructure.factories.datacleaner_factory import datacleaner_factory
 
 
 def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 MAX_WORKERS = 1
 
 # Default queue size for producer/consumer pipelines (commonly 2× workers)
-QUEUE_SIZE = 2 * MAX_WORKERS
+QUEUE_SIZE = 1 # * MAX_WORKERS
 
 
 @dataclass(frozen=True)

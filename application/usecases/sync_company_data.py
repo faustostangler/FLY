@@ -1,10 +1,12 @@
 from typing import List
 
-from domain.dtos import CompanyDataDTO
-from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
+from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from infrastructure.utils.list_flatenner import ListFlattener
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -14,7 +16,7 @@ class SyncCompanyDataUseCase:
 
     def __init__(
         self,
-        config: ConfigPort, 
+        config: ConfigPort,
         logger: LoggerPort,
         repository: CompanyDataRepositoryPort,
         scraper: CompanyDataScraperPort,
@@ -36,7 +38,7 @@ class SyncCompanyDataUseCase:
         self.scraper = scraper
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
-    def synchronize_companies(self) -> CompanyDataDTO:
+    def synchronize_companies(self) -> SyncResultsDTO:
         """Run the full company synchronization pipeline.
 
         Steps:
@@ -59,15 +61,7 @@ class SyncCompanyDataUseCase:
             save_callback=self._save_batch,
         )
 
-        # Collect metrics from the scraper (downloaded bytes, timings, etc.)
-        bytes_downloaded = self.scraper.metrics_collector.add_network_byte()
-
-        return SyncCompanyDataResultDTO(
-            processed_count=len(results.items),
-            skipped_count=len(skip_codes),
-            bytes_downloaded=bytes_downloaded,
-            elapsed_time=elapsed,
-        )
+        return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
 
     def _save_batch(self, buffer: List[CompanyDataDTO]) -> None:
         """Transform and persist a batch of company data.

@@ -25,3 +25,12 @@ class MetricsCollectorPort(Protocol):
             int: The accumulated number of network bytes.
         """
         ...
+
+    @property
+    def download_bytes(self) -> int:
+        """Retrieve the current size of collected download bytes.
+
+        Returns:
+            int: The accumulated number of download bytes.
+        """
+        ...
