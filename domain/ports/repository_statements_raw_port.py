@@ -8,7 +8,7 @@ from .repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable
-class RawStatementsRepositoryPort(RepositoryBasePort[RawStatementDTO, int], Protocol):
+class RepositoryStatementsRawPort(RepositoryBasePort[RawStatementDTO, int], Protocol):
     """Port interface for managing raw statement persistence.
 
     Extends the base repository port to handle `RawStatementDTO` entities,

@@ -2,17 +2,17 @@ from dataclasses import replace
 
 from sqlalchemy import text
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.parsed_statement_dto import StatementParsedDTO
 from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.parsed_statement_repository import (
-    SqlAlchemyParsedStatementRepository,
+    SqlAlchemyStatementParsedRepository,
 )
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_replace_and_exists(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyParsedStatementRepository(
+    repo = SqlAlchemyStatementParsedRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -21,7 +21,7 @@ def test_replace_and_exists(SessionLocal, engine):
     repo.Session = SessionLocal
     BaseModel.metadata.create_all(engine)
 
-    dto = ParsedStatementDTO(
+    dto = StatementParsedDTO(
         nsd="1",
         company_name="ACME",
         quarter="2020-03-31",
@@ -35,7 +35,7 @@ def test_replace_and_exists(SessionLocal, engine):
     )
     repo.save_all([dto])
 
-    new_dto = ParsedStatementDTO(
+    new_dto = StatementParsedDTO(
         nsd="2",
         company_name="ACME",
         quarter="2020-06-30",
@@ -66,7 +66,7 @@ def test_replace_and_exists(SessionLocal, engine):
 
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyParsedStatementRepository(
+    repo = SqlAlchemyStatementParsedRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -76,7 +76,7 @@ def test_save_all_upserts(SessionLocal, engine):
     BaseModel.metadata.drop_all(engine)
     BaseModel.metadata.create_all(engine)
 
-    base = ParsedStatementDTO(
+    base = StatementParsedDTO(
         nsd="1",
         company_name="ACME",
         quarter="2020-03-31",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Protocol, Tuple
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.parsed_statement_dto import StatementParsedDTO
 from domain.utils.criteria_node import CriteriaNode
 
 
@@ -34,9 +34,9 @@ class StatementClassificationService:
 
     def classify(
         self, rows: List[_RowLike], roots: List[CriteriaNode]
-    ) -> List[ParsedStatementDTO]:
+    ) -> List[StatementParsedDTO]:
         """Classify ``rows`` using ``roots`` criteria tree."""
-        result: List[ParsedStatementDTO] = []
+        result: List[StatementParsedDTO] = []
         for node in roots:
             # print(f"Processing node: {node.target_line}")
             result.extend(self._process_node(rows, node))
@@ -44,7 +44,7 @@ class StatementClassificationService:
 
     def _process_node(
         self, rows: List[_RowLike], node: CriteriaNode
-    ) -> List[ParsedStatementDTO]:
+    ) -> List[StatementParsedDTO]:
         hits = [r for r in rows if self._matches(r, node.criteria)]
         parsed = [self._to_parsed(r, node.target_line) for r in hits]
 
@@ -61,13 +61,13 @@ class StatementClassificationService:
             parsed.extend(self._process_node(children_rows, child_node))
         return parsed
 
-    def _to_parsed(self, row: _RowLike, target_line: str) -> ParsedStatementDTO:
+    def _to_parsed(self, row: _RowLike, target_line: str) -> StatementParsedDTO:
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         # raw_account = parts[0].strip()
         # account = ".".join(seg.zfill(2) for seg in raw_account.split("."))
         description = parts[1].strip() if len(parts) > 1 else row.description
-        return ParsedStatementDTO(
+        return StatementParsedDTO(
             nsd=row.nsd,
             company_name=row.company_name,
             quarter=row.quarter,

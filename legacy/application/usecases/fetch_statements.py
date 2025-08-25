@@ -12,11 +12,11 @@ from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    ParsedStatementRepositoryPort,
+    RepositoryStatementParsedPort,
     RawStatementRepositoryPort,
     WorkerPoolPort,
 )
-from domain.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import StatementsRawcraperPort
 from infrastructure.helpers import ByteFormatter, SaveStrategy
 
 
@@ -26,9 +26,9 @@ class FetchStatementsUseCase:
     def __init__(
         self,
         logger: LoggerPort,
-        source: RawStatementScraperPort,
+        source: StatementsRawcraperPort,
         raw_statement_repository: RawStatementRepositoryPort,
-        parsed_statements_repo: ParsedStatementRepositoryPort,
+        parsed_statements_repo: RepositoryStatementParsedPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPoolPort,
         config: ConfigPort,

@@ -6,12 +6,12 @@ from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.execution_result_dto import ExecutionResultDTO
 from domain.dto.metrics_dto import MetricsDTO
 from domain.dto.sync_companies_result_dto import SyncCompanyDataResultDTO
-from domain.ports import CompanyDataRepositoryPort, CompanyDataScraperPort
+from domain.ports import RepositoryCompanyDataPort, ScraperCompanyDataPort
 from tests.conftest import DummyLogger
 
 
 def test_execute_converts_and_saves():
-    repo = MagicMock(spec=CompanyDataRepositoryPort)
+    repo = MagicMock(spec=RepositoryCompanyDataPort)
     repo.iter_existing_by_columns = MagicMock(return_value=iter([("SKIP",)]))
 
     raw = types.SimpleNamespace(
@@ -63,7 +63,7 @@ def test_execute_converts_and_saves():
         metrics = MetricsDTO(elapsed_time=0.0, network_bytes=100, processing_bytes=0)
         return ExecutionResultDTO(items=[raw], metrics=metrics)
 
-    scraper = MagicMock(spec=CompanyDataScraperPort)
+    scraper = MagicMock(spec=ScraperCompanyDataPort)
     scraper.fetch_all.side_effect = fake_fetch_all
     scraper.metrics_collector = types.SimpleNamespace(network_bytes=100)
 

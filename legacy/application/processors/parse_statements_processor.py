@@ -7,13 +7,13 @@ from typing import List, Tuple
 from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
-from domain.dto import NsdDTO, ParsedStatementDTO, WorkerTaskDTO
+from domain.dto import NsdDTO, StatementParsedDTO, WorkerTaskDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    ParsedStatementRepositoryPort,
+    RepositoryStatementParsedPort,
     WorkerPoolPort,
 )
 
@@ -26,7 +26,7 @@ class ParseStatementsProcessor(BaseProcessor):
     def __init__(
         self,
         logger: LoggerPort,
-        repository: ParsedStatementRepositoryPort,
+        repository: RepositoryStatementParsedPort,
         config: ConfigPort,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
@@ -44,10 +44,10 @@ class ParseStatementsProcessor(BaseProcessor):
 
     def _parse_all(
         self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]
-    ) -> List[List[ParsedStatementDTO]]:
+    ) -> List[List[StatementParsedDTO]]:
         tasks = list(enumerate(data))
 
-        def processor(task: WorkerTaskDTO) -> List[ParsedStatementDTO]:
+        def processor(task: WorkerTaskDTO) -> List[StatementParsedDTO]:
             _nsd, rows = task.data
             return [self.parse_usecase.parse_and_store_row(r) for r in rows]
 
@@ -64,23 +64,23 @@ class ParseStatementsProcessor(BaseProcessor):
 
     def transform(
         self, data: List[Tuple[NsdDTO, List[RawStatementDTO]]]
-    ) -> List[List[ParsedStatementDTO]]:
+    ) -> List[List[StatementParsedDTO]]:
         """Parse fetched rows in parallel."""
         if not data:
             return []
         return self._parse_all(data)
 
     def persist(
-        self, data: List[List[ParsedStatementDTO]]
-    ) -> List[List[ParsedStatementDTO]]:
+        self, data: List[List[StatementParsedDTO]]
+    ) -> List[List[StatementParsedDTO]]:
         """Finalize parse use case and return parsed data."""
         self.parse_usecase.finalize()
         return data
 
     def run(
         self, fetched: List[Tuple[NsdDTO, List[RawStatementDTO]]]
-    ) -> List[List[ParsedStatementDTO]]:
+    ) -> List[List[StatementParsedDTO]]:
         """Run the parse pipeline."""
         
-        results: List[List[ParsedStatementDTO]] = self._parse_all(fetched)
+        results: List[List[StatementParsedDTO]] = self._parse_all(fetched)
         return results

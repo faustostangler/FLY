@@ -7,7 +7,7 @@ from domain.ports import ConfigPort
 
 
 @runtime_checkable
-class RawStatementScraperPort(Protocol):
+class StatementsRawcraperPort(Protocol):
     """Port for fetching raw statement HTML."""
 
     @property

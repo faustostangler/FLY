@@ -14,7 +14,7 @@ from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
-from domain.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import StatementsRawcraperPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers import WorkerPool
 from infrastructure.helpers.data_cleaner import DataCleaner
@@ -23,7 +23,7 @@ from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
 
-class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
+class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
     """Fetch statement HTML using ``requests``."""
 
     def __init__(

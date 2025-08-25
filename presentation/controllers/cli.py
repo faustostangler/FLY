@@ -1,10 +1,16 @@
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.ports import (
-    CompanyDataRepositoryPort,
-    CompanyDataScraperPort,
-    ConfigPort,
-    LoggerPort,
-)
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_statements_parsed_port import RepositoryStatementParsedPort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
+from domain.ports.scraper_nsd_port import ScraperNsdPort
+from domain.ports.scraper_raw_statements_port import ScraperRawStatementPort
+from domain.ports.scraper_fetched_statements_port import ScraperFetchedStatementPort
+
 from domain.services import CompanyDataService
 
 
@@ -17,23 +23,34 @@ class Cli:
     Args:
         config (ConfigPort): Read-only application configuration.
         logger (LoggerPort): Logging abstraction for structured events.
-        company_repository (CompanyDataRepositoryPort): Persistence port for company data.
-        company_scraper (CompanyDataScraperPort): Scraper port for fetching company data.
+        company_repository (RepositoryCompanyDataPort): Persistence port for company data.
+        company_scraper (ScraperCompanyDataPort): Scraper port for fetching company data.
     """
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        company_repository: CompanyDataRepositoryPort,
-        company_scraper: CompanyDataScraperPort,
+        company_repository: RepositoryCompanyDataPort,
+        nsd_repository: RepositoryNsdPort,
+        statements_raw_repository: RepositoryStatementsRawPort,
+        statements_fetched_repository: RepositoryStatementParsedPort, 
+
+        company_scraper: ScraperCompanyDataPort,
+        nsd_scraper: ScraperNsdPort,
+        
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
         self.config = config
         self.logger = logger
         self.company_repository = company_repository
+        self.nsd_repository = nsd_repository
+        self.statements_raw_repository = statements_raw_repository
+        self.statements_fetched_repository = statements_fetched_repository
+
         self.company_scraper = company_scraper
+        self.nsd_scraper = nsd_scraper
 
     def run(self) -> None:
         """Execute the top-level application workflow."""
@@ -43,6 +60,8 @@ class Cli:
         # Kick off the company data pipeline
         company_results: SyncResultsDTO = self._company_service()
         self.logger.log(f"Total Download: {company_results.metrics}")
+
+        statements_results: SyncResultsDTO = self._statements_service()
 
         return None
 
@@ -62,3 +81,18 @@ class Cli:
 
         # Run the synchronization step
         return company_service.sync_companies()
+
+    def _statements_service(self) -> SyncResultsDTO:
+        """
+        """
+
+        company_repository = self.company_repository
+        nsd_repository = self.nsd_repository
+        # statements_raw_repository = self.statements_raw_repository
+        # statements_parsed_repository = self.statements_fetched_repository
+
+        nsd_scraper = self.nsd_scraper
+
+        # nsd_service = self.nsd_service()
+
+        # return statements_service.sync_statements()

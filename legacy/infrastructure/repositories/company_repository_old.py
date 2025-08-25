@@ -7,7 +7,7 @@ from typing import List, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dto.company_data_dto import CompanyDataDTO
-from domain.ports import CompanyDataRepositoryPort, ConfigPort, LoggerPort
+from domain.ports import RepositoryCompanyDataPort, ConfigPort, LoggerPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -17,11 +17,11 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 
 class SqlAlchemyCompanyDataRepository(
     SqlAlchemyRepositoryBase[CompanyDataDTO, int],
-    CompanyDataRepositoryPort,
+    RepositoryCompanyDataPort,
 ):
     """SQLite/SQLAlchemy repository for ``CompanyDataDTO``.
 
-    This adapter implements the CompanyDataRepositoryPort interface, providing
+    This adapter implements the RepositoryCompanyDataPort interface, providing
     persistence operations for company data via a local SQLite database.
 
     Note:

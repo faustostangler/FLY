@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Sequence, Tuple
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.parsed_statement_dto import StatementParsedDTO
 from domain.ports import ConfigPort, StatementTransformerPort
 
 
 class MathStatementTransformerAdapter(
-    StatementTransformerPort[ParsedStatementDTO, ParsedStatementDTO]
+    StatementTransformerPort[StatementParsedDTO, StatementParsedDTO]
 ):
     """Adjust quarterly statement values."""
 
@@ -17,7 +17,7 @@ class MathStatementTransformerAdapter(
         self.cumulative_prefixes = tuple(config.transformers.math_cumulative_prefixes)
         self.target_accounts = set(config.transformers.math_target_accounts)
 
-    def _group_key(self, row: ParsedStatementDTO, dt: datetime | None) -> Tuple:
+    def _group_key(self, row: StatementParsedDTO, dt: datetime | None) -> Tuple:
         year = dt.year if dt else 0
         return (
             row.company_name or "",
@@ -36,17 +36,17 @@ class MathStatementTransformerAdapter(
         except ValueError:
             return None
 
-    def transform(self, rows: Sequence[ParsedStatementDTO]) -> List[ParsedStatementDTO]:
+    def transform(self, rows: Sequence[StatementParsedDTO]) -> List[StatementParsedDTO]:
         groups: Dict[
             Tuple[str, str, str, str, str, str],
-            List[Tuple[datetime | None, ParsedStatementDTO]],
+            List[Tuple[datetime | None, StatementParsedDTO]],
         ] = {}
         for row in rows:
             dt = self._parse(row.quarter)
             key = self._group_key(row, dt)
             groups.setdefault(key, []).append((dt, row))
 
-        result: List[ParsedStatementDTO] = []
+        result: List[StatementParsedDTO] = []
         for i, group in enumerate(groups.items()):
             (company, account, grupo, quadro, year, version), items = group
 
@@ -82,10 +82,10 @@ class MathStatementTransformerAdapter(
         return result
 
     def _as_parsed(
-        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
-    ) -> List[ParsedStatementDTO]:
+        self, items: List[Tuple[datetime | None, StatementParsedDTO]]
+    ) -> List[StatementParsedDTO]:
         return [
-            ParsedStatementDTO(
+            StatementParsedDTO(
                 nsd=row.nsd,
                 company_name=row.company_name,
                 quarter=row.quarter,
@@ -101,9 +101,9 @@ class MathStatementTransformerAdapter(
         ]
 
     def _adjust_year_end(
-        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
-    ) -> List[ParsedStatementDTO]:
-        values: List[ParsedStatementDTO] = []
+        self, items: List[Tuple[datetime | None, StatementParsedDTO]]
+    ) -> List[StatementParsedDTO]:
+        values: List[StatementParsedDTO] = []
         cumulative = 0.0
         for idx, (dt, row) in enumerate(items):
             if not dt:
@@ -126,7 +126,7 @@ class MathStatementTransformerAdapter(
 
             # Recria DTO imutável
             values.append(
-                ParsedStatementDTO(
+                StatementParsedDTO(
                     nsd=row.nsd,
                     company_name=row.company_name,
                     quarter=row.quarter,
@@ -143,15 +143,15 @@ class MathStatementTransformerAdapter(
         return values
 
     def _adjust_cumulative(
-        self, items: List[Tuple[datetime | None, ParsedStatementDTO]]
-    ) -> List[ParsedStatementDTO]:
-        values: List[ParsedStatementDTO] = []
+        self, items: List[Tuple[datetime | None, StatementParsedDTO]]
+    ) -> List[StatementParsedDTO]:
+        values: List[StatementParsedDTO] = []
         last = 0.0
         for dt, row in items:
             val = row.value - last
             last = row.value
             values.append(
-                ParsedStatementDTO(
+                StatementParsedDTO(
                     nsd=row.nsd,
                     company_name=row.company_name,
                     quarter=row.quarter,

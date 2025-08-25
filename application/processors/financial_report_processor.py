@@ -2,9 +2,9 @@ from application.usecases.statements_transformer import StatementTransformer
 from domain.dtos.raw_statement_dto import RawStatementDTO
 from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_parsed_port import ParsedStatementRepositoryPort
-from domain.ports.repository_statements_raw_port import RawStatementsRepositoryPort
-from domain.ports.scraper_raw_statements_port import RawStatementScraperPort
+from domain.ports.repository_statements_parsed_port import RepositoryStatementParsedPort
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.scraper_raw_statements_port import StatementsRawcraperPort
 
 
 class FinancialReportProcessor:
@@ -22,9 +22,9 @@ class FinancialReportProcessor:
     def __init__(
         self,
         nsd_repo: RepositoryNsdPort,
-        raw_repo: RawStatementsRepositoryPort,
-        parsed_repo: ParsedStatementRepositoryPort,
-        scraper: RawStatementScraperPort,
+        raw_repo: RepositoryStatementsRawPort,
+        parsed_repo: RepositoryStatementParsedPort,
+        scraper: StatementsRawcraperPort,
         transformer: StatementTransformer,
         logger: LoggerPort,
     ) -> None:

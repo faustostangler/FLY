@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
-from domain.dtos.parsed_statement_dto import ParsedStatementDTO
+from domain.dtos.parsed_statement_dto import StatementParsedDTO
 from domain.dtos.raw_statement_dto import RawStatementDTO
 from domain.ports import DataCleanerPort
 
@@ -23,7 +23,7 @@ class StatementTransformer:
         # Data cleaner used for preprocessing statements
         self.cleaner = cleaner
 
-    def transform(self, raw: RawStatementDTO) -> ParsedStatementDTO:
+    def transform(self, raw: RawStatementDTO) -> StatementParsedDTO:
         """Convert a raw statement into a parsed statement.
 
         Applies data cleaning and computes a unique hash based on
@@ -33,7 +33,7 @@ class StatementTransformer:
             raw (RawStatementDTO): Raw financial statement input.
 
         Returns:
-            ParsedStatementDTO: Structured and cleaned statement
+            StatementParsedDTO: Structured and cleaned statement
             enriched with a deterministic hash.
         """
         pass

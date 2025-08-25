@@ -7,8 +7,8 @@ from .company_data_processors import (
 )
 from .nsd_scraper import NsdScraper
 from .requests_raw_statement_scraper import (
-    RawStatementScraper,
-    RequestsRawStatementScraper,
+    StatementsRawcraper,
+    RequestsStatementsRawcraper,
 )
 
 __all__ = [
@@ -18,6 +18,6 @@ __all__ = [
     "DetailFetcher",
     "CompanyDataMerger",
     "CompanyDataDetailProcessor",
-    "RequestsRawStatementScraper",
-    "RawStatementScraper",
+    "RequestsStatementsRawcraper",
+    "StatementsRawcraper",
 ]

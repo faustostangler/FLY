@@ -7,7 +7,7 @@ from domain.ports import RepositoryBasePort
 
 
 @runtime_checkable
-class CompanyDataRepositoryPort(RepositoryBasePort[CompanyDataDTO, int], Protocol):
+class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protocol):
     """Port interface for persistence operations on CompanyData entities.
 
     Provides an abstraction for the application layer to interact with

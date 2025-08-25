@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
-    CompanyDataRepositoryPort,
+    RepositoryCompanyDataPort,
     ConfigPort,
     LoggerPort,
     NSDRepositoryPort,
@@ -20,7 +20,7 @@ class SyncNSDUseCase:
         config: ConfigPort,
         logger: LoggerPort,
         repository: NSDRepositoryPort,
-        company_repo: CompanyDataRepositoryPort,
+        company_repo: RepositoryCompanyDataPort,
         scraper: NSDSourcePort,
     ) -> None:
         """Store dependencies required for synchronization."""

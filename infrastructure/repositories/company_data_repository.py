@@ -7,7 +7,7 @@ from sqlalchemy.dialects.sqlite import insert
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
-from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.base_repository import BaseRepository
 
@@ -16,10 +16,10 @@ from infrastructure.repositories.base_repository import BaseRepository
 
 class CompanyDataRepository(
     BaseRepository[CompanyDataDTO, int],
-    CompanyDataRepositoryPort):
+    RepositoryCompanyDataPort):
     """SQLite/SQLAlchemy repository for company data.
 
-    Implements the `CompanyDataRepositoryPort` using a local SQLite database
+    Implements the `RepositoryCompanyDataPort` using a local SQLite database
     with SQLAlchemy Core/ORM.
 
     Notes:

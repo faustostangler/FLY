@@ -8,16 +8,16 @@ from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import (
-    CompanyDataRepositoryPort,
+    RepositoryCompanyDataPort,
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     NSDRepositoryPort,
-    ParsedStatementRepositoryPort,
+    RepositoryStatementParsedPort,
     RawStatementRepositoryPort,
     WorkerPoolPort,
 )
-from domain.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import StatementsRawcraperPort
 
 from .base_processor import BaseProcessor
 
@@ -38,11 +38,11 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         self,
         logger: LoggerPort,
         config: ConfigPort,
-        source: RawStatementScraperPort,
-        company_repo: CompanyDataRepositoryPort,
+        source: StatementsRawcraperPort,
+        company_repo: RepositoryCompanyDataPort,
         nsd_repo: NSDRepositoryPort,
         raw_statement_repo: RawStatementRepositoryPort,
-        parsed_statements_repo: ParsedStatementRepositoryPort,
+        parsed_statements_repo: RepositoryStatementParsedPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPoolPort,
         max_workers: int = 1,

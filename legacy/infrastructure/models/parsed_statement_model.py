@@ -3,12 +3,12 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.parsed_statement_dto import StatementParsedDTO
 
 from .abstract_statement_model import AbstractStatementModel
 
 
-class ParsedStatementModel(AbstractStatementModel):
+class StatementParsedModel(AbstractStatementModel):
     """ORM model for parsed statement rows."""
 
     __tablename__ = "tbl_parsed_statements"
@@ -45,8 +45,8 @@ class ParsedStatementModel(AbstractStatementModel):
     _FIELDS = AbstractStatementModel._FIELDS + ("processing_hash",)
 
     @staticmethod
-    def from_dto(dto: ParsedStatementDTO) -> "ParsedStatementModel":
-        return ParsedStatementModel(**ParsedStatementModel._kwargs_from_dto(dto))
+    def from_dto(dto: StatementParsedDTO) -> "StatementParsedModel":
+        return StatementParsedModel(**StatementParsedModel._kwargs_from_dto(dto))
 
-    def to_dto(self) -> ParsedStatementDTO:
-        return ParsedStatementDTO(**self._dto_kwargs())
+    def to_dto(self) -> StatementParsedDTO:
+        return StatementParsedDTO(**self._dto_kwargs())

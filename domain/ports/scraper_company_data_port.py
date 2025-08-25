@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol, TypeVar, runtime_checkable
 
-from domain.ports import BaseScraperPort
+from domain.ports.scraper_base_port import ScraperBasePort
 
 # Generic type variable for scraped data results
 T = TypeVar("T")
@@ -10,7 +10,7 @@ T = TypeVar("T")
 
 
 @runtime_checkable
-class CompanyDataScraperPort(BaseScraperPort[T], Protocol):
+class ScraperCompanyDataPort(ScraperBasePort[T], Protocol):
     """Abstraction for external company data scrapers.
 
     Defines the contract that any scraper implementation must follow

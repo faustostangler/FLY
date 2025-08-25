@@ -2,8 +2,8 @@ from application.usecases import SyncCompanyDataUseCase
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
-from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 
 
 class CompanyDataService:
@@ -13,16 +13,16 @@ class CompanyDataService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: CompanyDataRepositoryPort,
-        scraper: CompanyDataScraperPort,
+        repository: RepositoryCompanyDataPort,
+        scraper: ScraperCompanyDataPort,
     ):
         """Initialize the service with required dependencies.
 
         Args:
             config (ConfigPort): Provides application configuration settings.
             logger (LoggerPort): Logging interface for tracking operations.
-            repository (CompanyDataRepositoryPort): Repository for persisting company data.
-            scraper (CompanyDataScraperPort): Scraper for fetching company data.
+            repository (RepositoryCompanyDataPort): Repository for persisting company data.
+            scraper (ScraperCompanyDataPort): Scraper for fetching company data.
         """
         # Keep references to injected dependencies
         self.logger = logger

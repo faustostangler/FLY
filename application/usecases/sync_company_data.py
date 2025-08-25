@@ -4,8 +4,8 @@ from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
-from domain.ports.repository_company_data_port import CompanyDataRepositoryPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.utils.list_flatenner import ListFlattener
 
 # from infrastructure.helpers.list_flattener import ListFlattener
@@ -18,8 +18,8 @@ class SyncCompanyDataUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: CompanyDataRepositoryPort,
-        scraper: CompanyDataScraperPort,
+        repository: RepositoryCompanyDataPort,
+        scraper: ScraperCompanyDataPort,
         max_workers: int = 1,
     ):
         """Initialize the use case with its dependencies.
@@ -27,8 +27,8 @@ class SyncCompanyDataUseCase:
         Args:
             config (ConfigPort): Application configuration provider.
             logger (LoggerPort): Logger interface for capturing messages.
-            repository (CompanyDataRepositoryPort): Repository for persisting company data.
-            scraper (CompanyDataScraperPort): Scraper used to fetch company data.
+            repository (RepositoryCompanyDataPort): Repository for persisting company data.
+            scraper (ScraperCompanyDataPort): Scraper used to fetch company data.
             max_workers (int, optional): Maximum number of workers for parallel execution.
                 Defaults to 1, or falls back to the value in the config worker pool.
         """

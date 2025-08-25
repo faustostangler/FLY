@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import ParsedStatementRepositoryPort
+from domain.dto.parsed_statement_dto import StatementParsedDTO
+from domain.ports import RepositoryStatementParsedPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_transform_processes_groups(monkeypatch):
-    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
+    parsed_repo = MagicMock(spec=RepositoryStatementParsedPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",
@@ -34,8 +34,8 @@ def test_transform_processes_groups(monkeypatch):
         parsed_repo=parsed_repo,
     )
 
-    groups = [[MagicMock(spec=ParsedStatementDTO)]]
-    usecase_inst.execute.return_value = [MagicMock(spec=ParsedStatementDTO)]
+    groups = [[MagicMock(spec=StatementParsedDTO)]]
+    usecase_inst.execute.return_value = [MagicMock(spec=StatementParsedDTO)]
 
     result = processor.run(groups)
 
@@ -45,7 +45,7 @@ def test_transform_processes_groups(monkeypatch):
 
 
 def test_transform_returns_empty_when_no_groups(monkeypatch):
-    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
+    parsed_repo = MagicMock(spec=RepositoryStatementParsedPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",

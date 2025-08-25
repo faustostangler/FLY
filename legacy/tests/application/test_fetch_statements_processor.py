@@ -4,12 +4,12 @@ from application.processors.fetch_statements_processor import FetchStatementsPro
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
-    CompanyDataRepositoryPort,
+    RepositoryCompanyDataPort,
     NSDRepositoryPort,
-    ParsedStatementRepositoryPort,
+    RepositoryStatementParsedPort,
     RawStatementRepositoryPort,
 )
-from domain.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import StatementsRawcraperPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
@@ -24,11 +24,11 @@ def test_fetch_statements_calls_usecase(monkeypatch):
         mock_usecase_cls,
     )
 
-    company_repo = MagicMock(spec=CompanyDataRepositoryPort)
+    company_repo = MagicMock(spec=RepositoryCompanyDataPort)
     nsd_repo = MagicMock(spec=NSDRepositoryPort)
     stmt_repo = MagicMock(spec=RawStatementRepositoryPort)
-    rows_repo = MagicMock(spec=ParsedStatementRepositoryPort)
-    source = MagicMock(spec=RawStatementScraperPort)
+    rows_repo = MagicMock(spec=RepositoryStatementParsedPort)
+    source = MagicMock(spec=StatementsRawcraperPort)
     collector = MagicMock()
     worker_pool = MagicMock()
 

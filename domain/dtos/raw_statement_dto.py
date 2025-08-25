@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .parsed_statement_dto import ParsedStatementDTO
+from .parsed_statement_dto import StatementParsedDTO
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -67,17 +67,17 @@ class RawStatementDTO:
             value=float(raw.get("value", 0.0)),
         )
 
-    def to_parsed(self, target_line: str) -> "ParsedStatementDTO":
-        """Convert this raw DTO into a ``ParsedStatementDTO``.
+    def to_parsed(self, target_line: str) -> "StatementParsedDTO":
+        """Convert this raw DTO into a ``StatementParsedDTO``.
 
         Args:
             target_line (str): A formatted line containing account and description,
                 separated by " - ". Example: "1234 - Cash and Equivalents".
 
         Returns:
-            ParsedStatementDTO: The parsed statement with structured fields.
+            StatementParsedDTO: The parsed statement with structured fields.
         """
-        from .parsed_statement_dto import ParsedStatementDTO
+        from .parsed_statement_dto import StatementParsedDTO
 
         # Extract account and description from the target line
         parts = target_line.split(" - ", 1)
@@ -85,7 +85,7 @@ class RawStatementDTO:
         description = parts[1].strip() if len(parts) > 1 else self.description
 
         # Build and return the parsed DTO
-        return ParsedStatementDTO(
+        return StatementParsedDTO(
             id=None,
             nsd=self.nsd,
             company_name=self.company_name,

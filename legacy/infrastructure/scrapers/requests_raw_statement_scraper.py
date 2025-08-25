@@ -20,7 +20,7 @@ from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
-from domain.ports.scraper_ports import RawStatementScraperPort
+from domain.ports.scraper_ports import StatementsRawcraperPort
 
 # Infra helpers
 from infrastructure.helpers.data_cleaner import DataCleaner
@@ -33,7 +33,7 @@ from infrastructure.repositories.http_cache_repository import HttpCacheRepositor
 from infrastructure.utils.id_generator import IdGenerator
 
 
-class RequestsRawStatementScraper:
+class RequestsStatementsRawcraper:
     """Infra HTTP client with connection reuse and conditional GET.
     Exposes a public API that supports session affinity for a batch of fetches.
     """
@@ -137,7 +137,7 @@ class _SessionLease(contextlib.AbstractContextManager[requests.Session]):
             self._session = None
 
 
-class RawStatementScraper(RawStatementScraperPort):
+class StatementsRawcraper(StatementsRawcraperPort):
     """Domain-level scraper that coordinates NSD + 13 pages using an AffinityHttpClient."""
 
     def __init__(

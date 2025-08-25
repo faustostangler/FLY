@@ -17,7 +17,7 @@ from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.http_client_port import AffinityHttpClientPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.metrics_collector_port import MetricsCollectorPort
-from domain.ports.scraper_company_data_port import CompanyDataScraperPort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.worker_pool_port import WorkerPoolPort
 from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 
@@ -34,7 +34,7 @@ from infrastructure.utils.save_strategy import SaveStrategy
 T = TypeVar("T")
 
 
-class CompanyDataScraper(CompanyDataScraperPort):
+class CompanyDataScraper(ScraperCompanyDataPort):
     """Scraper adapter responsible for fetching raw company data.
 
     In a real implementation, this adapter could orchestrate HTTP calls

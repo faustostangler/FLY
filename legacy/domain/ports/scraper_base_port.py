@@ -12,7 +12,7 @@ from .metrics_collector_port import MetricsCollectorPort
 T = TypeVar("T")
 
 
-class BaseScraperPort(ABC, Generic[T]):
+class ScraperBasePort(ABC, Generic[T]):
     """Generic port for external data providers."""
 
     @abstractmethod

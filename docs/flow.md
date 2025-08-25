@@ -14,7 +14,7 @@ Mapper: CompanyMapper, que mescla o CompanyListingDTO com o CompanyDetailDTO par
 Repository: SqlAlchemyCompanyRepository é construído com base em duas classes, uma base genérica e uma base específica. 
 A base genérica vem de SqlAlchemyRepositoryBasePort, com os métodos abstratos como save_all(), get_all(), has_item(), get_by_id() e get_all_primary_keys(). As implementações concretas comuns a todos os repositórios são realizadas em SqlAlchemyRepositoryBase, que acrescenta o método abstrado para buscar o model (get_model_class(). 
 A base específica para Company tem os métodos abstratos específicos em SqlAlchemyCompanyRepositoryPort e a implantação dos métodos concretos em SqlAlchemyCompanyRepository, como o get_model_class(). 
-Scraper: CompanyDataScraper, que implementa o contrato CompanyDataScraperPort, derivado de BaseScraperPort (comum a todos os sources) para CompanyDataRawDTO (com o método fetch_all()). 
+Scraper: CompanyDataScraper, que implementa o contrato ScraperCompanyDataPort, derivado de ScraperBasePort (comum a todos os sources) para CompanyDataRawDTO (com o método fetch_all()). 
 A construção de CompanyDataScraper recebe as dependências criadas CompanyMapper e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. Além disso, o construtor do CompanyDataScraper cria instâncias de EntryCleaner, DetailFetcher (e seu método fetch_detail()) e session, que contém o scraper, e que vão ser injetados na instanciação de CompanyDataDetailProcessor. O CompanyDataDetailProcessor contém o método process_entry, que vai realizar a implantação concreta do código. 
 Então o método _company_service() instancia o serviço CompanyDataService com a injeção do Repository e do Scraper, e chama o método sync_companies()
 ## === Application ===
@@ -35,7 +35,7 @@ E o SyncCompanyDataResultDTO contém processed_count, skipped_count, bytes_downl
 Esse resultado de métricas não é utilizado. 
 
 ## === Infrastructure ===
-O método fetch_all() do CompanyDataScraper é implementado através de uma porta CompanyDataScraperPort via BaseScraperPort, e pela implantação concreta no scraper injetado. O método concreto fetch_all() do CompanyDataScraper executa duas etapas: _fetch_companies_list() e _fetch_companies_details(), com a injeção de _save_batch() em ambos. 
+O método fetch_all() do CompanyDataScraper é implementado através de uma porta ScraperCompanyDataPort via ScraperBasePort, e pela implantação concreta no scraper injetado. O método concreto fetch_all() do CompanyDataScraper executa duas etapas: _fetch_companies_list() e _fetch_companies_details(), com a injeção de _save_batch() em ambos. 
 
 ### _fetch_companies_list()
 O método concreto fetch_all() do CompanyDataScraper primeiro chama _fetch_companies_list() também do CompanyDataScraper, que delega a execução em multithreading ao método run() do WorkerPool (instanciado no CLIAdapter), com a injeção no run() das tasks e do método processor() e do método handle_batch(), que neste caso é nulo. Cada vez que o método processor() for chamado pelo run(), vai chamar o método _fetch_page() de CompanyDataScraper, que é onde a implementação é executada. Os resultados são acumulados e salvos periodicamente por meio do SaveStrategy instanciado. O método _fetch_page() recupera e processa o response de um url. 
@@ -57,7 +57,7 @@ Este ExecutionResultDTO é finalizado em synchronize_companies(), que retorna um
 ## O método _nsd_service()
 Instancia o repositório e o scraper. 
 Repository: SqlAlchemyCompanyRepository, que implementa os métodos do contrato CompanyRepositoryPort, herdados de BaseRepositoryPort (com os métodos save_all(), get_all(), has_item(), get_by_id() e get_all_primary_keys()), e também do BaseRepository, via BaseRepositoryPort. O módulo de construção do BaseRepository garante a implementação concreta dos repositórios no banco de dados. A implementação respeita o princípio de substituição de Liskov.
-Scraper: NsdScraper, que implementa o contrato NSDSourcePort, derivado de BaseScraperPort (com o método fetch_all()). Sua construção recebe as dependências criadas FetchUtils e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. 
+Scraper: NsdScraper, que implementa o contrato NSDSourcePort, derivado de ScraperBasePort (com o método fetch_all()). Sua construção recebe as dependências criadas FetchUtils e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. 
 
 Então o método _nsd_service() instancia o serviço NsdService com a injeção do Repository e do Scraper, e chama o método sync_nsd()
 
@@ -71,5 +71,5 @@ Primeiro coleta os códigos primários existentes via repository,
 Depois chama scraper.fetch_all() passando os códigos a serem ignorados e o método _save_batch() instanciado aqui. Esse método _save_batch() é responsável por persistir os resultados do método fetch_all() da source para método save_all() do repositório. 
 
 ## === Infrastructure ===
-O método fetch_all() do NsdScraper é implementado através de uma porta NSDSourcePort via BaseScraperPort, e pela implantação concreta no scraper injetado e executa uma etapa através do método processor(). Chama o método run() do WorkerPoolExecutor e injeta tasks, processor, que é o método processor() e on_result, que é o método handle_batch() que vai chamar o StrategySave.handle(). O processor 
+O método fetch_all() do NsdScraper é implementado através de uma porta NSDSourcePort via ScraperBasePort, e pela implantação concreta no scraper injetado e executa uma etapa através do método processor(). Chama o método run() do WorkerPoolExecutor e injeta tasks, processor, que é o método processor() e on_result, que é o método handle_batch() que vai chamar o StrategySave.handle(). O processor 
 

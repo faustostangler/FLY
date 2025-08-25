@@ -55,7 +55,7 @@ The CLI invokes the application services to synchronize companies and NSD record
 - `sync_companies` – Fetch company listings and details from the exchange.
 - `sync_nsd` – Download sequential document information.
 - `fetch_statements` – Retrieve raw statement pages. The rows are stored in
-  `SqlAlchemyParsedStatementRepositoryPort` before parsing. Parsed statements are persisted separately using `SqlAlchemyRawStatementRepository`.
+  `SqlAlchemyRepositoryStatementParsedPort` before parsing. Parsed statements are persisted separately using `SqlAlchemyRawStatementRepository`.
 - `parse_statements` – Convert stored pages into structured records.
 
 Services are started from `presentation/cli.py` when you execute `run.py`.

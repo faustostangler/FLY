@@ -10,7 +10,7 @@ from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
 from domain.dto import NsdDTO
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.parsed_statement_dto import StatementParsedDTO
 from domain.dto.raw_statement_dto import RawStatementDTO
 from tests.conftest import DummyLogger
 
@@ -96,7 +96,7 @@ def test_full_statement_pipeline(monkeypatch):
         worker_pool_executor=worker_pool,
         metrics_collector=collector,
     )
-    parsed_dto = ParsedStatementDTO(
+    parsed_dto = StatementParsedDTO(
         nsd="1",
         company_name="Comp",
         quarter=None,

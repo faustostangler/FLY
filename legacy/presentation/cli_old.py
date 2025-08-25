@@ -17,14 +17,14 @@ from infrastructure.http.session_pool import SessionPool
 from infrastructure.repositories import (
     SqlAlchemyCompanyDataRepository,
     SqlAlchemyNsdRepository,
-    SqlAlchemyParsedStatementRepository,
+    SqlAlchemyStatementParsedRepository,
     SqlAlchemyRawStatementRepository,
 )
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers import (
     CompanyDataScraper,
     NsdScraper,
-    RequestsRawStatementScraper,
+    RequestsStatementsRawcraper,
 )
 
 
@@ -50,7 +50,7 @@ class CLIAdapter:
             self.config, self.logger, size=self.config.http.session_pool_size
         )
         self.http_cache = HttpCacheRepository(self.company_repo.session_factory)
-        base_scraper = RequestsRawStatementScraper(
+        base_scraper = RequestsStatementsRawcraper(
             pool=self.session_pool,
             cache=self.http_cache,
             timeout=(
@@ -140,7 +140,7 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        parsed_statement_repo = SqlAlchemyParsedStatementRepository(
+        parsed_statement_repo = SqlAlchemyStatementParsedRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,

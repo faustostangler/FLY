@@ -21,8 +21,8 @@ package "fly" {
             CLIController --> fly.infrastructure.repositories.SqlAlchemyCompanyDataRepository : uses
             CLIController --> SqlAlchemyNsdRepository : uses
             CLIController --> SqlAlchemyRawStatementRepository : uses
-            CLIController --> SqlAlchemyParsedStatementRepositoryPort : uses
-            CLIController --> RawStatementScraperPort : uses
+            CLIController --> SqlAlchemyRepositoryStatementParsedPort : uses
+            CLIController --> StatementsRawcraperPort : uses
             CLIController --> MetricsCollector : uses
             CLIController --> StatementFetchService
         }
@@ -56,13 +56,13 @@ package "fly" {
 
         package "fly.application.services" {
             class CompanyDataService {
-                +__init__(config: Config, logger: LoggerPort, repository: SqlAlchemyCompanyDataRepositoryPort, scraper: CompanyDataScraperPort)
+                +__init__(config: Config, logger: LoggerPort, repository: SqlAlchemyRepositoryCompanyDataPort, scraper: ScraperCompanyDataPort)
                 +sync_companies() : SyncCompanyDataResultDTO
                 }
                 CompanyDataService --> SyncCompanyDataUseCase
                 CompanyDataService --> LoggerPort
-                CompanyDataService --> SqlAlchemyCompanyDataRepositoryPort
-                CompanyDataService --> CompanyDataScraperPort
+                CompanyDataService --> SqlAlchemyRepositoryCompanyDataPort
+                CompanyDataService --> ScraperCompanyDataPort
                 CompanyDataService --> Config
                 CompanyDataService --> SyncCompanyDataResultDTO
 
@@ -87,9 +87,9 @@ package "fly" {
                 }
                 StatementFetchService --> FetchStatementsUseCase
                 StatementFetchService --> LoggerPort
-                StatementFetchService --> RawStatementScraperPort
-                StatementFetchService --> ParsedStatementRepositoryPort
-                StatementFetchService --> SqlAlchemyCompanyDataRepositoryPort
+                StatementFetchService --> StatementsRawcraperPort
+                StatementFetchService --> RepositoryStatementParsedPort
+                StatementFetchService --> SqlAlchemyRepositoryCompanyDataPort
                 StatementFetchService --> NSDRepositoryPort
                 StatementFetchService --> SqlAlchemyRawStatementRepository
             }
@@ -100,8 +100,8 @@ package "fly" {
                 -_save_batch(buffer: List[CompanyDataRawDTO]) : void
                 }
                 SyncCompanyDataUseCase --> LoggerPort
-                SyncCompanyDataUseCase --> SqlAlchemyCompanyDataRepositoryPort
-                SyncCompanyDataUseCase --> CompanyDataScraperPort
+                SyncCompanyDataUseCase --> SqlAlchemyRepositoryCompanyDataPort
+                SyncCompanyDataUseCase --> ScraperCompanyDataPort
                 SyncCompanyDataUseCase --> SyncCompanyDataResultDTO
                 SyncCompanyDataUseCase --> CompanyDataDTO
                 SyncCompanyDataUseCase --> CompanyDataRawDTO
@@ -118,8 +118,8 @@ package "fly" {
                 +fetch_all(...) : List[Tuple[NsdDTO, List[StatementRowsDTO]]]
                 }
                 FetchStatementsUseCase --> LoggerPort
-                FetchStatementsUseCase --> RawStatementScraperPort
-                FetchStatementsUseCase --> ParsedStatementRepositoryPort
+                FetchStatementsUseCase --> StatementsRawcraperPort
+                FetchStatementsUseCase --> RepositoryStatementParsedPort
                 FetchStatementsUseCase --> SqlAlchemyRawStatementRepository
                 FetchStatementsUseCase --> Config
                 FetchStatementsUseCase --> WorkerPool
@@ -128,13 +128,13 @@ package "fly" {
             }
     package "fly.domain" {
         package "fly.domain.ports" {
-            interface BaseScraperPort<T> {
+            interface ScraperBasePort<T> {
                 +fetch_all(...) : ExecutionResultDTO<T>
                 +metrics_collector : MetricsCollectorPort
                 }
-            interface CompanyDataScraperPort {
+            interface ScraperCompanyDataPort {
                 }
-                CompanyDataScraperPort --|> BaseScraperPort
+                ScraperCompanyDataPort --|> ScraperBasePort
             interface NSDSourcePort {
                 +fetch_all(...) : ExecutionResultDTO<NsdDTO>
                 }
@@ -158,8 +158,8 @@ package "fly" {
                 +get_by_id(id: str) : T
                 }
 
-            interface SqlAlchemyCompanyDataRepositoryPort
-                SqlAlchemyCompanyDataRepositoryPort --|> SqlAlchemyRepositoryBasePort        
+            interface SqlAlchemyRepositoryCompanyDataPort
+                SqlAlchemyRepositoryCompanyDataPort --|> SqlAlchemyRepositoryBasePort        
 
             interface NSDRepositoryPort {
                 }
@@ -186,17 +186,17 @@ package "fly" {
                 WorkerPoolPort --> ExecutionResultDTO
                 WorkerPoolPort --> LoggerPort
                 WorkerPoolPort --> WorkerTaskDTO
-            interface ParsedStatementRepositoryPort {
+            interface RepositoryStatementParsedPort {
                 +get_existing_by_columns(column_name: str) : Set[Any]
                 +save_all(items: List[StatementRowsDTO]) : void
                 }
             interface SqlAlchemyRawStatementRepository {
                 +save_all(items: List[StatementRowsDTO]) : void
                 }
-            interface RawStatementScraperPort {
+            interface StatementsRawcraperPort {
                 +fetch(task: WorkerTaskDTO) : dict
                 }
-                RawStatementScraperPort --> WorkerTaskDTO
+                StatementsRawcraperPort --> WorkerTaskDTO
 
         package "fly.domain.dto" {
             class CompanyDataListingDTO {
@@ -382,7 +382,7 @@ package "fly" {
                 -_fetch_page(page_number: int) : PageResultDTO
                 -_encode_payload(payload: dict) : str
                 }
-                CompanyDataScraper --|> CompanyDataScraperPort
+                CompanyDataScraper --|> ScraperCompanyDataPort
                 CompanyDataScraper --> ExecutionResultDTO
                 CompanyDataScraper --> WorkerPoolPort
                 CompanyDataScraper --> LoggerPort
@@ -415,7 +415,7 @@ package "fly" {
                 NsdScraper --> NsdDTO
                 NsdScraper --> ExecutionResultDTO
 
-            class RawStatementScraperPort {
+            class StatementsRawcraperPort {
                 session : Session
                 endpoint : str
                 id_generator : IdGenerator
@@ -425,9 +425,9 @@ package "fly" {
                 -_build_urls() : list
                 +fetch() : dict
                 }
-                RawStatementScraperPort --> IdGenerator
-                RawStatementScraperPort --> MetricsCollector
-                RawStatementScraperPort --|> RawStatementScraperPort
+                StatementsRawcraperPort --> IdGenerator
+                StatementsRawcraperPort --> MetricsCollector
+                StatementsRawcraperPort --|> StatementsRawcraperPort
                 }
             }
         package "fly.infrastructure.config" {
@@ -654,7 +654,7 @@ package "fly" {
                 +get_by_id(id: str) : CompanyDataDTO
                 +get_all_primary_keys() : Set[str>
                 }
-                SqlAlchemyCompanyDataRepository --|> SqlAlchemyCompanyDataRepositoryPort
+                SqlAlchemyCompanyDataRepository --|> SqlAlchemyRepositoryCompanyDataPort
                 SqlAlchemyCompanyDataRepository --|> SqlAlchemyRepositoryBase
                 SqlAlchemyCompanyDataRepository --> CompanyDataDTO
 

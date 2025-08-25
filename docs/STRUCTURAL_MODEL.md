@@ -29,8 +29,8 @@ Dependencies are injected through constructors and point inward to domain ports 
   - `StatementDTO`, `StatementRowsDTO`
   - `ExecutionResultDTO`, `PageResultDTO`, `MetricsDTO`, `SyncCompanyDataResultDTO`, `WorkerTaskDTO`
 - **Ports** (`domain/ports`)
-  - Repository ports: `SqlAlchemyCompanyDataRepositoryPort`, `NSDRepositoryPort`, `SqlAlchemyRawStatementRepository`, `ParsedStatementRepositoryPort`.
-  - Source ports: `CompanyDataScraperPort`, `NSDSourcePort`, `RawStatementScraperPort`.
+  - Repository ports: `SqlAlchemyRepositoryCompanyDataPort`, `NSDRepositoryPort`, `SqlAlchemyRawStatementRepository`, `RepositoryStatementParsedPort`.
+  - Source ports: `ScraperCompanyDataPort`, `NSDSourcePort`, `StatementsRawcraperPort`.
   - `LoggerPort`, `WorkerPoolPort`, `MetricsCollectorPort`, `DataCleanerPort`.
 - **Utilities**
   - `statement_processing.classify_section` – maps account names to statement sections.
@@ -39,12 +39,12 @@ The domain contains no infrastructure references and consists only of dataclasse
 
 ## Infrastructure Layer
 - **Repositories** (`infrastructure/repositories`)
-  - `SqlAlchemyCompanyDataRepository`, `SqlAlchemyNSDRepository`, `SqlAlchemyRawStatementRepository`, `SqlAlchemyParsedStatementRepositoryPort` – implement respective repository ports and manage database persistence using SQLAlchemy.
+  - `SqlAlchemyCompanyDataRepository`, `SqlAlchemyNSDRepository`, `SqlAlchemyRawStatementRepository`, `SqlAlchemyRepositoryStatementParsedPort` – implement respective repository ports and manage database persistence using SQLAlchemy.
   - `SqlAlchemyRepositoryBase` – shared connection logic used by concrete repositories.
 - **Scrapers & Adapters** (`infrastructure/scrapers`)
-  - `CompanyDataScraper` – implements `CompanyDataScraperPort` using `FetchUtils`, `DataCleaner`, and several processor classes (`EntryCleaner`, `DetailFetcher`, `CompanyDataMerger`, `CompanyDataDetailProcessor`).
+  - `CompanyDataScraper` – implements `ScraperCompanyDataPort` using `FetchUtils`, `DataCleaner`, and several processor classes (`EntryCleaner`, `DetailFetcher`, `CompanyDataMerger`, `CompanyDataDetailProcessor`).
   - `NsdScraper` – implements `NSDSourcePort` and fetches sequential documents.
-  - `StatementsSourceAdapter` – implements `RawStatementScraperPort` for statement pages.
+  - `StatementsSourceAdapter` – implements `StatementsRawcraperPort` for statement pages.
 - **Helpers** (`infrastructure/helpers`)
   - `FetchUtils` – HTTP fetching with retry logic.
   - `SaveStrategy` – buffers DTOs before persistence.
@@ -65,17 +65,17 @@ class CompanyDataService:
         self,
         config: Config,
         logger: LoggerPort,
-        repository: SqlAlchemyCompanyDataRepositoryPort,
-        scraper: CompanyDataScraperPort,
+        repository: SqlAlchemyRepositoryCompanyDataPort,
+        scraper: ScraperCompanyDataPort,
     ) -> None:
         ...
 ```
 ```python
-class SqlAlchemyCompanyDataRepository(SqlAlchemyCompanyDataRepositoryPort):
+class SqlAlchemyCompanyDataRepository(SqlAlchemyRepositoryCompanyDataPort):
 ```
 
 ```python
-class SqlAlchemyCompanyDataRepositoryPort(SqlAlchemyRepositoryBasePort[CompanyDataDTO, str]):
+class SqlAlchemyRepositoryCompanyDataPort(SqlAlchemyRepositoryBasePort[CompanyDataDTO, str]):
 ```
 
 ```python
@@ -84,15 +84,15 @@ class SqlAlchemyRepositoryBasePort(ABC, Generic[T, K]):
 e também 
 
 ```python
-class CompanyDataScraper(CompanyDataScraperPort):
+class CompanyDataScraper(ScraperCompanyDataPort):
 ```
 
 ```python
-class CompanyDataScraperPort(BaseScraperPort[CompanyDataRawDTO]):
+class ScraperCompanyDataPort(ScraperBasePort[CompanyDataRawDTO]):
 ```
 
 ```python
-class BaseScraperPort(ABC, Generic[T]):
+class ScraperBasePort(ABC, Generic[T]):
 ```
 
 Dependencies always point inward (scrapers depend on ports and helpers, services depend on use cases and ports).

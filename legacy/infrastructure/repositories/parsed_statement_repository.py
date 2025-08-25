@@ -7,20 +7,20 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto import ParsedStatementDTO
-from domain.ports import ConfigPort, LoggerPort, ParsedStatementRepositoryPort
+from domain.dto import StatementParsedDTO
+from domain.ports import ConfigPort, LoggerPort, RepositoryStatementParsedPort
 from infrastructure.helpers.list_flattener import ListFlattener
-from infrastructure.models.parsed_statement_model import ParsedStatementModel
+from infrastructure.models.parsed_statement_model import StatementParsedModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
 )
 
 
-class SqlAlchemyParsedStatementRepository(
-    SqlAlchemyRepositoryBase[ParsedStatementDTO, int],
-    ParsedStatementRepositoryPort,
+class SqlAlchemyStatementParsedRepository(
+    SqlAlchemyRepositoryBase[StatementParsedDTO, int],
+    RepositoryStatementParsedPort,
 ):
-    """SQLite-backed repository for ``ParsedStatementDTO`` objects."""
+    """SQLite-backed repository for ``StatementParsedDTO`` objects."""
 
     def __init__(
         self, connection_string: str, config: ConfigPort, logger: LoggerPort
@@ -31,7 +31,7 @@ class SqlAlchemyParsedStatementRepository(
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[ParsedStatementDTO]) -> None:
+    def save_all(self, items: List[StatementParsedDTO]) -> None:
         """Persist parsed statements using SQLite upserts."""
         session = self.Session()
         try:
@@ -73,30 +73,30 @@ class SqlAlchemyParsedStatementRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return ParsedStatementModel, (ParsedStatementModel.id,)
+        return StatementParsedModel, (StatementParsedModel.id,)
 
     def exists_with_hash(self, company_name: str, hash_: str) -> bool:
         """Return True if ``company_name`` has rows with ``hash_``."""
         with self.Session() as session:
-            query = session.query(ParsedStatementModel).filter(
-                ParsedStatementModel.company_name == company_name,
-                ParsedStatementModel.processing_hash == hash_,
+            query = session.query(StatementParsedModel).filter(
+                StatementParsedModel.company_name == company_name,
+                StatementParsedModel.processing_hash == hash_,
             )
             return session.query(query.exists()).scalar()
 
     def replace_all_for_company(
         self,
         company_name: str,
-        parsed_dtos: List[ParsedStatementDTO],
+        parsed_dtos: List[StatementParsedDTO],
         new_hash: str,
     ) -> None:
         """Replace parsed rows for ``company_name`` with ``parsed_dtos``."""
         with self.Session() as session:
-            session.query(ParsedStatementModel).filter(
-                ParsedStatementModel.company_name == company_name
+            session.query(StatementParsedModel).filter(
+                StatementParsedModel.company_name == company_name
             ).delete()
             models = [
-                ParsedStatementModel.from_dto(
+                StatementParsedModel.from_dto(
                     replace(dto, processing_hash=new_hash, id=None)
                 )
                 for dto in parsed_dtos

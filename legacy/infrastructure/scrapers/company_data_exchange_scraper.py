@@ -15,7 +15,7 @@ from domain.dto import (
     WorkerTaskDTO,
 )
 from domain.ports import (
-    CompanyDataScraperPort,
+    ScraperCompanyDataPort,
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
@@ -33,7 +33,7 @@ from infrastructure.scrapers.company_data_processors import (
 )
 
 
-class CompanyDataScraper(CompanyDataScraperPort):
+class CompanyDataScraper(ScraperCompanyDataPort):
     """Scraper adapter responsible for fetching raw company data.
 
     In a real implementation, this could use requests, BeautifulSoup, or

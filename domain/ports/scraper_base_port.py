@@ -15,7 +15,7 @@ T = TypeVar("T")
 
 
 @runtime_checkable
-class BaseScraperPort(Protocol, Generic[T]):
+class ScraperBasePort(Protocol, Generic[T]):
     """Generic port interface for external data scrapers.
 
     This protocol defines the contract that all scraper implementations

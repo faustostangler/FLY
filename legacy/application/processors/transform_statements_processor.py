@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import List
 
 from application.usecases.transform_statements import TransformStatementsUseCase
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
-from domain.ports import ConfigPort, LoggerPort, ParsedStatementRepositoryPort
+from domain.dto.parsed_statement_dto import StatementParsedDTO
+from domain.ports import ConfigPort, LoggerPort, RepositoryStatementParsedPort
 from domain.services import StatementClassificationService
 from infrastructure.transformers import (
     IntelStatementTransformerAdapter,
@@ -23,7 +23,7 @@ class TransformStatementsProcessor(BaseProcessor):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        parsed_repo: ParsedStatementRepositoryPort,
+        parsed_repo: RepositoryStatementParsedPort,
     ) -> None:
         """Create processor with repository and configuration."""
         self.logger = logger
@@ -42,16 +42,16 @@ class TransformStatementsProcessor(BaseProcessor):
         )
 
     def load(
-        self, parsed_groups: List[List[ParsedStatementDTO]]
-    ) -> List[List[ParsedStatementDTO]]:
+        self, parsed_groups: List[List[StatementParsedDTO]]
+    ) -> List[List[StatementParsedDTO]]:
         """Forward parsed groups to the transformation stage."""
         return parsed_groups
 
     def transform(
-        self, data: List[List[ParsedStatementDTO]]
-    ) -> List[List[ParsedStatementDTO]]:
+        self, data: List[List[StatementParsedDTO]]
+    ) -> List[List[StatementParsedDTO]]:
         """Apply the transformation use case to each group."""
-        processed: List[List[ParsedStatementDTO]] = []
+        processed: List[List[StatementParsedDTO]] = []
         for group in data:
             try:
                 processed.append(self.transform_usecase.execute(group))
@@ -61,15 +61,15 @@ class TransformStatementsProcessor(BaseProcessor):
         return processed
 
     def persist(
-        self, data: List[List[ParsedStatementDTO]]
-    ) -> List[List[ParsedStatementDTO]]:
+        self, data: List[List[StatementParsedDTO]]
+    ) -> List[List[StatementParsedDTO]]:
         """Persist transformed statements to the repository."""
         for group in data:
             self.parsed_repo.save_all(group)
         return data
 
     def run(
-        self, data: List[List[ParsedStatementDTO]]
-    ) -> List[List[ParsedStatementDTO]]:
+        self, data: List[List[StatementParsedDTO]]
+    ) -> List[List[StatementParsedDTO]]:
         """Run the transformation pipeline."""
         return super().run(data)

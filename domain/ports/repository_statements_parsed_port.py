@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import List, Protocol, runtime_checkable
 
-from domain.dtos import ParsedStatementDTO
+from domain.dtos import StatementParsedDTO
 
 from .repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable
-class ParsedStatementRepositoryPort(RepositoryBasePort[ParsedStatementDTO, int], Protocol):
+class RepositoryStatementParsedPort(RepositoryBasePort[StatementParsedDTO, int], Protocol):
     """Port definition for persisting parsed financial statements.
 
     Extends RepositoryBasePort with methods specific to handling parsed
@@ -31,14 +31,14 @@ class ParsedStatementRepositoryPort(RepositoryBasePort[ParsedStatementDTO, int],
     def replace_all_for_company(
         self,
         company_name: str,
-        parsed_dtos: List[ParsedStatementDTO],
+        parsed_dtos: List[StatementParsedDTO],
         new_hash: str,
     ) -> None:
         """Replace all parsed statements for a company with a new set.
 
         Args:
             company_name (str): Name of the company whose statements are updated.
-            parsed_dtos (List[ParsedStatementDTO]): New list of parsed statements
+            parsed_dtos (List[StatementParsedDTO]): New list of parsed statements
                 to persist in place of the old ones.
             new_hash (str): Hash associated with the new parsed statements.
 

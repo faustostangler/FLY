@@ -50,16 +50,16 @@ StatementFetchService -> FetchStatementsUseCase : fetch_statement_rows(targets)
 FetchStatementsUseCase -> FetchStatementsUseCase : fetch_all()
 FetchStatementsUseCase -> WorkerPool : run(tasks, processor)
 loop per NSD
-    WorkerPool -> RawStatementScraperPort : fetch()
+    WorkerPool -> StatementsRawcraperPort : fetch()
     alt no rows returned
-        WorkerPool -> RawStatementScraperPort : fetch() retry
+        WorkerPool -> StatementsRawcraperPort : fetch() retry
     end
     WorkerPool -> SaveStrategy : handle(rows)
     alt threshold reached
-        SaveStrategy -> ParsedStatementRepositoryPort : save_all(batch)
+        SaveStrategy -> RepositoryStatementParsedPort : save_all(batch)
     end
 end
-SaveStrategy -> ParsedStatementRepositoryPort : save_all(remaining)
+SaveStrategy -> RepositoryStatementParsedPort : save_all(remaining)
 @enduml
 ```
 
@@ -67,7 +67,7 @@ SaveStrategy -> ParsedStatementRepositoryPort : save_all(remaining)
 2. `_build_targets()` filters NSDs that have valid types and are missing
    statement rows.
 3. **FetchStatementsUseCase.fetch_all** sets up a worker pool and `SaveStrategy`.
-4. Each worker calls the `RawStatementScraperPort.fetch` method. Empty results
+4. Each worker calls the `StatementsRawcraperPort.fetch` method. Empty results
    trigger retries until rows are returned.
 5. Fetched `StatementRowsDTO` objects are buffered and written in batches via the
    repository.

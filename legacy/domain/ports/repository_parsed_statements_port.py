@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import List
 
-from domain.dto import ParsedStatementDTO
+from domain.dto import StatementParsedDTO
 
-from .base_repository_port import RepositoryBasePort
+from .repository_base_port import RepositoryBasePort
 
 
-class ParsedStatementRepositoryPort(RepositoryBasePort[ParsedStatementDTO, int]):
+class RepositoryStatementParsedPort(RepositoryBasePort[StatementParsedDTO, int]):
     """Port for persisting parsed statement rows."""
 
     def exists_with_hash(self, company_name: str, hash_: str) -> bool:
@@ -18,7 +18,7 @@ class ParsedStatementRepositoryPort(RepositoryBasePort[ParsedStatementDTO, int])
     def replace_all_for_company(
         self,
         company_name: str,
-        parsed_dtos: List[ParsedStatementDTO],
+        parsed_dtos: List[StatementParsedDTO],
         new_hash: str,
     ) -> None:
         """Replace all rows for ``company_name`` with ``parsed_dtos``."""
