@@ -10,7 +10,7 @@ from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
 from domain.ports.scraper_fetched_statements_port import ScraperStatementFetchedPort
-
+from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services import CompanyDataService
 
 
@@ -37,8 +37,7 @@ class Cli:
         statements_fetched_repository: RepositoryStatementFetchedPort, 
 
         company_scraper: ScraperCompanyDataPort,
-        nsd_scraper: ScraperNsdPort,
-        
+        nsd_scraper: ScraperNsdPort,        
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -51,6 +50,7 @@ class Cli:
 
         self.company_scraper = company_scraper
         self.nsd_scraper = nsd_scraper
+        self.byte_formatter = ByteFormatter()
 
     def run(self) -> None:
         """Execute the top-level application workflow."""
@@ -59,7 +59,7 @@ class Cli:
 
         # Kick off the company data pipeline
         company_results: SyncResultsDTO = self._company_service()
-        self.logger.log(f"Total Download: {company_results.metrics}")
+        self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
         statements_results: SyncResultsDTO = self._statements_service()
 
