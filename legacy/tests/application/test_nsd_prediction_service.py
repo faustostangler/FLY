@@ -3,11 +3,11 @@ from unittest.mock import MagicMock
 
 from application.services.nsd_prediction_service import _find_next_probable_nsd
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import NSDRepositoryPort
+from domain.ports import RepositoryNsdPort
 
 
 def test_find_next_probable_nsd_returns_sequence():
-    repo = MagicMock(spec=NSDRepositoryPort)
+    repo = MagicMock(spec=RepositoryNsdPort)
     now = datetime.utcnow()
     start = now - timedelta(days=15)
 
@@ -50,7 +50,7 @@ def test_find_next_probable_nsd_returns_sequence():
 
 
 def test_find_next_probable_nsd_empty():
-    repo = MagicMock(spec=NSDRepositoryPort)
+    repo = MagicMock(spec=RepositoryNsdPort)
     repo.iter_all.return_value = iter([])
 
     result = _find_next_probable_nsd(repo)

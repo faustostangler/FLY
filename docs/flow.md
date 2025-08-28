@@ -57,7 +57,7 @@ Este ExecutionResultDTO é finalizado em synchronize_companies(), que retorna um
 ## O método _nsd_service()
 Instancia o repositório e o scraper. 
 Repository: SqlAlchemyCompanyRepository, que implementa os métodos do contrato CompanyRepositoryPort, herdados de RepositoryBasePort (com os métodos save_all(), get_all(), has_item(), get_by_id() e get_all_primary_keys()), e também do RepositoryBase, via RepositoryBasePort. O módulo de construção do RepositoryBase garante a implementação concreta dos repositórios no banco de dados. A implementação respeita o princípio de substituição de Liskov.
-Scraper: NsdScraper, que implementa o contrato NSDSourcePort, derivado de ScraperBasePort (com o método fetch_all()). Sua construção recebe as dependências criadas FetchUtils e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. 
+Scraper: NsdScraper, que implementa o contrato ScraperNsdPort, derivado de ScraperBasePort (com o método fetch_all()). Sua construção recebe as dependências criadas FetchUtils e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. 
 
 Então o método _nsd_service() instancia o serviço NsdService com a injeção do Repository e do Scraper, e chama o método sync_nsd()
 
@@ -71,5 +71,5 @@ Primeiro coleta os códigos primários existentes via repository,
 Depois chama scraper.fetch_all() passando os códigos a serem ignorados e o método _save_batch() instanciado aqui. Esse método _save_batch() é responsável por persistir os resultados do método fetch_all() da source para método save_all() do repositório. 
 
 ## === Infrastructure ===
-O método fetch_all() do NsdScraper é implementado através de uma porta NSDSourcePort via ScraperBasePort, e pela implantação concreta no scraper injetado e executa uma etapa através do método processor(). Chama o método run() do WorkerPoolExecutor e injeta tasks, processor, que é o método processor() e on_result, que é o método handle_batch() que vai chamar o StrategySave.handle(). O processor 
+O método fetch_all() do NsdScraper é implementado através de uma porta ScraperNsdPort via ScraperBasePort, e pela implantação concreta no scraper injetado e executa uma etapa através do método processor(). Chama o método run() do WorkerPoolExecutor e injeta tasks, processor, que é o método processor() e on_result, que é o método handle_batch() que vai chamar o StrategySave.handle(). O processor 
 

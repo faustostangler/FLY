@@ -8,7 +8,7 @@ from sqlalchemy.dialects.sqlite import insert
 
 from domain import dto
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
+from domain.ports import ConfigPort, LoggerPort, RepositoryNsdPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -16,7 +16,7 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 )
 
 
-class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDRepositoryPort):
+class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryNsdPort):
     """Concrete repository for NsdDTO using SQLite via SQLAlchemy."""
 
     def __init__(
