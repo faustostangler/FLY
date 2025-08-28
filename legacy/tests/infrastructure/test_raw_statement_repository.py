@@ -1,16 +1,16 @@
 from sqlalchemy import text
 
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.raw_statement_repository import (
-    SqlAlchemyRawStatementRepository,
+    SqlAlchemyStatementRawRepository,
 )
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyRawStatementRepository(
+    repo = SqlAlchemyStatementRawRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -31,10 +31,10 @@ def test_save_all_upserts(SessionLocal, engine):
         "description": "d",
         "value": 1.0,
     }
-    repo.save_all([RawStatementDTO.from_dict(base)])
+    repo.save_all([StatementRawDTO.from_dict(base)])
 
     updated = base | {"value": 2.0}
-    repo.save_all([RawStatementDTO.from_dict(updated)])
+    repo.save_all([StatementRawDTO.from_dict(updated)])
 
     with engine.connect() as conn:
         count = conn.execute(text("SELECT COUNT(*) FROM tbl_raw_statements")).scalar()

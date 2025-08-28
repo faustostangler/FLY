@@ -9,42 +9,42 @@ from typing import Callable, Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
-from domain.dto import ExecutionResultDTO, NsdDTO, WorkerTaskDTO
-from domain.ports import (
-    ConfigPort,
-    LoggerPort,
-    MetricsCollectorPort,
-    NSDRepositoryPort,
-    NSDSourcePort,
-    WorkerPoolPort,
-)
-from infrastructure.helpers import ByteFormatter, SaveStrategy
-from infrastructure.helpers.data_cleaner import DataCleaner
-from infrastructure.http.affinity_port import AffinityHttpClient
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+from domain.ports.metrics_collector_port import MetricsCollectorPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.scraper_nsd_port import ScraperNsdPort
+from infrastructure.utils.byte_formatter import ByteFormatter
+from infrastructure.utils.save_strategy import SaveStrategy
+from infrastructure.adapters.datacleaner_adapter import DataCleaner
+from domain.ports.http_client_port import AffinityHttpClientPort
+from domain.ports.worker_pool_port import WorkerPoolPort
 
 
-class NsdScraper(NSDSourcePort):
+class NsdScraper(ScraperNsdPort):
     """Scraper adapter responsible for fetching raw NSD documents."""
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        data_cleaner: DataCleaner,
-        worker_pool_executor: WorkerPoolPort,
+        datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
-        repository: NSDRepositoryPort,
-        http_client: AffinityHttpClient,
+        worker_pool: WorkerPoolPort,
+        nsd_repository: RepositoryNsdPort,
+        http_client: AffinityHttpClientPort,
     ):
         """Set up configuration, logger, and helper utilities for the
         scraper."""
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.data_cleaner = data_cleaner
-        self.worker_pool_executor = worker_pool_executor
+        self.datacleaner = datacleaner
+        self.worker_pool = worker_pool
         self._metrics_collector = metrics_collector
-        self.repository = repository
+        self.nsd_repository = nsd_repository
 
         self.nsd_endpoint = self.config.exchange.nsd_endpoint
         self.http_client = http_client
@@ -64,7 +64,7 @@ class NsdScraper(NSDSourcePort):
         start: int = 1,
         max_nsd: Optional[int] = None,
         **kwargs,
-    ) -> ExecutionResultDTO[NsdDTO]:
+    ) -> List[NsdDTO]:
         """Fetch and parse NSD pages using a worker queue."""
 
         # self.logger.log(
@@ -83,7 +83,7 @@ class NsdScraper(NSDSourcePort):
 
         nsd_diff = max_nsd - start
 
-        threshold = threshold or self.config.repository.persistence_threshold or 50
+        threshold = threshold or self.config.repository.persistence_threshold
 
         self.logger.log("Fetch NSD list", level="info")
 
@@ -95,7 +95,7 @@ class NsdScraper(NSDSourcePort):
 
         tasks = list(enumerate(codes))
 
-        strategy: SaveStrategy[NsdDTO] = SaveStrategy(
+        strategy: SaveStrategy[NsdDTO] = SaveStrategy.from_config(
             save_callback, threshold, config=self.config
         )
 
@@ -174,7 +174,7 @@ class NsdScraper(NSDSourcePort):
 
         def handle_batch(item: Optional[NsdDTO]) -> None:
             if item is not None:
-                strategy.handle([item])
+                strategy.handle(item)
             else:
                 pass
 
@@ -182,11 +182,12 @@ class NsdScraper(NSDSourcePort):
         #     "Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
         #     level="info",
         # )
-        exec_result = self.worker_pool_executor.run(
+        nsds = self.worker_pool.run(
             tasks=tasks,
             processor=processor,
             logger=self.logger,
             on_result=handle_batch,
+            max_workers=self.config.worker_pool.max_workers or 1,
         )
         # self.logger.log(
         #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
@@ -200,14 +201,14 @@ class NsdScraper(NSDSourcePort):
         #     level="info",
         # )
 
-        results = [item for item in exec_result.items if item is not None]
+        results = [item for item in nsds if item is not None]
 
         # self.logger.log(
         #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
         #     level="info",
         # )
 
-        return ExecutionResultDTO(items=results, metrics=exec_result.metrics)
+        return results
 
     def _parse_html(self, nsd: int, html: str) -> Dict:
         """Parse NSD HTML into a dictionary."""
@@ -224,30 +225,30 @@ class NsdScraper(NSDSourcePort):
         # from DTO
         data: Dict[str, str | int | datetime | None] = {
             "nsd": nsd,
-            "company_name": self.data_cleaner.clean_text(text_of("#lblNomeCompanhia")),
+            "company_name": self.datacleaner.clean_text(text_of("#lblNomeCompanhia")),
             # quarter e sent_date serão preenchidos depois
             "quarter": None,
             "version": None,
             "nsd_type": None,
             "dri": None,
             "auditor": None,
-            "responsible_auditor": self.data_cleaner.clean_text(
+            "responsible_auditor": self.datacleaner.clean_text(
                 text_of("#lblResponsavelTecnico")
             ),
             "protocol": text_of("#lblProtocolo"),
             "sent_date": None,
-            "reason": self.data_cleaner.clean_text(
+            "reason": self.datacleaner.clean_text(
                 text_of("#lblMotivoCancelamentoReapresentacao")
             ),
         }
 
         # Limpeza do padrão FCA
-        dri = self.data_cleaner.clean_text(text_of("#lblNomeDRI")) or ""
+        dri = self.datacleaner.clean_text(text_of("#lblNomeDRI")) or ""
         dri_pattern = r"\s+FCA(?:\s+V\d+)?\b"
         data["dri"] = re.sub(dri_pattern, "", dri)
         data["dri"] = re.sub(r"\s{2,}", " ", data["dri"]).strip()
 
-        auditor = self.data_cleaner.clean_text(text_of("#lblAuditor")) or ""
+        auditor = self.datacleaner.clean_text(text_of("#lblAuditor")) or ""
         auditor_pattern = r"\s+FCA\s+\d{4}(?:\s+V\d+)?\b"
         data["auditor"] = re.sub(auditor_pattern, "", auditor)
         data["auditor"] = re.sub(r"\s{2,}", " ", data["auditor"]).strip()
@@ -255,21 +256,21 @@ class NsdScraper(NSDSourcePort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        data["quarter"] = self.data_cleaner.clean_date(quarter) if quarter else None
+        data["quarter"] = self.datacleaner.clean_date(quarter) if quarter else None
 
         nsd_type_version = text_of("#lblDescricaoCategoria")
         if nsd_type_version:
             parts = [p.strip() for p in nsd_type_version.split(" - ")]
             if len(parts) >= 2:
                 data["version"] = (
-                    self.data_cleaner.clean_text(parts[-1]) if parts[-1] else None
+                    self.datacleaner.clean_text(parts[-1]) if parts[-1] else None
                 )
                 data["nsd_type"] = (
-                    self.data_cleaner.clean_text(parts[0]) if parts[0] else None
+                    self.datacleaner.clean_text(parts[0]) if parts[0] else None
                 )
 
         data["sent_date"] = (
-            self.data_cleaner.clean_date(sent_date) if sent_date else None
+            self.datacleaner.clean_date(sent_date) if sent_date else None
         )
 
         return data
@@ -336,20 +337,6 @@ class NsdScraper(NSDSourcePort):
 
         return nsd_low
 
-    def _try_nsd(self, nsd: int) -> Optional[dict]:
-        """Attempt to fetch and parse a single NSD page."""
-        try:
-            # Request the NSD page and parse its HTML
-            url = self.nsd_endpoint.format(nsd=nsd)
-            body = self.http_client.fetch(url)
-            fetched = self._parse_html(nsd, body.decode("utf-8"))
-
-            # Only return results if the page contains a "sent_date" field
-            return fetched if fetched.get("sent_date") else None
-        except Exception:
-            # Ignore any network or parsing errors
-            return None
-
     def _find_next_probable_nsd(
         self,
         start: int = 1,
@@ -376,7 +363,7 @@ class NsdScraper(NSDSourcePort):
         if not self.skip_codes:
             return start
 
-        dates = [d for (d,) in self.repository.iter_existing_by_columns("sent_date")]
+        dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date")]
 
         first_date = min(dates)
         last_date = max(dates)
@@ -398,3 +385,20 @@ class NsdScraper(NSDSourcePort):
         )
 
         return last_estimated_nsd
+
+    def _try_nsd(self, nsd: int) -> Optional[dict]:
+        """Attempt to fetch and parse a single NSD page."""
+        try:
+            # Request the NSD page and parse its HTML
+            url = self.nsd_endpoint.format(nsd=nsd)
+            body = self.http_client.fetch(url)
+            fetched = self._parse_html(nsd, body.decode("utf-8"))
+
+            # Only return results if the page contains a "sent_date" field
+            return fetched if fetched.get("sent_date") else None
+        except Exception:
+            # Ignore any network or parsing errors
+            return None
+
+    def get_metrics(self) -> int:
+        return self._metrics_collector.network_bytes

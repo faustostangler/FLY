@@ -66,7 +66,7 @@ class DataCleaner(DataCleanerPort):
             text (str): Input string representing a number.
 
         Returns:
-            float: Parsed and cleaned numeric value.
+            float: Fetched and cleaned numeric value.
         """
         return norm.clean_number(text, logger=cast("Logger", self.logger))
 
@@ -77,7 +77,7 @@ class DataCleaner(DataCleanerPort):
             text (Optional[str]): Input string representing a date.
 
         Returns:
-            Optional[datetime]: Parsed datetime object, or None if invalid.
+            Optional[datetime]: Fetched datetime object, or None if invalid.
         """
         return norm.clean_date(text, logger=cast("Logger", self.logger))
 
@@ -93,8 +93,8 @@ class DataCleaner(DataCleanerPort):
         Args:
             entry (Mapping[str, object]): Input dictionary with raw values.
             text_keys (Optional[Iterable[str]]): Keys whose values should be cleaned as text.
-            date_keys (Optional[Iterable[str]]): Keys whose values should be parsed as dates.
-            number_keys (Optional[Iterable[str]]): Keys whose values should be parsed as numbers.
+            date_keys (Optional[Iterable[str]]): Keys whose values should be fetched as dates.
+            number_keys (Optional[Iterable[str]]): Keys whose values should be fetched as numbers.
 
         Returns:
             dict: A new dictionary with cleaned values.

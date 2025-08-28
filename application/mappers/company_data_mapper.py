@@ -9,7 +9,7 @@ from domain.ports.datacleaner_port import DataCleanerPort
 
 
 class CompanyDataMapper:
-    """Mapper that merges company listing and detail data into a parsed DTO."""
+    """Mapper that merges company listing and detail data into a fetched DTO."""
 
     def __init__(self, data_cleaner: DataCleanerPort) -> None:
         """Initialize the mapper with a data cleaning utility.

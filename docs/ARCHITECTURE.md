@@ -78,7 +78,7 @@ ConcreteAdapter (implementation, infrastructure)
 Example: 
 Layer: Base Port | Element SqlAlchemyRepositoryBasePort(T) | File domain/ports/base_repository_port.py
 Layer: Specific Port | Element SqlAlchemyRepositoryCompanyDataPort | File domain/ports/company_repository_port.py
-Layer: Implementation | Element SqlAlchemyCompanyDataRepository | File infrastructure/repositories/company_repository.py
+Layer: Implementation | Element SqlAlchemyRepositoryCompanyData | File infrastructure/repositories/company_repository.py
 
 ### 2. Application – The Managers and Project Coordinators
 This layer bridges the domain and the real execution. It doesn't know about technology (no SQL or HTTP) and doesn't contain business rules (no validations), but it coordinates everything.
@@ -113,7 +113,7 @@ This is the operational floor of FLY: developers, clerks, file cabinets, scraper
 It includes:
 
 - Adapters: e.g., CompanyDataScraper implements SourcePort.
-- Repositories: e.g., SqlAlchemyCompanyDataRepository implements RepositoryPort.
+- Repositories: e.g., SqlAlchemyRepositoryCompanyData implements RepositoryPort.
 - ORM Models: Define the data schema using SQLAlchemy.
 - Scrapers: Fetch HTML, XML, or JSON from the exchange.
 - Parsers & Cleaners: Normalize raw data.
@@ -147,7 +147,7 @@ The table below maps the main components to their respective layers.
 | `SyncCompanyDataUseCase` | Application | Use case |
 | `CompanyDataDTO` | Domain | DTO |
 | `SqlAlchemyRepositoryCompanyDataPort` | Domain | Port |
-| `SqlAlchemyCompanyDataRepository` | Infrastructure | Repository |
+| `SqlAlchemyRepositoryCompanyData` | Infrastructure | Repository |
 | `CompanyDataScraper` | Infrastructure | Adapter |
 
 ### Ports and Adapters
@@ -155,7 +155,7 @@ The table below maps the main components to their respective layers.
 Every external dependency is accessed through a port defined in the domain. The
 infrastructure layer implements these ports. For example:
 
-- `SqlAlchemyRepositoryCompanyDataPort` ← `SqlAlchemyCompanyDataRepository`
+- `SqlAlchemyRepositoryCompanyDataPort` ← `SqlAlchemyRepositoryCompanyData`
 - `ScraperCompanyDataPort` ← `CompanyDataScraper`
 
 ### Dependency Map
@@ -178,8 +178,8 @@ CompanyDataService -> SyncCompanyDataUseCase : execute()
 SyncCompanyDataUseCase -> ScraperCompanyDataPort : fetch()
 ScraperCompanyDataPort <.. CompanyDataScraper
 SyncCompanyDataUseCase -> SqlAlchemyRepositoryCompanyDataPort : save()
-SqlAlchemyRepositoryCompanyDataPort <.. SqlAlchemyCompanyDataRepository
-SqlAlchemyCompanyDataRepository -> SQLiteDB : insert/update
+SqlAlchemyRepositoryCompanyDataPort <.. SqlAlchemyRepositoryCompanyData
+SqlAlchemyRepositoryCompanyData -> SQLiteDB : insert/update
 @enduml
 ```
 

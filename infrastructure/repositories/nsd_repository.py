@@ -6,23 +6,22 @@ from typing import List, Set, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain import dto
-from domain.dto.nsd_dto import NsdDTO
-from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
-from infrastructure.helpers.list_flattener import ListFlattener
+from domain.dtos.nsd_dto import NsdDTO
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
-from infrastructure.repositories.sqlalchemy_repository_base import (
-    SqlAlchemyRepositoryBase,
-)
+from infrastructure.repositories.base_repository import RepositoryBase
 
 
-class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDRepositoryPort):
+class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
     """Concrete repository for NsdDTO using SQLite via SQLAlchemy."""
 
     def __init__(
-        self, connection_string: str, config: ConfigPort, logger: LoggerPort
+        self, config: ConfigPort, logger: LoggerPort
     ) -> None:
-        super().__init__(connection_string, config, logger)
+        super().__init__(config, logger)
 
         self.config = config
         self.logger = logger

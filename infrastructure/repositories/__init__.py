@@ -1,4 +1,4 @@
-from .base_repository import BaseRepository
-from .company_data_repository import CompanyDataRepository
+from .base_repository import RepositoryBase
+from .company_data_repository import RepositoryCompanyData
 
-__all__ = ["BaseRepository", "CompanyDataRepository"]
+__all__ = ["RepositoryBase", "RepositoryCompanyData"]

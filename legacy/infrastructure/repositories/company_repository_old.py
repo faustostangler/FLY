@@ -15,7 +15,7 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 )
 
 
-class SqlAlchemyCompanyDataRepository(
+class SqlAlchemyRepositoryCompanyData(
     SqlAlchemyRepositoryBase[CompanyDataDTO, int],
     RepositoryCompanyDataPort,
 ):

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Mapping, Protocol, Tuple, runtime_checkable
+from typing import List, Mapping, Protocol, Tuple, runtime_checkable
 
 
 # Defines the filesystem path contract that implementations must provide
@@ -122,6 +122,45 @@ class DomainConfigPort(Protocol):
         ...
 
 
+@runtime_checkable
+class ScrapingConfig(Protocol):
+    """Contract for web scraping configuration."""
+
+    @property
+    def user_agents(self) -> List[str]:
+        """Filename of the JSON file containing user-agent strings."""
+        ...
+
+    @property
+    def referers(self) -> List[str]:
+        """Filename of the JSON file containing referer URLs."""
+        ...
+
+    @property
+    def languages(self) -> List[str]:
+        """Filename of the JSON file containing Accept-Language headers."""
+        ...
+
+    @property
+    def test_internet(self) -> str:
+        """URL used to verify internet connectivity."""
+        ...
+
+    @property
+    def timeout(self) -> int:
+        """Timeout in seconds for HTTP requests."""
+        ...
+
+    @property
+    def max_attempts(self) -> int:
+        """Maximum number of retry attempts per request."""
+        ...
+
+    @property
+    def linear_holes(self) -> int:
+        """Maximum number of linear holes allowed in the NSD scraping process."""
+        ...
+
 # Defines batching and durability thresholds for repositories
 @runtime_checkable
 class RepositoryConfig(Protocol):
@@ -201,6 +240,11 @@ class ConfigPort(Protocol):
         ...
 
     @property
+    def scraping(self) -> ScrapingConfig:
+        """Domain-specific rules and defaults."""
+        ...
+
+    @property
     def domain(self) -> DomainConfigPort:
         """Domain-specific rules and defaults."""
         ...
@@ -219,3 +263,5 @@ class ConfigPort(Protocol):
     def worker_pool(self) -> WorkerPoolConfig:
         """Local concurrency configuration for worker pools."""
         ...
+
+# Encapsulates global settings used across various components

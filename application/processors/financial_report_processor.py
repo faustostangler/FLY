@@ -1,8 +1,8 @@
 from application.usecases.statements_transformer import StatementTransformer
-from domain.dtos.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import StatementRawDTO
 from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_parsed_port import RepositoryStatementParsedPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from domain.ports.scraper_raw_statements_port import StatementsRawcraperPort
 
@@ -12,7 +12,7 @@ class FinancialReportProcessor:
 
     This service coordinates fetching raw statements, validating NSD eligibility,
     applying parsing policies, transforming content, enforcing idempotency, and
-    persisting both raw and parsed artifacts.
+    persisting both raw and fetched artifacts.
 
     The concrete behavior depends on the provided ports (repositories/scraper),
     transformer, and logger, enabling easy substitution in tests or different
@@ -23,7 +23,7 @@ class FinancialReportProcessor:
         self,
         nsd_repo: RepositoryNsdPort,
         raw_repo: RepositoryStatementsRawPort,
-        parsed_repo: RepositoryStatementParsedPort,
+        fetched_repo: RepositoryStatementFetchedPort,
         scraper: StatementsRawcraperPort,
         transformer: StatementTransformer,
         logger: LoggerPort,
@@ -32,9 +32,9 @@ class FinancialReportProcessor:
 
             nsd_repo: Repository to read and persist NSD metadata/state.
             raw_repo: Repository responsible for raw statements persistence.
-            parsed_repo: Repository responsible for parsed statements persistence.
+            fetched_repo: Repository responsible for fetched statements persistence.
             scraper: Adapter that fetches raw statements/documents for a given NSD.
-            transformer: Pure transformation logic from raw DTO to parsed DTO.
+            transformer: Pure transformation logic from raw DTO to fetched DTO.
             logger: Structured logger for operational messages.
 
         Raises:
@@ -44,7 +44,7 @@ class FinancialReportProcessor:
         # Keep references to all required collaborators
         self.nsd_repo = nsd_repo
         self.raw_repo = raw_repo
-        self.parsed_repo = parsed_repo
+        self.fetched_repo = fetched_repo
         self.scraper = scraper
         self.transformer = transformer
         self.logger = logger
@@ -58,7 +58,7 @@ class FinancialReportProcessor:
             3) Evaluate parsing policy to decide whether to parse now.
             4) Transform RAW -> PARSED.
             5) Enforce idempotency via content hash comparison.
-            6) Upsert parsed output and update NSD state.
+            6) Upsert fetched output and update NSD state.
 
         Args:
             nsd_id: Unique identifier of the NSD to process.
@@ -77,7 +77,7 @@ class FinancialReportProcessor:
         #
         # Always scrape and persist the raw document to maintain an audit trail
         # raw_doc = self.scraper.fetch(nsd)
-        # raw_dto = RawStatementDTO.from_nsd(nsd, raw_doc)
+        # raw_dto = StatementRawDTO.from_nsd(nsd, raw_doc)
         # self.raw_repo.insert_or_update(raw_dto)
         #
         # Validate whether this NSD type is supported before parsing
@@ -91,18 +91,18 @@ class FinancialReportProcessor:
         #     self.logger.log(f"NSD {nsd_id} skipped by policy", level="info")
         #     return
         #
-        # Transform raw statements into the normalized parsed representation
-        # parsed_dto = self.transformer.transform(raw_dto)
+        # Transform raw statements into the normalized fetched representation
+        # fetched_dto = self.transformer.transform(raw_dto)
         #
         # Ensure idempotency: skip if nothing changed (hash comparison)
-        # current = self.parsed_repo.get_latest_by_key(parsed_dto.key())
-        # if current and current.hash == parsed_dto.hash:
-        #     self.logger.log(f"NSD {nsd_id} unchanged, no new parsed", level="info")
+        # current = self.fetched_repo.get_latest_by_key(fetched_dto.key())
+        # if current and current.hash == fetched_dto.hash:
+        #     self.logger.log(f"NSD {nsd_id} unchanged, no new fetched", level="info")
         #     return
         #
-        # Persist parsed output and record success
-        # self.parsed_repo.upsert(parsed_dto)
-        # self.logger.log(f"NSD {nsd_id} parsed and saved", level="info")
+        # Persist fetched output and record success
+        # self.fetched_repo.upsert(fetched_dto)
+        # self.logger.log(f"NSD {nsd_id} fetched and saved", level="info")
 
         # Explicitly return None for clarity of intent
         return None

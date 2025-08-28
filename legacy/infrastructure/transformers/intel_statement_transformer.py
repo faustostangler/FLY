@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from domain.dto.parsed_statement_dto import StatementParsedDTO
+from domain.dto.fetched_statement_dto import StatementFetchedDTO
 from domain.ports import ConfigPort, StatementTransformerPort
 from domain.services import StatementClassificationService
 from infrastructure.config.intel_criteria import load_intel_criteria_nodes
 
 
 class IntelStatementTransformerAdapter(StatementTransformerPort):
-    """Apply business rules to parsed statements."""
+    """Apply business rules to fetched statements."""
 
     def __init__(
         self,
@@ -23,7 +23,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
         self.year_end_prefixes = config.transformers.intel_year_end_prefixes
         self.cumulative_prefixes = config.transformers.intel_cumulative_prefixes
 
-    def transform(self, rows: Sequence[StatementParsedDTO]) -> List[StatementParsedDTO]:
+    def transform(self, rows: Sequence[StatementFetchedDTO]) -> List[StatementFetchedDTO]:
         """Run the Intel transformation pipeline."""
         from infrastructure.utils.csv_utils import save_dtos_to_csv
 
@@ -43,10 +43,10 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     # Cleanup --------------------------------------------------------------
     def adjust_columns(
-        self, rows: Iterable[StatementParsedDTO]
-    ) -> List[StatementParsedDTO]:
+        self, rows: Iterable[StatementFetchedDTO]
+    ) -> List[StatementFetchedDTO]:
         return [
-            StatementParsedDTO(
+            StatementFetchedDTO(
                 **{
                     **row.__dict__,
                     "account": row.account.strip(),
@@ -58,22 +58,22 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
     # Outlier Detection ----------------------------------------------------
     def detect_and_correct_outliers(
-        self, rows: Iterable[StatementParsedDTO]
-    ) -> List[StatementParsedDTO]:
+        self, rows: Iterable[StatementFetchedDTO]
+    ) -> List[StatementFetchedDTO]:
         neighbor_count = 5  # Number of neighboring periods to consider
         epsilon = 1e-6
 
         # Agrupa por (grupo, account)
-        groups: Dict[Tuple[str, str], List[StatementParsedDTO]] = {}
+        groups: Dict[Tuple[str, str], List[StatementFetchedDTO]] = {}
         for row in rows:
             key = (row.grupo, row.account)
             groups.setdefault(key, []).append(row)
 
-        results: List[StatementParsedDTO] = []
+        results: List[StatementFetchedDTO] = []
         for items in groups.values():
             # Ordena por quarter (YYYY-MM-DD ordena lexicograficamente)
             items.sort(key=lambda r: r.quarter or "")
-            corrected: List[StatementParsedDTO] = []
+            corrected: List[StatementFetchedDTO] = []
 
             for i, row in enumerate(items):
                 val = row.value
@@ -115,7 +115,7 @@ class IntelStatementTransformerAdapter(StatementTransformerPort):
 
                 # Recria DTO imutável manualmente
                 data = {**row.__dict__, "value": new_val}
-                corrected.append(StatementParsedDTO(**data))
+                corrected.append(StatementFetchedDTO(**data))
 
             results.extend(corrected)
 

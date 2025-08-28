@@ -132,7 +132,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             **kwargs: Reserved for future extensions.
 
         Returns:
-            List[CompanyDataDTO]: Fully parsed company detail DTOs.
+            List[CompanyDataDTO]: Fully fetched company detail DTOs.
         """
         # Normalize list of codes to a set for O(1) membership checks
         self.skip_codes = skip_codes or set()
@@ -157,7 +157,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             save_callback=save_callback,
         )
 
-        # Return the full collection of parsed company details
+        # Return the full collection of fetched company details
         return companies
 
     def _fetch_companies_list(
@@ -280,7 +280,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     ) -> List[CompanyDataDTO]:
         """Fetch and parse detailed info for a list of companies.
 
-        Streams companies through a detail processor and buffers parsed results,
+        Streams companies through a detail processor and buffers fetched results,
         periodically flushing via ``save_callback`` according to the configured
         threshold. Skips entries present in ``self.skip_codes``.
 
@@ -290,7 +290,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                 Sink to persist buffered detail DTOs.
 
         Returns:
-            List[CompanyDataDTO]: Parsed company detail DTOs.
+            List[CompanyDataDTO]: Fetched company detail DTOs.
 
         Logs:
             Progress for each processed company, including per-item download bytes.
@@ -368,7 +368,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                 worker_id=worker_id,
             )
 
-            # Return the parsed detail (or None if skipped/failed)
+            # Return the fetched detail (or None if skipped/failed)
             return result
 
         # Handler that buffers items and triggers flushes via the strategy

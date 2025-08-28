@@ -14,6 +14,9 @@ TIMEOUT = 5
 # Maximum number of retry attempts per request
 MAX_ATTEMPTS = 5
 
+# Maximum number of linear holes allowed in the NSD scraping process
+MAX_LINEAR_HOLES = 200
+
 # JSON resource files containing request headers and metadata
 USER_AGENTS_JSON = "user_agents.json"
 REFERERS_JSON = "referers.json"
@@ -51,6 +54,9 @@ class ScrapingConfig:
     # Maximum retry attempts
     max_attempts: int = field(default=MAX_ATTEMPTS)
 
+    # Maximum number of linear holes allowed in the NSD scraping process
+    linear_holes: int = field(default=MAX_LINEAR_HOLES)
+
 
 def load_scraping_config() -> ScrapingConfig:
     """Factory function to build a ScrapingConfig instance.
@@ -66,7 +72,7 @@ def load_scraping_config() -> ScrapingConfig:
     # Base directory where JSON files are located
     base = Path(__file__).parent
 
-    def load_json(path: Path, default):
+    def load_json(path: Path, default)  -> List[str]:
         """Helper to load a JSON file with fallback to default on error."""
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -92,4 +98,5 @@ def load_scraping_config() -> ScrapingConfig:
         test_internet=TEST_INTERNET,
         timeout=TIMEOUT,
         max_attempts=MAX_ATTEMPTS,
+        linear_holes=MAX_LINEAR_HOLES
     )

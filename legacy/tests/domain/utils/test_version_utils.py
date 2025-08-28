@@ -1,10 +1,10 @@
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 from domain.utils.version_utils import filter_latest_versions
 
 
 def test_filter_latest_versions_keeps_highest():
     rows = [
-        RawStatementDTO.from_dict(
+        StatementRawDTO.from_dict(
             {
                 "nsd": 1,
                 "company_name": "ACME",
@@ -17,7 +17,7 @@ def test_filter_latest_versions_keeps_highest():
                 "value": 1,
             }
         ),
-        RawStatementDTO.from_dict(
+        StatementRawDTO.from_dict(
             {
                 "nsd": 2,
                 "company_name": "ACME",
@@ -30,7 +30,7 @@ def test_filter_latest_versions_keeps_highest():
                 "value": 2,
             }
         ),
-        RawStatementDTO.from_dict(
+        StatementRawDTO.from_dict(
             {
                 "nsd": 3,
                 "company_name": "ACME",

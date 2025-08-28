@@ -1,4 +1,4 @@
-"""Port for transforming raw statement rows into parsed ones."""
+"""Port for transforming raw statement rows into fetched ones."""
 
 from __future__ import annotations
 

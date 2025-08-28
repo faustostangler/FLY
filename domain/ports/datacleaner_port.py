@@ -44,7 +44,7 @@ class DataCleanerPort(Protocol):
             text: Raw textual representation of a number.
 
         Returns:
-            A parsed ``float`` if conversion succeeds; otherwise ``None``.
+            A fetched ``float`` if conversion succeeds; otherwise ``None``.
         """
         ...
 
@@ -78,8 +78,8 @@ class DataCleanerPort(Protocol):
         Args:
             entry: Source mapping containing raw values.
             text_keys: Keys whose values should be normalized as text.
-            date_keys: Keys whose values should be parsed as dates.
-            number_keys: Keys whose values should be parsed as numbers.
+            date_keys: Keys whose values should be fetched as dates.
+            number_keys: Keys whose values should be fetched as numbers.
 
         Returns:
             A new ``dict`` with cleaned values and untouched unspecified fields.

@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .parsed_statement_dto import StatementParsedDTO
+from .fetched_statement_dto import StatementFetchedDTO
 
 
 @dataclass(frozen=True, kw_only=True)
-class RawStatementDTO:
+class StatementRawDTO:
     """Immutable DTO representing a raw scraped financial statement row.
 
     Attributes:
@@ -35,14 +35,14 @@ class RawStatementDTO:
     value: float
 
     @staticmethod
-    def from_dict(raw: dict) -> "RawStatementDTO":
-        """Build a ``RawStatementDTO`` from a raw dictionary.
+    def from_dict(raw: dict) -> "StatementRawDTO":
+        """Build a ``StatementRawDTO`` from a raw dictionary.
 
         Args:
             raw (dict): Input dictionary containing scraped statement data.
 
         Returns:
-            RawStatementDTO: A validated and structured DTO.
+            StatementRawDTO: A validated and structured DTO.
 
         Raises:
             ValueError: If the ``nsd`` field is missing or not numeric.
@@ -54,7 +54,7 @@ class RawStatementDTO:
         nsd_value = str(nsd_raw)
 
         # Construct and return a fully initialized DTO
-        return RawStatementDTO(
+        return StatementRawDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
@@ -67,25 +67,25 @@ class RawStatementDTO:
             value=float(raw.get("value", 0.0)),
         )
 
-    def to_parsed(self, target_line: str) -> "StatementParsedDTO":
-        """Convert this raw DTO into a ``StatementParsedDTO``.
+    def to_fetched(self, target_line: str) -> "StatementFetchedDTO":
+        """Convert this raw DTO into a ``StatementFetchedDTO``.
 
         Args:
             target_line (str): A formatted line containing account and description,
                 separated by " - ". Example: "1234 - Cash and Equivalents".
 
         Returns:
-            StatementParsedDTO: The parsed statement with structured fields.
+            StatementFetchedDTO: The fetched statement with structured fields.
         """
-        from .parsed_statement_dto import StatementParsedDTO
+        from .fetched_statement_dto import StatementFetchedDTO
 
         # Extract account and description from the target line
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         description = parts[1].strip() if len(parts) > 1 else self.description
 
-        # Build and return the parsed DTO
-        return StatementParsedDTO(
+        # Build and return the fetched DTO
+        return StatementFetchedDTO(
             id=None,
             nsd=self.nsd,
             company_name=self.company_name,

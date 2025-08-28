@@ -189,9 +189,9 @@ class CompanyDataDTO:
         if isinstance(x, str):
             # If it's a JSON array string, parse it; otherwise treat as single item
             try:
-                parsed = json.loads(x)
-                if isinstance(parsed, list):
-                    return [str(i) for i in parsed if i is not None and str(i) != ""]
+                fetched = json.loads(x)
+                if isinstance(fetched, list):
+                    return [str(i) for i in fetched if i is not None and str(i) != ""]
             except json.JSONDecodeError:
                 pass
             return [x] if x != "" else []

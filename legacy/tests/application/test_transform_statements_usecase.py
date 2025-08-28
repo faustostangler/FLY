@@ -4,14 +4,14 @@ from unittest.mock import MagicMock
 import pytest
 
 from application.usecases.transform_statements import TransformStatementsUseCase
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 from tests.conftest import DummyConfig
 
 
 @pytest.fixture()
 def sample_rows():
     return [
-        RawStatementDTO(
+        StatementRawDTO(
             nsd="1",
             company_name="ACME",
             quarter="2020-03-31",
@@ -22,7 +22,7 @@ def sample_rows():
             description="d1",
             value=10.0,
         ),
-        RawStatementDTO(
+        StatementRawDTO(
             nsd="2",
             company_name="ACME",
             quarter="2020-06-30",

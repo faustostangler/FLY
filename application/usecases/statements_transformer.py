@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import hashlib
 
-from domain.dtos.parsed_statement_dto import StatementParsedDTO
-from domain.dtos.raw_statement_dto import RawStatementDTO
+from domain.dtos.fetched_statement_dto import StatementFetchedDTO
+from domain.dtos.raw_statement_dto import StatementRawDTO
 from domain.ports import DataCleanerPort
 
 
 class StatementTransformer:
-    """Transforms raw financial statements into parsed statements.
+    """Transforms raw financial statements into fetched statements.
 
     This class uses a data cleaner to sanitize raw statements
-    and generates a parsed DTO that includes a content hash
+    and generates a fetched DTO that includes a content hash
     for uniqueness and traceability.
 
     Attributes:
@@ -23,17 +23,17 @@ class StatementTransformer:
         # Data cleaner used for preprocessing statements
         self.cleaner = cleaner
 
-    def transform(self, raw: RawStatementDTO) -> StatementParsedDTO:
-        """Convert a raw statement into a parsed statement.
+    def transform(self, raw: StatementRawDTO) -> StatementFetchedDTO:
+        """Convert a raw statement into a fetched statement.
 
         Applies data cleaning and computes a unique hash based on
         the normalized content.
 
         Args:
-            raw (RawStatementDTO): Raw financial statement input.
+            raw (StatementRawDTO): Raw financial statement input.
 
         Returns:
-            StatementParsedDTO: Structured and cleaned statement
+            StatementFetchedDTO: Structured and cleaned statement
             enriched with a deterministic hash.
         """
         pass

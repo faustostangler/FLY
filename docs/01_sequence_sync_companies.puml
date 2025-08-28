@@ -41,7 +41,7 @@ SCUC -> CRP : save(companyDTO)
 activate CRP
 
 == Infraestrutura de Persistência ==
-participant "SQLAlchemyCompanyDataRepository\n(implementa SqlAlchemyRepositoryCompanyDataPort)" as SCRepo
+participant "SQLAlchemyRepositoryCompanyData\n(implementa SqlAlchemyRepositoryCompanyDataPort)" as SCRepo
 participant "SQLiteDB" as DB
 
 CRP -> SCRepo : insert_or_update(companyDTO)

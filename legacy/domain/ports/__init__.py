@@ -7,8 +7,8 @@ from .metrics_collector_port import MetricsCollectorPort
 from .repository_base_port import RepositoryBasePort
 from .repository_company_data_port import RepositoryCompanyDataPort
 from .repository_nsd_port import NSDRepositoryPort
-from .repository_raw_statements_port import RepositoryRawStatementPort
-from .repository_parsed_statements_port import RepositoryStatementParsedPort
+from .repository_raw_statements_port import RepositoryStatementRawPort
+from .repository_fetched_statements_port import RepositoryStatementFetchedPort
 from .statement_transformer_port import StatementTransformerPort
 from .worker_pool_port import WorkerPoolPort
 from .scraper_base_port import ScraperBasePort
@@ -28,8 +28,8 @@ __all__ = [
     "NSDRepositoryPort",
     "NSDSourcePort",
     "StatementsRawcraperPort",
-    "RawStatementRepositoryPort",
-    "RepositoryStatementParsedPort",
+    "StatementRawRepositoryPort",
+    "RepositoryStatementFetchedPort",
     "ConfigPort",
     "StatementTransformerPort",
 ]

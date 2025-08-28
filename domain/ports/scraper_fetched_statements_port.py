@@ -8,7 +8,7 @@ from domain.dtos import WorkerTaskDTO
 
 
 @runtime_checkable
-class ScraperFetchedStatementPort(Protocol):
+class ScraperStatementFetchedPort(Protocol):
     """Protocol defining the scraping interface for fetched financial statements.
 
     This port abstracts the mechanism used to fetch HTML statements so that

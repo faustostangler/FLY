@@ -6,15 +6,15 @@ import hashlib
 from dataclasses import asdict
 from typing import List
 
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 
 from .math_utils import parse_quarter
 
 
-def compute_hash(raw_dtos: List[RawStatementDTO]) -> str:
+def compute_hash(raw_dtos: List[StatementRawDTO]) -> str:
     """Return SHA256 hash for ``raw_dtos`` sorted by account and date."""
 
-    def sort_key(dto: RawStatementDTO) -> tuple:
+    def sort_key(dto: StatementRawDTO) -> tuple:
         dt = parse_quarter(dto.quarter)
         year = dt.year if dt else 0
         quarter = dto.quarter or ""

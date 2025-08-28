@@ -18,7 +18,7 @@ from requests import Response
 # Domain deps
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
 from domain.ports.scraper_ports import StatementsRawcraperPort
 
@@ -267,7 +267,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
         row: NsdDTO = task.data
         nsd_url = self.endpoint.format(nsd=row.nsd)
 
-        statements_rows_dto: list[RawStatementDTO] = []
+        statements_rows_dto: list[StatementRawDTO] = []
         with self.http_client.borrow_session() as session:
             nsd_bytes = self.http_client.fetch_with(session, nsd_url)
             html = nsd_bytes.decode("utf-8", errors="ignore")
@@ -294,7 +294,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 rows = self._parse_statement_page(soup, item["grupo"])  # list[dict]
                 quarter = row.quarter.strftime("%Y-%m-%d") if row.quarter else None
                 for r in rows:
-                    statements_rows_dto.append(RawStatementDTO(
+                    statements_rows_dto.append(StatementRawDTO(
                         nsd=str(row.nsd),
                         company_name=row.company_name,
                         quarter=quarter,

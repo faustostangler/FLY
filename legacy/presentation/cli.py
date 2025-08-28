@@ -15,10 +15,10 @@ from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerScr
 from infrastructure.http.rate_limiter import RateLimitedScraper, TokenBucket
 from infrastructure.http.session_pool import SessionPool
 from infrastructure.repositories import (
-    SqlAlchemyCompanyDataRepository,
+    SqlAlchemyRepositoryCompanyData,
     SqlAlchemyNsdRepository,
-    SqlAlchemyStatementParsedRepository,
-    SqlAlchemyRawStatementRepository,
+    SqlAlchemyStatementFetchedRepository,
+    SqlAlchemyStatementRawRepository,
 )
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers import (
@@ -43,7 +43,7 @@ class CLIAdapter:
             metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
-        self.company_repo = SqlAlchemyCompanyDataRepository(
+        self.company_repo = SqlAlchemyRepositoryCompanyData(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -139,12 +139,12 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        raw_statement_repo = SqlAlchemyRawStatementRepository(
+        raw_statement_repo = SqlAlchemyStatementRawRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
-        parsed_statement_repo = SqlAlchemyStatementParsedRepository(
+        fetched_statement_repo = SqlAlchemyStatementFetchedRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -166,7 +166,7 @@ class CLIAdapter:
             company_repo=company_repo,
             nsd_repo=nsd_repo,
             raw_statement_repo=raw_statement_repo,
-            parsed_statements_repo=parsed_statement_repo,
+            fetched_statements_repo=fetched_statement_repo,
             metrics_collector=self.collector,
             worker_pool_executor=self.worker_pool_executor,
         )
@@ -180,7 +180,7 @@ class CLIAdapter:
 
         parse_processor = ParseStatementsProcessor(
             logger=self.logger,
-            repository=parsed_statement_repo,
+            repository=fetched_statement_repo,
             config=self.config,
             worker_pool_executor=parse_pool,
             metrics_collector=self.collector,
@@ -188,22 +188,22 @@ class CLIAdapter:
         )
 
         raw_rows = self._load_transformed()  # mock
-        parsed_groups = parse_processor.run(raw_rows)
+        fetched_groups = parse_processor.run(raw_rows)
 
         transform_processor = TransformStatementsProcessor(
             config=self.config,
             logger=self.logger,
-            parsed_repo=parsed_statement_repo,
+            fetched_repo=fetched_statement_repo,
         )
-        transform_processor.run(parsed_groups)
+        transform_processor.run(fetched_groups)
 
     def _load_transformed(self):
         from typing import  Dict, List, Tuple
         from collections import defaultdict
         from domain.dto import NsdDTO
-        from domain.dto.raw_statement_dto import RawStatementDTO
+        from domain.dto.raw_statement_dto import StatementRawDTO
 
-        raw_statement_repo = SqlAlchemyRawStatementRepository(
+        raw_statement_repo = SqlAlchemyStatementRawRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -220,7 +220,7 @@ class CLIAdapter:
         raw_statements = raw_statement_repo.get_by_company_name(company_name=company_name)
 
         # 2) agrupa por nsd (normalizando para int) e reforça o filtro por companhia
-        buckets: Dict[int, List[RawStatementDTO]] = defaultdict(list)
+        buckets: Dict[int, List[StatementRawDTO]] = defaultdict(list)
         for row in raw_statements:
             if getattr(row, "company_name", None) != company_name:
                 continue
@@ -239,7 +239,7 @@ class CLIAdapter:
         nsd_index = {n.nsd: n for n in nsd_repo.get_by_column_values('company_name', values)}
         
         # 4) monta os pares apenas quando existir NsdDTO correspondente
-        pairs: List[Tuple[NsdDTO, List[RawStatementDTO]]] = [
+        pairs: List[Tuple[NsdDTO, List[StatementRawDTO]]] = [
             (nsd_index[nsd_id], rows)
             for nsd_id, rows in buckets.items()
             if nsd_id in nsd_index

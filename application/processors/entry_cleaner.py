@@ -47,7 +47,7 @@ class EntryCleaner:
             entry (Dict): Raw entry with mixed field types and formats.
             text_keys (List[str]): Keys expected to be normalized as text
                 (e.g., trimming, whitespace compaction).
-            date_keys (List[str]): Keys expected to be parsed as dates.
+            date_keys (List[str]): Keys expected to be fetched as dates.
             number_keys (Optional[List[str]]): Keys expected to be cast as
                 numeric values. If ``None``, no numeric casting is attempted.
             dto_class (Type[Union[CompanyDataListingDTO, CompanyDataDetailDTO]]):

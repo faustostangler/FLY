@@ -23,7 +23,7 @@ class CompanyDataModel(BaseModel):
         - Some multi-valued fields (e.g., tickers, ISINs) are persisted as
           comma-separated strings for simplicity and later expanded back into
           lists in ``to_dto``.
-        - ``other_codes`` is stored as a JSON array of objects and parsed back
+        - ``other_codes`` is stored as a JSON array of objects and fetched back
           into a list of :class:`CodeDTO`.
     """
 
@@ -120,9 +120,9 @@ class CompanyDataModel(BaseModel):
                 return None
             if isinstance(value, str):
                 try:
-                    parsed = json.loads(value)
-                    if isinstance(parsed, list):
-                        return ",".join(parsed) if parsed else None
+                    fetched = json.loads(value)
+                    if isinstance(fetched, list):
+                        return ",".join(fetched) if fetched else None
                 except json.JSONDecodeError:
                     return value
                 return value
@@ -198,7 +198,7 @@ class CompanyDataModel(BaseModel):
         # Parse JSON array of objects into a Python list
         raw_other = json.loads(self.other_codes) if self.other_codes else []
 
-        # Rebuild CodeDTO entries from the parsed structure
+        # Rebuild CodeDTO entries from the fetched structure
         other_codes = [
             CodeDTO(code=item.get("code"), isin=item.get("isin")) for item in raw_other
         ]

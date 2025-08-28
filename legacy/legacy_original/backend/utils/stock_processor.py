@@ -317,7 +317,7 @@ class StockProcessor(BaseProcessor):
         return stock_data
 
     def _extract_stock_data(self, soup, company_ticker, year, month):
-        """Extract stock data from the parsed HTML."""
+        """Extract stock data from the fetched HTML."""
         table_id = "tblResDiario"
         stock_entry_label = "Nome da Ação"
         result = []

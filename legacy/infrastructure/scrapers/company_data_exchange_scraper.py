@@ -133,7 +133,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Ensure skip_codes is a set (to avoid None and allow fast lookup)
         self.skip_codes = skip_codes or set()
         # Determine the save threshold (number of companies before saving buffer)
-        self.threshold = threshold or self.config.global_settings.threshold or 50
+        self.threshold = threshold or self.config.repository.persistence_threshold or 50
         # Determine the number of simultaneous process
 
         def noop(_buffer: List[Dict]) -> None:
@@ -161,7 +161,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
 
-        # Return the complete list of parsed company details
+        # Return the complete list of fetched company details
         return companies
 
     def _fetch_companies_list(
@@ -287,7 +287,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             threshold (Optional[int], optional): Number of companies to process before triggering the save_callback. If not provided, uses configuration or defaults to 50.
             max_workers (int | None, optional): Reserved for future parallel fetching.
         Returns:
-            ExecutionResultDTO[CompanyDataRawDTO]: Parsed company detail DTOs and
+            ExecutionResultDTO[CompanyDataRawDTO]: Fetched company detail DTOs and
             execution metrics.
         Logs:
             - Progress and status information at each step.
@@ -377,7 +377,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             return result
 
         def handle_batch(item: Optional[CompanyDataRawDTO]) -> None:
-            # Buffer each parsed company and flush when threshold is hit
+            # Buffer each fetched company and flush when threshold is hit
             # self.logger.log("Call Method strategy.handle()", level="info")
             if item is not None:
                 strategy.handle([item])

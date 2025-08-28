@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .parsed_statement_dto import StatementParsedDTO
+from .fetched_statement_dto import StatementFetchedDTO
 
 
 @dataclass(frozen=True, kw_only=True)
-class RawStatementDTO:
+class StatementRawDTO:
     """Immutable DTO representing a scraped statement row."""
 
     id: Optional[int] = None
@@ -22,15 +22,15 @@ class RawStatementDTO:
     value: float
 
     @staticmethod
-    def from_dict(raw: dict) -> "RawStatementDTO":
-        """Create a ``RawStatementDTO`` from a raw dictionary."""
+    def from_dict(raw: dict) -> "StatementRawDTO":
+        """Create a ``StatementRawDTO`` from a raw dictionary."""
 
         nsd_raw = raw.get("nsd", "")
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
 
-        return RawStatementDTO(
+        return StatementRawDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
@@ -43,16 +43,16 @@ class RawStatementDTO:
             value=float(raw.get("value", 0.0)),
         )
 
-    def to_parsed(self, target_line: str) -> "StatementParsedDTO":
-        """Convert this raw row into a ``StatementParsedDTO``."""
+    def to_fetched(self, target_line: str) -> "StatementFetchedDTO":
+        """Convert this raw row into a ``StatementFetchedDTO``."""
 
-        from .parsed_statement_dto import StatementParsedDTO
+        from .fetched_statement_dto import StatementFetchedDTO
 
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         description = parts[1].strip() if len(parts) > 1 else self.description
 
-        return StatementParsedDTO(
+        return StatementFetchedDTO(
             id=None,
             nsd=self.nsd,
             company_name=self.company_name,

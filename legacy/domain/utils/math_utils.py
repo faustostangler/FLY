@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 def parse_quarter(quarter: str | None) -> datetime | None:
-    """Return ``datetime`` parsed from ISO date string."""
+    """Return ``datetime`` fetched from ISO date string."""
     if not quarter:
         return None
     try:

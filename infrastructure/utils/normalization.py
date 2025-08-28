@@ -85,7 +85,7 @@ def clean_number(
         logger: Optional logger interface for warnings on parse failures.
 
     Returns:
-        A floating-point value representing the parsed input, or ``0.0`` on failure.
+        A floating-point value representing the fetched input, or ``0.0`` on failure.
 
     Notes:
         - Dots (``.``) are treated as thousands separators and removed.
@@ -190,13 +190,13 @@ def clean_dict_fields(
 
     Applies field-wise normalization on a shallow copy of ``entry``:
     - Text keys are normalized via :func:`clean_text`.
-    - Date keys are parsed via :func:`clean_date`.
+    - Date keys are fetched via :func:`clean_date`.
     - Number keys are coerced via :func:`clean_number`.
 
     Args:
         entry: Original mapping that contains raw values.
         text_keys: Keys in ``entry`` to be normalized as text.
-        date_keys: Keys in ``entry`` to be parsed as dates.
+        date_keys: Keys in ``entry`` to be fetched as dates.
         number_keys: Optional keys to be coerced to floats. Defaults to empty.
         logger: Required logger interface used by the underlying cleaning functions.
         words_to_remove: Optional list of stop-words to drop from text fields.
@@ -229,7 +229,7 @@ def clean_dict_fields(
     # Parse configured date fields
     for key in date_keys or []:
         if key in cleaned:
-            # Guard type: only strings are parsed; others become None
+            # Guard type: only strings are fetched; others become None
             val = entry.get(key)
             cleaned[key] = clean_date(
                 text=val if isinstance(val, str) else None,

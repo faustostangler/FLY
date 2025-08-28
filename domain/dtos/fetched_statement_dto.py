@@ -5,8 +5,8 @@ from typing import Optional
 
 
 @dataclass(frozen=True, kw_only=True)
-class StatementParsedDTO:
-    """Immutable representation of a parsed and validated financial statement row.
+class StatementFetchedDTO:
+    """Immutable representation of a fetched and validated financial statement row.
 
     Attributes:
         id (Optional[int]): Unique identifier, if present in the database.
@@ -35,8 +35,8 @@ class StatementParsedDTO:
     processing_hash: str = ""
 
     @staticmethod
-    def from_dict(raw: dict) -> "StatementParsedDTO":
-        """Convert a raw dictionary into a ``StatementParsedDTO``.
+    def from_dict(raw: dict) -> "StatementFetchedDTO":
+        """Convert a raw dictionary into a ``StatementFetchedDTO``.
 
         Validates and coerces types where necessary to ensure the DTO
         is properly structured for downstream processing.
@@ -45,7 +45,7 @@ class StatementParsedDTO:
             raw (dict): Input dictionary containing statement fields.
 
         Returns:
-            StatementParsedDTO: A fully validated and normalized DTO.
+            StatementFetchedDTO: A fully validated and normalized DTO.
 
         Raises:
             ValueError: If the NSD field is missing or not numeric.
@@ -57,7 +57,7 @@ class StatementParsedDTO:
         nsd_value = str(nsd_raw)
 
         # Build and return DTO with normalized fields
-        return StatementParsedDTO(
+        return StatementFetchedDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),

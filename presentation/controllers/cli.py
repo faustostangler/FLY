@@ -5,11 +5,11 @@ from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.repository_statements_parsed_port import RepositoryStatementParsedPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
-from domain.ports.scraper_raw_statements_port import ScraperRawStatementPort
-from domain.ports.scraper_fetched_statements_port import ScraperFetchedStatementPort
+from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
+from domain.ports.scraper_fetched_statements_port import ScraperStatementFetchedPort
 
 from domain.services import CompanyDataService
 
@@ -34,7 +34,7 @@ class Cli:
         company_repository: RepositoryCompanyDataPort,
         nsd_repository: RepositoryNsdPort,
         statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementParsedPort, 
+        statements_fetched_repository: RepositoryStatementFetchedPort, 
 
         company_scraper: ScraperCompanyDataPort,
         nsd_scraper: ScraperNsdPort,
@@ -89,7 +89,7 @@ class Cli:
         company_repository = self.company_repository
         nsd_repository = self.nsd_repository
         # statements_raw_repository = self.statements_raw_repository
-        # statements_parsed_repository = self.statements_fetched_repository
+        # statements_fetched_repository = self.statements_fetched_repository
 
         nsd_scraper = self.nsd_scraper
 

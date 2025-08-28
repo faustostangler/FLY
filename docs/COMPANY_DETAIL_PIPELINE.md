@@ -7,6 +7,6 @@ The detail pipeline is triggered by `sync_companies.py` via `CompanyDataService`
    - `DetailFetcher` downloads the detail page and converts it to `CompanyDataDetailDTO`.
    - `CompanyDataMerger` merges listing and detail data into `CompanyDataRawDTO`.
 2. The use case converts each `CompanyDataRawDTO` to `CompanyDataDTO` and calls the repository.
-3. `SqlAlchemyCompanyDataRepository` persists the data with `insert_or_update` semantics.
+3. `SqlAlchemyRepositoryCompanyData` persists the data with `insert_or_update` semantics.
 
 All steps emit logs and accumulate metrics. Results are stored in the SQLite tables declared in `infrastructure/models`.

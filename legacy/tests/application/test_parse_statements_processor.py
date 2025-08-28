@@ -5,8 +5,8 @@ from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
 from domain.dto import NsdDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
-from domain.ports import RepositoryStatementParsedPort
+from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.ports import RepositoryStatementFetchedPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
@@ -21,7 +21,7 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
         mock_usecase_cls,
     )
 
-    repository = MagicMock(spec=RepositoryStatementParsedPort)
+    repository = MagicMock(spec=RepositoryStatementFetchedPort)
     worker_pool = MagicMock()
     collector = MagicMock()
 
@@ -41,7 +41,7 @@ def test_parse_statements_invokes_usecase_and_finalize(monkeypatch):
     parse_all = MagicMock()
     monkeypatch.setattr(processor, "_parse_all", parse_all)
 
-    fetched = [(MagicMock(spec=NsdDTO), [MagicMock(spec=RawStatementDTO)])]
+    fetched = [(MagicMock(spec=NsdDTO), [MagicMock(spec=StatementRawDTO)])]
 
     result = processor.run(fetched)
 

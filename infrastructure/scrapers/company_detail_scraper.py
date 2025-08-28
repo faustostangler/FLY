@@ -56,7 +56,7 @@ class DetailFetcher:
             cvm_code (str): Company CVM identifier used by the remote API.
 
         Returns:
-            Dict: Parsed JSON payload returned by the detail endpoint.
+            Dict: Fetched JSON payload returned by the detail endpoint.
 
         Raises:
             Exception: Propagates any network, decoding, or JSON parsing errors

@@ -3,9 +3,9 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dtos.raw_statement_dto import StatementRawDTO
 
-from .abstract_statement_model import BaseStatementModel
+from infrastructure.models.base_statements_model import BaseStatementModel
 
 
 class StatementRawModel(BaseStatementModel):

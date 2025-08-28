@@ -56,7 +56,7 @@ Este ExecutionResultDTO é finalizado em synchronize_companies(), que retorna um
 
 ## O método _nsd_service()
 Instancia o repositório e o scraper. 
-Repository: SqlAlchemyCompanyRepository, que implementa os métodos do contrato CompanyRepositoryPort, herdados de BaseRepositoryPort (com os métodos save_all(), get_all(), has_item(), get_by_id() e get_all_primary_keys()), e também do BaseRepository, via BaseRepositoryPort. O módulo de construção do BaseRepository garante a implementação concreta dos repositórios no banco de dados. A implementação respeita o princípio de substituição de Liskov.
+Repository: SqlAlchemyCompanyRepository, que implementa os métodos do contrato CompanyRepositoryPort, herdados de RepositoryBasePort (com os métodos save_all(), get_all(), has_item(), get_by_id() e get_all_primary_keys()), e também do RepositoryBase, via RepositoryBasePort. O módulo de construção do RepositoryBase garante a implementação concreta dos repositórios no banco de dados. A implementação respeita o princípio de substituição de Liskov.
 Scraper: NsdScraper, que implementa o contrato NSDSourcePort, derivado de ScraperBasePort (com o método fetch_all()). Sua construção recebe as dependências criadas FetchUtils e injetadas WorkerPoolExecutor e MetricsCollector, e também segue o princípio de substituição de Liskov. 
 
 Então o método _nsd_service() instancia o serviço NsdService com a injeção do Repository e do Scraper, e chama o método sync_nsd()

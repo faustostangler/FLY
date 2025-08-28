@@ -15,10 +15,10 @@ from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerScr
 from infrastructure.http.rate_limiter import RateLimitedScraper, TokenBucket
 from infrastructure.http.session_pool import SessionPool
 from infrastructure.repositories import (
-    SqlAlchemyCompanyDataRepository,
+    SqlAlchemyRepositoryCompanyData,
     SqlAlchemyNsdRepository,
-    SqlAlchemyStatementParsedRepository,
-    SqlAlchemyRawStatementRepository,
+    SqlAlchemyStatementFetchedRepository,
+    SqlAlchemyStatementRawRepository,
 )
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers import (
@@ -41,7 +41,7 @@ class CLIAdapter:
             metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
-        self.company_repo = SqlAlchemyCompanyDataRepository(
+        self.company_repo = SqlAlchemyRepositoryCompanyData(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -135,12 +135,12 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        raw_statement_repo = SqlAlchemyRawStatementRepository(
+        raw_statement_repo = SqlAlchemyStatementRawRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
-        parsed_statement_repo = SqlAlchemyStatementParsedRepository(
+        fetched_statement_repo = SqlAlchemyStatementFetchedRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -153,7 +153,7 @@ class CLIAdapter:
             company_repo=company_repo,
             nsd_repo=nsd_repo,
             raw_statement_repo=raw_statement_repo,
-            parsed_statements_repo=parsed_statement_repo,
+            fetched_statements_repo=fetched_statement_repo,
             metrics_collector=self.collector,
             worker_pool_executor=self.worker_pool_executor,
         )
@@ -167,18 +167,18 @@ class CLIAdapter:
 
         parse_processor = ParseStatementsProcessor(
             logger=self.logger,
-            repository=parsed_statement_repo,
+            repository=fetched_statement_repo,
             config=self.config,
             worker_pool_executor=parse_pool,
             metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
 
-        parsed_groups = parse_processor.run(raw_rows)
+        fetched_groups = parse_processor.run(raw_rows)
 
         transform_processor = TransformStatementsProcessor(
             config=self.config,
             logger=self.logger,
-            parsed_repo=parsed_statement_repo,
+            fetched_repo=fetched_statement_repo,
         )
-        transform_processor.run(parsed_groups)
+        transform_processor.run(fetched_groups)

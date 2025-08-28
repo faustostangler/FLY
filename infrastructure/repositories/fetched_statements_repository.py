@@ -1,4 +1,4 @@
-"""SQLAlchemy adapter for raw statement persistence."""
+"""SQLAlchemy adapter for fetched statement persistence."""
 
 from __future__ import annotations
 
@@ -6,31 +6,31 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto.raw_statement_dto import StatementRawDTO
-from domain.ports import ConfigPort, LoggerPort, StatementRawRepositoryPort
-from infrastructure.helpers.list_flattener import ListFlattener
-from infrastructure.models.raw_statement_model import StatementRawModel
-from infrastructure.repositories.sqlalchemy_repository_base import (
-    SqlAlchemyRepositoryBase,
-)
+from domain.dtos.fetched_statement_dto import StatementFetchedDTO
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from infrastructure.utils.list_flatenner import ListFlattener
+from infrastructure.models.fetched_statements_model import StatementFetchedModel
+from infrastructure.repositories.base_repository import RepositoryBase
 
 
-class SqlAlchemyStatementRawRepository(
-    SqlAlchemyRepositoryBase[StatementRawDTO, int],
-    StatementRawRepositoryPort,
+class StatementFetchedRepository(
+    RepositoryBase[StatementFetchedDTO, int],
+    RepositoryStatementFetchedPort,
 ):
-    """SQLite-backed repository for ``StatementRawDTO`` objects."""
+    """SQLite-backed repository for ``StatementFetchedDTO`` objects."""
 
     def __init__(
-        self, connection_string: str, config: ConfigPort, logger: LoggerPort
+        self, config: ConfigPort, logger: LoggerPort
     ) -> None:
         """Initialize repository with ``config`` and ``logger``."""
-        super().__init__(connection_string, config, logger)
+        super().__init__(config, logger)
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[StatementRawDTO]) -> None:
-        """Persist raw statements using SQLite upserts."""
+    def save_all(self, items: List[StatementFetchedDTO]) -> None:
+        """Persist fetched statements using SQLite upserts."""
         session = self.Session()
         try:
             model, pk_columns = self.get_model_class()
@@ -71,14 +71,14 @@ class SqlAlchemyStatementRawRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return StatementRawModel, (StatementRawModel.id,)
+        return StatementFetchedModel, (StatementFetchedModel.id,)
 
-    def get_by_company_name(self, company_name: str) -> list[StatementRawDTO]:
-        """Return raw statement rows for the given company."""
+    def get_by_company_name(self, company_name: str) -> list[StatementFetchedDTO]:
+        """Return fetched statement rows for the given company."""
         with self.Session() as session:
             results = (
-                session.query(StatementRawModel)
-                .filter(StatementRawModel.company_name == company_name)
+                session.query(StatementFetchedModel)
+                .filter(StatementFetchedModel.company_name == company_name)
                 .all()
             )
             return [r.to_dto() for r in results]

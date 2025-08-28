@@ -1,4 +1,4 @@
-"""SQLAlchemy adapter for parsed statement persistence."""
+"""SQLAlchemy adapter for fetched statement persistence."""
 
 from __future__ import annotations
 
@@ -7,20 +7,20 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto import StatementParsedDTO
-from domain.ports import ConfigPort, LoggerPort, RepositoryStatementParsedPort
+from domain.dto import StatementFetchedDTO
+from domain.ports import ConfigPort, LoggerPort, RepositoryStatementFetchedPort
 from infrastructure.helpers.list_flattener import ListFlattener
-from infrastructure.models.parsed_statement_model import StatementParsedModel
+from infrastructure.models.fetched_statement_model import StatementFetchedModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
 )
 
 
-class SqlAlchemyStatementParsedRepository(
-    SqlAlchemyRepositoryBase[StatementParsedDTO, int],
-    RepositoryStatementParsedPort,
+class SqlAlchemyStatementFetchedRepository(
+    SqlAlchemyRepositoryBase[StatementFetchedDTO, int],
+    RepositoryStatementFetchedPort,
 ):
-    """SQLite-backed repository for ``StatementParsedDTO`` objects."""
+    """SQLite-backed repository for ``StatementFetchedDTO`` objects."""
 
     def __init__(
         self, connection_string: str, config: ConfigPort, logger: LoggerPort
@@ -31,8 +31,8 @@ class SqlAlchemyStatementParsedRepository(
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[StatementParsedDTO]) -> None:
-        """Persist parsed statements using SQLite upserts."""
+    def save_all(self, items: List[StatementFetchedDTO]) -> None:
+        """Persist fetched statements using SQLite upserts."""
         session = self.Session()
         try:
             model, pk_columns = self.get_model_class()
@@ -73,33 +73,33 @@ class SqlAlchemyStatementParsedRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return StatementParsedModel, (StatementParsedModel.id,)
+        return StatementFetchedModel, (StatementFetchedModel.id,)
 
     def exists_with_hash(self, company_name: str, hash_: str) -> bool:
         """Return True if ``company_name`` has rows with ``hash_``."""
         with self.Session() as session:
-            query = session.query(StatementParsedModel).filter(
-                StatementParsedModel.company_name == company_name,
-                StatementParsedModel.processing_hash == hash_,
+            query = session.query(StatementFetchedModel).filter(
+                StatementFetchedModel.company_name == company_name,
+                StatementFetchedModel.processing_hash == hash_,
             )
             return session.query(query.exists()).scalar()
 
     def replace_all_for_company(
         self,
         company_name: str,
-        parsed_dtos: List[StatementParsedDTO],
+        fetched_dtos: List[StatementFetchedDTO],
         new_hash: str,
     ) -> None:
-        """Replace parsed rows for ``company_name`` with ``parsed_dtos``."""
+        """Replace fetched rows for ``company_name`` with ``fetched_dtos``."""
         with self.Session() as session:
-            session.query(StatementParsedModel).filter(
-                StatementParsedModel.company_name == company_name
+            session.query(StatementFetchedModel).filter(
+                StatementFetchedModel.company_name == company_name
             ).delete()
             models = [
-                StatementParsedModel.from_dto(
+                StatementFetchedModel.from_dto(
                     replace(dto, processing_hash=new_hash, id=None)
                 )
-                for dto in parsed_dtos
+                for dto in fetched_dtos
             ]
             session.add_all(models)
             session.commit()

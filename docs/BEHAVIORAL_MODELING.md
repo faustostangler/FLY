@@ -34,7 +34,7 @@ SaveStrategy -> NSDRepositoryPort : save_all(remaining)
 3. The **NsdScraper** iterates through sequential ids with the worker pool.
 4. **FetchUtils.fetch_with_retry** retries on network errors or Cloudflare blocks,
    recreating the scraper session when needed.
-5. Parsed pages become `NsdDTO` objects buffered by **SaveStrategy**.
+5. Fetched pages become `NsdDTO` objects buffered by **SaveStrategy**.
 6. Batches are persisted via `NSDRepositoryPort.save_all` until the worker pool
    finishes.
 
@@ -56,10 +56,10 @@ loop per NSD
     end
     WorkerPool -> SaveStrategy : handle(rows)
     alt threshold reached
-        SaveStrategy -> RepositoryStatementParsedPort : save_all(batch)
+        SaveStrategy -> RepositoryStatementFetchedPort : save_all(batch)
     end
 end
-SaveStrategy -> RepositoryStatementParsedPort : save_all(remaining)
+SaveStrategy -> RepositoryStatementFetchedPort : save_all(remaining)
 @enduml
 ```
 
@@ -84,10 +84,10 @@ loop per statement row
     WorkerPool -> ParseAndClassifyStatementsUseCase : parse_and_store_row(row)
     ParseAndClassifyStatementsUseCase -> SaveStrategy : handle(dto)
     alt threshold reached
-        SaveStrategy -> SqlAlchemyRawStatementRepository : save_all(batch)
+        SaveStrategy -> SqlAlchemyStatementRawRepository : save_all(batch)
     end
 end
-SaveStrategy -> SqlAlchemyRawStatementRepository : save_all(remaining)
+SaveStrategy -> SqlAlchemyStatementRawRepository : save_all(remaining)
 ParseAndClassifyStatementsUseCase -> StatementParseService : finalize()
 @enduml
 ```
@@ -97,7 +97,7 @@ ParseAndClassifyStatementsUseCase -> StatementParseService : finalize()
    `ParseAndClassifyStatementsUseCase.run`.
 3. The use case converts a `StatementRowsDTO` to a `StatementDTO`, classifies the
    section, and buffers it through `SaveStrategy`.
-4. Batches are saved using `SqlAlchemyRawStatementRepository.save_all`, and any remaining
+4. Batches are saved using `SqlAlchemyStatementRawRepository.save_all`, and any remaining
    items flush during `finalize()`.
 
 ---

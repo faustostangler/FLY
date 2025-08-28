@@ -9,16 +9,16 @@ from .metrics_collector_port import MetricsCollectorPort
 from .repository_base_port import RepositoryBasePort
 from .repository_company_data_port import RepositoryCompanyDataPort
 from .repository_nsd_port import RepositoryNsdPort
-from .repository_statements_parsed_port import RepositoryStatementParsedPort
+from .repository_statements_fetched_port import RepositoryStatementFetchedPort
 from .repository_statements_raw_port import RepositoryStatementsRawPort
 from .scraper_base_port import ScraperBasePort
 from .scraper_company_data_port import ScraperCompanyDataPort
-from .scraper_raw_statements_port import StatementsRawcraperPort
+from .scraper_raw_statements_port import ScraperStatementRawPort
 from .worker_pool_port import WorkerPoolPort
 
 __all__ = ["CliPort","RepositoryCompanyDataPort", "ConfigPort", "DataCleanerPort", 
            "AffinityHttpClientPort", "LoggerPort",
            "RepositoryBasePort", "RepositoryNsdPort",
-           "RepositoryStatementsRawPort", "RepositoryStatementParsedPort",
+           "RepositoryStatementsRawPort", "RepositoryStatementFetchedPort",
            "ScraperBasePort", "ScraperCompanyDataPort",
-           "StatementsRawcraperPort", "MetricsCollectorPort", "WorkerPoolPort"]
+           "ScraperStatementRawPort", "MetricsCollectorPort", "WorkerPoolPort"]

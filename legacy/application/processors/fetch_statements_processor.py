@@ -6,15 +6,15 @@ from typing import Callable, List, Optional, Tuple, TypeAlias
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dto.raw_statement_dto import StatementRawDTO
 from domain.ports import (
     RepositoryCompanyDataPort,
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
     NSDRepositoryPort,
-    RepositoryStatementParsedPort,
-    RawStatementRepositoryPort,
+    RepositoryStatementFetchedPort,
+    StatementRawRepositoryPort,
     WorkerPoolPort,
 )
 from domain.ports.scraper_ports import StatementsRawcraperPort
@@ -24,10 +24,10 @@ from .base_processor import BaseProcessor
 
 LoadPayload: TypeAlias = Tuple[
     List[NsdDTO],
-    Optional[Callable[[List[RawStatementDTO]], None]],
+    Optional[Callable[[List[StatementRawDTO]], None]],
     Optional[int],
 ]
-RowsByNsd: TypeAlias = List[Tuple[NsdDTO, List[RawStatementDTO]]]
+RowsByNsd: TypeAlias = List[Tuple[NsdDTO, List[StatementRawDTO]]]
 PersistedPayload: TypeAlias = RowsByNsd
 
 
@@ -41,8 +41,8 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         source: StatementsRawcraperPort,
         company_repo: RepositoryCompanyDataPort,
         nsd_repo: NSDRepositoryPort,
-        raw_statement_repo: RawStatementRepositoryPort,
-        parsed_statements_repo: RepositoryStatementParsedPort,
+        raw_statement_repo: StatementRawRepositoryPort,
+        fetched_statements_repo: RepositoryStatementFetchedPort,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPoolPort,
         max_workers: int = 1,
@@ -54,7 +54,7 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         self.company_repo = company_repo
         self.nsd_repo = nsd_repo
         self.raw_statement_repo = raw_statement_repo
-        self.parsed_statements_repo = parsed_statements_repo
+        self.fetched_statements_repo = fetched_statements_repo
         self.collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
         self.max_workers = max_workers
@@ -64,7 +64,7 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
             config=self.config,
             source=source,
             raw_statement_repository=raw_statement_repo,
-            parsed_statements_repo=parsed_statements_repo,
+            fetched_statements_repo=fetched_statements_repo,
             metrics_collector=self.collector,
             worker_pool_executor=self.worker_pool_executor,
             max_workers=self.max_workers,
@@ -99,7 +99,7 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
 
     def run(
         self,
-        save_callback: Optional[Callable[[List[RawStatementDTO]], None]] = None,
+        save_callback: Optional[Callable[[List[StatementRawDTO]], None]] = None,
         threshold: Optional[int] = None,
     ) -> RowsByNsd:
         """Run the fetch pipeline."""
@@ -113,7 +113,7 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         save_callback = None,
         threshold = None,
     ) -> Tuple[
-        List[NsdDTO], Optional[Callable[[List[RawStatementDTO]], None]], Optional[int]
+        List[NsdDTO], Optional[Callable[[List[StatementRawDTO]], None]], Optional[int]
     ]:
         """Prepare targets and forward optional persistence parameters."""
         targets = self._build_targets()
@@ -123,7 +123,7 @@ class FetchStatementsProcessor(BaseProcessor[LoadPayload, RowsByNsd, PersistedPa
         self,
         data: Tuple[
             List[NsdDTO],
-            Optional[Callable[[List[RawStatementDTO]], None]],
+            Optional[Callable[[List[StatementRawDTO]], None]],
             Optional[int],
         ],
     ) -> PersistedPayload:

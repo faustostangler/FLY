@@ -175,10 +175,10 @@ class NSDScraper:
 
         Parameters:
         html (str): The HTML content of the NSD page.
-        nsd (int): The NSD value being parsed.
+        nsd (int): The NSD value being fetched.
 
         Returns:
-        dict: A dictionary of the parsed NSD data.
+        dict: A dictionary of the fetched NSD data.
         """
         try:
             # Hard-coded XPaths or CSS selectors

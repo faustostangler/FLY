@@ -18,10 +18,10 @@ package "fly" {
             CLIController --> fly.infrastructure.config.Config
             CLIController --> CompanyDataService
             CLIController --> NsdService
-            CLIController --> fly.infrastructure.repositories.SqlAlchemyCompanyDataRepository : uses
+            CLIController --> fly.infrastructure.repositories.SqlAlchemyRepositoryCompanyData : uses
             CLIController --> SqlAlchemyNsdRepository : uses
-            CLIController --> SqlAlchemyRawStatementRepository : uses
-            CLIController --> SqlAlchemyRepositoryStatementParsedPort : uses
+            CLIController --> SqlAlchemyStatementRawRepository : uses
+            CLIController --> SqlAlchemyRepositoryStatementFetchedPort : uses
             CLIController --> StatementsRawcraperPort : uses
             CLIController --> MetricsCollector : uses
             CLIController --> StatementFetchService
@@ -88,10 +88,10 @@ package "fly" {
                 StatementFetchService --> FetchStatementsUseCase
                 StatementFetchService --> LoggerPort
                 StatementFetchService --> StatementsRawcraperPort
-                StatementFetchService --> RepositoryStatementParsedPort
+                StatementFetchService --> RepositoryStatementFetchedPort
                 StatementFetchService --> SqlAlchemyRepositoryCompanyDataPort
                 StatementFetchService --> NSDRepositoryPort
-                StatementFetchService --> SqlAlchemyRawStatementRepository
+                StatementFetchService --> SqlAlchemyStatementRawRepository
             }
         }
         package "fly.application.usecases" {
@@ -119,8 +119,8 @@ package "fly" {
                 }
                 FetchStatementsUseCase --> LoggerPort
                 FetchStatementsUseCase --> StatementsRawcraperPort
-                FetchStatementsUseCase --> RepositoryStatementParsedPort
-                FetchStatementsUseCase --> SqlAlchemyRawStatementRepository
+                FetchStatementsUseCase --> RepositoryStatementFetchedPort
+                FetchStatementsUseCase --> SqlAlchemyStatementRawRepository
                 FetchStatementsUseCase --> Config
                 FetchStatementsUseCase --> WorkerPool
                 FetchStatementsUseCase --> ByteFormatter
@@ -186,11 +186,11 @@ package "fly" {
                 WorkerPoolPort --> ExecutionResultDTO
                 WorkerPoolPort --> LoggerPort
                 WorkerPoolPort --> WorkerTaskDTO
-            interface RepositoryStatementParsedPort {
+            interface RepositoryStatementFetchedPort {
                 +get_existing_by_columns(column_name: str) : Set[Any]
                 +save_all(items: List[StatementRowsDTO]) : void
                 }
-            interface SqlAlchemyRawStatementRepository {
+            interface SqlAlchemyStatementRawRepository {
                 +save_all(items: List[StatementRowsDTO]) : void
                 }
             interface StatementsRawcraperPort {
@@ -642,11 +642,11 @@ package "fly" {
                 CompanyDataModel --> CompanyDataRawDTO : to_dto()
                 CompanyDataModel <-- CompanyDataDTO : from_dto()
                 CompanyDataModel <-- CompanyDataRawDTO : from_dto()
-                SqlAlchemyCompanyDataRepository --> CompanyDataModel : uses
+                SqlAlchemyRepositoryCompanyData --> CompanyDataModel : uses
             }
 
         package "fly.infrastructure.repositories" {
-            class SqlAlchemyCompanyDataRepository {
+            class SqlAlchemyRepositoryCompanyData {
                 CompanyDataDTO : CompanyDataDTO
                 +save_all(items: List[CompanyDataDTO]) : void
                 +get_all() : List[CompanyDataDTO]
@@ -654,9 +654,9 @@ package "fly" {
                 +get_by_id(id: str) : CompanyDataDTO
                 +get_all_primary_keys() : Set[str>
                 }
-                SqlAlchemyCompanyDataRepository --|> SqlAlchemyRepositoryCompanyDataPort
-                SqlAlchemyCompanyDataRepository --|> SqlAlchemyRepositoryBase
-                SqlAlchemyCompanyDataRepository --> CompanyDataDTO
+                SqlAlchemyRepositoryCompanyData --|> SqlAlchemyRepositoryCompanyDataPort
+                SqlAlchemyRepositoryCompanyData --|> SqlAlchemyRepositoryBase
+                SqlAlchemyRepositoryCompanyData --> CompanyDataDTO
 
             class SqlAlchemyNsdRepository {
                 +save_all(items: List[NsdDTO]) : void
@@ -669,15 +669,15 @@ package "fly" {
                 SqlAlchemyNsdRepository --|> SqlAlchemyRepositoryBase
                 SqlAlchemyNsdRepository --> NsdDTO
 
-            class SqlAlchemyRawStatementRepository {
+            class SqlAlchemyStatementRawRepository {
                 +save_all(items: List[StatementDTO]) : void
                 +get_all() : List[StatementDTO]
                 +has_item(identifier: int) : bool
                 +get_by_id(id: int) : StatementDTO
                 }
-                SqlAlchemyRawStatementRepository --|> SqlAlchemyRawStatementRepository
-                SqlAlchemyRawStatementRepository --|> SqlAlchemyRepositoryBase
-                SqlAlchemyRawStatementRepository --> StatementDTO
+                SqlAlchemyStatementRawRepository --|> SqlAlchemyStatementRawRepository
+                SqlAlchemyStatementRawRepository --|> SqlAlchemyRepositoryBase
+                SqlAlchemyStatementRawRepository --> StatementDTO
 
             abstract class SqlAlchemyRepositoryBase<T> {
                 -config : Config

@@ -6,26 +6,26 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto.raw_statement_dto import StatementRawDTO
-from domain.ports import ConfigPort, LoggerPort, StatementRawRepositoryPort
-from infrastructure.helpers.list_flattener import ListFlattener
-from infrastructure.models.raw_statement_model import StatementRawModel
-from infrastructure.repositories.sqlalchemy_repository_base import (
-    SqlAlchemyRepositoryBase,
-)
+from domain.dtos.raw_statement_dto import StatementRawDTO
+from domain.ports.config_port import ConfigPort
+from domain.ports.logger_port import LoggerPort
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from infrastructure.utils.list_flatenner import ListFlattener
+from infrastructure.models.raw_statements_model import StatementRawModel
+from infrastructure.repositories.base_repository import RepositoryBase
 
 
-class SqlAlchemyStatementRawRepository(
-    SqlAlchemyRepositoryBase[StatementRawDTO, int],
-    StatementRawRepositoryPort,
+class StatementRawRepository(
+    RepositoryBase[StatementRawDTO, int],
+    RepositoryStatementsRawPort,
 ):
     """SQLite-backed repository for ``StatementRawDTO`` objects."""
 
     def __init__(
-        self, connection_string: str, config: ConfigPort, logger: LoggerPort
+        self, config: ConfigPort, logger: LoggerPort
     ) -> None:
         """Initialize repository with ``config`` and ``logger``."""
-        super().__init__(connection_string, config, logger)
+        super().__init__(config, logger)
         self.config = config
         self.logger = logger
 
