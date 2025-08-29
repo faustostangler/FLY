@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.usecases.sync_nsd import SyncNSDUseCase
+from application.usecases.sync_nsd_legacy import SyncNSDUseCase
 from domain.ports import (
     RepositoryCompanyDataPort,
     ConfigPort,
