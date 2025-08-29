@@ -12,6 +12,13 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from infrastructure.utils.byte_formatter import ByteFormatter
+from presentation.controllers.bootstrap import (
+    HandlerDepsFactory,
+    event_bus,
+    outbox_dispatcher,
+    uow_factory,
+)
+from application.handlers.nsd_handler import on_nsd_ready
 
 class Cli:
     """CLI façade that coordinates domain services.
@@ -54,6 +61,11 @@ class Cli:
         """Execute the top-level application workflow."""
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
+
+        # Wire event-driven bus and start outbox dispatcher
+        deps = HandlerDepsFactory(self.config, self.logger)
+        event_bus.subscribe("NSDReady", lambda evt: on_nsd_ready(evt, uow_factory, deps))
+        outbox_dispatcher.start()
 
         # Kick off the company data pipeline
         # company_results: SyncResultsDTO = self._company_service()
