@@ -1,29 +1,18 @@
 from __future__ import annotations
 
-import hashlib
-from datetime import datetime
-from typing import List
-
 from domain.dtos.nsd_dto import NsdDTO
-from domain.events.events import NSDReady
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
-from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.repositories.outbox_repository import SqlAlchemyOutboxRepository
-from infrastructure.utils.clock import UtcClock
-from infrastructure.utils.id_generator import IdGenerator
+
 from infrastructure.utils.list_flatenner import ListFlattener
+from infrastructure.utils.id_generator import IdGenerator
 
 
 class SyncNSDUseCase:
-    """Use case for synchronizing NSD documents and emitting events.
-
-    Contract matches the original legacy version so services can swap
-    implementations without changing their calls.
-    """
+    """Use case responsible for synchronizing NSD documents."""
 
     def __init__(
         self,
@@ -33,37 +22,54 @@ class SyncNSDUseCase:
         company_repository: RepositoryCompanyDataPort,
         scraper: ScraperNsdPort,
     ) -> None:
+        """Store dependencies required for synchronization."""
         self.config = config
         self.logger = logger
         self.nsd_repository = nsd_repository
         self.company_repository = company_repository
         self.scraper = scraper
         self.id_generator = IdGenerator(config=config)
-        self.clock = UtcClock()
-        # Local session factory used only for outbox persistence
-        self._engine_setup = EngineSetup(
-            self.config.database.connection_string, self.logger
-        )
+
+        # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
     def synchronize_nsd(self) -> None:
-        # Collect NSDs already present to skip duplicates
+        """Start the NSD synchronization workflow."""
+
+        # self.logger.log("Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run()", level="info")
+
+        # busca todos os cvm_code que já estão na tabela
         existing_nsd = [
             code for (code,) in self.nsd_repository.iter_existing_by_columns("nsd")
         ]
 
-        # Fetch and persist NSDs in batches via callback
+        # Fetch all documents from the scraper, persisting them in batches.
+        # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
         self.scraper.fetch_all(
             skip_codes=existing_nsd,
             save_callback=self._save_batch,
         )
+        # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
 
-    def _save_batch(self, buffer: List[NsdDTO]) -> None:
-        # Flatten potential nested lists
-        flat_items = ListFlattener.flatten(buffer)
+        # Record metrics about the synchronization process.
+        # self.logger.log(
+        #     f"Downloaded {self.scraper.metrics_collector.network_bytes} bytes",
+        #     level="info",
+        # )
+
+        # self.logger.log("End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run()", level="info")
+
+    def _save_batch(self, buffer: list[NsdDTO]) -> None:
+        """Persist a batch of raw data after converting to domain DTOs."""
+
+        flat_items = ListFlattener.flatten(
+            buffer
+        )  # recebe nested lists, devolve flat list
+
+        # Transform raw DTOs from the scraper to domain DTOs.
         dtos = [NsdDTO.from_raw(item) for item in flat_items]
 
-        # Ensure company registry contains any missing names
         names = {dto.company_name for dto in dtos if dto.company_name}
+        # → busca os já cadastrados
         existing_companies = {
             company_name
             for (company_name,) in self.company_repository.iter_existing_by_columns(
@@ -76,42 +82,12 @@ class SyncNSDUseCase:
 
             to_create = [
                 CompanyDataDTO(
-                    cvm_code=self.id_generator.create_id(size=6),
-                    company_name=name,
+                    cvm_code=self.id_generator.create_id(size=6), company_name=name
                 )
                 for name in missing
             ]
+            # insere todas as empresas faltantes de uma vez
             self.company_repository.save_all(to_create)
 
-        # Persist NSDs
+        # Save the batch to the repository in a single call.
         self.nsd_repository.save_all(dtos)
-
-        # Emit NSDReady events into the outbox for downstream processors
-        self._publish_nsd_ready_events(dtos)
-
-    def _publish_nsd_ready_events(self, dtos: List[NsdDTO]) -> None:
-        if not dtos:
-            return
-        session = self._engine_setup.Session()
-        try:
-            outbox = SqlAlchemyOutboxRepository(session)
-            now = self.clock.now()
-            for dto in dtos:
-                # Deterministic version hash from NSD attributes
-                basis = f"{dto.nsd}|{dto.version or ''}|{(dto.sent_date or datetime.min).isoformat()}".encode(
-                    "utf-8"
-                )
-                version_hash = hashlib.sha256(basis).hexdigest()
-                evt = NSDReady(
-                    nsd_id=dto.nsd,  # using NSD code as a stable identifier
-                    version_hash=version_hash,
-                    occurred_at=now,
-                    correlation_id=self.id_generator.create_id(12),
-                )
-                outbox.add(topic="NSDReady", event_obj=evt, occurred_at=now)
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()

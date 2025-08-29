@@ -4,7 +4,7 @@ import hashlib
 
 from domain.dtos.fetched_statement_dto import StatementFetchedDTO
 from domain.dtos.raw_statement_dto import StatementRawDTO
-from domain.ports.datacleaner_port import DataCleanerPort
+from domain.ports import DataCleanerPort
 
 
 class StatementTransformer:
@@ -36,23 +36,4 @@ class StatementTransformer:
             StatementFetchedDTO: Structured and cleaned statement
             enriched with a deterministic hash.
         """
-        # Clean and normalize relevant text fields
-        cleaned_description = self.cleaner.clean_text(raw.description)
-
-        # Build a canonical string to hash for idempotency
-        canonical = f"{raw.nsd}|{raw.grupo}|{raw.quadro}|{raw.account}|{cleaned_description or ''}|{raw.value}"
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-        return StatementFetchedDTO(
-            id=None,
-            nsd=raw.nsd,
-            company_name=raw.company_name,
-            quarter=raw.quarter,
-            version=raw.version,
-            grupo=raw.grupo,
-            quadro=raw.quadro,
-            account=raw.account,
-            description=cleaned_description or raw.description,
-            value=raw.value,
-            processing_hash=digest,
-        )
+        pass

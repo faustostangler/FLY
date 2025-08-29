@@ -1,24 +1,18 @@
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
+
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
+from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
+from domain.ports.scraper_fetched_statements_port import ScraperStatementFetchedPort
+from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
-from infrastructure.utils.byte_formatter import ByteFormatter
-from presentation.controllers.bootstrap import (
-    HandlerDepsFactory,
-    event_bus,
-    outbox_dispatcher,
-    uow_factory,
-)
-from application.handlers.nsd_handler import on_nsd_ready
 
 class Cli:
     """CLI façade that coordinates domain services.
@@ -40,9 +34,10 @@ class Cli:
         company_repository: RepositoryCompanyDataPort,
         nsd_repository: RepositoryNsdPort,
         statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementFetchedPort,
+        statements_fetched_repository: RepositoryStatementFetchedPort, 
+
         company_scraper: ScraperCompanyDataPort,
-        nsd_scraper: ScraperNsdPort,
+        nsd_scraper: ScraperNsdPort,        
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -62,15 +57,12 @@ class Cli:
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
-        # Wire event-driven bus and start outbox dispatcher
-        deps = HandlerDepsFactory(self.config, self.logger)
-        event_bus.subscribe("NSDReady", lambda evt: on_nsd_ready(evt, uow_factory, deps))
-        outbox_dispatcher.start()
-
         # Kick off the company data pipeline
         # company_results: SyncResultsDTO = self._company_service()
         # self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
-        self._statements_service()
+
+        statements_results: SyncResultsDTO = self._statements_service()
+
         return None
 
     def _company_service(self) -> SyncResultsDTO:
@@ -90,8 +82,10 @@ class Cli:
         # Run the synchronization step
         return company_service.sync_companies()
 
-    def _statements_service(self) -> None:
-        """Build and execute the NSD synchronization flow."""
+    def _statements_service(self) -> SyncResultsDTO:
+        """
+        """
+
         nsd_service = NsdService(
             config=self.config,
             logger=self.logger,
@@ -101,4 +95,6 @@ class Cli:
         )
 
         # Run the synchronization step
-        nsd_service.sync_nsd()
+        nsd_service = nsd_service.sync_nsd()
+
+        # return statements_service.sync_statements()
