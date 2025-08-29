@@ -62,6 +62,7 @@ class Cli:
         # self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
         statements_results: SyncResultsDTO = self._statements_service()
+        self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
 
         return None
 

@@ -143,7 +143,7 @@ class NsdScraper(ScraperNsdPort):
                 return None
 
             if fetched:
-                download_bytes = len(body)
+                self.metrics_collector.add_network_bytes(len(body))
                 extra_info = [
                     fetched["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
                     if fetched.get("sent_date") is not None
@@ -153,7 +153,7 @@ class NsdScraper(ScraperNsdPort):
                     fetched["quarter"].strftime("%Y-%m-%d")
                     if fetched.get("quarter") is not None
                     else "",
-                    f"{byte_formatter.format_bytes(download_bytes)} {byte_formatter.format_bytes(self.metrics_collector.network_bytes)}",
+                    f"{byte_formatter.format_bytes(self.metrics_collector.download_bytes)} {byte_formatter.format_bytes(self.metrics_collector.network_bytes)}",
                 ]
             else:
                 extra_info = []

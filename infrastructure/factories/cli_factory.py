@@ -45,7 +45,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     # Create a mapper that converts raw payloads into domain objects
     mapper = CompanyDataMapper(datacleaner)
     # Initialize metrics collection for operational observability
-    metrics_collector = MetricsCollector()
+    metrics_collector = MetricsCollector(db_dir=config.paths.data_dir, db_filename=config.database.db_filename)
     # Provision a worker pool sized by configuration for concurrent tasks
     worker_pool = WorkerPool(config, metrics_collector, config.worker_pool.max_workers)
     # Instantiate the HTTP client with request affinity/session handling
