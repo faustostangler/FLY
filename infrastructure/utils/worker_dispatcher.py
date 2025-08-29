@@ -1,6 +1,9 @@
 # infrastructure/utils/worker_dispatcher.py
-import json, threading, time
-from typing import Callable, Dict, Type, Any
+import json
+import threading
+import time
+from typing import Any, Callable, Dict, Type
+
 from domain.events.events import NSDReady, StatementsFetched
 
 EVENT_TYPES: Dict[str, Type[Any]] = {"NSDReady": NSDReady, "StatementsFetched": StatementsFetched}

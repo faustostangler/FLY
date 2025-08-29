@@ -13,13 +13,20 @@ class SqlAlchemyUnitOfWork(AbstractContextManager):
 
     def __exit__(self, exc_type, *_):
         try:
+            assert self.session is not None
             if exc_type:
                 self.session.rollback()
             else:
                 self.session.commit()
         finally:
+            assert self.session is not None
             self.session.close()
 
     # compat com port
-    def commit(self): self.session.commit()
-    def rollback(self): self.session.rollback()
+    def commit(self):
+        assert self.session is not None
+        self.session.commit()
+
+    def rollback(self):
+        assert self.session is not None
+        self.session.rollback()

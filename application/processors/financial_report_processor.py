@@ -1,10 +1,11 @@
 from application.usecases.statements_transformer import StatementTransformer
-from domain.dtos.raw_statement_dto import StatementRawDTO
 from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.scraper_raw_statements_port import StatementsRawcraperPort
+from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
 
 
 class FinancialReportProcessor:
@@ -24,7 +25,7 @@ class FinancialReportProcessor:
         nsd_repo: RepositoryNsdPort,
         raw_repo: RepositoryStatementsRawPort,
         fetched_repo: RepositoryStatementFetchedPort,
-        scraper: StatementsRawcraperPort,
+        scraper: ScraperStatementRawPort,
         transformer: StatementTransformer,
         logger: LoggerPort,
     ) -> None:

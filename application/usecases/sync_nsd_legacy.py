@@ -7,8 +7,8 @@ from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 
-from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.utils.id_generator import IdGenerator
+from infrastructure.utils.list_flatenner import ListFlattener
 
 
 class SyncNSDUseCase:

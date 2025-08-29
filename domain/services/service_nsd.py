@@ -1,8 +1,5 @@
 from __future__ import annotations
-
-
-# from application.usecases.sync_nsd_legacy import SyncNSDUseCase
-from application.usecases.sync_nsd import SyncNSDUseCase
+from application.usecases.sync_nsd_legacy import SyncNSDUseCase
 from domain.ports.config_port import ConfigPort
 from domain.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort

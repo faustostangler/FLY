@@ -58,3 +58,45 @@ _dispatcher = OutboxDispatcherWorker(_session_factory, outbox_repo_factory, even
 _dispatcher.start()
 
 # a CLI pode seguir chamando o caso de uso como já faz
+from __future__ import annotations
+
+"""Optional bootstrap for event-driven wiring.
+
+This module provides minimal wiring for an in-memory event bus and an outbox
+dispatcher worker using the existing infrastructure components. It intentionally
+avoids coupling to application-specific handlers or scrapers to prevent import
+errors during static analysis when those components evolve.
+"""
+
+from infrastructure.adapters.engine_setup import EngineSetup
+from infrastructure.config.config_adapter import ConfigAdapter
+from infrastructure.logging.logger_adapter import Logger
+from infrastructure.messaging.events_messaging import InMemoryEventBus
+from infrastructure.repositories.outbox_repository import SqlAlchemyOutboxRepository
+from infrastructure.utils.uow import SqlAlchemyUnitOfWork
+from infrastructure.utils.worker_dispatcher import OutboxDispatcherWorker
+
+# Initialize configuration and logger
+_config = ConfigAdapter()
+_logger = Logger(_config)
+
+# Build engine/session factory via EngineSetup helper
+_engine_setup = EngineSetup(_config.database.connection_string, _logger)
+_session_factory = _engine_setup.Session
+
+# In-memory event bus (other modules may import and subscribe as needed)
+event_bus = InMemoryEventBus()
+
+
+def uow_factory() -> SqlAlchemyUnitOfWork:
+    return SqlAlchemyUnitOfWork(_session_factory)
+
+
+def outbox_repo_factory(session) -> SqlAlchemyOutboxRepository:
+    return SqlAlchemyOutboxRepository(session)
+
+
+# Outbox dispatcher worker (can be started by the application entrypoint if desired)
+outbox_dispatcher = OutboxDispatcherWorker(
+    _session_factory, outbox_repo_factory, event_bus=event_bus, batch_size=100, idle_sleep=0.3
+)
