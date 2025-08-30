@@ -23,7 +23,7 @@ from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
 from domain.ports.scraper_ports import StatementsRawcraperPort
 
 # Infra helpers
-from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.helpers.datacleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.helpers.worker_pool import WorkerPool
@@ -144,7 +144,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        data_cleaner: DataCleaner,
+        datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         http_client: AffinityHttpClient,  # public API only
         worker_pool_executor: WorkerPool,
@@ -152,7 +152,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
         self._config = config
         self.logger = logger
         self.http_client = http_client
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
         self._metrics_collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
         self.time_utils = TimeUtils(config)
@@ -229,7 +229,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 element = soup.find(id=elem_id)
                 if element is None:
                     return 0.0
-                value = self.data_cleaner.clean_number(element.get_text())
+                value = self.datacleaner.clean_number(element.get_text())
                 result = thousand * value
                 return result if result is not None else 0.0
 
@@ -257,7 +257,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 if not cols[0] or not cols[0][0].isdigit():
                     continue
                 account, account_description, account_value = cols[0], cols[1], cols[2]
-                rows.append({"account": account, "description": account_description, "value": (self.data_cleaner.clean_number(account_value) or 0.0) * thousand})
+                rows.append({"account": account, "description": account_description, "value": (self.datacleaner.clean_number(account_value) or 0.0) * thousand})
         return rows
 
     # ---------- Use case entrypoint ----------

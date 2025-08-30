@@ -23,7 +23,7 @@ from domain.ports import (
 )
 from infrastructure.helpers import SaveStrategy
 from infrastructure.helpers.byte_formatter import ByteFormatter
-from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.helpers.datacleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 from infrastructure.scrapers.company_data_processors import (
     CompanyDataDetailProcessor,
@@ -44,7 +44,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        data_cleaner: DataCleaner,
+        datacleaner: DataCleaner,
         mapper: CompanyDataMapper,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
@@ -75,7 +75,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
         self.mapper = mapper
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
@@ -94,7 +94,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Initialize a counter for total processed items
         self.processed_count = 0
 
-        self.entry_cleaner = EntryCleaner(self.data_cleaner)
+        self.entry_cleaner = EntryCleaner(self.datacleaner)
         self.detail_fetcher = DetailFetcher(
             http_client=self.http_client,
             endpoint_detail=self.endpoint_detail,
@@ -314,7 +314,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             entry = task.data
             worker_id = task.worker_id
 
-            company_name = self.data_cleaner.clean_text(entry.get("companyName"))
+            company_name = self.datacleaner.clean_text(entry.get("companyName"))
             if company_name in self.skip_codes:
                 # download_bytes_pre = self._metrics_collector.network_bytes
                 # download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, TypeVar
+from typing import List, Optional, Iterable
 
 from domain.dtos.nsd_dto import NsdDTO
 
@@ -13,14 +13,14 @@ from domain.ports.scraper_base_port import ScraperBasePort
 
 class ScraperNsdPort(ScraperBasePort[NsdDTO]):
     """Port for external NSD data providers."""
-
-    # def fetch_nsd(
-    #     self,
-    #     threshold: Optional[int] = None,
-    #     skip_codes: Optional[List[str]] = None,
-    #     save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
-    #     start: int = 1,
-    #     max_nsd: Optional[int] = None,
-    #     **kwargs,
-    # ) -> ExecutionResultDTO[NsdDTO]:
-    #     raise NotImplementedError
+    def iter_nsd(
+        self,
+        *,
+        start: int = 1,
+        threshold: Optional[int] = None,
+        skip_codes: Optional[List[str]] = None,
+        max_nsd: Optional[int] = None,
+        **kwargs,
+    ) -> Iterable[NsdDTO]:
+        """Entrega NSDs um a um, em ordem incremental, sem materializar tudo."""
+        raise NotImplementedError

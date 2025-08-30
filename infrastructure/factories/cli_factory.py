@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from application.mappers.company_data_mapper import CompanyDataMapper
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.factories.datacleaner_factory import datacleaner_factory

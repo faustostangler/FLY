@@ -11,14 +11,14 @@ from domain.ports.datacleaner_port import DataCleanerPort
 class CompanyDataMapper:
     """Mapper that merges company listing and detail data into a fetched DTO."""
 
-    def __init__(self, data_cleaner: DataCleanerPort) -> None:
+    def __init__(self, datacleaner: DataCleanerPort) -> None:
         """Initialize the mapper with a data cleaning utility.
 
         Args:
-            data_cleaner (DataCleanerPort): Utility responsible for cleaning
+            datacleaner (DataCleanerPort): Utility responsible for cleaning
                 free-text fields before mapping into DTOs.
         """
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
 
     def create_company_data_dto(
         self,
@@ -44,13 +44,13 @@ class CompanyDataMapper:
 
         # Map each classification level safely, cleaning the text if present
         industry_sector = (
-            self.data_cleaner.clean_text(parts[0]) if len(parts) > 0 else None
+            self.datacleaner.clean_text(parts[0]) if len(parts) > 0 else None
         )
         industry_subsector = (
-            self.data_cleaner.clean_text(parts[1]) if len(parts) > 1 else None
+            self.datacleaner.clean_text(parts[1]) if len(parts) > 1 else None
         )
         industry_segment = (
-            self.data_cleaner.clean_text(parts[2]) if len(parts) > 2 else None
+            self.datacleaner.clean_text(parts[2]) if len(parts) > 2 else None
         )
 
         # Construct and return the aggregated company DTO

@@ -32,10 +32,10 @@ from infrastructure.scrapers import (
 class CLIAdapter:
     """Orchestrate FLY application flows via the command line."""
 
-    def __init__(self, config: ConfigPort, logger: LoggerPort, data_cleaner) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner) -> None:
         self.config = config
         self.logger = logger
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
 
         self.collector = MetricsCollector()
         self.worker_pool_executor = WorkerPool(
@@ -85,12 +85,12 @@ class CLIAdapter:
 
     def _company_service(self) -> None:
         """Build and execute the company data synchronization flow."""
-        mapper = CompanyDataMapper(self.data_cleaner)
+        mapper = CompanyDataMapper(self.datacleaner)
         company_repo = self.company_repo
         company_scraper = CompanyDataScraper(
             config=self.config,
             logger=self.logger,
-            data_cleaner=self.data_cleaner,
+            datacleaner=self.datacleaner,
             mapper=mapper,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
@@ -115,7 +115,7 @@ class CLIAdapter:
         nsd_scraper = NsdScraper(
             config=self.config,
             logger=self.logger,
-            data_cleaner=self.data_cleaner,
+            datacleaner=self.datacleaner,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
             repository=nsd_repo,
@@ -153,7 +153,7 @@ class CLIAdapter:
         raw_statements_scraper = StatementsRawcraper(
             config=self.config,
             logger=self.logger,
-            data_cleaner=self.data_cleaner,
+            datacleaner=self.datacleaner,
             metrics_collector=self.collector,
             http_client=self.http_client,
             worker_pool_executor=self.worker_pool_executor,

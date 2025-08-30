@@ -10,7 +10,7 @@ from domain.dtos.company_data_dto import (
 )
 
 # from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.logger_port import LoggerPort
 
 
 class CompanyDataMerger:

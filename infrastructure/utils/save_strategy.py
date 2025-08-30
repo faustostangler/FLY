@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Iterable, List, Optional, TypeVar
 
-from domain.ports.config_port import ConfigPort
+from application.ports.config_port import ConfigPort
 
 T = TypeVar("T")
 

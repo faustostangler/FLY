@@ -17,7 +17,7 @@ from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
 from domain.ports.scraper_ports import StatementsRawcraperPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers import WorkerPool
-from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.helpers.datacleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
@@ -30,7 +30,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        data_cleaner: DataCleaner,
+        datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
@@ -38,7 +38,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
         self._config: ConfigPort = config
 
         # Adapter-specific dependencies
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
         self._metrics_collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
 
@@ -83,7 +83,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                 element = soup.find(id=elem_id)
                 if element is None:
                     return 0.0
-                value = self.data_cleaner.clean_number(element.get_text())
+                value = self.datacleaner.clean_number(element.get_text())
                 result = thousand * value
                 return result if result is not None else 0.0
 
@@ -123,7 +123,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                     {
                         "account": account,
                         "description": account_description,
-                        "value": (self.data_cleaner.clean_number(account_value) or 0.0)
+                        "value": (self.datacleaner.clean_number(account_value) or 0.0)
                         * thousand,
                     }
                 )

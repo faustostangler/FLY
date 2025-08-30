@@ -9,10 +9,10 @@ from queue import Queue
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
-from domain.ports.metrics_collector_port import MetricsCollectorPort
-from domain.ports.worker_pool_port import WorkerPoolPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.worker_pool_port import WorkerPoolPort
 
 # Generic type variable representing the processor's return type
 R = TypeVar("R")

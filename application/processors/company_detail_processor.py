@@ -79,6 +79,7 @@ class CompanyDataDetailProcessor:
 
             # Define date fields for the listing DTO
             date_keys = ["dateListing"]
+            date_keys_norm = []
 
             # No numeric fields expected for the listing DTO
             number_keys = []
@@ -90,6 +91,7 @@ class CompanyDataDetailProcessor:
                     entry=entry,
                     text_keys=text_keys,
                     date_keys=date_keys,
+                    date_keys_norm=date_keys_norm,
                     number_keys=number_keys,
                     dto_class=CompanyDataListingDTO,
                 ),
@@ -118,6 +120,7 @@ class CompanyDataDetailProcessor:
 
             # Define date fields present in the detail payload
             date_keys = ["lastDate", "dateQuotation"]
+            date_keys_norm = []
 
             # No numeric fields expected for the detail DTO
             number_keys = []
@@ -129,6 +132,7 @@ class CompanyDataDetailProcessor:
                     entry=detail,
                     text_keys=text_keys,
                     date_keys=date_keys,
+                    date_keys_norm=date_keys_norm,
                     number_keys=number_keys,
                     dto_class=CompanyDataDetailDTO,
                 ),

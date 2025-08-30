@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 from infrastructure.models import BaseModel
 
 

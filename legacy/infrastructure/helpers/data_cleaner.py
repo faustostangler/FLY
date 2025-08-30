@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Sequence, cast
 
 from domain.ports import ConfigPort, LoggerPort
-from domain.ports.data_cleaner_port import DataCleanerPort
+from domain.ports.datacleaner_port import DataCleanerPort
 from infrastructure.utils.normalization import clean_date as util_clean_date
 from infrastructure.utils.normalization import (
     clean_dict_fields as util_clean_dict_fields,

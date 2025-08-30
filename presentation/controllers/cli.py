@@ -1,6 +1,6 @@
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
@@ -13,6 +13,13 @@ from domain.ports.scraper_fetched_statements_port import ScraperStatementFetched
 from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
+
+from application.ports.uow_port import UnitOfWorkFactoryPort
+from domain.polices.nsd_policy_port import NsdPolicyPort
+from domain.services.financial_normalizer import FinancialNormalizerPort
+from domain.services.ratios_calculator import RatiosCalculatorPort
+from application.ports.year_view_port import YearViewPort
+
 
 class Cli:
     """CLI façade that coordinates domain services.
@@ -31,6 +38,7 @@ class Cli:
         self,
         config: ConfigPort,
         logger: LoggerPort,
+
         company_repository: RepositoryCompanyDataPort,
         nsd_repository: RepositoryNsdPort,
         statements_raw_repository: RepositoryStatementsRawPort,
@@ -38,6 +46,12 @@ class Cli:
 
         company_scraper: ScraperCompanyDataPort,
         nsd_scraper: ScraperNsdPort,        
+
+        policy: NsdPolicyPort,
+        uow_factory: UnitOfWorkFactoryPort,
+        financial_normalizer: FinancialNormalizerPort,
+        ratios_calc: RatiosCalculatorPort,
+        year_view_port: YearViewPort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -50,6 +64,13 @@ class Cli:
 
         self.company_scraper = company_scraper
         self.nsd_scraper = nsd_scraper
+
+        self.policy = policy
+        self.uow_factory = uow_factory
+        self.financial_normalizer = financial_normalizer
+        self.ratios_calc = ratios_calc
+        self.year_view_port = year_view_port
+
         self.byte_formatter = ByteFormatter()
 
     def run(self) -> None:
@@ -57,7 +78,7 @@ class Cli:
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
-        # Kick off the company data pipeline
+        # # Kick off the company data pipeline
         # company_results: SyncResultsDTO = self._company_service()
         # self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
@@ -91,8 +112,19 @@ class Cli:
             logger=self.logger,
             nsd_repository=self.nsd_repository,
             company_repository=self.company_repository,
-            scraper=self.nsd_scraper,
-        )
+            nsd_scraper=self.nsd_scraper,
+            company_scraper=self.company_scraper,
+
+            policy=self.policy,                  # porta para política composta
+            statements_raw_repository=self.statements_raw_repository,        # portas para persistência
+            statements_fetched_repository=self.statements_fetched_repository,
+
+            uow_factory=self.uow_factory,        # fábrica de UoW (SQLAlchemy + SQLite)
+            financial_normalizer=self.financial_normalizer, # serviço de domínio puro
+            ratios_calculator=self.ratios_calc,   # serviço de domínio puro
+            year_view_port=self.year_view_port,   # porta: buscar RAW do ano por companhia
+
+            )
 
         # Run the synchronization step
         nsd_service = nsd_service.sync_nsd()

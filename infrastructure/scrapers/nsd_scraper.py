@@ -5,22 +5,22 @@ from __future__ import annotations
 import re
 import time
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import  Dict, List, Iterable, Optional
 
 from bs4 import BeautifulSoup
 
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
-from domain.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
-from domain.ports.http_client_port import AffinityHttpClientPort
-from domain.ports.worker_pool_port import WorkerPoolPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.worker_pool_port import WorkerPoolPort
 
 
 class NsdScraper(ScraperNsdPort):
@@ -51,164 +51,214 @@ class NsdScraper(ScraperNsdPort):
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
-    @property
-    def metrics_collector(self) -> MetricsCollectorPort:
-        """Metrics collector used by the scraper."""
-        return self._metrics_collector
-
-    def fetch_all(
+    def iter_nsd(
         self,
-        threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
-        save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
+        *,
         start: int = 1,
+        threshold: Optional[int] = None,  # mantido por compatibilidade, não usado aqui
+        skip_codes: Optional[List[str]] = None,
         max_nsd: Optional[int] = None,
         **kwargs,
-    ) -> List[NsdDTO]:
-        """Fetch and parse NSD pages using a worker queue."""
-
-        # self.logger.log(
-        #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
-        #     level="info",
-        # )
-        byte_formatter = ByteFormatter()
-
-        self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
+    ) -> Iterable[NsdDTO]:
+        self.skip_codes = {int(code) for code in (skip_codes or [])}
 
         start = max(start, max(self.skip_codes, default=0) + 1)
 
         max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
         max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        max_nsd = max(start, max_nsd_existing, max_nsd_probable)
+        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
 
-        nsd_diff = max_nsd - start
-
-        threshold = threshold or self.config.repository.persistence_threshold
-
-        self.logger.log("Fetch NSD list", level="info")
-
-        if len(self.skip_codes) > nsd_diff:
-            codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
-            codes = [c for c in codes if c not in self.skip_codes]
-        else:
-            codes = list(range(start, max_nsd + 1))
-
-        tasks = list(enumerate(codes))
-
-        strategy: SaveStrategy[NsdDTO] = SaveStrategy.from_config(
-            save_callback, threshold, config=self.config
-        )
-
-        start_time = time.perf_counter()
-
-        def processor(task: WorkerTaskDTO) -> Optional[NsdDTO]:
-            # self.logger.log(
-            #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()",
-            #     level="info",
-            # )
-            nsd = task.data
-
-            progress = {
-                "index": task.index,
-                "size": len(tasks),
-                "start_time": start_time,
-            }
-
-            if nsd in self.skip_codes:
-                self.logger.log(
-                    f"{nsd}", level="info", progress=progress, worker_id=task.worker_id
-                )
-                return None
-
-            url = self.nsd_endpoint.format(nsd=nsd)
-
+        for code in range(start, max_nsd_final + 1):
+            if code in self.skip_codes:
+                continue
+            url = self.nsd_endpoint.format(nsd=code)
             try:
                 with self.http_client.borrow_session() as session:
                     body = self.http_client.fetch_with(session, url, headers=session.headers)
-                fetched = self._parse_html(nsd, body.decode("utf-8"))
-                # we now persist by company_name, no CVM lookup needed
-            # ————————————————————————————————————————————————————————————————
+                parsed = self._parse_html(code, body.decode("utf-8"))
+                if not parsed:
+                    continue
 
-            # self.logger.log(
-            #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()._parse_html()",
-            #     level="info",
-            # )
+                dto = NsdDTO.from_dict(parsed)
+                if dto is None:
+                    continue  # evita yield de None, satisfaz o type checker
+                yield dto
+
+                # aqui não há persistência nem batch; é só streaming
             except Exception as e:
-                self.logger.log(
-                    f"Failed to fetch NSD {nsd}: {e}",
-                    level="warning",
-                    progress=progress,
-                    worker_id=task.worker_id,
-                )
-                return None
+                self.logger.log(f"Failed to fetch NSD {code}: {e}", level="warning")
+                continue
 
-            if fetched:
-                download_bytes = len(body)
-                extra_info = [
-                    fetched["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
-                    if fetched.get("sent_date") is not None
-                    else "",
-                    fetched.get("nsd_type", ""),
-                    fetched.get("company_name", ""),
-                    fetched["quarter"].strftime("%Y-%m-%d")
-                    if fetched.get("quarter") is not None
-                    else "",
-                    f"{byte_formatter.format_bytes(download_bytes)} {byte_formatter.format_bytes(self.metrics_collector.network_bytes)}",
-                ]
-            else:
-                extra_info = []
+    # def fetch_all(
+    #     self,
+    #     threshold: Optional[int] = None,
+    #     skip_codes: Optional[List[str]] = None,
+    #     save_callback=None,
+    #     start: int = 1,
+    #     max_nsd: Optional[int] = None,
+    #     **kwargs,
+    # ) -> List[NsdDTO]:
+    #     return list(self.iter_nsd(
+    #         start=start,
+    #         threshold=threshold,
+    #         skip_codes=skip_codes,
+    #         max_nsd=max_nsd,
+    #         **kwargs,
+    #     ))
 
-            self.logger.log(
-                f"{nsd}",
-                level="info",
-                progress={**progress, "extra_info": extra_info},
-                worker_id=task.worker_id,
-            )
+    # def fetch_all(
+    #     self,
+    #     threshold: Optional[int] = None,
+    #     skip_codes: Optional[List[str]] = None,
+    #     save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
+    #     start: int = 1,
+    #     max_nsd: Optional[int] = None,
+    #     **kwargs,
+    # ) -> List[NsdDTO]:
+    #     """Fetch and parse NSD pages using a worker queue."""
 
-            # self.logger.log(
-            #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()",
-            #     level="info",
-            # )
+    #     # self.logger.log(
+    #     #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
+    #     #     level="info",
+    #     # )
+    #     byte_formatter = ByteFormatter()
 
-            return NsdDTO.from_dict(fetched)
+    #     self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
 
-        def handle_batch(item: Optional[NsdDTO]) -> None:
-            if item is not None:
-                strategy.handle(item)
-            else:
-                pass
+    #     start = max(start, max(self.skip_codes, default=0) + 1)
 
-        # self.logger.log(
-        #     "Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
-        #     level="info",
-        # )
-        nsds = self.worker_pool.run(
-            tasks=tasks,
-            processor=processor,
-            logger=self.logger,
-            on_result=handle_batch,
-            max_workers=self.config.worker_pool.max_workers or 1,
-        )
-        # self.logger.log(
-        #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
-        #     level="info",
-        # )
+    #     max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
+    #     max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
+    #     max_nsd = max(start, max_nsd_existing, max_nsd_probable)
 
-        strategy.finalize()
+    #     nsd_diff = max_nsd - start
 
-        # self.logger.log(
-        #     f"Downloaded {self.metrics_collector.network_bytes} bytes",
-        #     level="info",
-        # )
+    #     threshold = threshold or self.config.repository.persistence_threshold
 
-        results = [item for item in nsds if item is not None]
+    #     self.logger.log("Fetch NSD list", level="info")
 
-        # self.logger.log(
-        #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
-        #     level="info",
-        # )
+    #     if len(self.skip_codes) > nsd_diff:
+    #         codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
+    #         codes = [c for c in codes if c not in self.skip_codes]
+    #     else:
+    #         codes = list(range(start, max_nsd + 1))
 
-        return results
+    #     tasks = list(enumerate(codes))
+
+    #     strategy: SaveStrategy[NsdDTO] = SaveStrategy.from_config(
+    #         save_callback, threshold, config=self.config
+    #     )
+
+    #     start_time = time.perf_counter()
+
+    #     def processor(task: WorkerTaskDTO) -> Optional[NsdDTO]:
+    #         # self.logger.log(
+    #         #     "Run  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()",
+    #         #     level="info",
+    #         # )
+    #         nsd = task.data
+
+    #         progress = {
+    #             "index": task.index,
+    #             "size": len(tasks),
+    #             "start_time": start_time,
+    #         }
+
+    #         if nsd in self.skip_codes:
+    #             self.logger.log(
+    #                 f"{nsd}", level="info", progress=progress, worker_id=task.worker_id
+    #             )
+    #             return None
+
+    #         url = self.nsd_endpoint.format(nsd=nsd)
+
+    #         try:
+    #             with self.http_client.borrow_session() as session:
+    #                 body = self.http_client.fetch_with(session, url, headers=session.headers)
+    #             fetched = self._parse_html(nsd, body.decode("utf-8"))
+    #             # we now persist by company_name, no CVM lookup needed
+    #         # ————————————————————————————————————————————————————————————————
+
+    #         # self.logger.log(
+    #         #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()._parse_html()",
+    #         #     level="info",
+    #         # )
+    #         except Exception as e:
+    #             self.logger.log(
+    #                 f"Failed to fetch NSD {nsd}: {e}",
+    #                 level="warning",
+    #                 progress=progress,
+    #                 worker_id=task.worker_id,
+    #             )
+    #             return None
+
+    #         if fetched:
+    #             download_bytes = len(body)
+    #             extra_info = [
+    #                 fetched["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
+    #                 if fetched.get("sent_date") is not None
+    #                 else "",
+    #                 fetched.get("nsd_type", ""),
+    #                 fetched.get("company_name", ""),
+    #                 fetched["quarter"].strftime("%Y-%m-%d")
+    #                 if fetched.get("quarter") is not None
+    #                 else "",
+    #                 f"{byte_formatter.format_bytes(download_bytes)} {byte_formatter.format_bytes(self.metrics_collector.network_bytes)}",
+    #             ]
+    #         else:
+    #             extra_info = []
+
+    #         self.logger.log(
+    #             f"{nsd}",
+    #             level="info",
+    #             progress={**progress, "extra_info": extra_info},
+    #             worker_id=task.worker_id,
+    #         )
+
+    #         # self.logger.log(
+    #         #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().processor()",
+    #         #     level="info",
+    #         # )
+
+    #         return NsdDTO.from_dict(fetched)
+
+    #     def handle_batch(item: Optional[NsdDTO]) -> None:
+    #         if item is not None:
+    #             strategy.handle(item)
+    #         else:
+    #             pass
+
+    #     # self.logger.log(
+    #     #     "Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
+    #     #     level="info",
+    #     # )
+    #     nsds = self.worker_pool.run(
+    #         tasks=tasks,
+    #         processor=processor,
+    #         logger=self.logger,
+    #         on_result=handle_batch,
+    #         max_workers=self.config.worker_pool.max_workers or 1,
+    #     )
+    #     # self.logger.log(
+    #     #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().worker_pool_executor.run()",
+    #     #     level="info",
+    #     # )
+
+    #     strategy.finalize()
+
+    #     # self.logger.log(
+    #     #     f"Downloaded {self.metrics_collector.network_bytes} bytes",
+    #     #     level="info",
+    #     # )
+
+    #     results = [item for item in nsds if item is not None]
+
+    #     # self.logger.log(
+    #     #     "End  Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()",
+    #     #     level="info",
+    #     # )
+
+    #     return results
 
     def _parse_html(self, nsd: int, html: str) -> Dict:
         """Parse NSD HTML into a dictionary."""
@@ -399,6 +449,11 @@ class NsdScraper(ScraperNsdPort):
         except Exception:
             # Ignore any network or parsing errors
             return None
+
+    @property
+    def metrics_collector(self) -> MetricsCollectorPort:
+        """Metrics collector used by the scraper."""
+        return self._metrics_collector
 
     def get_metrics(self) -> int:
         return self._metrics_collector.network_bytes

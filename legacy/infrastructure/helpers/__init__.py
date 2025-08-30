@@ -1,5 +1,5 @@
 from .byte_formatter import ByteFormatter
-from .data_cleaner import DataCleaner
+from .datacleaner import DataCleaner
 from .fetch_utils import FetchUtils
 from .metrics_collector import MetricsCollector
 from .save_strategy import SaveStrategy

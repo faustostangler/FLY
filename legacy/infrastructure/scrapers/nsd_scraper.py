@@ -19,7 +19,7 @@ from domain.ports import (
     WorkerPoolPort,
 )
 from infrastructure.helpers import ByteFormatter, SaveStrategy
-from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.helpers.datacleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 
 
@@ -30,7 +30,7 @@ class NsdScraper(ScraperNsdPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        data_cleaner: DataCleaner,
+        datacleaner: DataCleaner,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
         repository: RepositoryNsdPort,
@@ -41,7 +41,7 @@ class NsdScraper(ScraperNsdPort):
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
         self.repository = repository
@@ -224,30 +224,30 @@ class NsdScraper(ScraperNsdPort):
         # from DTO
         data: Dict[str, str | int | datetime | None] = {
             "nsd": nsd,
-            "company_name": self.data_cleaner.clean_text(text_of("#lblNomeCompanhia")),
+            "company_name": self.datacleaner.clean_text(text_of("#lblNomeCompanhia")),
             # quarter e sent_date serão preenchidos depois
             "quarter": None,
             "version": None,
             "nsd_type": None,
             "dri": None,
             "auditor": None,
-            "responsible_auditor": self.data_cleaner.clean_text(
+            "responsible_auditor": self.datacleaner.clean_text(
                 text_of("#lblResponsavelTecnico")
             ),
             "protocol": text_of("#lblProtocolo"),
             "sent_date": None,
-            "reason": self.data_cleaner.clean_text(
+            "reason": self.datacleaner.clean_text(
                 text_of("#lblMotivoCancelamentoReapresentacao")
             ),
         }
 
         # Limpeza do padrão FCA
-        dri = self.data_cleaner.clean_text(text_of("#lblNomeDRI")) or ""
+        dri = self.datacleaner.clean_text(text_of("#lblNomeDRI")) or ""
         dri_pattern = r"\s+FCA(?:\s+V\d+)?\b"
         data["dri"] = re.sub(dri_pattern, "", dri)
         data["dri"] = re.sub(r"\s{2,}", " ", data["dri"]).strip()
 
-        auditor = self.data_cleaner.clean_text(text_of("#lblAuditor")) or ""
+        auditor = self.datacleaner.clean_text(text_of("#lblAuditor")) or ""
         auditor_pattern = r"\s+FCA\s+\d{4}(?:\s+V\d+)?\b"
         data["auditor"] = re.sub(auditor_pattern, "", auditor)
         data["auditor"] = re.sub(r"\s{2,}", " ", data["auditor"]).strip()
@@ -255,21 +255,21 @@ class NsdScraper(ScraperNsdPort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        data["quarter"] = self.data_cleaner.clean_date(quarter) if quarter else None
+        data["quarter"] = self.datacleaner.clean_date(quarter) if quarter else None
 
         nsd_type_version = text_of("#lblDescricaoCategoria")
         if nsd_type_version:
             parts = [p.strip() for p in nsd_type_version.split(" - ")]
             if len(parts) >= 2:
                 data["version"] = (
-                    self.data_cleaner.clean_text(parts[-1]) if parts[-1] else None
+                    self.datacleaner.clean_text(parts[-1]) if parts[-1] else None
                 )
                 data["nsd_type"] = (
-                    self.data_cleaner.clean_text(parts[0]) if parts[0] else None
+                    self.datacleaner.clean_text(parts[0]) if parts[0] else None
                 )
 
         data["sent_date"] = (
-            self.data_cleaner.clean_date(sent_date) if sent_date else None
+            self.datacleaner.clean_date(sent_date) if sent_date else None
         )
 
         return data

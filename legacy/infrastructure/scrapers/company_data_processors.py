@@ -9,16 +9,16 @@ from typing import Dict, List, Optional, Type, Union, cast
 from application import CompanyDataMapper
 from domain.dto import CompanyDataDetailDTO, CompanyDataListingDTO, CompanyDataRawDTO
 from domain.ports import LoggerPort
-from infrastructure.helpers.data_cleaner import DataCleaner
+from infrastructure.helpers.datacleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 
 
 class EntryCleaner:
     """Clean raw company listing entries."""
 
-    def __init__(self, data_cleaner: DataCleaner) -> None:
+    def __init__(self, datacleaner: DataCleaner) -> None:
         """Initialize with ``DataCleaner``."""
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
 
     def clean_entry(
         self,
@@ -29,7 +29,7 @@ class EntryCleaner:
         dto_class: Type[Union[CompanyDataListingDTO, CompanyDataDetailDTO]],
     ) -> Union[CompanyDataListingDTO, CompanyDataDetailDTO]:
         """Return a ``CompanyDataListingDTO`` from the given entry."""
-        cleaned = self.data_cleaner.clean_dict_fields(
+        cleaned = self.datacleaner.clean_dict_fields(
             entry, text_keys, date_keys, number_keys
         )
         return dto_class.from_dict(cleaned)

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Iterable, Mapping, Optional, cast
+from typing import TYPE_CHECKING, List, Mapping, Optional, cast
 
 import infrastructure.utils.normalization as norm
-from domain.ports.config_port import ConfigPort
+from application.ports.config_port import ConfigPort
 from domain.ports.datacleaner_port import DataCleanerPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.logger_port import LoggerPort
 
 if TYPE_CHECKING:
     from infrastructure.logging.logger_adapter import Logger
@@ -37,13 +37,13 @@ class DataCleaner(DataCleanerPort):
     def clean_text(
         self,
         text: Optional[str],
-        words_to_remove: Optional[Iterable[str]] = None,
+        words_to_remove: Optional[List[str]] = None,
     ) -> Optional[str]:
         """Normalize and clean text by removing unwanted words.
 
         Args:
             text (Optional[str]): Input string to be cleaned.
-            words_to_remove (Optional[Iterable[str]]): Custom words to remove.
+            words_to_remove (Optional[List[str]]): Custom words to remove.
                 If not provided, defaults to words from configuration.
 
         Returns:
@@ -84,17 +84,18 @@ class DataCleaner(DataCleanerPort):
     def clean_dict_fields(
         self,
         entry: Mapping[str, object],
-        text_keys: Optional[Iterable[str]],
-        date_keys: Optional[Iterable[str]],
-        number_keys: Optional[Iterable[str]] = None,
+        text_keys: Optional[List[str]],
+        date_keys: Optional[List[str]],
+        date_keys_norm: Optional[List[str]],
+        number_keys: Optional[List[str]] = None,
     ) -> dict:
         """Clean multiple fields of a dictionary according to their types.
 
         Args:
             entry (Mapping[str, object]): Input dictionary with raw values.
-            text_keys (Optional[Iterable[str]]): Keys whose values should be cleaned as text.
-            date_keys (Optional[Iterable[str]]): Keys whose values should be fetched as dates.
-            number_keys (Optional[Iterable[str]]): Keys whose values should be fetched as numbers.
+            text_keys (Optional[List[str]]): Keys whose values should be cleaned as text.
+            date_keys (Optional[List[str]]): Keys whose values should be fetched as dates.
+            number_keys (Optional[List[str]]): Keys whose values should be fetched as numbers.
 
         Returns:
             dict: A new dictionary with cleaned values.
@@ -103,6 +104,7 @@ class DataCleaner(DataCleanerPort):
             entry=entry,
             text_keys=text_keys or [],
             date_keys=date_keys or [],
+            date_keys_norm=date_keys_norm or [],
             number_keys=number_keys or [],
             logger=cast("Logger", self.logger),
             words_to_remove=list(self.config.domain.words_to_remove or []),

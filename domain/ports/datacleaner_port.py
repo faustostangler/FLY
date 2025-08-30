@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Iterable, Mapping, Optional, Protocol, runtime_checkable
+from typing import List, Mapping, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -17,7 +17,7 @@ class DataCleanerPort(Protocol):
     def clean_text(
         self,
         text: Optional[str],
-        words_to_remove: Optional[Iterable[str]] = None,
+        words_to_remove: Optional[List[str]] = None,
     ) -> Optional[str]:
         """Normalize free-text content.
 
@@ -66,9 +66,10 @@ class DataCleanerPort(Protocol):
     def clean_dict_fields(
         self,
         entry: Mapping[str, object],
-        text_keys: Optional[Iterable[str]],
-        date_keys: Optional[Iterable[str]],
-        number_keys: Optional[Iterable[str]] = None,
+        text_keys: Optional[List[str]],
+        date_keys: Optional[List[str]],
+        date_keys_norm: Optional[List[str]],
+        number_keys: Optional[List[str]] = None,
     ) -> dict:
         """Return a new mapping with selected fields cleaned.
 

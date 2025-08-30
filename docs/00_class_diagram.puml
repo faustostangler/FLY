@@ -518,9 +518,9 @@ package "fly" {
             }
         package "fly.infrastructure.factories" {
             class DataCleanerFactory <<factory>> {
-                +create_data_cleaner(config: Config, logger: LoggerPort) : DataCleaner
+                +create_datacleaner(config: Config, logger: LoggerPort) : DataCleaner
                 }
-                DataCleanerFactory --> DataCleaner : create_data_cleaner()
+                DataCleanerFactory --> DataCleaner : create_datacleaner()
                 DataCleanerFactory --> Config : uses
                 DataCleanerFactory --> LoggerPort : uses
             }

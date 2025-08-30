@@ -3,16 +3,15 @@ from __future__ import annotations
 import re
 import string
 from datetime import datetime
-from typing import Dict, Iterable, List, Mapping, Optional
+from typing import Dict, List, List, Mapping, Optional
 
 import unidecode
 
-from domain.ports.logger_port import LoggerPort
-
+from application.ports.logger_port import LoggerPort
 
 def clean_text(
     text: Optional[str],
-    words_to_remove: Optional[Iterable[str]] = None,
+    words_to_remove: Optional[List[str]] = None,
     logger: Optional[LoggerPort] = None,
 ) -> Optional[str]:
     """Normalize a free-form text string.
@@ -68,7 +67,6 @@ def clean_text(
             logger.log(f"Failed to clean text: {exc}", level="warning")
         return None
 
-
 # Accepts None, str, int, float; returns a best-effort float normalization
 def clean_number(
     text: Optional[object],
@@ -119,9 +117,9 @@ def clean_number(
             logger.log(f"Failed to clean number: {exc}", level="warning")
         return 0.0
 
-
 def clean_date(
     text: Optional[str],
+    normalization: Optional[bool] = False,
     logger: Optional[LoggerPort] = None,
 ) -> Optional[datetime]:
     """Parse a date-like value into ``datetime``.
@@ -166,7 +164,21 @@ def clean_date(
     # Iterate through formats to find the first successful parse
     for fmt in patterns:
         try:
-            return datetime.strptime(text.strip(), fmt)
+            dt = datetime.strptime(text.strip(), fmt)
+            
+            # Find end of quarter
+            if normalization == True:
+                q = (dt.month - 1) // 3 + 1
+                if q == 1:
+                    dt = datetime(dt.year, 3, 31)
+                elif q == 2:
+                    dt = datetime(dt.year, 6, 30)
+                elif q == 3:
+                    dt = datetime(dt.year, 9, 30)
+                else:
+                    dt = datetime(dt.year, 12, 31)
+            return dt
+
         except Exception:
             # Keep trying other formats without failing fast
             continue
@@ -176,15 +188,15 @@ def clean_date(
         logger.log(f"Failed to parse date: unsupported format '{text}'", level="debug")
     return None
 
-
 def clean_dict_fields(
     entry: Mapping[str, object],
-    text_keys: Iterable[str],
-    date_keys: Iterable[str],
-    number_keys: Optional[Iterable[str]] = None,
+    text_keys: List[str],
+    date_keys: List[str],
+    date_keys_norm: Optional[List[str]] = None,
+    number_keys: Optional[List[str]] = None,
     *,
     logger,
-    words_to_remove: Optional[Iterable[str]] = None,
+    words_to_remove: Optional[List[str]] = None,
 ) -> Dict:
     """Produce a cleaned copy of a mapping, normalizing select fields.
 
@@ -233,6 +245,17 @@ def clean_dict_fields(
             val = entry.get(key)
             cleaned[key] = clean_date(
                 text=val if isinstance(val, str) else None,
+                normalization=False,
+                logger=logger,
+            )
+
+    for key in date_keys_norm or []:
+        if key in cleaned:
+            # Guard type: only strings are fetched; others become None
+            val = entry.get(key)
+            cleaned[key] = clean_date(
+                text=val if isinstance(val, str) else None,
+                normalization=True,
                 logger=logger,
             )
 

@@ -1,4 +1,4 @@
-from domain.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
 
 
 class MetricsCollector(MetricsCollectorPort):

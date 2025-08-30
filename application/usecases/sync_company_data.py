@@ -2,8 +2,8 @@ from typing import List
 
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.utils.list_flatenner import ListFlattener

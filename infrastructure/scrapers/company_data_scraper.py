@@ -12,13 +12,13 @@ from application.processors.entry_cleaner import EntryCleaner
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.config_port import ConfigPort
+from application.ports.config_port import ConfigPort
 from domain.ports.datacleaner_port import DataCleanerPort
-from domain.ports.http_client_port import AffinityHttpClientPort
-from domain.ports.logger_port import LoggerPort
-from domain.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
-from domain.ports.worker_pool_port import WorkerPoolPort
+from application.ports.worker_pool_port import WorkerPoolPort
 from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 
 # from infrastructure.scrapers.company_data_processors import (
@@ -44,7 +44,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     Attributes:
         config (ConfigPort): Global configuration provider.
         logger (LoggerPort): Logging abstraction for progress/diagnostics.
-        data_cleaner (DataCleanerPort): Text normalization and cleaning utilities.
+        datacleaner (DataCleanerPort): Text normalization and cleaning utilities.
         mapper (CompanyDataMapper): Maps raw records into domain DTOs.
         worker_pool_executor (WorkerPoolPort): Concurrency execution engine.
         _metrics_collector (MetricsCollectorPort): Network/processing metrics.

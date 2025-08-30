@@ -7,8 +7,8 @@ from typing import List, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dtos.raw_statement_dto import StatementRawDTO
-from domain.ports.config_port import ConfigPort
-from domain.ports.logger_port import LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.raw_statements_model import StatementRawModel

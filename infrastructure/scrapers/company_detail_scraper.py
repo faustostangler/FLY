@@ -4,8 +4,8 @@ import base64
 import json
 from typing import Dict
 
-from domain.ports.http_client_port import AffinityHttpClientPort
-from domain.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
 
 
 class DetailFetcher:

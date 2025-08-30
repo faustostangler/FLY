@@ -19,22 +19,23 @@ class EntryCleaner:
     explicit and testable.
     """
 
-    def __init__(self, data_cleaner: DataCleanerPort) -> None:
+    def __init__(self, datacleaner: DataCleanerPort) -> None:
         """Initialize the cleaner with its data normalization dependency.
 
         Args:
-            data_cleaner (DataCleaner): Component responsible for coercing and
+            datacleaner (DataCleaner): Component responsible for coercing and
                 sanitizing dict fields (trimming text, parsing dates, and
                 casting numeric values).
         """
         # Store the cleaning dependency for reuse across entries
-        self.data_cleaner = data_cleaner
+        self.datacleaner = datacleaner
 
     def clean_entry(
         self,
         entry: Dict,
         text_keys: List[str],
         date_keys: List[str],
+        date_keys_norm: List[str],
         number_keys: Optional[List[str]],
         dto_class: Type[Union[CompanyDataListingDTO, CompanyDataDetailDTO]],
     ) -> Union[CompanyDataListingDTO, CompanyDataDetailDTO]:
@@ -63,8 +64,8 @@ class EntryCleaner:
             KeyError: If required keys are missing for the target DTO.
         """
         # Normalize raw fields into canonical text/date/number representations
-        cleaned = self.data_cleaner.clean_dict_fields(
-            entry, text_keys, date_keys, number_keys
+        cleaned = self.datacleaner.clean_dict_fields(
+            entry, text_keys, date_keys, date_keys_norm, number_keys
         )
 
         # Construct and return the typed DTO from the cleaned mapping
