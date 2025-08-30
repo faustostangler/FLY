@@ -29,8 +29,8 @@ Dependencies are injected through constructors and point inward to domain ports 
   - `StatementDTO`, `StatementRowsDTO`
   - `ExecutionResultDTO`, `PageResultDTO`, `MetricsDTO`, `SyncCompanyDataResultDTO`, `WorkerTaskDTO`
 - **Ports** (`domain/ports`)
-  - Repository ports: `SqlAlchemyRepositoryCompanyDataPort`, `RepositoryNsdPort`, `SqlAlchemyStatementRawRepository`, `RepositoryStatementFetchedPort`.
-  - Source ports: `ScraperCompanyDataPort`, `ScraperNsdPort`, `StatementsRawcraperPort`.
+  - Repository ports: `SqlAlchemyRepositoryCompanyDataPort`, `NSDRepositoryPort`, `SqlAlchemyStatementRawRepository`, `RepositoryStatementFetchedPort`.
+  - Source ports: `ScraperCompanyDataPort`, `NSDSourcePort`, `StatementsRawcraperPort`.
   - `LoggerPort`, `WorkerPoolPort`, `MetricsCollectorPort`, `DataCleanerPort`.
 - **Utilities**
   - `statement_processing.classify_section` – maps account names to statement sections.
@@ -43,7 +43,7 @@ The domain contains no infrastructure references and consists only of dataclasse
   - `SqlAlchemyRepositoryBase` – shared connection logic used by concrete repositories.
 - **Scrapers & Adapters** (`infrastructure/scrapers`)
   - `CompanyDataScraper` – implements `ScraperCompanyDataPort` using `FetchUtils`, `DataCleaner`, and several processor classes (`EntryCleaner`, `DetailFetcher`, `CompanyDataMerger`, `CompanyDataDetailProcessor`).
-  - `NsdScraper` – implements `ScraperNsdPort` and fetches sequential documents.
+  - `NsdScraper` – implements `NSDSourcePort` and fetches sequential documents.
   - `StatementsSourceAdapter` – implements `StatementsRawcraperPort` for statement pages.
 - **Helpers** (`infrastructure/helpers`)
   - `FetchUtils` – HTTP fetching with retry logic.

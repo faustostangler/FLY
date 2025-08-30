@@ -78,8 +78,8 @@ package "fly" {
                 }
                 NsdService --> SyncNSDUseCase
                 NsdService --> LoggerPort
-                NsdService --> RepositoryNsdPort
-                NsdService --> ScraperNsdPort
+                NsdService --> NSDRepositoryPort
+                NsdService --> NSDSourcePort
 
             class StatementFetchService {
                 +fetch_statements(...) : List[Tuple[NsdDTO, List[StatementRowsDTO]]]
@@ -90,7 +90,7 @@ package "fly" {
                 StatementFetchService --> StatementsRawcraperPort
                 StatementFetchService --> RepositoryStatementFetchedPort
                 StatementFetchService --> SqlAlchemyRepositoryCompanyDataPort
-                StatementFetchService --> RepositoryNsdPort
+                StatementFetchService --> NSDRepositoryPort
                 StatementFetchService --> SqlAlchemyStatementRawRepository
             }
         }
@@ -110,8 +110,8 @@ package "fly" {
                 -_save_batch(buffer: list[NsdDTO]) : void
                 }
                 SyncNSDUseCase --> LoggerPort
-                SyncNSDUseCase --> RepositoryNsdPort
-                SyncNSDUseCase --> ScraperNsdPort
+                SyncNSDUseCase --> NSDRepositoryPort
+                SyncNSDUseCase --> NSDSourcePort
                 SyncNSDUseCase --> NsdDTO
             class FetchStatementsUseCase {
                 +fetch_statement_rows(...) : List[Tuple[NsdDTO, List[StatementRowsDTO]]]
@@ -135,13 +135,13 @@ package "fly" {
             interface ScraperCompanyDataPort {
                 }
                 ScraperCompanyDataPort --|> ScraperBasePort
-            interface ScraperNsdPort {
+            interface NSDSourcePort {
                 +fetch_all(...) : ExecutionResultDTO<NsdDTO>
                 }
                 interface WorkerPoolPort
                 interface LoggerPort
                 interface MetricsCollectorPort
-                interface RepositoryNsdPort
+                interface NSDRepositoryPort
 
             interface LoggerPort {
                 -message: str
@@ -161,9 +161,9 @@ package "fly" {
             interface SqlAlchemyRepositoryCompanyDataPort
                 SqlAlchemyRepositoryCompanyDataPort --|> SqlAlchemyRepositoryBasePort        
 
-            interface RepositoryNsdPort {
+            interface NSDRepositoryPort {
                 }
-                RepositoryNsdPort --|> SqlAlchemyRepositoryBasePort
+                NSDRepositoryPort --|> SqlAlchemyRepositoryBasePort
 
             interface StatementsRepositoryPort {
                 }
@@ -404,13 +404,13 @@ package "fly" {
                 -_find_next_probable_nsd(start: int) : int
                 +metrics_collector : MetricsCollectorPort
                 }
-                NsdScraper --|> ScraperNsdPort
+                NsdScraper --|> NSDSourcePort
                 NsdScraper --> Config
                 NsdScraper --> LoggerPort
                 NsdScraper --> DataCleaner
                 NsdScraper --> WorkerPoolPort
                 NsdScraper --> MetricsCollectorPort
-                NsdScraper --> RepositoryNsdPort
+                NsdScraper --> NSDRepositoryPort
                 NsdScraper --> FetchUtils
                 NsdScraper --> NsdDTO
                 NsdScraper --> ExecutionResultDTO
@@ -665,7 +665,7 @@ package "fly" {
                 +get_by_id(id: int) : NsdDTO
                 +get_all_primary_keys() : Set[int]
                 }
-                SqlAlchemyNsdRepository --|> RepositoryNsdPort
+                SqlAlchemyNsdRepository --|> NSDRepositoryPort
                 SqlAlchemyNsdRepository --|> SqlAlchemyRepositoryBase
                 SqlAlchemyNsdRepository --> NsdDTO
 

@@ -12,7 +12,7 @@ actor User
 User -> CLIController : start()
 CLIController -> NsdService : sync_nsd()
 NsdService -> SyncNSDUseCase : synchronize_nsd()
-SyncNSDUseCase -> RepositoryNsdPort : get_all_primary_keys()
+SyncNSDUseCase -> NSDRepositoryPort : get_all_primary_keys()
 SyncNSDUseCase -> NsdScraper : fetch_all(skip_codes, save_callback)
 loop for each nsd
     NsdScraper -> FetchUtils : fetch_with_retry()
@@ -22,10 +22,10 @@ loop for each nsd
     NsdScraper -> NsdScraper : _parse_html()
     NsdScraper -> SaveStrategy : handle(NsdDTO)
     alt threshold reached
-        SaveStrategy -> RepositoryNsdPort : save_all(batch)
+        SaveStrategy -> NSDRepositoryPort : save_all(batch)
     end
 end
-SaveStrategy -> RepositoryNsdPort : save_all(remaining)
+SaveStrategy -> NSDRepositoryPort : save_all(remaining)
 @enduml
 ```
 
@@ -35,7 +35,7 @@ SaveStrategy -> RepositoryNsdPort : save_all(remaining)
 4. **FetchUtils.fetch_with_retry** retries on network errors or Cloudflare blocks,
    recreating the scraper session when needed.
 5. Fetched pages become `NsdDTO` objects buffered by **SaveStrategy**.
-6. Batches are persisted via `RepositoryNsdPort.save_all` until the worker pool
+6. Batches are persisted via `NSDRepositoryPort.save_all` until the worker pool
    finishes.
 
 ## Statement Fetching

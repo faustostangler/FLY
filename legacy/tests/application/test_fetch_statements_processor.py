@@ -5,7 +5,7 @@ from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
     RepositoryCompanyDataPort,
-    RepositoryNsdPort,
+    NSDRepositoryPort,
     RepositoryStatementFetchedPort,
     StatementRawRepositoryPort,
 )
@@ -25,7 +25,7 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     )
 
     company_repo = MagicMock(spec=RepositoryCompanyDataPort)
-    nsd_repo = MagicMock(spec=RepositoryNsdPort)
+    nsd_repo = MagicMock(spec=NSDRepositoryPort)
     stmt_repo = MagicMock(spec=StatementRawRepositoryPort)
     rows_repo = MagicMock(spec=RepositoryStatementFetchedPort)
     source = MagicMock(spec=StatementsRawcraperPort)

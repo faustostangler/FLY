@@ -34,6 +34,7 @@ def main() -> None:
         # Print unexpected error
         logger.log(f"Critical error: {e}")
 
+
 if __name__ == "__main__":
     # Start application
     main()

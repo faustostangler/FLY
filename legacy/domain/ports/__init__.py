@@ -6,7 +6,7 @@ from .logger_port import LoggerPort
 from .metrics_collector_port import MetricsCollectorPort
 from .repository_base_port import RepositoryBasePort
 from .repository_company_data_port import RepositoryCompanyDataPort
-from .repository_nsd_port import RepositoryNsdPort
+from .repository_nsd_port import NSDRepositoryPort
 from .repository_raw_statements_port import RepositoryStatementRawPort
 from .repository_fetched_statements_port import RepositoryStatementFetchedPort
 from .statement_transformer_port import StatementTransformerPort
@@ -25,8 +25,8 @@ __all__ = [
     "RepositoryCompanyDataPort",
     "ScraperCompanyDataPort",
     "MetricsCollectorPort",
-    "RepositoryNsdPort",
-    "ScraperNsdPort",
+    "NSDRepositoryPort",
+    "NSDSourcePort",
     "StatementsRawcraperPort",
     "StatementRawRepositoryPort",
     "RepositoryStatementFetchedPort",

@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from .service_company_data import CompanyDataService
+from .company_data_service import CompanyDataService
 
 __all__ = ["CompanyDataService"]

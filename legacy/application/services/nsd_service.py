@@ -5,8 +5,8 @@ from domain.ports import (
     RepositoryCompanyDataPort,
     ConfigPort,
     LoggerPort,
-    RepositoryNsdPort,
-    ScraperNsdPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
 )
 
 
@@ -17,9 +17,9 @@ class NsdService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryNsdPort,
+        repository: NSDRepositoryPort,
         company_repo: RepositoryCompanyDataPort,
-        scraper: ScraperNsdPort,
+        scraper: NSDSourcePort,
     ) -> None:
         """Instantiate the service with its required dependencies."""
         self.logger = logger
