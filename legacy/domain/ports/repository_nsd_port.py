@@ -10,7 +10,7 @@ from domain.dto.nsd_dto import NsdDTO
 from .repository_base_port import RepositoryBasePort
 
 
-class NSDRepositoryPort(RepositoryBasePort[NsdDTO, int]):
+class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int]):
     """Port for NSD persistence operations."""
 
     @abstractmethod

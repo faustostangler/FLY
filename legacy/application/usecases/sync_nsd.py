@@ -5,8 +5,8 @@ from domain.ports import (
     RepositoryCompanyDataPort,
     ConfigPort,
     LoggerPort,
-    NSDRepositoryPort,
-    NSDSourcePort,
+    RepositoryNsdPort,
+    ScraperNsdPort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.utils.id_generator import IdGenerator
@@ -19,9 +19,9 @@ class SyncNSDUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: NSDRepositoryPort,
+        repository: RepositoryNsdPort,
         company_repo: RepositoryCompanyDataPort,
-        scraper: NSDSourcePort,
+        scraper: ScraperNsdPort,
     ) -> None:
         """Store dependencies required for synchronization."""
         self.config = config

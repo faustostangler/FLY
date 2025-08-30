@@ -14,8 +14,8 @@ from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    NSDRepositoryPort,
-    NSDSourcePort,
+    RepositoryNsdPort,
+    ScraperNsdPort,
     WorkerPoolPort,
 )
 from infrastructure.helpers import ByteFormatter, SaveStrategy
@@ -23,7 +23,7 @@ from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 
 
-class NsdScraper(NSDSourcePort):
+class NsdScraper(ScraperNsdPort):
     """Scraper adapter responsible for fetching raw NSD documents."""
 
     def __init__(
@@ -33,7 +33,7 @@ class NsdScraper(NSDSourcePort):
         data_cleaner: DataCleaner,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
-        repository: NSDRepositoryPort,
+        repository: RepositoryNsdPort,
         http_client: AffinityHttpClient,
     ):
         """Set up configuration, logger, and helper utilities for the

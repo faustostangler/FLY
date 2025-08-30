@@ -11,8 +11,8 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
 from domain.ports.scraper_fetched_statements_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
-from domain.services import CompanyDataService
-
+from domain.services.service_company_data import CompanyDataService
+from domain.services.service_nsd import NsdService
 
 class Cli:
     """CLI façade that coordinates domain services.
@@ -58,8 +58,8 @@ class Cli:
         self.logger.log("Start FLY", level="info")
 
         # Kick off the company data pipeline
-        company_results: SyncResultsDTO = self._company_service()
-        self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
+        # company_results: SyncResultsDTO = self._company_service()
+        # self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
         statements_results: SyncResultsDTO = self._statements_service()
 
@@ -86,13 +86,15 @@ class Cli:
         """
         """
 
-        company_repository = self.company_repository
-        nsd_repository = self.nsd_repository
-        # statements_raw_repository = self.statements_raw_repository
-        # statements_fetched_repository = self.statements_fetched_repository
+        nsd_service = NsdService(
+            config=self.config,
+            logger=self.logger,
+            nsd_repository=self.nsd_repository,
+            company_repository=self.company_repository,
+            scraper=self.nsd_scraper,
+        )
 
-        nsd_scraper = self.nsd_scraper
-
-        # nsd_service = self.nsd_service()
+        # Run the synchronization step
+        nsd_service = nsd_service.sync_nsd()
 
         # return statements_service.sync_statements()
