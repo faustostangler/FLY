@@ -1,6 +1,7 @@
 # application/usecases/sync_nsd.py
 from __future__ import annotations
 from typing import Iterator, Optional
+
 from domain.dtos.nsd_dto import NsdDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort

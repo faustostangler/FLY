@@ -14,11 +14,10 @@ from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 
-from application.ports.uow_port import UnitOfWorkFactoryPort
-from domain.polices.nsd_policy_port import NsdPolicyPort
+from application.ports.uow_port import UowFactoryPort
+from domain.polices.nsd_policy import NsdPolicyPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
-from application.ports.year_view_port import YearViewPort
 
 
 class Cli:
@@ -31,7 +30,7 @@ class Cli:
         config (ConfigPort): Read-only application configuration.
         logger (LoggerPort): Logging abstraction for structured events.
         company_repository (RepositoryCompanyDataPort): Persistence port for company data.
-        company_scraper (ScraperCompanyDataPort): Scraper port for fetching company data.
+        scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
     """
 
     def __init__(
@@ -44,34 +43,33 @@ class Cli:
         statements_raw_repository: RepositoryStatementsRawPort,
         statements_fetched_repository: RepositoryStatementFetchedPort, 
 
-        company_scraper: ScraperCompanyDataPort,
-        nsd_scraper: ScraperNsdPort,      
-        statements_raw_scraper: ScraperStatementRawPort,
+        scraper_company_data: ScraperCompanyDataPort,
+        scraper_nsd: ScraperNsdPort,      
+        scraper_statements_raw: ScraperStatementRawPort,
 
         policy: NsdPolicyPort,
-        uow_factory: UnitOfWorkFactoryPort,
+        uow_factory: UowFactoryPort,
         financial_normalizer: FinancialNormalizerPort,
-        ratios_calc: RatiosCalculatorPort,
-        year_view_port: YearViewPort,
+        ratios_calculator: RatiosCalculatorPort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
         self.config = config
         self.logger = logger
+
         self.company_repository = company_repository
         self.nsd_repository = nsd_repository
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
 
-        self.company_scraper = company_scraper
-        self.nsd_scraper = nsd_scraper
-        self.statements_raw_scraper = statements_raw_scraper
+        self.scraper_company_data = scraper_company_data
+        self.scraper_nsd = scraper_nsd
+        self.scraper_statements_raw = scraper_statements_raw
 
         self.policy = policy
         self.uow_factory = uow_factory
         self.financial_normalizer = financial_normalizer
-        self.ratios_calculator = ratios_calc
-        self.year_view_port = year_view_port
+        self.ratios_calculator = ratios_calculator
 
         self.byte_formatter = ByteFormatter()
 
@@ -92,14 +90,14 @@ class Cli:
         """Build and execute the company data synchronization flow."""
         # Alias injected dependencies for readability
         company_repository = self.company_repository
-        company_scraper = self.company_scraper
+        scraper_company_data = self.scraper_company_data
 
         # Compose the service with explicit dependencies
         company_service = CompanyDataService(
             config=self.config,
             logger=self.logger,
             repository=company_repository,
-            scraper=company_scraper,
+            scraper=scraper_company_data,
         )
 
         # Run the synchronization step
@@ -118,9 +116,9 @@ class Cli:
             statements_raw_repository=self.statements_raw_repository,
             statements_fetched_repository=self.statements_fetched_repository,   
 
-            company_scraper=self.company_scraper,
-            nsd_scraper=self.nsd_scraper,
-            statements_raw_scraper=self.statements_raw_scraper,
+            scraper_company_data=self.scraper_company_data,
+            scraper_nsd=self.scraper_nsd,
+            scraper_statements_raw=self.scraper_statements_raw,
 
             policy=self.policy,                  # porta para política composta
             financial_normalizer=self.financial_normalizer, # serviço de domínio puro

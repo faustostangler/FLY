@@ -2,7 +2,7 @@ import pytest
 
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 
 
 def test_company_dto_from_dict():

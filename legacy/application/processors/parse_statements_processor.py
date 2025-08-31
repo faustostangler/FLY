@@ -8,7 +8,7 @@ from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
 from domain.dto import NsdDTO, StatementFetchedDTO, WorkerTaskDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.ports import (
     ConfigPort,
     LoggerPort,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from domain.ports import ConfigPort, LoggerPort
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
 
 

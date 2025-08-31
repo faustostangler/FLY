@@ -6,7 +6,7 @@ import time
 from typing import Callable, List, Optional, Tuple
 
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.dto.worker_class_dto import WorkerTaskDTO
 from domain.ports import (
     ConfigPort,

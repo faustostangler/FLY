@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from domain.dto import StatementFetchedDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.ports import ConfigPort, LoggerPort, RepositoryStatementFetchedPort
 from infrastructure.helpers import SaveStrategy
 

@@ -1,4 +1,4 @@
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.services import StatementClassificationService
 from domain.utils.criteria_node import CriteriaNode
 

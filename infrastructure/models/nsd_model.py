@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.nsd_dto import NsdDTO
 
-from .base_model import BaseModel
+from infrastructure.models.base_model import BaseModel
 
 
 class NSDModel(BaseModel):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.utils.validation_utils import validate_quarter_completeness
 
 

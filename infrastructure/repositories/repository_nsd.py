@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple, TypeVar
+from typing import List, Set, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dtos.nsd_dto import NsdDTO
-from application.ports.uow_port import UnitOfWork
+from application.ports.uow_port import Uow
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
@@ -37,11 +37,12 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
         """
         return NSDModel, (NSDModel.id,)
 
-    def save_all(self, items: List[T], *, uow: UnitOfWork) -> None:
+    def save_all(self, items: List[T], *, uow: Uow) -> None:
         """Persist ``NsdDTO`` objects using SQLite upserts.
         Se receber uma sessão externa, participa dela sem dar commit próprio.
         """
         try:
+            sess = uow.session
             model, pk_columns = self.get_model_class()
             flat_items = ListFlattener.flatten(items)
             valid_items = [i for i in flat_items if i is not None]
@@ -56,22 +57,17 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
                 }
                 stmt = stmt.on_conflict_do_update(index_elements=["nsd"], set_=update_dict)
                 sess.execute(stmt)
-            if own_session:
-                sess.commit()
         except Exception as e:
-            if own_session:
-                sess.rollback()
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
-        finally:
-            if own_session:
-                sess.close()
 
     def get_all_pending(
         self,
         company_names: Set[str],
         valid_types: Set[str],
         exclude_nsd: Set[str],
+        *,
+        uow: Uow,
     ) -> List[NsdDTO]:
         """Retorna todos os NSDs que ainda não foram processados, filtrando por
         empresa, tipo e NSD.

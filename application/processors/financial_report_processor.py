@@ -1,5 +1,5 @@
 from application.usecases.statements_transformer import StatementTransformer
-from domain.dtos.raw_statement_dto import StatementRawDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort

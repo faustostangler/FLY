@@ -1,3 +1,3 @@
-from .company_data_scraper import CompanyDataScraper
+from .scraper_company_data import CompanyDataScraper
 
 __all__ = ["CompanyDataScraper"]

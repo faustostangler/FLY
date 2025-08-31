@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .paths import load_paths
+from infrastructure.config.paths import load_paths
 
 # Default log filename
 LOG_FILENAME = "fly_logger.log"

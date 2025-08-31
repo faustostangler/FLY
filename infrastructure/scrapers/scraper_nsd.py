@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 from datetime import datetime
-from typing import  Dict, List, Iterable, Optional
+from typing import  Callable, Dict, List, Iterable, Optional
 
 from bs4 import BeautifulSoup
 
@@ -31,10 +31,11 @@ class NsdScraper(ScraperNsdPort):
         config: ConfigPort,
         logger: LoggerPort,
         
+        nsd_repository: RepositoryNsdPort,
+
         datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         worker_pool: WorkerPoolPort,
-        nsd_repository: RepositoryNsdPort,
         http_client: AffinityHttpClientPort,
     ):
         """Set up configuration, logger, and helper utilities for the
@@ -42,15 +43,22 @@ class NsdScraper(ScraperNsdPort):
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
+
+        self.nsd_repository = nsd_repository
+
         self.datacleaner = datacleaner
         self.worker_pool = worker_pool
         self._metrics_collector = metrics_collector
-        self.nsd_repository = nsd_repository
 
         self.nsd_endpoint = self.config.exchange.nsd_endpoint
         self.http_client = http_client
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
+
+    def fetch_all(self, threshold: int | None = None, skip_codes: List[str] | None = None, save_callback: Callable[[List[NsdDTO]], None] | None = None, **kwargs) -> List[NsdDTO]:
+        self.logger.log("Run Method scraper_nsd.fetch_all() NOT IMPLEMENTED YET - and to be removed", level="info") 
+        return None
+    
 
     def iter_nsd(
         self,
@@ -63,12 +71,15 @@ class NsdScraper(ScraperNsdPort):
     ) -> Iterable[NsdDTO]:
         self.skip_codes = {int(code) for code in (skip_codes or [])}
 
-        start = max(start, max(self.skip_codes, default=0) + 1)
+        # start = max(start, max(self.skip_codes, default=0) + 1)
 
-        max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
-        max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
+        # max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
+        # max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
+        # max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
 
+        start = 34
+        max_nsd_final = 100
+        self.logger.log(f"Streaming NSD from {start} to {max_nsd_final or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
         for code in range(start, max_nsd_final + 1):
             if code in self.skip_codes:
                 continue
@@ -287,7 +298,7 @@ class NsdScraper(ScraperNsdPort):
                 text_of("#lblResponsavelTecnico")
             ),
             "protocol": text_of("#lblProtocolo"),
-            "sent_date": None,
+            "sent_date": sent_date,
             "reason": self.datacleaner.clean_text(
                 text_of("#lblMotivoCancelamentoReapresentacao")
             ),
@@ -313,9 +324,8 @@ class NsdScraper(ScraperNsdPort):
         if nsd_type_version:
             parts = [p.strip() for p in nsd_type_version.split(" - ")]
             if len(parts) >= 2:
-                data["version"] = (
-                    self.datacleaner.clean_text(parts[-1]) if parts[-1] else None
-                )
+                version = self.datacleaner.clean_text(parts[-1]) if parts[-1] else "1"
+                data["version"] = int(''.join(c for c in str(version or 1) if c.isdigit()))
                 data["nsd_type"] = (
                     self.datacleaner.clean_text(parts[0]) if parts[0] else None
                 )

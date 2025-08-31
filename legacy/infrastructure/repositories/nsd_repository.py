@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple
+from typing import List, Sequence, Set, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain import dto
+from application.ports.uow_port import Uow
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import ConfigPort, LoggerPort, RepositoryNsdPort
 from infrastructure.helpers.list_flattener import ListFlattener
@@ -27,7 +27,7 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryN
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[NsdDTO]) -> None:
+    def save_all(self, items: Sequence[NsdDTO]) -> None:
         """Persist ``NsdDTO`` objects using SQLite upserts."""
         session = self.Session()
         try:
@@ -68,7 +68,9 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryN
         company_names: Set[str],
         valid_types: Set[str],
         exclude_nsd: Set[str],
-    ) -> List[NsdDTO]:
+        *,
+        uow: Uow,
+    ) -> Sequence[NsdDTO]:
         """Retorna todos os NSDs que ainda não foram processados, filtrando por
         empresa, tipo e NSD.
 

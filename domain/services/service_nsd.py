@@ -5,10 +5,10 @@ from typing import Optional
 from application.usecases.sync_nsd import SyncNSDUseCase
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import UnitOfWorkFactoryPort
+from application.ports.uow_port import UowFactoryPort
 
 from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos import WorkerTaskDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
@@ -16,7 +16,8 @@ from domain.ports.repository_statements_fetched_port import RepositoryStatementF
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-from domain.polices.nsd_policy_port import NsdPolicyPort
+from domain.polices.nsd_policy import NsdPolicyPort
+
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 
@@ -36,14 +37,14 @@ class NsdService:
         statements_fetched_repository: RepositoryStatementFetchedPort,
 
 
-        company_scraper: ScraperCompanyDataPort,
-        nsd_scraper: ScraperNsdPort,
-        statements_raw_scraper: ScraperStatementRawPort,
+        scraper_company_data: ScraperCompanyDataPort,
+        scraper_nsd: ScraperNsdPort,
+        scraper_statements_raw: ScraperStatementRawPort,
 
         policy: NsdPolicyPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
-        uow_factory: UnitOfWorkFactoryPort,
+        uow_factory: UowFactoryPort,
     ) -> None:
         self.config = config
         self.logger = logger
@@ -53,8 +54,8 @@ class NsdService:
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
 
-        self.nsd_scraper = nsd_scraper
-        self.statements_raw_scraper = statements_raw_scraper
+        self.scraper_nsd = scraper_nsd
+        self.scraper_statements_raw = scraper_statements_raw
 
         self.policy = policy
         self.financial_normalizer = financial_normalizer
@@ -67,7 +68,7 @@ class NsdService:
             logger=logger,
             nsd_repository=nsd_repository,
             company_repository=company_repository,
-            scraper=nsd_scraper,
+            scraper=scraper_nsd,
         )
 
     def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
@@ -76,8 +77,8 @@ class NsdService:
             self._process_one_nsd(nsd)
 
     def _process_one_nsd(self, nsd: NsdDTO) -> None:
-        supported = self.policy.identify_type(nsd)
-        if not supported.supported:
+        nsd_type = self.policy.identify_type(nsd)
+        if not nsd_type.is_statement:
             # caso não suportado: persiste só o NSD e segue a vida
             with self.uow_factory() as uow:
                 self.nsd_repository.save_all([nsd], uow=uow)
@@ -103,7 +104,7 @@ class NsdService:
         
         self.logger.log(f'MISSING IMPLEMENTATION: {task}')
         # Pass to the fetch method.
-        # raw_lines = self.raw_scraper.fetch(task)
+        # raw_lines = self.scraper_statements_raw.fetch(task)
 
         # if action.is_raw():
         #     # commit inclui RAW + NSD, juntos

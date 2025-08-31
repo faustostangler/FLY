@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from .database import DatabaseConfig
-from .domain import DomainConfig
-from .exchange_api import ExchangeApiConfig
-from .fly_settings import FlyConfig
-from .logger import LoggerConfig
-from .paths import Path
-from .repository import RepositoryConfig
-from .scraping import ScrapingConfig
-from .worker_pool import WorkerPoolConfig
+from infrastructure.config.paths import Path
+from infrastructure.config.logger import LoggerConfig
+from infrastructure.config.database import DatabaseConfig
+from infrastructure.config.domain import DomainConfig
+from infrastructure.config.exchange_api import ExchangeApiConfig
+from infrastructure.config.fly_settings import FlyConfig
+from infrastructure.config.repository import RepositoryConfig
+from infrastructure.config.scraping import ScrapingConfig
+from infrastructure.config.worker_pool import WorkerPoolConfig
 
 __all__ = ["DatabaseConfig", "DomainConfig", "ExchangeApiConfig", "FlyConfig", "LoggerConfig", "Path", "RepositoryConfig", "ScrapingConfig", "WorkerPoolConfig"]

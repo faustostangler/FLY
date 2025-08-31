@@ -13,13 +13,13 @@ from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 from domain.ports.datacleaner_port import DataCleanerPort
 from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from infrastructure.scrapers.company_detail_scraper import DetailFetcher
+from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 
 # from infrastructure.scrapers.company_data_processors import (
 #     CompanyDataDetailProcessor,
@@ -27,7 +27,7 @@ from infrastructure.scrapers.company_detail_scraper import DetailFetcher
 #     DetailFetcher,
 #     EntryCleaner,
 # )
-from infrastructure.utils import ByteFormatter
+from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
 # Generic type variable for list/payload helpers

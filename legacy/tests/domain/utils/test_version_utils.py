@@ -1,4 +1,4 @@
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.utils.version_utils import filter_latest_versions
 
 

@@ -4,7 +4,7 @@ from typing import Protocol, Sequence, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     # Evita import circular. Substitua pelos seus DTOs reais.
-    from domain.dtos.raw_statement_dto import StatementRawDTO
+    from domain.dtos.statement_raw_dto import StatementRawDTO
 
 
 @runtime_checkable

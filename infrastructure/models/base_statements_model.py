@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from .base_model import BaseModel
+from infrastructure.models.base_model import BaseModel
 
 
 class BaseStatementModel(BaseModel):

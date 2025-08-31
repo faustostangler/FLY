@@ -87,7 +87,7 @@ class CLIAdapter:
         """Build and execute the company data synchronization flow."""
         mapper = CompanyDataMapper(self.datacleaner)
         company_repo = self.company_repo
-        company_scraper = CompanyDataScraper(
+        scraper_company_data = CompanyDataScraper(
             config=self.config,
             logger=self.logger,
             datacleaner=self.datacleaner,
@@ -100,7 +100,7 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
             repository=company_repo,
-            scraper=company_scraper,
+            scraper=scraper_company_data,
         )
         company_service.sync_companies()
 
@@ -112,7 +112,7 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        nsd_scraper = NsdScraper(
+        scraper_nsd = NsdScraper(
             config=self.config,
             logger=self.logger,
             datacleaner=self.datacleaner,
@@ -126,7 +126,7 @@ class CLIAdapter:
             logger=self.logger,
             repository=nsd_repo,
             company_repo=company_repo,
-            scraper=nsd_scraper,
+            scraper=scraper_nsd,
         )
 
         nsd_service.sync_nsd()
@@ -201,7 +201,7 @@ class CLIAdapter:
         from typing import  Dict, List, Tuple
         from collections import defaultdict
         from domain.dto import NsdDTO
-        from domain.dto.raw_statement_dto import StatementRawDTO
+        from domain.dto.statement_raw_dto import StatementRawDTO
 
         raw_statement_repo = SqlAlchemyStatementRawRepository(
             connection_string=self.config.database.connection_string,

@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.raw_statement_repository import (
     SqlAlchemyStatementRawRepository,

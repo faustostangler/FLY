@@ -5,7 +5,7 @@ from application.usecases.parse_and_classify_statements import (
     ParseAndClassifyStatementsUseCase,
 )
 from domain.dto import NsdDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.ports import RepositoryStatementFetchedPort
 from tests.conftest import DummyConfig, DummyLogger
 

@@ -4,7 +4,7 @@ from typing import Any, ContextManager, Protocol, runtime_checkable
 
 
 @runtime_checkable
-class UnitOfWork(Protocol):
+class Uow(Protocol):
     @property
     def session(self) -> Any:
         ...
@@ -17,8 +17,8 @@ class UnitOfWork(Protocol):
 
 
 @runtime_checkable
-class UnitOfWorkFactoryPort(Protocol):
+class UowFactoryPort(Protocol):
     """Fábrica que retorna um context manager de UoW, ex.: with uow_factory() as uow: ..."""
 
-    def __call__(self) -> ContextManager[UnitOfWork]:
+    def __call__(self) -> ContextManager[Uow]:
         ...

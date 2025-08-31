@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Protocol, runtime_checkable
 
-from domain.dtos.fetched_statement_dto import StatementFetchedDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
 from .repository_base_port import RepositoryBasePort
 

@@ -11,7 +11,7 @@ from typing import (
     runtime_checkable,
 )
 
-from application.ports.uow_port import UnitOfWork
+from application.ports.uow_port import Uow
 
 # Type variable for the entity/DTO stored in the repository
 T = TypeVar("T")
@@ -51,7 +51,7 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         # Must be implemented by subclass to define the ORM mapping
         raise NotImplementedError
 
-    def save_all(self, items: List[T], *, uow: UnitOfWork) -> None: ...
+    def save_all(self, items: List[T], *, uow: Uow) -> None: ...
 
     # def get_all(self) -> List[T]: ...
 

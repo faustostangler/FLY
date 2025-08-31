@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .database import DatabaseConfig, load_database_config
-from .domain import DomainConfig, load_domain_config
-from .exchange_api import ExchangeApiConfig, load_exchange_api_config
-from .fly_settings import FlyConfig, load_fly_config
-from .logger import LoggerConfig, load_logger_config
-from .paths import PathConfig, load_paths
-from .repository import RepositoryConfig, load_repository_config
-from .scraping import ScrapingConfig, load_scraping_config
-from .worker_pool import WorkerPoolConfig, load_worker_pool_config
+from infrastructure.config.database import DatabaseConfig, load_database_config
+from infrastructure.config.domain import DomainConfig, load_domain_config
+from infrastructure.config.exchange_api import ExchangeApiConfig, load_exchange_api_config
+from infrastructure.config.fly_settings import FlyConfig, load_fly_config
+from infrastructure.config.logger import LoggerConfig, load_logger_config
+from infrastructure.config.paths import PathConfig, load_paths
+from infrastructure.config.repository import RepositoryConfig, load_repository_config
+from infrastructure.config.scraping import ScrapingConfig, load_scraping_config
+from infrastructure.config.worker_pool import WorkerPoolConfig, load_worker_pool_config
 
 
 @dataclass(frozen=True)

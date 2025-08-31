@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import Optional
 
 from application.mappers.company_data_mapper import CompanyDataMapper
-from domain.dtos.company_data_dto import (
-    CompanyDataDetailDTO,
-    CompanyDataDTO,
-    CompanyDataListingDTO,
-)
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.company_data_dto import CompanyDataDetailDTO
+from domain.dtos.company_data_dto import CompanyDataListingDTO
 
 # from domain.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort

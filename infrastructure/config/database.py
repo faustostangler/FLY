@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
-from .paths import load_paths
+from infrastructure.config.paths import load_paths
 
 # Default SQLite database filename
 DB_FILENAME = "fly.db"

@@ -10,8 +10,8 @@ from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
 from domain.dto import NsdDTO
-from domain.dto.fetched_statement_dto import StatementFetchedDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_fetched_dto import StatementFetchedDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from tests.conftest import DummyLogger
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Protocol, Set, runtime_checkable
 
 from domain.dtos import NsdDTO
+from application.ports.uow_port import Uow
 
 from .repository_base_port import RepositoryBasePort
 
@@ -24,6 +25,8 @@ class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int], Protocol):
         company_names: Set[str],
         valid_types: Set[str],
         exclude_nsd: Set[str],
+        *,
+        uow: Uow,
     ) -> List[NsdDTO]:
         """Retrieve all pending NSD entries matching the given criteria.
 

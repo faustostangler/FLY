@@ -7,8 +7,8 @@ from .company_data_dto import (
     CompanyDataListingDTO,
 )
 from .nsd_dto import NsdDTO
-from .fetched_statement_dto import StatementFetchedDTO
-from .raw_statement_dto import StatementRawDTO
+from .statement_fetched_dto import StatementFetchedDTO
+from .statement_raw_dto import StatementRawDTO
 from .worker_task_dto import WorkerTaskDTO
 
 __all__ = ["CodeDTO", "CompanyDataDetailDTO", "CompanyDataDTO", "CompanyDataListingDTO",

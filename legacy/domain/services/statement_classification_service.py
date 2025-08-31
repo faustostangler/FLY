@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Protocol, Tuple
 
-from domain.dto.fetched_statement_dto import StatementFetchedDTO
+from domain.dto.statement_fetched_dto import StatementFetchedDTO
 from domain.utils.criteria_node import CriteriaNode
 
 

@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup, Tag
 
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
 from domain.ports.scraper_ports import StatementsRawcraperPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin

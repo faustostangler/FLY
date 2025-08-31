@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Mapping, Optional, Protocol, runtime_checkable
 
-# Supported log levels for application logging
+# NsdType log levels for application logging
 LogLevel = Literal["debug", "info", "warning", "error"]
 
 

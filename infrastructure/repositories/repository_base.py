@@ -11,9 +11,9 @@ from typing import (
     Union,
 )
 
-from application.ports.uow_port import UnitOfWork
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow
 from domain.ports.repository_base_port import RepositoryBasePort
 from infrastructure.adapters.engine_setup import EngineSetup
 
@@ -47,7 +47,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[T], *, uow: UnitOfWork) -> None:
+    def save_all(self, items: List[T], *, uow: Uow) -> None:
         """Persist a list (possibly nested) of DTOs in a single transaction.
 
         Merges each DTO into the session (upsert semantics via SQLAlchemy

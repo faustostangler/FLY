@@ -3,6 +3,10 @@ from __future__ import annotations
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+
+from domain.polices.nsd_policy import NsdPolicy
+from domain.services.financial_normalizer import FinancialNormalizer
+
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
@@ -11,10 +15,12 @@ from infrastructure.repositories.repository_company_data import RepositoryCompan
 from infrastructure.repositories.repository_nsd import RepositoryNsd
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_statements_fetched import StatementFetchedRepository
-from infrastructure.scrapers.company_data_scraper import CompanyDataScraper
-from infrastructure.scrapers.nsd_scraper import NsdScraper
+from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
+from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.utils.metrics_collector import MetricsCollector
 from infrastructure.utils.worker_pool import WorkerPool
+from infrastructure.uow.uow import UowFactory
+
 from presentation.controllers.cli import Cli
 
 
@@ -52,7 +58,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     http_client = RequestsAffinityHttpClient()
 
     # Assemble the scraper with all required cross-cutting dependencies
-    company_scraper = CompanyDataScraper(
+    scraper_company_data = CompanyDataScraper(
         config=config,
         logger=logger,
         datacleaner=datacleaner,
@@ -62,25 +68,69 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         http_client=http_client,
     )
 
-    nsd_scraper = NsdScraper(
+    scraper_nsd = NsdScraper(
         config=config,
         logger=logger,
+
+        nsd_repository=nsd_repository,
+
         datacleaner=datacleaner,
         metrics_collector=metrics_collector,
         worker_pool=worker_pool,
-        nsd_repository=nsd_repository,
         http_client=http_client,
     )
 
+    logger.log("Load Class ScraperStatementRaw NOT YET IMPLEMENTED", level="info")
+    # scraper_statements_raw = ScraperStatementRaw(
+    #     config=config,
+    #     logger=logger,
+
+    #     statements_raw_repository=raw_statements_repository,
+
+    #     datacleaner=datacleaner,
+    #     metrics_collector=metrics_collector,
+    #     worker_pool=worker_pool,
+    #     http_client=http_client,
+    # )
+
+
+
+    # Policy
+    policy = NsdPolicy(
+        allowed_types=tuple(config.domain.statements_types),
+        recency_year=None,  # se quiser, leia também de config (ex.: config.domain.recency_year)
+    )
+
+    # Unit of Work
+    uow_factory = UowFactory(session_factory=nsd_repository.Session)
+
+    # Financial Normalizer
+    financial_normalizer = FinancialNormalizer()
+
+    # Ratios
+    class _RatiosPassthrough:
+        def calculate(self, normalized):
+            return list(normalized)
+    ratios_calculator = _RatiosPassthrough()
+
     # Return the CLI controller with its dependencies injected
-    return Cli(
+    cli = Cli(
         config=config,
         logger=logger,
+
         company_repository=company_repository,
         nsd_repository=nsd_repository,
         statements_raw_repository=raw_statements_repository,
         statements_fetched_repository=fetched_statements_repository,
 
-        company_scraper=company_scraper,
-        nsd_scraper=nsd_scraper,
+        scraper_company_data=scraper_company_data,
+        scraper_nsd=scraper_nsd,
+        scraper_statements_raw=scraper_nsd,
+
+        policy=policy,
+        uow_factory=uow_factory,
+        financial_normalizer=financial_normalizer,
+        ratios_calculator=ratios_calculator,
     )
+
+    return cli

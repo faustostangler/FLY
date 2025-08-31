@@ -5,7 +5,7 @@ from .company_data_processors import (
     DetailFetcher,
     EntryCleaner,
 )
-from .nsd_scraper import NsdScraper
+from .scraper_nsd import NsdScraper
 from .requests_raw_statement_scraper import (
     StatementsRawcraper,
     RequestsStatementsRawcraper,

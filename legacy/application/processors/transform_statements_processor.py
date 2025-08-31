@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List
 
 from application.usecases.transform_statements import TransformStatementsUseCase
-from domain.dto.fetched_statement_dto import StatementFetchedDTO
+from domain.dto.statement_fetched_dto import StatementFetchedDTO
 from domain.ports import ConfigPort, LoggerPort, RepositoryStatementFetchedPort
 from domain.services import StatementClassificationService
 from infrastructure.transformers import (

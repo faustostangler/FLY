@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Tuple, TypeAlias
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto import NsdDTO
-from domain.dto.raw_statement_dto import StatementRawDTO
+from domain.dto.statement_raw_dto import StatementRawDTO
 from domain.ports import (
     RepositoryCompanyDataPort,
     ConfigPort,
