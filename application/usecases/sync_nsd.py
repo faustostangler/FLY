@@ -28,8 +28,6 @@ class SyncNSDUseCase:
         for dto in self.scraper.iter_nsd(start=start, skip_codes=existing, max_nsd=max_nsd):
             yield dto
 
-
-
     # def synchronize_nsd(self) -> None:
     #     """Start the NSD synchronization workflow."""
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from marshal import version
 from typing import Optional
 
 
@@ -31,7 +32,7 @@ class NsdDTO:
     nsd: int
     company_name: str
     quarter: Optional[datetime]
-    version: Optional[str]
+    version: int
     nsd_type: Optional[str]
     dri: Optional[str]
     auditor: Optional[str]
@@ -69,7 +70,7 @@ class NsdDTO:
             nsd=int(nsd_raw),
             company_name=str(raw.get("company_name") or ""),
             quarter=raw.get("quarter"),
-            version=raw.get("version"),
+            version=int(''.join(c for c in str(raw.get("version") or 1) if c.isdigit())), # Normalized version
             nsd_type=raw.get("nsd_type"),
             dri=raw.get("dri"),
             auditor=raw.get("auditor"),

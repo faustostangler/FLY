@@ -12,7 +12,7 @@ from application.ports.logger_port import LoggerPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.fetched_statements_model import StatementFetchedModel
-from infrastructure.repositories.base_repository import RepositoryBase
+from infrastructure.repositories.repository_base import RepositoryBase
 
 
 class StatementFetchedRepository(
@@ -28,6 +28,14 @@ class StatementFetchedRepository(
         super().__init__(config, logger)
         self.config = config
         self.logger = logger
+
+    def get_model_class(self) -> Tuple[type, tuple]:
+        """Return the SQLAlchemy ORM model class managed by this repository.
+
+        Returns:
+            type: The model class associated with this repository.
+        """
+        return StatementFetchedModel, (StatementFetchedModel.id,)
 
     def save_all(self, items: List[StatementFetchedDTO]) -> None:
         """Persist fetched statements using SQLite upserts."""
@@ -64,14 +72,6 @@ class StatementFetchedRepository(
             raise
         finally:
             session.close()
-
-    def get_model_class(self) -> Tuple[type, tuple]:
-        """Return the SQLAlchemy ORM model class managed by this repository.
-
-        Returns:
-            type: The model class associated with this repository.
-        """
-        return StatementFetchedModel, (StatementFetchedModel.id,)
 
     def get_by_company_name(self, company_name: str) -> list[StatementFetchedDTO]:
         """Return fetched statement rows for the given company."""

@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 
 from domain.dtos.nsd_dto import NsdDTO
+from application.ports.uow_port import UnitOfWork
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
-from infrastructure.repositories.base_repository import RepositoryBase
+from infrastructure.repositories.repository_base import RepositoryBase
+
+T = TypeVar("T")
 
 
 class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
@@ -26,9 +29,18 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[NsdDTO]) -> None:
-        """Persist ``NsdDTO`` objects using SQLite upserts."""
-        session = self.Session()
+    def get_model_class(self) -> Tuple[type, tuple]:
+        """Return the SQLAlchemy ORM model class managed by this repository.
+
+        Returns:
+            type: The model class associated with this repository.
+        """
+        return NSDModel, (NSDModel.id,)
+
+    def save_all(self, items: List[T], *, uow: UnitOfWork) -> None:
+        """Persist ``NsdDTO`` objects using SQLite upserts.
+        Se receber uma sessão externa, participa dela sem dar commit próprio.
+        """
         try:
             model, pk_columns = self.get_model_class()
             flat_items = ListFlattener.flatten(items)
@@ -42,25 +54,18 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
                     for c in model.__table__.columns
                     if c.name != "id"
                 }
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["nsd"], set_=update_dict
-                )
-                session.execute(stmt)
-            session.commit()
+                stmt = stmt.on_conflict_do_update(index_elements=["nsd"], set_=update_dict)
+                sess.execute(stmt)
+            if own_session:
+                sess.commit()
         except Exception as e:
-            session.rollback()
+            if own_session:
+                sess.rollback()
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
         finally:
-            session.close()
-
-    def get_model_class(self) -> Tuple[type, tuple]:
-        """Return the SQLAlchemy ORM model class managed by this repository.
-
-        Returns:
-            type: The model class associated with this repository.
-        """
-        return NSDModel, (NSDModel.id,)
+            if own_session:
+                sess.close()
 
     def get_all_pending(
         self,

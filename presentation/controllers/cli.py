@@ -8,8 +8,8 @@ from domain.ports.repository_statements_raw_port import RepositoryStatementsRawP
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
-from domain.ports.scraper_raw_statements_port import ScraperStatementRawPort
-from domain.ports.scraper_fetched_statements_port import ScraperStatementFetchedPort
+from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+# from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
@@ -45,7 +45,8 @@ class Cli:
         statements_fetched_repository: RepositoryStatementFetchedPort, 
 
         company_scraper: ScraperCompanyDataPort,
-        nsd_scraper: ScraperNsdPort,        
+        nsd_scraper: ScraperNsdPort,      
+        statements_raw_scraper: ScraperStatementRawPort,
 
         policy: NsdPolicyPort,
         uow_factory: UnitOfWorkFactoryPort,
@@ -64,11 +65,12 @@ class Cli:
 
         self.company_scraper = company_scraper
         self.nsd_scraper = nsd_scraper
+        self.statements_raw_scraper = statements_raw_scraper
 
         self.policy = policy
         self.uow_factory = uow_factory
         self.financial_normalizer = financial_normalizer
-        self.ratios_calc = ratios_calc
+        self.ratios_calculator = ratios_calc
         self.year_view_port = year_view_port
 
         self.byte_formatter = ByteFormatter()
@@ -110,20 +112,20 @@ class Cli:
         nsd_service = NsdService(
             config=self.config,
             logger=self.logger,
-            nsd_repository=self.nsd_repository,
+
             company_repository=self.company_repository,
-            nsd_scraper=self.nsd_scraper,
+            nsd_repository=self.nsd_repository,
+            statements_raw_repository=self.statements_raw_repository,
+            statements_fetched_repository=self.statements_fetched_repository,   
+
             company_scraper=self.company_scraper,
+            nsd_scraper=self.nsd_scraper,
+            statements_raw_scraper=self.statements_raw_scraper,
 
             policy=self.policy,                  # porta para política composta
-            statements_raw_repository=self.statements_raw_repository,        # portas para persistência
-            statements_fetched_repository=self.statements_fetched_repository,
-
-            uow_factory=self.uow_factory,        # fábrica de UoW (SQLAlchemy + SQLite)
             financial_normalizer=self.financial_normalizer, # serviço de domínio puro
-            ratios_calculator=self.ratios_calc,   # serviço de domínio puro
-            year_view_port=self.year_view_port,   # porta: buscar RAW do ano por companhia
-
+            ratios_calculator=self.ratios_calculator,   # serviço de domínio puro
+            uow_factory=self.uow_factory,        # fábrica de UoW (SQLAlchemy + SQLite)
             )
 
         # Run the synchronization step

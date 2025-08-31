@@ -13,7 +13,7 @@ from .repository_statements_fetched_port import RepositoryStatementFetchedPort
 from .repository_statements_raw_port import RepositoryStatementsRawPort
 from .scraper_base_port import ScraperBasePort
 from .scraper_company_data_port import ScraperCompanyDataPort
-from .scraper_raw_statements_port import ScraperStatementRawPort
+from .scraper_statements_raw_port import ScraperStatementRawPort
 from ...application.ports.worker_pool_port import WorkerPoolPort
 
 __all__ = ["CliPort","RepositoryCompanyDataPort", "ConfigPort", "DataCleanerPort", 

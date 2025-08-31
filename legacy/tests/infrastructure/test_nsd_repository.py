@@ -2,7 +2,7 @@ from sqlalchemy import text
 
 from domain.dto.nsd_dto import NsdDTO
 from infrastructure.models.base_model import BaseModel
-from infrastructure.repositories.nsd_repository import SqlAlchemyNsdRepository
+from infrastructure.repositories.repository_nsd import SqlAlchemyNsdRepository
 from tests.conftest import DummyConfig, DummyLogger
 
 

@@ -9,7 +9,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
-from infrastructure.repositories.base_repository import RepositoryBase
+from infrastructure.repositories.repository_base import RepositoryBase
 
 # from infrastructure.uils.list_flattener import ListFlattener
 
@@ -51,15 +51,14 @@ class RepositoryCompanyData(
         self.logger = logger
 
     # Provide a canonical factory the rest of infra can depend on.
-    @property
-    def session_factory(self):
-        """Return the configured SQLAlchemy session factory.
+    def get_model_class(self) -> Tuple[type, tuple]:
+        """Return the ORM model class and primary key tuple used by this repository.
 
         Returns:
-            Any: The `sessionmaker` instance created by the base repository.
+            Tuple[type, tuple]: A tuple of (model class, primary key columns).
         """
-        # `self.Session` is provided by `SqlAlchemyEngineMixin` in the base class
-        return self.Session
+        # Provide the bound model and its primary key columns
+        return CompanyDataModel, (CompanyDataModel.id,)
 
     def save_all(self, items: List[CompanyDataDTO]) -> None:
         """Upsert all provided `CompanyDataDTO` items into SQLite.
@@ -132,15 +131,6 @@ class RepositoryCompanyData(
 
         # Intentionally disabled noisy lifecycle log; re-enable if needed.
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
-
-    def get_model_class(self) -> Tuple[type, tuple]:
-        """Return the ORM model class and primary key tuple used by this repository.
-
-        Returns:
-            Tuple[type, tuple]: A tuple of (model class, primary key columns).
-        """
-        # Provide the bound model and its primary key columns
-        return CompanyDataModel, (CompanyDataModel.id,)
 
     def get_cvm_by_name(self, company_name: str) -> str:
         """Look up the CVM code for a company by its name.

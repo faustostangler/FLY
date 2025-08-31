@@ -30,6 +30,7 @@ class NsdScraper(ScraperNsdPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
+        
         datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         worker_pool: WorkerPoolPort,

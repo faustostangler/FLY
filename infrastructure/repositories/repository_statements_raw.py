@@ -12,7 +12,7 @@ from application.ports.logger_port import LoggerPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.raw_statements_model import StatementRawModel
-from infrastructure.repositories.base_repository import RepositoryBase
+from infrastructure.repositories.repository_base import RepositoryBase
 
 
 class StatementRawRepository(
@@ -28,6 +28,14 @@ class StatementRawRepository(
         super().__init__(config, logger)
         self.config = config
         self.logger = logger
+
+    def get_model_class(self) -> Tuple[type, tuple]:
+        """Return the SQLAlchemy ORM model class managed by this repository.
+
+        Returns:
+            type: The model class associated with this repository.
+        """
+        return StatementRawModel, (StatementRawModel.id,)
 
     def save_all(self, items: List[StatementRawDTO]) -> None:
         """Persist raw statements using SQLite upserts."""
@@ -64,14 +72,6 @@ class StatementRawRepository(
             raise
         finally:
             session.close()
-
-    def get_model_class(self) -> Tuple[type, tuple]:
-        """Return the SQLAlchemy ORM model class managed by this repository.
-
-        Returns:
-            type: The model class associated with this repository.
-        """
-        return StatementRawModel, (StatementRawModel.id,)
 
     def get_by_company_name(self, company_name: str) -> list[StatementRawDTO]:
         """Return raw statement rows for the given company."""
