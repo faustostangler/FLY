@@ -67,6 +67,7 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         self,
         column_names: Union[str, List[str]],
         *,
+        uow: Uow, 
         batch_size: int | None = None,
         include_nulls: bool = False,
     ) -> Iterator[Tuple]: ...

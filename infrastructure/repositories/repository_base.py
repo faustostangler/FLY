@@ -10,6 +10,7 @@ from typing import (
     TypeVar,
     Union,
 )
+from sqlalchemy.engine import Row
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -335,6 +336,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         self,
         column_names: Union[str, List[str]],
         *,
+        uow: Uow, 
         batch_size: int | None = None,
         include_nulls: bool = False,
     ) -> Iterator[Tuple]:
@@ -358,33 +360,50 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
 
         # Resolve model; PK columns are not needed here
         model, _ = self.get_model_class()
+        session = uow.session
 
         # Normalize the column name(s) to a list
         if isinstance(column_names, str):
             column_names = [column_names]
-
+        
         # Resolve ORM columns from names
         columns = [getattr(model, col) for col in column_names]
 
-        with self.Session() as session:
-            # Start with a distinct, ordered query over the target columns
-            query = session.query(*columns).distinct().order_by(*columns)
+        q = session.query(*columns)
+        if not include_nulls:
+            for c in columns:
+                q = q.filter(c.isnot(None))
 
-            # Optionally filter out NULLs column-wise
-            if not include_nulls:
-                for col in columns:
-                    query = query.filter(col.isnot(None))
+        def yield_rows(rows):
+            if len(columns) == 1:
+                for v in rows:
+                    # SQLAlchemy pode devolver escalar ou (v,) dependendo da versão
+                    if isinstance(v, Row):
+                        yield (v[0],)
+                    elif isinstance(v, tuple):
+                        yield v
+                    else:
+                        try:
+                            yield (v[0],)
+                        except Exception as e:
+                            yield (v,)
+            else:
+                for r in rows:
+                    yield tuple(r) if isinstance(r, tuple) else (r,)
 
-            # Stream results in pages to limit memory usage
-            query = (
-                query.yield_per(size)
-                .execution_options(stream_results=True)
-                .enable_eagerloads(False)
-            )
+        if size and size > 0:
+            offset = 0
+            while True:
+                chunk = q.offset(offset).limit(size).all()
+                if not chunk:
+                    break
+                yield from yield_rows(chunk)
+                offset += size
+            return
 
-            # Yield rows as plain tuples for lightweight iteration
-            for row in query:
-                yield tuple(row)
+        rows = q.all()
+        yield from yield_rows(rows)
+
 
     # def get_existing_by_columns(
     #     self, column_names: Union[str, List[str]]

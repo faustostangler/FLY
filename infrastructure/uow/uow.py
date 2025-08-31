@@ -14,27 +14,33 @@ class UowFactory(UowFactoryPort):
         uow = _SqlAlchemyUoW(session)
         try:
             yield uow
-        except Exception:
+        except Exception as e:
             uow.rollback()
             raise
         finally:
+            if session.in_transaction():
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
             session.close()
 
 class _SqlAlchemyUoW(Uow):
     def __init__(self, session: Session) -> None:
         self._session = session
-        self._txn = session.begin()
 
     @property
     def session(self) -> Session:
         return self._session
 
     def commit(self) -> None:
-        self._txn.commit()
+        if self._session.in_transaction():
+            self._session.commit()
 
     def rollback(self) -> None:
-        try:
-            self._txn.rollback()
-        except Exception:
-            pass
+        if self._session.in_transaction():
+            try:
+                self._session.rollback()
+            except Exception:
+                pass
 

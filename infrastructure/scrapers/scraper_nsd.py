@@ -71,17 +71,18 @@ class NsdScraper(ScraperNsdPort):
     ) -> Iterable[NsdDTO]:
         self.skip_codes = {int(code) for code in (skip_codes or [])}
 
-        # start = max(start, max(self.skip_codes, default=0) + 1)
+        start = max(start, max(self.skip_codes, default=0) + 1)
 
-        # max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
-        # max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        # max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
+        max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
+        max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
+        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
 
-        start = 34
-        max_nsd_final = 100
+        # start = 34
+        # max_nsd_final = 100
         self.logger.log(f"Streaming NSD from {start} to {max_nsd_final or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
         for code in range(start, max_nsd_final + 1):
             if code in self.skip_codes:
+                self.logger.log(f"Processed NSD: {code} Done", level="info")
                 continue
             url = self.nsd_endpoint.format(nsd=code)
             try:
@@ -89,6 +90,7 @@ class NsdScraper(ScraperNsdPort):
                     body = self.http_client.fetch_with(session, url, headers=session.headers)
                 parsed = self._parse_html(code, body.decode("utf-8"))
                 if not parsed:
+                    self.logger.log(f"Processed NSD: {code} Empty", level="info")
                     continue
 
                 dto = NsdDTO.from_dict(parsed)
@@ -98,7 +100,7 @@ class NsdScraper(ScraperNsdPort):
 
                 # aqui não há persistência nem batch; é só streaming
             except Exception as e:
-                self.logger.log(f"Failed to fetch NSD {code}: {e}", level="warning")
+                self.logger.log(f"Failed to fetch NSD: {code} {e}", level="warning")
                 continue
 
     # def fetch_all(

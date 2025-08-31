@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Iterator, Protocol, runtime_checkable
 
 from domain.dtos import CompanyDataDTO
 from domain.ports import RepositoryBasePort
+from application.ports.uow_port import Uow
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.ports.repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable
@@ -19,8 +22,8 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
         for CRUD operations on CompanyData entities.
     """
 
-    def get_cvm_by_name(self, company_name: str) -> str:
-        """Retrieve the CVM code for a company by its name.
+    def get_cvm_by_name(self, company_name: str, *, uow: Uow) -> str | None:
+            """Retrieve the CVM code for a company by its name.
 
         Args:
             company_name (str): The official company name.
@@ -28,4 +31,9 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
         Returns:
             str: The CVM code associated with the given company.
         """
-        ...
+
+    # utilitário para “garantir companhia” em lote
+    def iter_existing_by_names(self, names: set[str], *, uow: Uow) -> Iterator[str]: ...
+
+    # já herdado de RepositoryBasePort: save_all(..., uow)
+

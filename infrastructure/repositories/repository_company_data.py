@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
@@ -10,6 +10,7 @@ from application.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.repository_base import RepositoryBase
+from application.ports.uow_port import Uow
 
 # from infrastructure.uils.list_flattener import ListFlattener
 
@@ -60,7 +61,7 @@ class RepositoryCompanyData(
         # Provide the bound model and its primary key columns
         return CompanyDataModel, (CompanyDataModel.id,)
 
-    def save_all(self, items: List[CompanyDataDTO]) -> None:
+    def save_all(self, items: List[CompanyDataDTO], *, uow: Uow) -> None:
         """Upsert all provided `CompanyDataDTO` items into SQLite.
 
         Performs batched upserts using `INSERT ... ON CONFLICT DO UPDATE` keyed on
@@ -79,60 +80,50 @@ class RepositoryCompanyData(
               is enabled or provide an equivalent flattener.
         """
         # Create a short-lived session for this unit of work
-        session = self.Session()
-        try:
-            # Resolve ORM model and primary key columns
-            model, pk_columns = self.get_model_class()
+        session = uow.session
 
-            # Normalize potentially nested inputs into a flat list
-            flat_items = items # ListFlattener.flatten(items)
+        # Resolve ORM model and primary key columns
+        model, pk_columns = self.get_model_class()
 
-            # Filter out `None` values to avoid mapping errors
-            valid_items = [i for i in flat_items if i is not None]
+        # Normalize potentially nested inputs into a flat list
+        flat_items = items # ListFlattener.flatten(items)
 
-            # Upsert each DTO using a deterministic conflict target
-            for dto in valid_items:
-                # Convert DTO into ORM instance
-                obj = model.from_dto(dto)
+        # Filter out `None` values to avoid mapping errors
+        valid_items = [i for i in flat_items if i is not None]
 
-                # Build a plain dict for SQLAlchemy Core insert
-                data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
+        # Upsert each DTO using a deterministic conflict target
+        for dto in valid_items:
+            # Convert DTO into ORM instance
+            obj = model.from_dto(dto)
 
-                # Prepare an INSERT statement with all fields
-                stmt = insert(model).values(**data)
+            # Build a plain dict for SQLAlchemy Core insert
+            data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
 
-                # Define update payload excluding the PK
-                update_dict = {
-                    c.name: getattr(stmt.excluded, c.name)
-                    for c in model.__table__.columns
-                    if c.name != "id"
-                }
+            # Prepare an INSERT statement with all fields
+            stmt = insert(model).values(**data)
 
-                # Apply ON CONFLICT DO UPDATE on a unique business key
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["company_name"], set_=update_dict
-                )
+            # Define update payload excluding the PK
+            update_dict = {
+                c.name: getattr(stmt.excluded, c.name)
+                for c in model.__table__.columns
+                if c.name != "id"
+            }
 
-                # Execute the upsert operation
-                session.execute(stmt)
+            # Apply ON CONFLICT DO UPDATE on a unique business key
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["company_name"], set_=update_dict
+            )
 
-            # Commit the transaction once after processing all items
-            session.commit()
-        except Exception as e:
-            # Roll back the transaction on any failure to maintain atomicity
-            session.rollback()
+            # Execute the upsert operation
+            session.execute(stmt)
 
-            # Log the error at debug level with contextual information
-            self.logger.log(f"Erro ao salvar CompanyDataDTO: {e}", level="debug")
-            raise
-        finally:
-            # Ensure session resources are always released
-            session.close()
+        # Commit the transaction once after processing all items
+        session.commit()
 
         # Intentionally disabled noisy lifecycle log; re-enable if needed.
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
-    def get_cvm_by_name(self, company_name: str) -> str:
+    def get_cvm_by_name(self, company_name: str, *, uow: Uow) -> Optional[str]:
         """Look up the CVM code for a company by its name.
 
         Args:
@@ -145,19 +136,13 @@ class RepositoryCompanyData(
             ValueError: If the company name is not found.
         """
         # Create a short-lived session for this query
-        session = self.Session()
-        try:
-            # Query only the needed column for efficiency
-            row = (
-                session.query(CompanyDataModel.cvm_code)
-                .filter(CompanyDataModel.company_name == company_name)
-                .one_or_none()
-            )
+        session = uow.session
 
-            # Validate presence and return the scalar value
-            if row is None:
-                raise ValueError(f"Empresa não encontrada: {company_name}")
-            return row[0]
-        finally:
-            # Ensure session resources are always released
-            session.close()
+        # Query only the needed column for efficiency
+        row = (
+            session.query(CompanyDataModel.cvm_code)
+            .filter(CompanyDataModel.company_name == company_name)
+            .one_or_none()
+        )
+
+        return row[0] if row else None

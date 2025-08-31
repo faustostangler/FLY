@@ -6,7 +6,10 @@ from application.usecases.sync_nsd import SyncNSDUseCase
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
+from application.ports.uow_port import Uow
+from infrastructure.utils.id_generator import IdGenerator
 
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
@@ -36,7 +39,6 @@ class NsdService:
         statements_raw_repository: RepositoryStatementsRawPort,
         statements_fetched_repository: RepositoryStatementFetchedPort,
 
-
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
@@ -62,6 +64,8 @@ class NsdService:
         self.ratios_calculator = ratios_calculator
         self.uow_factory = uow_factory
 
+        self.id_generator = IdGenerator(config=config)
+
         # stream incremental de NSDs, sem persistir nada aqui
         self.sync_nsd_usecase = SyncNSDUseCase(
             config=config,
@@ -69,6 +73,7 @@ class NsdService:
             nsd_repository=nsd_repository,
             company_repository=company_repository,
             scraper=scraper_nsd,
+            uow_factory=uow_factory,
         )
 
     def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
@@ -81,8 +86,10 @@ class NsdService:
         if not nsd_type.is_statement:
             # caso não suportado: persiste só o NSD e segue a vida
             with self.uow_factory() as uow:
+                self._ensure_company_exists(nsd.company_name, uow=uow)
                 self.nsd_repository.save_all([nsd], uow=uow)
                 uow.commit()
+                self.logger.log(f"Processed NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} {nsd.nsd_type} {nsd.company_name}", level="info")
             return
 
         q = self.policy.normalize_quarter(nsd)
@@ -129,8 +136,22 @@ class NsdService:
         #     self.nsd_repository.upsert(nsd, uow)
         #     uow.commit()
 
-    def _company_for(self, nsd: NsdDTO) -> str:
-        return self.company_repository.get_id_by_name(nsd.company_name)
+    def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> None:
+        if not company_name:
+            return
+        cvm = self.company_repository.get_cvm_by_name(company_name, uow=uow)
+        if cvm:
+            return
+        dto = CompanyDataDTO(
+            cvm_code=self.id_generator.create_id(size=6),
+            company_name=company_name,
+        )
+        self.company_repository.save_all([dto], uow=uow)
+        self.logger.log(f"Created missing company: {company_name}", level="info")
+
+    def _company_for(self, nsd: NsdDTO, *, uow: Uow) -> Optional[str]:
+        company = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
+        return company
 
     def _hash_run(self, *parts) -> str:
         import hashlib, json

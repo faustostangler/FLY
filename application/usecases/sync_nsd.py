@@ -8,6 +8,7 @@ from application.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
+from application.ports.uow_port import UowFactoryPort, Uow
 
 class SyncNSDUseCase:
     def __init__(
@@ -17,15 +18,19 @@ class SyncNSDUseCase:
         nsd_repository: RepositoryNsdPort,
         company_repository: RepositoryCompanyDataPort,
         scraper: ScraperNsdPort,
+        uow_factory: UowFactoryPort,
     ) -> None:
         self.config = config
         self.logger = logger
         self.nsd_repository = nsd_repository
         self.company_repository = company_repository
         self.scraper = scraper
+        self.uow_factory = uow_factory
 
     def stream_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[NsdDTO]:
-        existing = [code for (code,) in self.nsd_repository.iter_existing_by_columns("nsd")]
+        with self.uow_factory() as uow:
+            existing = [code for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
+            # leitura apenas; sem commit explícito
         for dto in self.scraper.iter_nsd(start=start, skip_codes=existing, max_nsd=max_nsd):
             yield dto
 

@@ -42,8 +42,9 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
         Se receber uma sessão externa, participa dela sem dar commit próprio.
         """
         try:
-            sess = uow.session
+            session = uow.session
             model, pk_columns = self.get_model_class()
+
             flat_items = ListFlattener.flatten(items)
             valid_items = [i for i in flat_items if i is not None]
             for dto in valid_items:
@@ -56,7 +57,7 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
                     if c.name != "id"
                 }
                 stmt = stmt.on_conflict_do_update(index_elements=["nsd"], set_=update_dict)
-                sess.execute(stmt)
+                session.execute(stmt)
         except Exception as e:
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
