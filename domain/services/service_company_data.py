@@ -1,3 +1,4 @@
+from typing import Any
 from application.usecases import SyncCompanyDataUseCase
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from application.ports.config_port import ConfigPort
@@ -37,11 +38,14 @@ class CompanyDataService:
             max_workers=self.config.worker_pool.max_workers,
         )
 
-    def sync_companies(self) -> SyncResultsDTO:
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        self.run()
+
+    def run(self) -> SyncResultsDTO:
         """Trigger company synchronization workflow.
 
         Returns:
             Any: The result of the synchronization use case execution.
         """
         # Delegate execution to the underlying use case
-        return self.sync_companies_usecase.synchronize_companies()
+        return self.sync_companies_usecase()

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
@@ -7,6 +7,7 @@ from application.ports.logger_port import LoggerPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.utils.list_flatenner import ListFlattener
+from application.ports.uow_port import UowFactoryPort, Uow
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -20,6 +21,8 @@ class SyncCompanyDataUseCase:
         logger: LoggerPort,
         repository: RepositoryCompanyDataPort,
         scraper: ScraperCompanyDataPort,
+        uow_factory: UowFactoryPort,
+
         max_workers: int = 1,
     ):
         """Initialize the use case with its dependencies.
@@ -36,9 +39,14 @@ class SyncCompanyDataUseCase:
         self.logger = logger
         self.repository = repository
         self.scraper = scraper
+        self.uow_factory = uow_factory
+
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
-    def synchronize_companies(self) -> SyncResultsDTO:
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.run()
+
+    def run(self) -> SyncResultsDTO:
         """Run the full company synchronization pipeline.
 
         Steps:
@@ -51,17 +59,13 @@ class SyncCompanyDataUseCase:
             including counts and network usage metrics.
         """
         # Collect company identifiers already stored in the repository
-        skip_codes = [
-            code for (code,) in self.repository.iter_existing_by_columns("company_name")
-        ]
+        with self.uow_factory() as uow:
+            skip_codes = [code for (code,) in self.repository.iter_existing_by_columns("company_name", uow=uow)]
 
-        # Fetch companies from scraper and persist them in batch mode
-        results = self.scraper.fetch_all(
-            skip_codes=skip_codes,
-            save_callback=self._save_batch,
-        )
+            # Fetch companies from scraper and persist them in batch mode
+            results = self.scraper.fetch_all(skip_codes=skip_codes,save_callback=self._save_batch)
 
-        return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
+            return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
 
     def _save_batch(self, buffer: List[CompanyDataDTO]) -> None:
         """Transform and persist a batch of company data.
@@ -69,11 +73,12 @@ class SyncCompanyDataUseCase:
         Args:
             buffer (List[CompanyDataDTO]): Raw or nested DTOs retrieved by the scraper.
         """
-        # Flatten potential nested lists from scraper output
-        flat_items = ListFlattener.flatten(buffer)
+        with self.uow_factory() as uow:
+            # Flatten potential nested lists from scraper output
+            flat_items = ListFlattener.flatten(buffer)
 
-        # Convert raw scraper DTOs into domain-level DTOs
-        dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
+            # Convert raw scraper DTOs into domain-level DTOs
+            dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
 
-        # Persist the transformed DTOs in bulk
-        self.repository.save_all(dtos)
+            # Persist the transformed DTOs in bulk
+            self.repository.save_all(dtos)

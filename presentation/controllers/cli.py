@@ -108,7 +108,7 @@ class Cli:
         )
 
         # Run the synchronization step
-        return company_service.sync_companies()
+        return company_service()
 
     def _statements_service(self) -> SyncResultsDTO:
         """
