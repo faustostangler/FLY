@@ -9,32 +9,32 @@ from domain.dtos.statement_raw_dto import StatementRawDTO
 
 
 class NsdPolicyPort(Protocol):
-    def identify_type(self, nsd: NsdDTO) -> "NsdType": ...
-    def normalize_quarter(self, nsd: NsdDTO) -> "QuarterInfo": ...
-    def compute_recency_window(self, when: date) -> "Recency": ...
-    def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> "Action": ...
+    def identify_type(self, nsd: NsdDTO) -> "NsdTypePolicy": ...
+    def normalize_quarter(self, nsd: NsdDTO) -> "QuarterPolicy": ...
+    def compute_recency_window(self, when: date) -> "RecencyPolicy": ...
+    def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> "ActionPolicy": ...
     def version_deduplicate(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementRawDTO]: ...
 
 
 @dataclass(frozen=True)
-class NsdType:
+class NsdTypePolicy:
     is_statement: bool
 
 
 @dataclass(frozen=True)
-class QuarterInfo:
+class QuarterPolicy:
     year: int
     quarter: int
     is_december: bool
 
 
 @dataclass(frozen=True)
-class Recency:
+class RecencyPolicy:
     is_recent: bool
 
 
 @dataclass(frozen=True)
-class Action:
+class ActionPolicy:
     kind: str  # "RAW" | "PROCESS"
     def is_raw(self) -> bool: return self.kind == "RAW"
     def is_process(self) -> bool: return self.kind == "PROCESS"
@@ -46,11 +46,11 @@ class NsdPolicy(NsdPolicyPort):
         self._recency_year = recency_year  # None => usa ano corrente
 
     # tipo suportado: compara nsd.nsd_type com config.domain.statements_types (case-insensitive)
-    def identify_type(self, nsd: NsdDTO) -> NsdType:
-        return NsdType(is_statement=(getattr(nsd, "nsd_type", "") in self._allowed_types))
+    def identify_type(self, nsd: NsdDTO) -> NsdTypePolicy:
+        return NsdTypePolicy(is_statement=(getattr(nsd, "nsd_type", "") in self._allowed_types))
 
     # normaliza quarter a partir de nsd.quarter (date/datetime). Fallback: year/month ou sent_date.
-    def normalize_quarter(self, nsd: NsdDTO) -> QuarterInfo:
+    def normalize_quarter(self, nsd: NsdDTO) -> QuarterPolicy:
         q = getattr(nsd, "quarter", None)
         if isinstance(q, (date, datetime)):
             y, m = q.year, q.month
@@ -64,23 +64,23 @@ class NsdPolicy(NsdPolicyPort):
                 else:
                     raise ValueError("NsdDTO.quarter precisa ser date/datetime ou informar year/month")
         q = 1 if m <= 3 else 2 if m <= 6 else 3 if m <= 9 else 4
-        return QuarterInfo(year=int(y), quarter=q, is_december=(m == 12))
+        return QuarterPolicy(year=int(y), quarter=q, is_december=(m == 12))
 
     # recência: None => ano corrente; int => >= recency_year
-    def compute_recency_window(self, when: date) -> Recency:
+    def compute_recency_window(self, when: date) -> RecencyPolicy:
         if self._recency_year is None:
-            return Recency(is_recent=(when.year == date.today().year))
-        return Recency(is_recent=(when.year >= self._recency_year))
+            return RecencyPolicy(is_recent=(when.year == date.today().year))
+        return RecencyPolicy(is_recent=(when.year >= self._recency_year))
 
     # decisão: v>1 processa; v1 em dezembro processa; v1 fora de dezembro processa se recente, senão RAW
-    def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> Action:
+    def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> ActionPolicy:
         if version > 1:
-            return Action("PROCESS")
+            return ActionPolicy("PROCESS")
         if is_december:
-            return Action("PROCESS")
+            return ActionPolicy("PROCESS")
         if is_recent:
-            return Action("PROCESS")
-        return Action("RAW")
+            return ActionPolicy("PROCESS")
+        return ActionPolicy("RAW")
 
     # dedup por versão: mantém a maior versão por (company_id, year, quarter, account/account_code)
     def version_deduplicate(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementRawDTO]:

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar, Protocol
 
 from application.ports.config_port import ConfigPort
+from application.ports.uow_port import Uow, UowFactoryPort
 
 T = TypeVar("T")
+
+class SaveCallback(Protocol, Generic[T]):
+    def __call__(self, items: List[T], *, uow: Optional[Uow] = None) -> None: ...
 
 
 @dataclass
@@ -28,10 +32,16 @@ class SaveStrategy(Generic[T]):
     """
 
     # Callback invoked when a flush occurs
-    save_callback: Callable[[List[T]], None]
+    save_callback: SaveCallback[T]
 
     # Maximum number of items to accumulate before flushing
     threshold: int
+
+    # Uow factory for creating unit of work contexts
+    uow_factory: UowFactoryPort
+
+    # False to avoid partial flush by threshold (True to allow partial flush)
+    auto_flush: bool = True
 
     # Internal buffer holding pending items
     _buffer: List[T] = field(default_factory=list)
@@ -39,9 +49,11 @@ class SaveStrategy(Generic[T]):
     @classmethod
     def from_config(
         cls,
-        save_callback: Optional[Callable[[List[T]], None]] = None,
+        save_callback: SaveCallback[T] | None = None,
         threshold: Optional[int] = None,
         config: Optional[ConfigPort] = None,
+        auto_flush: bool = True,
+        uow_factory: Optional[UowFactoryPort] = None,
     ) -> "SaveStrategy[T]":
         """Create a strategy using explicit args or fall back to configuration.
 
@@ -59,13 +71,16 @@ class SaveStrategy(Generic[T]):
             SaveStrategy[T]: A strategy instance ready to buffer and flush items.
         """
         # Choose a callback or fall back to a no-op implementation
-        cb = save_callback or (lambda _: None)
+        cb: SaveCallback[T] = save_callback or (lambda items, *, uow=None: None)
 
         # Choose a threshold from explicit arg, config, or a conservative default
         th = threshold or (config.repository.persistence_threshold if config else 50)
 
         # Build and return the configured strategy
-        return cls(cb, th)
+        if uow_factory is None:
+            raise ValueError("SaveStrategy precisa de uow_factory")
+
+        return cls(cb, th, uow_factory)
 
     def handle(self, item: T) -> None:
         """Buffer a single item and flush if the threshold is reached.
@@ -77,7 +92,7 @@ class SaveStrategy(Generic[T]):
         self._buffer.append(item)
 
         # Flush immediately if the buffer reached the threshold
-        if len(self._buffer) >= self.threshold:
+        if len(self._buffer) >= self.threshold and self.auto_flush :
             self.flush()
 
     def handle_many(self, items: Iterable[T]) -> None:
@@ -90,19 +105,30 @@ class SaveStrategy(Generic[T]):
         for it in items:
             self.handle(it)
 
-    def flush(self) -> None:
-        """Persist the current buffer via the callback and clear it.
+    # def flush(self) -> None:
+    #     """Persist the current buffer via the callback and clear it.
 
-        If the buffer is empty, this method is a no-op.
-        """
-        # Skip work if there is nothing to persist
+    #     If the buffer is empty, this method is a no-op.
+    #     """
+    #     # Skip work if there is nothing to persist
+    #     if not self._buffer:
+    #         return
+
+    #     # Invoke the provided persistence callback with the buffered items
+    #     self.save_callback(self._buffer)
+
+    #     # Clear the buffer after a successful callback
+    #     self._buffer.clear()
+
+    def flush(self, uow: Uow | None = None) -> None:
         if not self._buffer:
             return
-
-        # Invoke the provided persistence callback with the buffered items
-        self.save_callback(self._buffer)
-
-        # Clear the buffer after a successful callback
+        if uow is None:
+            with self.uow_factory() as local:
+                self.save_callback(self._buffer, uow=local)
+                local.commit()
+        else:
+            self.save_callback(self._buffer, uow=uow)
         self._buffer.clear()
 
     def finalize(self) -> None:

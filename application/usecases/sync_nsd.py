@@ -44,26 +44,35 @@ class SyncNSDUseCase:
         for dto in self.scraper.iter_nsd(start=start, skip_codes=skip_codes, max_nsd=max_nsd_probable):
             yield dto
 
-    def stream_codes(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[int]:
+    def build_code_list(self, *, start: int = 1, max_nsd: int = 1) -> List[int]:
+        """Calcula uma única vez a lista de NSDs a processar (sem rede)."""
+        # probe = getattr(self.scraper, "_find_last_existing_nsd", None)
+        # max_nsd_existing: int = 1
+        # if callable(probe):
+        #     try:
+        #         max_nsd_existing = int(probe(start=start, max_limit=10**10))
+        #     except Exception:
+        #         max_nsd_existing = 1
+        max_nsd_existing =1
+        start=10007
+
         with self.uow_factory() as uow:
-            skip_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
-            start = max(skip_codes) + 1
-            max_nsd_probable = self._find_next_probable_nsd(start=start, skip_codes=skip_codes, uow=uow)
+            skip_codes: List[int] = [
+                int(code) for (code,)
+                in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)
+            ]
+            max_nsd_probable: int = self._find_next_probable_nsd(
+                start=start, skip_codes=skip_codes, uow=uow
+            )
 
-        # probe opcional no scraper; se não existir, usa 0
-        probe = getattr(self.scraper, "_find_last_existing_nsd", None)
-        max_nsd_existing: int = 1
-        if callable(probe):
-            try:
-                max_nsd_existing = int(probe(start=start, max_limit=10**10))
-            except Exception as e:
-                self.logger.log(f"find_last_existing_nsd failed: {e}", level="warning")
+        max_nsd: int = max_nsd if max_nsd is not None else 1
+        max_nsd_final: int = max(start, max_nsd_existing, max_nsd_probable, max_nsd)
 
-        cap = max_nsd if max_nsd is not None else 0
-        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable, cap)
-        for code in range(start, max_nsd_final + 1):
-            if code in skip_codes:
-                continue
+        return [c for c in range(start, max_nsd_final + 1) if c not in skip_codes]
+
+    def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
+        """Gerador preguiçoso sobre a lista já calculada externamente."""
+        for code in codes:
             yield code
 
     def _find_next_probable_nsd(

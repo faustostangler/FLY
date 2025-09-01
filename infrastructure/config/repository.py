@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 # Default batch size for repository operations
-BATCH_SIZE = 100
+BATCH_SIZE = 2
 
 # Default persistence threshold (how often data should be committed)
 # Originally could depend on MAX_WORKERS (e.g., max(int(50 / MAX_WORKERS), 1))
-persistence_threshold = 25
+PERSISTENCE_THRESHOLD = 25
 
 
 @dataclass(frozen=True)
@@ -24,7 +24,7 @@ class RepositoryConfig:
     batch_size: int = field(default=BATCH_SIZE)
 
     # Minimum threshold for persistence
-    persistence_threshold: int = field(default=persistence_threshold)
+    persistence_threshold: int = field(default=PERSISTENCE_THRESHOLD)
 
 
 def load_repository_config() -> RepositoryConfig:
@@ -37,5 +37,5 @@ def load_repository_config() -> RepositoryConfig:
     # Construct and return repository configuration with defaults
     return RepositoryConfig(
         batch_size=BATCH_SIZE,
-        persistence_threshold=persistence_threshold,
+        persistence_threshold=PERSISTENCE_THRESHOLD,
     )

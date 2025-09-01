@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import threading
 import time
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
@@ -56,6 +55,16 @@ class WorkerPool(WorkerPoolPort):
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
         self.generator = IdGenerator(config=self.config)
 
+    def __call__(
+        self,
+        tasks: Iterable[Tuple[int, Any]],
+        processor: Callable[[WorkerTaskDTO], R],
+        logger: LoggerPort,
+        on_result: Optional[Callable[[R], None]] = None,
+        post_callback: Optional[Callable[[List[R]], None]] = None,
+        max_workers: int = 1
+    ) -> List[R]:
+        return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers)
 
     def run(
         self,

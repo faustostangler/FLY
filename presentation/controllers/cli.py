@@ -77,6 +77,9 @@ class Cli:
 
         self.byte_formatter = ByteFormatter()
 
+    def __call__(self) -> None:
+        return self.run()
+
     def run(self) -> None:
         """Execute the top-level application workflow."""
         # Emit lifecycle start event
@@ -133,6 +136,6 @@ class Cli:
             )
 
         # Run the synchronization step
-        nsd_service = nsd_service.sync_nsd()
+        service = nsd_service()
     
         # return statements_service.sync_statements()

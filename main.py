@@ -28,7 +28,7 @@ def main() -> None:
         controller = cli_factory(config, logger)
 
         # Run controller
-        controller.run()
+        controller()
 
     except Exception as e:
         # Print unexpected error

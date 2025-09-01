@@ -99,6 +99,9 @@ class NsdService:
             uow_factory=uow_factory,
         )
 
+    def __call__(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
+        return self.sync_nsd()
+
     # def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
     #     stream = self.sync_nsd_usecase.stream_nsd(start=start, max_nsd=max_nsd)
 
@@ -116,9 +119,11 @@ class NsdService:
     #         logger=self.logger,
     #     )
     def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
-        codes = self.sync_nsd_usecase.stream_codes(start=start, max_nsd=max_nsd)
-        self.worker_pool.run(
-            tasks=enumerate(codes),
-            processor=self._processor,
+        codes = self.sync_nsd_usecase.build_code_list(start=start, max_nsd=max_nsd)
+        code_stream = self.sync_nsd_usecase.stream_codes(codes)
+
+        self.worker_pool(
+            tasks=enumerate(code_stream),
+            processor=self._processor,   # NsdProcessor já faz fetch_one(nsdc)
             logger=self.logger,
         )

@@ -126,6 +126,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_nsd,
+        
         worker_pool=worker_pool,
 
         policy=policy,

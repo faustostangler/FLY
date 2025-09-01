@@ -135,7 +135,7 @@ def clean_date(
     Returns:
         A ``datetime`` instance when parsing succeeds; otherwise ``None``.
 
-    NsdType Formats:
+    NsdTypePolicy Formats:
         - ``%d/%m/%Y %H:%M:%S`` (e.g., 31/12/2024 23:59:59)
         - ``%m/%d/%Y %H:%M:%S``
         - ``%Y-%m-%d %H:%M:%S``

@@ -17,18 +17,18 @@
 #     reason: str = ""
 
 # @dataclass(frozen=True)
-# class QuarterInfo:
+# class QuarterPolicy:
 #     year: int
 #     quarter: int
 #     is_december: bool
 
 # @dataclass(frozen=True)
-# class RecencyWindow:
+# class RecencyPolicyWindow:
 #     is_recent: bool
 #     basis_year: int
 
 # @dataclass(frozen=True)
-# class Action:
+# class ActionPolicy:
 #     kind: str  # "RAW" ou "PROCESS"
 #     def is_raw(self) -> bool: return self.kind == "RAW"
 #     def is_process(self) -> bool: return self.kind == "PROCESS"
@@ -38,9 +38,9 @@
 
 # class NsdPolicyPort(Protocol):
 #     def identify_type(self, nsd: NsdDTO) -> TypeSupport: ...
-#     def normalize_quarter(self, nsd: NsdDTO) -> QuarterInfo: ...
-#     def compute_recency_window(self, when: date) -> RecencyWindow: ...
-#     def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> Action: ...
+#     def normalize_quarter(self, nsd: NsdDTO) -> QuarterPolicy: ...
+#     def compute_recency_window(self, when: date) -> RecencyPolicyWindow: ...
+#     def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> ActionPolicy: ...
 #     def version_deduplicate(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementRawDTO]: ...
 
 
@@ -77,33 +77,33 @@
 
 #     # ---- quarter
 
-#     def normalize_quarter(self, nsd: NsdDTO) -> QuarterInfo:
+#     def normalize_quarter(self, nsd: NsdDTO) -> QuarterPolicy:
 #         qdt = getattr(nsd, "quarter", None)
 #         if not isinstance(qdt, (datetime, date)):
 #             raise ValueError("nsd.quarter precisa ser datetime/date para normalização")
 #         y = qdt.year
 #         m = qdt.month
 #         q = 1 if m <= 3 else 2 if m <= 6 else 3 if m <= 9 else 4
-#         return QuarterInfo(year=y, quarter=q, is_december=(m == 12))
+#         return QuarterPolicy(year=y, quarter=q, is_december=(m == 12))
 
 #     # ---- recência
 
-#     def compute_recency_window(self, when: date) -> RecencyWindow:
+#     def compute_recency_window(self, when: date) -> RecencyPolicyWindow:
 #         today = date.today()
 #         if self.recency_year is None:
-#             return RecencyWindow(is_recent=(when.year == today.year), basis_year=today.year)
-#         return RecencyWindow(is_recent=(when.year >= self.recency_year), basis_year=self.recency_year)
+#             return RecencyPolicyWindow(is_recent=(when.year == today.year), basis_year=today.year)
+#         return RecencyPolicyWindow(is_recent=(when.year >= self.recency_year), basis_year=self.recency_year)
 
 #     # ---- decisão
 
-#     def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> Action:
+#     def decide_action(self, *, year: int, quarter: int, version: int, is_december: bool, is_recent: bool) -> ActionPolicy:
 #         if version > 1:
-#             return Action("PROCESS")
+#             return ActionPolicy("PROCESS")
 #         if is_december:
-#             return Action("PROCESS")
+#             return ActionPolicy("PROCESS")
 #         if is_recent:
-#             return Action("PROCESS")
-#         return Action("RAW")
+#             return ActionPolicy("PROCESS")
+#         return ActionPolicy("RAW")
 
 #     # ---- deduplicação por versão
 

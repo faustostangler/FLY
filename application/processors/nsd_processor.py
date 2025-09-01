@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date
-from typing import Iterable, Optional
+from typing import Optional
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -18,6 +18,38 @@ from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
+
+
+class _NsdTxnAggregator:
+    """Mantém NSD, RAW e FETCHED juntos para flush atômico."""
+    def __init__(self, *, nsd_repo, raw_repo, fetched_repo):
+        self._nsd_repo = nsd_repo
+        self._raw_repo = raw_repo
+        self._fetched_repo = fetched_repo
+        self._nsd: Optional[NsdDTO] = None
+        self._raw = []
+        self._fetched = []
+
+    def set_nsd(self, nsd: NsdDTO) -> None:
+        self._nsd = nsd
+
+    def add_raw_many(self, items) -> None:
+        self._raw.extend(items)
+
+    def add_fetched_many(self, items) -> None:
+        self._fetched.extend(items)
+
+    def flush(self, *, uow: Uow) -> None:
+        if self._raw:
+            self._raw_repo.save_all(self._raw, uow=uow)
+        if self._fetched:
+            self._fetched_repo.save_all(self._fetched, uow=uow)
+        if self._nsd is not None:
+            self._nsd_repo.save_all([self._nsd], uow=uow)
+        self._nsd = None
+        self._raw.clear()
+        self._fetched.clear()
+
 
 class NsdProcessor:
     """Processa 1 NSD por vez. Cada tarefa abre sua própria UoW."""
@@ -40,7 +72,6 @@ class NsdProcessor:
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
         uow_factory: UowFactoryPort,
-
     ) -> None:
         self.config = config
         self.logger = logger
@@ -61,52 +92,81 @@ class NsdProcessor:
         self.id_generator = IdGenerator(config=config)
 
     # compat com pools que chamam .run(task) ou chamam o objeto
-    def __call__(self, task: WorkerTaskDTO) -> None:
+    def __call__(self, task: WorkerTaskDTO) -> NsdDTO:
         return self.run(task)
 
-    def run(self, task: WorkerTaskDTO) -> None:
+    def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
         nsd = data if isinstance(data, NsdDTO) else self.scraper_nsd.fetch_one(int(data))
+
         if nsd is None:
             self.logger.log(f"NSD not found: {data}", level="info")
-            return
+            return task.data
+
         with self.uow_factory() as uow:
             self._ensure_company_exists(nsd.company_name, uow=uow)
             nsd_type = self.policy.identify_type(nsd)
+
+            agg = _NsdTxnAggregator(
+                nsd_repo=self.nsd_repository,
+                raw_repo=self.statements_raw_repository,
+                fetched_repo=self.statements_fetched_repository,
+            )
+
             if not nsd_type.is_statement:
-                self.nsd_repository.save_all([nsd], uow=uow)
+                agg.set_nsd(nsd)
+                agg.flush(uow=uow)
                 uow.commit()
-                self._log_done(nsd, tag="NSD_ONLY")
-                return
+                self.logger.log(
+                    f"Processed NSD_ONLY NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
+                    level="info",
+                )
+                return nsd
+
             q = self.policy.normalize_quarter(nsd)
-            sd = getattr(nsd, "sent_date", None)
+            sd = getattr(nsd, "sent_date")
             if hasattr(sd, "date"):
                 sd = sd.date()
             when = sd or date(q.year, q.quarter * 3, 1)
-            rec = self.policy.compute_recency_window(when)
+            recency = self.policy.compute_recency_window(when)
             action = self.policy.decide_action(
                 year=q.year, quarter=q.quarter, version=nsd.version,
-                is_december=q.is_december, is_recent=rec.is_recent,
+                is_december=q.is_december, is_recent=recency.is_recent,
             )
-            if not action.kind == "RAW":
-                pass
-            # raw_lines = list(self.scraper_statements_raw.fetch(task))
-            # if action.is_raw():
-            #     self.statements_raw_repository.save_all(raw_lines, uow=uow)
-            #     self.nsd_repository.save_all([nsd], uow=uow)
-            #     uow.commit()
-            #     self._log_done(nsd, tag="RAW")
-            #     return
-            # company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
-            # year_view = list(self.statements_raw_repository.get_company_year_view(company_id=company_id, year=q.year, uow=uow))
-            # deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
-            # standardized = self.financial_normalizer.standardize(deduped)
-            # fetched = self.ratios_calculator.calculate(standardized)
-            # self.statements_raw_repository.save_all(raw_lines, uow=uow)
-            # self.statements_fetched_repository.save_all(list(fetched), uow=uow)
-            # self.nsd_repository.save_all([nsd], uow=uow)
-            # uow.commit()
-            # self._log_done(nsd, tag="PROCESS")
+
+            raw_lines = list(self.scraper_statements_raw.fetch(task))
+
+            if action.is_raw():
+                agg.add_raw_many(raw_lines)
+                agg.set_nsd(nsd)
+                agg.flush(uow=uow)
+                uow.commit()
+                self.logger.log(
+                    f"Processed NSD_RAW NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
+                    level="info",
+                )
+                return nsd
+
+            # PROCESS
+            company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
+            year_view = list(
+                self.statements_raw_repository.get_company_year_view(company_id=company_id, year=q.year, uow=uow)
+            )
+            deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
+            standardized = self.financial_normalizer.standardize(deduped)
+            fetched = self.ratios_calculator.calculate(standardized)
+
+            agg.add_raw_many(raw_lines)
+            agg.add_fetched_many(list(fetched))
+            agg.set_nsd(nsd)
+            agg.flush(uow=uow)
+            uow.commit()
+
+            self.logger.log(
+                f"Processed NSD_RAW_FETCHED NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
+                level="info",
+            )
+            return nsd
 
     def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:
         if not company_name:
@@ -123,17 +183,13 @@ class NsdProcessor:
 
     def _hash_run(self, *parts) -> str:
         import hashlib, json
+
         def to_prim(obj):
             if isinstance(obj, (list, tuple)):
                 return [to_prim(x) for x in obj]
             if hasattr(obj, "__dict__"):
                 return {k: to_prim(v) for k, v in obj.__dict__.items()}
             return obj
+
         blob = json.dumps([to_prim(p) for p in parts], sort_keys=True, default=str)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-    def _log_done(self, nsd: NsdDTO, *, tag: str) -> None:
-        self.logger.log(
-            f"Processed {tag} NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
-            level="info",
-        )

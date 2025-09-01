@@ -82,8 +82,6 @@ class NsdScraper(ScraperNsdPort):
         start = max(start, max(self.skip_codes, default=0) + 1)
         # top_limit = max(max_nsd, self._find_last_existing_nsd(start=start), 50)
 
-        start = 10008
-        top_limit = max_nsd
         self.logger.log(f"Using top limit: {top_limit}", level="info")
 
         self.logger.log(f"Streaming NSD from {start} to {top_limit or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
@@ -384,6 +382,7 @@ class NsdScraper(ScraperNsdPort):
 
         # Phase 2: exponential search to locate an invalid boundary
         multiplier = 1
+        nsd += 1
         while nsd <= max_limit and hole_count < max_linear_holes:
             fetched = self._try_nsd(nsd)
             if fetched:

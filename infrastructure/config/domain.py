@@ -14,7 +14,7 @@ WORDS_TO_REMOVE: Tuple[str, ...] = (
     "MASSA FALIDA DA",
 )
 
-# NsdType financial statement types
+# NsdTypePolicy financial statement types
 STATEMENTS_TYPES: Tuple[str, ...] = (
     "DEMONSTRACOES FINANCEIRAS PADRONIZADAS",
     "INFORMACOES TRIMESTRAIS",
