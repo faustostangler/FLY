@@ -11,6 +11,7 @@ from infrastructure.config.paths import PathConfig, load_paths
 from infrastructure.config.repository import RepositoryConfig, load_repository_config
 from infrastructure.config.scraping import ScrapingConfig, load_scraping_config
 from infrastructure.config.worker_pool import WorkerPoolConfig, load_worker_pool_config
+from infrastructure.config.statements import StatementsConfig, load_statements_config
 
 
 @dataclass(frozen=True)
@@ -48,3 +49,7 @@ class ConfigAdapter:
 
     # Worker pool sizing and concurrency limits
     worker_pool: WorkerPoolConfig = field(default_factory=load_worker_pool_config)
+
+    # Statements to Scrape
+    statements: StatementsConfig = field(default_factory=load_statements_config)
+

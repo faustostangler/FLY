@@ -44,7 +44,7 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         hdn_hash = self._extract_hash(html)
 
         # 2) monta a lista de URLs por grupo/quadro
-        items = self.config.domain.statement_items
+        items = self.config.statements.statement_items
         urls = self._build_urls(nsd, items, hdn_hash)
 
         # 3) para cada URL, baixa e parseia linhas
@@ -54,20 +54,21 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             rows = self._parse_statement_page(BeautifulSoup(page_html, "html.parser"), item["grupo"])
 
             # 4) converte linhas para DTOs idempotentes
-            year, quarter = self._infer_year_quarter(nsd)
+            # quarter como data completa (string ISO ou pt-BR; escolha UMA e padronize)
+            quarter_str = nsd.quarter.strftime("%Y-%m-%d")  # ou "%d/%m/%Y"
+
             for r in rows:
                 out.append(
                     StatementRawDTO(
                         nsd=str(nsd.nsd),
                         company_name=nsd.company_name,
-                        year=year,
-                        quarter=quarter,            # 1..4
-                        version=int(nsd.version),
+                        quarter=quarter_str,           # data completa
+                        version=str(nsd.version),      # StatementRawDTO espera str
                         grupo=item["grupo"],
                         quadro=item["quadro"],
                         account=r["account"],
                         description=r["description"],
-                        value=r["value"],
+                        value=float(r["value"]),
                     )
                 )
         return out
@@ -76,6 +77,7 @@ class ScraperStatementRaw(ScraperStatementRawPort):
 
     def _get(self, url: str) -> str:
         with self.http.borrow_session() as s:
+            print(s.headers)
             body = self.http.fetch_with(s, url, headers=s.headers)
         return body.decode("utf-8")
 

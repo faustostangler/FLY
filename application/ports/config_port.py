@@ -112,11 +112,6 @@ class DomainConfigPort(Protocol):
         ...
 
     @property
-    def statement_items(self) -> Tuple[Dict[str, Optional[int | str]], ...]:
-        """Accepted statement types within the domain."""
-        ...
-
-    @property
     def base_currency(self) -> str:
         """Canonical currency used for normalization."""
         ...
@@ -219,6 +214,19 @@ class WorkerPoolConfig(Protocol):
         ...
 
 
+@runtime_checkable
+class StatementsConfigPort(Protocol):
+    @property
+    def statement_items(self) -> Tuple[Dict[str, Optional[int | str]], ...]: ...
+    @property
+    def nsd_type_map(self) -> Mapping[str, Tuple[str, int]]: ...
+    @property
+    def capital_items(self) -> List[Dict[str, str]]: ...
+    @property
+    def url_df(self) -> str: ...
+    @property
+    def url_capital(self) -> str: ...
+
 # Aggregates all configuration ports into a single access surface
 @runtime_checkable
 class ConfigPort(Protocol):
@@ -268,5 +276,8 @@ class ConfigPort(Protocol):
     def worker_pool(self) -> WorkerPoolConfig:
         """Local concurrency configuration for worker pools."""
         ...
+
+    @property
+    def statements(self) -> StatementsConfigPort: ...
 
 # Encapsulates global settings used across various components

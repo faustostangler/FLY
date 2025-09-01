@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import date, datetime
+from datetime import date
+import datetime
 import time
 from typing import Optional
 
@@ -99,10 +100,10 @@ class NsdProcessor:
 
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
-        data = 10008
-        nsd = NsdDTO(id=None, nsd=10008, company_name='IND MAQS AGRICOLAS FUCHS SA', quarter=datetime(2011, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='JALMAR JOSE MARTEL', auditor='MULTICON AUDITORIA E ASSESSORIA CONTABIL SS', responsible_auditor='MARCO ANTONIO PALERMO', protocol='007064ITR310320110100010008-86', sent_date=datetime(2011, 7, 6, 22, 1, 35), reason=None)
+        data = 82408
+        nsd = NsdDTO(id=None, nsd=82408, company_name='LOJAS RENNER SA', quarter=datetime.datetime(2019, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='LAURENCE BELTRAO GOMES', auditor='KPMG AUDITORES INDEPENDENTES', responsible_auditor='CRISTIANO JARDIM SEGUECIO', protocol='008133ITR310320190100082408-72', sent_date=datetime.datetime(2019, 4, 25, 19, 13, 11), reason=None)
 
-        # start_time = time.perf_counter()
+        start_time = time.perf_counter()
         # nsd = self.scraper_nsd.fetch_one(int(data))
 
         if nsd is None:
