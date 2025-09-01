@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import List, Protocol, runtime_checkable
+from typing import Iterable, Protocol, runtime_checkable
 
-from domain.dtos import StatementRawDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 
 from .repository_base_port import RepositoryBasePort
 
@@ -20,3 +21,4 @@ class RepositoryStatementsRawPort(RepositoryBasePort[StatementRawDTO, int], Prot
     """
 
     # def get_by_company_name(self, company_name: str) -> List[StatementRawDTO]: ...
+    def fetch(self, task: WorkerTaskDTO) -> Iterable[StatementRawDTO]: ...
