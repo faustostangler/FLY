@@ -57,23 +57,27 @@ class WorkerPool(WorkerPoolPort):
 
     def __call__(
         self,
+        logger: LoggerPort,
+
         tasks: Iterable[Tuple[int, Any]],
         processor: Callable[[WorkerTaskDTO], R],
-        logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
-        max_workers: int = 1
+
+        max_workers: Optional[int] = 1
     ) -> List[R]:
         return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers)
 
     def run(
         self,
+        logger: LoggerPort,
+
         tasks: Iterable[Tuple[int, Any]],
         processor: Callable[[WorkerTaskDTO], R],
-        logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
-        max_workers: int = 1
+
+        max_workers: Optional[int] = 1
     ) -> List[R]:
         """Process tasks concurrently using the provided processor.
 

@@ -16,6 +16,7 @@ from infrastructure.repositories.repository_nsd import RepositoryNsd
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_statements_fetched import StatementFetchedRepository
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
+from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.utils.metrics_collector import MetricsCollector
 from infrastructure.utils.worker_pool import WorkerPool
@@ -80,20 +81,17 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         http_client=http_client,
     )
 
-    logger.log("Load Class ScraperStatementRaw NOT YET IMPLEMENTED", level="info")
-    # scraper_statements_raw = ScraperStatementRaw(
-    #     config=config,
-    #     logger=logger,
+    scraper_statements_raw = ScraperStatementRaw(
+        config=config,
+        logger=logger,
 
-    #     statements_raw_repository=raw_statements_repository,
+        # statements_raw_repository=raw_statements_repository,
 
-    #     datacleaner=datacleaner,
-    #     metrics_collector=metrics_collector,
-    #     worker_pool=worker_pool,
-    #     http_client=http_client,
-    # )
-
-
+        # datacleaner=datacleaner,
+        # metrics_collector=metrics_collector,
+        # worker_pool=worker_pool,
+        http_client=http_client,
+    )
 
     # Policy
     policy = NsdPolicy(
@@ -125,7 +123,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
 
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
-        scraper_statements_raw=scraper_nsd,
+        scraper_statements_raw=scraper_statements_raw,
         
         worker_pool=worker_pool,
 

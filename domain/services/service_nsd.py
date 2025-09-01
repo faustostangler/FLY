@@ -44,7 +44,7 @@ class NsdService:
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
 
-        worker_pool: WorkerPoolPort | None = None,
+        worker_pool: WorkerPoolPort,
 
         policy: NsdPolicyPort,
         financial_normalizer: FinancialNormalizerPort,
@@ -118,12 +118,12 @@ class NsdService:
     #         processor=self._processor,
     #         logger=self.logger,
     #     )
-    def run(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
+    def run(self, *, start: int = 1, max_nsd: int = 1) -> None:
         codes = self.sync_nsd_usecase.build_code_list(start=start, max_nsd=max_nsd)
         code_stream = self.sync_nsd_usecase.stream_codes(codes)
 
         self.worker_pool(
-            tasks=enumerate(code_stream),
-            processor=self._processor,   # NsdProcessor já faz fetch_one(nsdc)
             logger=self.logger,
+            tasks=enumerate(code_stream),
+            processor=self._processor,
         )

@@ -34,7 +34,7 @@ NSD_TYPE_MAP: Mapping[str, Tuple[str, int]] = {
     "DEMONSTRACOES FINANCEIRAS PADRONIZADAS": ("DFP", 4),
 }
 
-STATEMENT_ITEMS: List[Dict[str, Optional[int | str]]] = [
+STATEMENT_ITEMS: Tuple[Dict[str, Optional[int | str]]] = [
     {
         "grupo": "DFs Individuais",
         "quadro": "Balanço Patrimonial Ativo",
@@ -133,7 +133,7 @@ STATEMENT_ITEMS: List[Dict[str, Optional[int | str]]] = [
 class StatementsConfig:
     """Configuration for scraping financial statements."""
 
-    statement_items: List[Dict[str, Optional[int | str]]] = field(
+    statement_items: Tuple[Dict[str, Optional[int | str]]] = field(
         default_factory=lambda: [item.copy() for item in STATEMENT_ITEMS]
     )
 

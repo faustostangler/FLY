@@ -36,9 +36,8 @@ class SyncNSDUseCase:
     def stream_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[NsdDTO]:
         with self.uow_factory() as uow:
             skip_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
-            skip_codes = {int(code) for code in (skip_codes or [])}
 
-            max_nsd_probable = max(start, self._find_next_probable_nsd(uow=uow, start=start, safety_factor=1.10))
+            max_nsd_probable = max(start, self._find_next_probable_nsd(start=start, skip_codes=skip_codes, safety_factor=1.10, uow=uow))
 
         # leitura apenas; sem commit explícito
         for dto in self.scraper.iter_nsd(start=start, skip_codes=skip_codes, max_nsd=max_nsd_probable):
@@ -65,7 +64,6 @@ class SyncNSDUseCase:
                 start=start, skip_codes=skip_codes, uow=uow
             )
 
-        max_nsd: int = max_nsd if max_nsd is not None else 1
         max_nsd_final: int = max(start, max_nsd_existing, max_nsd_probable, max_nsd)
 
         return [c for c in range(start, max_nsd_final + 1) if c not in skip_codes]

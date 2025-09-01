@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Mapping, Protocol, Tuple, runtime_checkable
+from typing import Dict, List, Mapping, Optional, Protocol, Tuple, runtime_checkable
 
 
 # Defines the filesystem path contract that implementations must provide
@@ -108,6 +108,11 @@ class DomainConfigPort(Protocol):
 
     @property
     def statements_types(self) -> Tuple[str, ...]:
+        """Accepted statement types within the domain."""
+        ...
+
+    @property
+    def statement_items(self) -> Tuple[Dict[str, Optional[int | str]], ...]:
         """Accepted statement types within the domain."""
         ...
 

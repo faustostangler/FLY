@@ -23,6 +23,7 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         *,
         config: ConfigPort,
         logger: LoggerPort,
+
         http_client: RequestsAffinityHttpClient,
     ) -> None:
         self.config = config
@@ -36,18 +37,14 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         # - statements.nsd_type_map (mapeia nsd_type → (NomeTipoDocumento, CodTipoDocumento))
 
     # API pública
-    def fetch(self, task: WorkerTaskDTO) -> Iterable[StatementRawDTO]:
-        nsd: NsdDTO = task.data
-        if not isinstance(nsd, NsdDTO):
-            return []
-
+    def fetch(self, nsd: NsdDTO) -> Iterable[StatementRawDTO]:
         # 1) baixa página do NSD e extrai hash
         nsd_url = self.config.exchange.nsd_endpoint.format(nsd=nsd.nsd)
         html = self._get(nsd_url)
         hdn_hash = self._extract_hash(html)
 
         # 2) monta a lista de URLs por grupo/quadro
-        items = self.config.statements.statement_items
+        items = self.config.domain.statement_items
         urls = self._build_urls(nsd, items, hdn_hash)
 
         # 3) para cada URL, baixa e parseia linhas

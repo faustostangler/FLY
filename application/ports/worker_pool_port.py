@@ -32,15 +32,29 @@ class WorkerPoolPort(Protocol):
     Methods:
         run: Execute a collection of tasks through the worker pool.
     """
+    def __call__(
+        self,
+        logger: LoggerPort,
+
+        tasks: Iterable[Tuple[int, Any]],
+        processor: Callable[[WorkerTaskDTO], R],
+        on_result: Optional[Callable[[R], None]] = None,
+        post_callback: Optional[Callable[[List[R]], None]] = None,
+
+        max_workers: Optional[int] = 1
+    ) -> List[R]:
+        ...
 
     def run(
         self,
+        logger: LoggerPort,
+
         tasks: Iterable[Tuple[int, Any]],
         processor: Callable[[WorkerTaskDTO], R],
-        logger: LoggerPort,
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
-        max_workers: int = 1
+
+        max_workers: Optional[int] = 1
     ) -> List[R]:
         """Run a batch of tasks using the worker pool.
 

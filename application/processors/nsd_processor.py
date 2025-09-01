@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import date
+from datetime import date, datetime
+import time
 from typing import Optional
 
 from application.ports.config_port import ConfigPort
@@ -22,10 +23,10 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 
 class _NsdTxnAggregator:
     """Mantém NSD, RAW e FETCHED juntos para flush atômico."""
-    def __init__(self, *, nsd_repo, raw_repo, fetched_repo):
-        self._nsd_repo = nsd_repo
-        self._raw_repo = raw_repo
-        self._fetched_repo = fetched_repo
+    def __init__(self, *, nsd_repository, statements_raw_repository, statements_fetched_repository):
+        self.nsd_repository = nsd_repository
+        self.statements_raw_repository = statements_raw_repository
+        self.statements_fetched_repository = statements_fetched_repository
         self._nsd: Optional[NsdDTO] = None
         self._raw = []
         self._fetched = []
@@ -41,11 +42,12 @@ class _NsdTxnAggregator:
 
     def flush(self, *, uow: Uow) -> None:
         if self._raw:
-            self._raw_repo.save_all(self._raw, uow=uow)
+            self.statements_raw_repository.save_all(self._raw, uow=uow)
         if self._fetched:
-            self._fetched_repo.save_all(self._fetched, uow=uow)
+            self.statements_fetched_repository.save_all(self._fetched, uow=uow)
         if self._nsd is not None:
-            self._nsd_repo.save_all([self._nsd], uow=uow)
+            self.nsd_repository.save_all([self._nsd], uow=uow)
+
         self._nsd = None
         self._raw.clear()
         self._fetched.clear()
@@ -97,7 +99,11 @@ class NsdProcessor:
 
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
-        nsd = data if isinstance(data, NsdDTO) else self.scraper_nsd.fetch_one(int(data))
+        data = 10008
+        nsd = NsdDTO(id=None, nsd=10008, company_name='IND MAQS AGRICOLAS FUCHS SA', quarter=datetime(2011, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='JALMAR JOSE MARTEL', auditor='MULTICON AUDITORIA E ASSESSORIA CONTABIL SS', responsible_auditor='MARCO ANTONIO PALERMO', protocol='007064ITR310320110100010008-86', sent_date=datetime(2011, 7, 6, 22, 1, 35), reason=None)
+
+        # start_time = time.perf_counter()
+        # nsd = self.scraper_nsd.fetch_one(int(data))
 
         if nsd is None:
             self.logger.log(f"NSD not found: {data}", level="info")
@@ -108,19 +114,29 @@ class NsdProcessor:
             nsd_type = self.policy.identify_type(nsd)
 
             agg = _NsdTxnAggregator(
-                nsd_repo=self.nsd_repository,
-                raw_repo=self.statements_raw_repository,
-                fetched_repo=self.statements_fetched_repository,
+                nsd_repository=self.nsd_repository,
+                statements_raw_repository=self.statements_raw_repository,
+                statements_fetched_repository=self.statements_fetched_repository,
             )
 
             if not nsd_type.is_statement:
                 agg.set_nsd(nsd)
                 agg.flush(uow=uow)
                 uow.commit()
+
+                progress = {
+                    "index": task.index,
+                    "size": 100000,  # len(tasks),
+                    "start_time": start_time,
+                }
+                extra_info = [ f"{nsd.nsd} {nsd.quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
                 self.logger.log(
-                    f"Processed NSD_ONLY NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
+                    f"{nsd.nsd}",
                     level="info",
+                    progress={**progress, "extra_info": extra_info},
+                    worker_id=task.worker_id,
                 )
+
                 return nsd
 
             q = self.policy.normalize_quarter(nsd)
@@ -134,7 +150,7 @@ class NsdProcessor:
                 is_december=q.is_december, is_recent=recency.is_recent,
             )
 
-            raw_lines = list(self.scraper_statements_raw.fetch(task))
+            raw_lines = list(self.scraper_statements_raw.fetch(nsd))
 
             if action.is_raw():
                 agg.add_raw_many(raw_lines)

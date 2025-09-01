@@ -222,7 +222,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
 
         hash_value = self._extract_hash(response.text)
 
-        statement_items = self.config.statements.statement_items
+        statement_items = self.config.domain.statement_items
         statements_urls = self._build_urls(row, statement_items, hash_value)
 
         # Parse all statement pages
