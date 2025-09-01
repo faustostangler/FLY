@@ -1,6 +1,8 @@
 # application/usecases/sync_nsd.py
 from __future__ import annotations
-from typing import Iterator, Optional
+
+from datetime import datetime, timedelta
+from typing import Iterator, Optional, Protocol, runtime_checkable, Iterable, List
 
 from domain.dtos.nsd_dto import NsdDTO
 from application.ports.config_port import ConfigPort
@@ -9,6 +11,10 @@ from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from application.ports.uow_port import UowFactoryPort, Uow
+
+@runtime_checkable
+class _ScraperProbe(Protocol):
+    def find_last_existing_nsd(self, start: int = 1, max_limit: int = 10**10) -> int: ...
 
 class SyncNSDUseCase:
     def __init__(
@@ -29,10 +35,75 @@ class SyncNSDUseCase:
 
     def stream_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[NsdDTO]:
         with self.uow_factory() as uow:
-            existing = [code for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
-            # leitura apenas; sem commit explícito
-        for dto in self.scraper.iter_nsd(start=start, skip_codes=existing, max_nsd=max_nsd):
+            skip_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
+            skip_codes = {int(code) for code in (skip_codes or [])}
+
+            max_nsd_probable = max(start, self._find_next_probable_nsd(uow=uow, start=start, safety_factor=1.10))
+
+        # leitura apenas; sem commit explícito
+        for dto in self.scraper.iter_nsd(start=start, skip_codes=skip_codes, max_nsd=max_nsd_probable):
             yield dto
+
+    def stream_codes(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[int]:
+        with self.uow_factory() as uow:
+            skip_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
+            start = max(skip_codes) + 1
+            max_nsd_probable = self._find_next_probable_nsd(start=start, skip_codes=skip_codes, uow=uow)
+
+        # probe opcional no scraper; se não existir, usa 0
+        probe = getattr(self.scraper, "_find_last_existing_nsd", None)
+        max_nsd_existing: int = 1
+        if callable(probe):
+            try:
+                max_nsd_existing = int(probe(start=start, max_limit=10**10))
+            except Exception as e:
+                self.logger.log(f"find_last_existing_nsd failed: {e}", level="warning")
+
+        cap = max_nsd if max_nsd is not None else 0
+        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable, cap)
+        for code in range(start, max_nsd_final + 1):
+            if code in skip_codes:
+                continue
+            yield code
+
+    def _find_next_probable_nsd(
+        self,
+        *,
+        skip_codes: list[int],
+        uow,
+        start: int,
+        safety_factor: float = 1.10,
+    ) -> int:
+        if not skip_codes:
+            return start
+
+        # lê datas válidas do banco
+        dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date", uow=uow, include_nulls=False)]
+
+        if not dates:
+            return max(start, max(skip_codes))
+
+        first_date = min(dates)
+        last_date = max(dates)
+
+        # Days span between dates
+        total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
+
+        # Daily nsd per day Average
+        daily_avg = len(skip_codes) / total_span_days
+
+        # days elapsed since last_date
+        days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]
+
+        # Estimated nsd
+        max_nsd_probable = (
+            start
+            + int(daily_avg * days_elapsed * safety_factor)
+            + self.config.scraping.linear_holes
+        )
+
+        return max_nsd_probable
+
 
     # def synchronize_nsd(self) -> None:
     #     """Start the NSD synchronization workflow."""

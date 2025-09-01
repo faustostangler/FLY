@@ -18,9 +18,11 @@ class ScraperNsdPort(ScraperBasePort[NsdDTO]):
         *,
         start: int = 1,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
-        max_nsd: Optional[int] = None,
+        skip_codes: Optional[List[int]] = None,
+        max_nsd: int = 1,
         **kwargs,
     ) -> Iterable[NsdDTO]:
         """Entrega NSDs um a um, em ordem incremental, sem materializar tudo."""
         raise NotImplementedError
+
+    def fetch_one(self, nsd: int) -> NsdDTO | None: ...

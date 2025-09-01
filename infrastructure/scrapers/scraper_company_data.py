@@ -249,7 +249,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                         "start_time": start_time,  # noqa: F821
                     },
                     extra=extra_info,
-                    worker_id=task.worker_id,
+                    worker_id=worker_id,
                 )
 
                 # Return the page payload to be merged by the caller

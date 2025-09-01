@@ -81,13 +81,13 @@ class RepositoryNsd(RepositoryBase[NsdDTO, int], RepositoryNsdPort):
         Returns:
             List[NsdDTO]: Lista de NSDs pendentes.
         """
-        with self.Session() as session:  # <=== aqui está a correção
-            query = session.query(NSDModel).filter(
+        session = uow.session
+        query = session.query(NSDModel).filter(
                 NSDModel.company_name.in_(company_names),
                 NSDModel.nsd_type.in_(valid_types),
                 ~NSDModel.nsd.in_(exclude_nsd),
             )
-            results = query.all()
+        results = query.all()
         return sorted(
             [nsd.to_dto() for nsd in results],
             key=lambda dto: (dto.company_name, dto.quarter, dto.version),

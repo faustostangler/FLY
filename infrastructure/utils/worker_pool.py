@@ -13,6 +13,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.worker_pool_port import WorkerPoolPort
+from infrastructure.utils.id_generator import IdGenerator
 
 # Generic type variable representing the processor's return type
 R = TypeVar("R")
@@ -53,6 +54,8 @@ class WorkerPool(WorkerPoolPort):
 
         # Resolve the effective worker count with safe fallbacks
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
+        self.generator = IdGenerator(config=self.config)
+
 
     def run(
         self,
@@ -142,7 +145,7 @@ class WorkerPool(WorkerPoolPort):
         with ThreadPoolExecutor(max_workers=max_workers or self.max_workers) as worker_pool_executor:
             # Launch workers with short identifiers for easier logging
             futures = [
-                worker_pool_executor.submit(worker, uuid.uuid4().hex[:8])
+                worker_pool_executor.submit(worker, self.generator.create_id(size=8))
                 for _ in range(self.max_workers)
             ]
 

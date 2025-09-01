@@ -63,8 +63,8 @@ class NsdPolicy(NsdPolicyPort):
                     y, m = sent.year, sent.month
                 else:
                     raise ValueError("NsdDTO.quarter precisa ser date/datetime ou informar year/month")
-        qnum = 1 if m <= 3 else 2 if m <= 6 else 3 if m <= 9 else 4
-        return QuarterInfo(year=int(y), quarter=qnum, is_december=(m == 12))
+        q = 1 if m <= 3 else 2 if m <= 6 else 3 if m <= 9 else 4
+        return QuarterInfo(year=int(y), quarter=q, is_december=(m == 12))
 
     # recência: None => ano corrente; int => >= recency_year
     def compute_recency_window(self, when: date) -> Recency:

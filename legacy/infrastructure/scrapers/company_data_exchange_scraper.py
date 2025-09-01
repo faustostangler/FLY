@@ -244,7 +244,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                         "start_time": start_time,
                     },
                     extra=extra_info,
-                    worker_id=task.worker_id,
+                    worker_id=worker_id,
                 )
 
                 # self.logger.log("End  Method CompanyDataScraper._fetch_companies_list().processor()", level="info")

@@ -56,31 +56,38 @@ class NsdScraper(ScraperNsdPort):
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
     def fetch_all(self, threshold: int | None = None, skip_codes: List[str] | None = None, save_callback: Callable[[List[NsdDTO]], None] | None = None, **kwargs) -> List[NsdDTO]:
-        self.logger.log("Run Method scraper_nsd.fetch_all() NOT IMPLEMENTED YET - and to be removed", level="info") 
         return None
     
+    def fetch_one(self, nsd: int) -> NsdDTO | None:
+        try:
+            url = self.nsd_endpoint.format(nsd=nsd)
+            with self.http_client.borrow_session() as session:
+                body = self.http_client.fetch_with(session, url, headers=session.headers)
+            parsed = self._parse_html(nsd, body.decode("utf-8"))
+            return NsdDTO.from_dict(parsed) if parsed and parsed.get("sent_date") else None
+        except Exception:
+            return None
 
     def iter_nsd(
         self,
         *,
         start: int = 1,
         threshold: Optional[int] = None,  # mantido por compatibilidade, não usado aqui
-        skip_codes: Optional[List[str]] = None,
-        max_nsd: Optional[int] = None,
+        skip_codes: Optional[List[int]] = [],  # mantido por compatibilidade, não usado aqui
+        max_nsd: int = 1,
         **kwargs,
     ) -> Iterable[NsdDTO]:
-        self.skip_codes = {int(code) for code in (skip_codes or [])}
 
+        self.skip_codes = [int(code) for code in skip_codes] if skip_codes else []
         start = max(start, max(self.skip_codes, default=0) + 1)
+        # top_limit = max(max_nsd, self._find_last_existing_nsd(start=start), 50)
 
-        max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
-        max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
-        max_nsd_final = max(start, max_nsd_existing, max_nsd_probable)
+        start = 10008
+        top_limit = max_nsd
+        self.logger.log(f"Using top limit: {top_limit}", level="info")
 
-        # start = 34
-        # max_nsd_final = 100
-        self.logger.log(f"Streaming NSD from {start} to {max_nsd_final or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
-        for code in range(start, max_nsd_final + 1):
+        self.logger.log(f"Streaming NSD from {start} to {top_limit or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
+        for code in range(start, top_limit + 1):
             if code in self.skip_codes:
                 self.logger.log(f"Processed NSD: {code} Done", level="info")
                 continue
@@ -320,7 +327,15 @@ class NsdScraper(ScraperNsdPort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        data["quarter"] = self.datacleaner.clean_date(quarter) if quarter else None
+        q = self.datacleaner.clean_date(quarter) if quarter else None
+        y = datetime.today().year
+        m = datetime.today().month
+        if isinstance(q, datetime):
+            y, m = q.year, q.month
+        # mapeia para o mês de fechamento do trimestre
+        mm = 3 if m <= 3 else 6 if m <= 6 else 9 if m <= 9 else 12
+        dd = 31 if mm in (3, 12) else 30
+        data['quarter'] = datetime(int(y), mm, dd)
 
         nsd_type_version = text_of("#lblDescricaoCategoria")
         if nsd_type_version:
@@ -400,54 +415,54 @@ class NsdScraper(ScraperNsdPort):
 
         return nsd_low
 
-    def _find_next_probable_nsd(
-        self,
-        start: int = 1,
-        safety_factor: float = 1.10,
-    ) -> int:
-        """Estimate next NSD numbers based on historical submission rate.
+    # def _find_next_probable_nsd(
+    #     self,
+    #     start: int = 1,
+    #     safety_factor: float = 1.10,
+    # ) -> int:
+    #     """Estimate next NSD numbers based on historical submission rate.
 
-        The prediction is calculated from the most recent ``window_days`` worth
-        of stored records. It computes the average number of submissions per
-        day and multiplies by the number of days since the last known NSD. The
-        ``safety_factor`` parameter is applied to avoid underestimation.
+    #     The prediction is calculated from the most recent ``window_days`` worth
+    #     of stored records. It computes the average number of submissions per
+    #     day and multiplies by the number of days since the last known NSD. The
+    #     ``safety_factor`` parameter is applied to avoid underestimation.
 
-        Args:
-            repository: Data source providing access to stored NSDs.
-            window_days: Number of days used to calculate the average rate.
-            safety_factor: Multiplier to account for variations in publishing
-                behaviour.
+    #     Args:
+    #         repository: Data source providing access to stored NSDs.
+    #         window_days: Number of days used to calculate the average rate.
+    #         safety_factor: Multiplier to account for variations in publishing
+    #             behaviour.
 
-        Returns:
-            A list of sequential NSD values likely to have been published
-            after the last stored record.
-        """
-        # Get all nsd with valid sent_date
-        if not self.skip_codes:
-            return start
+    #     Returns:
+    #         A list of sequential NSD values likely to have been published
+    #         after the last stored record.
+    #     """
+    #     # Get all nsd with valid sent_date
+    #     if not self.skip_codes:
+    #         return start
 
-        dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date")]
+    #     dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date")]
 
-        first_date = min(dates)
-        last_date = max(dates)
+    #     first_date = min(dates)
+    #     last_date = max(dates)
 
-        # Days span between dates
-        total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
+    #     # Days span between dates
+    #     total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
 
-        # Daily nsd per day Average
-        daily_avg = len(self.skip_codes) / total_span_days
+    #     # Daily nsd per day Average
+    #     daily_avg = len(self.skip_codes) / total_span_days
 
-        # days elapsed since last_date
-        days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]
+    #     # days elapsed since last_date
+    #     days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]
 
-        # Estimated nsd
-        last_estimated_nsd = (
-            start
-            + int(daily_avg * days_elapsed * safety_factor)
-            + self.config.scraping.linear_holes
-        )
+    #     # Estimated nsd
+    #     last_estimated_nsd = (
+    #         start
+    #         + int(daily_avg * days_elapsed * safety_factor)
+    #         + self.config.scraping.linear_holes
+    #     )
 
-        return last_estimated_nsd
+    #     return last_estimated_nsd
 
     def _try_nsd(self, nsd: int) -> Optional[dict]:
         """Attempt to fetch and parse a single NSD page."""

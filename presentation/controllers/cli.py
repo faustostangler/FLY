@@ -13,7 +13,7 @@ from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
-
+from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import UowFactoryPort
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
@@ -47,6 +47,8 @@ class Cli:
         scraper_nsd: ScraperNsdPort,      
         scraper_statements_raw: ScraperStatementRawPort,
 
+        worker_pool: WorkerPoolPort,
+
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         financial_normalizer: FinancialNormalizerPort,
@@ -65,6 +67,8 @@ class Cli:
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
         self.scraper_statements_raw = scraper_statements_raw
+
+        self.worker_pool = worker_pool
 
         self.policy = policy
         self.uow_factory = uow_factory
@@ -119,6 +123,8 @@ class Cli:
             scraper_company_data=self.scraper_company_data,
             scraper_nsd=self.scraper_nsd,
             scraper_statements_raw=self.scraper_statements_raw,
+
+            worker_pool=self.worker_pool,
 
             policy=self.policy,                  # porta para política composta
             financial_normalizer=self.financial_normalizer, # serviço de domínio puro

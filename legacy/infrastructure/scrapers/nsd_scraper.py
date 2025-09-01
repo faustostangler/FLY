@@ -116,7 +116,7 @@ class NsdScraper(ScraperNsdPort):
 
             if nsd in self.skip_codes:
                 self.logger.log(
-                    f"{nsd}", level="info", progress=progress, worker_id=task.worker_id
+                    f"{nsd}", level="info", progress=progress, worker_id=worker_id
                 )
                 return None
 
@@ -138,7 +138,7 @@ class NsdScraper(ScraperNsdPort):
                     f"Failed to fetch NSD {nsd}: {e}",
                     level="warning",
                     progress=progress,
-                    worker_id=task.worker_id,
+                    worker_id=worker_id,
                 )
                 return None
 
@@ -162,7 +162,7 @@ class NsdScraper(ScraperNsdPort):
                 f"{nsd}",
                 level="info",
                 progress={**progress, "extra_info": extra_info},
-                worker_id=task.worker_id,
+                worker_id=worker_id,
             )
 
             # self.logger.log(

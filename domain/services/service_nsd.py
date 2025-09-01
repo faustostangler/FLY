@@ -20,9 +20,10 @@ from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.polices.nsd_policy import NsdPolicyPort
-
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from application.processors.nsd_processor import NsdProcessor
 
 
 class NsdService:
@@ -43,6 +44,8 @@ class NsdService:
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
 
+        worker_pool: WorkerPoolPort | None = None,
+
         policy: NsdPolicyPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
@@ -56,15 +59,17 @@ class NsdService:
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
 
+        self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
         self.scraper_statements_raw = scraper_statements_raw
+
+        self.id_generator = IdGenerator(config=config)
+        self.worker_pool = worker_pool
 
         self.policy = policy
         self.financial_normalizer = financial_normalizer
         self.ratios_calculator = ratios_calculator
         self.uow_factory = uow_factory
-
-        self.id_generator = IdGenerator(config=config)
 
         # stream incremental de NSDs, sem persistir nada aqui
         self.sync_nsd_usecase = SyncNSDUseCase(
@@ -76,91 +81,44 @@ class NsdService:
             uow_factory=uow_factory,
         )
 
+        self._processor = NsdProcessor(
+            config=config,
+            logger=logger,
+
+            nsd_repository=nsd_repository,
+            company_repository=company_repository,
+            statements_raw_repository=statements_raw_repository,
+            statements_fetched_repository=statements_fetched_repository,
+
+            scraper_nsd=scraper_nsd,
+            scraper_statements_raw=scraper_statements_raw,
+
+            policy=policy,
+            financial_normalizer=financial_normalizer,
+            ratios_calculator=ratios_calculator,
+            uow_factory=uow_factory,
+        )
+
+    # def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
+    #     stream = self.sync_nsd_usecase.stream_nsd(start=start, max_nsd=max_nsd)
+
+    #     # o pool cria WorkerTaskDTO internamente com worker_id próprio
+    #     tasks = []
+    #     for i, nsd in enumerate(stream):
+    #         tasks.append((i, nsd))
+    #     # tasks = [(i, nsd) for i, nsd in enumerate(stream)]
+    #     if not tasks:
+    #         return
+
+    #     self.worker_pool.run(
+    #         tasks=tasks,
+    #         processor=self._processor,
+    #         logger=self.logger,
+    #     )
     def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
-        """Processa NSDs incrementalmente com commit atômico por NSD."""
-        for nsd in self.sync_nsd_usecase.stream_nsd(start=start, max_nsd=max_nsd):
-            self._process_one_nsd(nsd)
-
-    def _process_one_nsd(self, nsd: NsdDTO) -> None:
-        nsd_type = self.policy.identify_type(nsd)
-        if not nsd_type.is_statement:
-            # caso não suportado: persiste só o NSD e segue a vida
-            with self.uow_factory() as uow:
-                self._ensure_company_exists(nsd.company_name, uow=uow)
-                self.nsd_repository.save_all([nsd], uow=uow)
-                uow.commit()
-                self.logger.log(f"Processed NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} {nsd.nsd_type} {nsd.company_name}", level="info")
-            return
-
-        q = self.policy.normalize_quarter(nsd)
-        when = getattr(
-            nsd, "date", date(q.year, 12 if q.quarter == 4 else q.quarter * 3, 1)
-            )
-        r = self.policy.compute_recency_window(when)
-        action = self.policy.decide_action(
-            year=q.year,
-            quarter=q.quarter,
-            version=nsd.version,
-            is_december=q.is_december,
-            is_recent=r.is_recent,
+        codes = self.sync_nsd_usecase.stream_codes(start=start, max_nsd=max_nsd)
+        self.worker_pool.run(
+            tasks=enumerate(codes),
+            processor=self._processor,
+            logger=self.logger,
         )
-
-        # Wrap the NsdDTO in a WorkerTaskDTO as required by the port.
-        # The 'index' and 'worker_id' can be placeholders if not needed immediately.
-        task = WorkerTaskDTO(index=0, data=nsd, worker_id="main_thread")
-        
-        self.logger.log(f'MISSING IMPLEMENTATION: {task}')
-        # Pass to the fetch method.
-        # raw_lines = self.scraper_statements_raw.fetch(task)
-
-        # if action.is_raw():
-        #     # commit inclui RAW + NSD, juntos
-        #     with self.uow_factory() as uow:
-        #         self.raw_repo.upsert_bulk(raw_lines, uow)
-        #         self.nsd_repository.upsert(nsd, uow)
-        #         uow.commit()
-        #     return
-
-        # # PROCESS: resolve visão do ano no repositório de RAW, dedup de versões,
-        # # normaliza e calcula ratios; commit inclui RAW + FETCHED + NSD
-        # company_id = self._company_for(nsd)
-        # year_view = self.raw_repo.get_company_year_view(company_id=company_id, year=q.year)
-        # deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
-        # standardized = self.normalizer.standardize(deduped)
-        # fetched = self.ratios.calculate(standardized)
-        # processing_hash = self._hash_run(deduped, standardized, fetched)
-
-        # with self.uow_factory() as uow:
-        #     self.raw_repo.upsert_bulk(raw_lines, uow)
-        #     self.fetched_repo.upsert_bulk(fetched, processing_hash, uow)
-        #     self.nsd_repository.upsert(nsd, uow)
-        #     uow.commit()
-
-    def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> None:
-        if not company_name:
-            return
-        cvm = self.company_repository.get_cvm_by_name(company_name, uow=uow)
-        if cvm:
-            return
-        dto = CompanyDataDTO(
-            cvm_code=self.id_generator.create_id(size=6),
-            company_name=company_name,
-        )
-        self.company_repository.save_all([dto], uow=uow)
-        self.logger.log(f"Created missing company: {company_name}", level="info")
-
-    def _company_for(self, nsd: NsdDTO, *, uow: Uow) -> Optional[str]:
-        company = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
-        return company
-
-    def _hash_run(self, *parts) -> str:
-        import hashlib, json
-        blob = json.dumps([self._to_primitive(p) for p in parts], sort_keys=True, default=str)
-        return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-    def _to_primitive(self, obj):
-        if isinstance(obj, (list, tuple)):
-            return [self._to_primitive(x) for x in obj]
-        if hasattr(obj, "__dict__"):
-            return {k: self._to_primitive(v) for k, v in obj.__dict__.items()}
-        return obj

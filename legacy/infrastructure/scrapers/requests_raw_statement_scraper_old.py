@@ -242,7 +242,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                     self.session,
                     url=item["url"],
                     cache_bypass=True,
-                    worker_id=task.worker_id,
+                    worker_id=worker_id,
                 )
                 # 2) registra bytes baixados
                 download = len(response.content)

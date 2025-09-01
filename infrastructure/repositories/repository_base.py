@@ -63,7 +63,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
             commented out; ensure it is provided by the concrete project setup.
         """
         # Create a new SQLAlchemy session
-        session = self.Session()
+        session = uow.session
 
         # Retrieve the SQLAlchemy model class associated with the DTO type
         model, pk_columns = self.get_model_class()
@@ -79,9 +79,6 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
             for dto in valid_items:
                 session.merge(model.from_dto(dto))
 
-            # Commit the transaction to persist all changes
-            session.commit()
-
             # Log the number of successfully saved items
             if len(valid_items) > 0:
                 self.logger.log(
@@ -89,9 +86,6 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
                     level="info",
                 )
         except Exception as e:
-            # Roll back the transaction in case of error
-            session.rollback()
-
             # Log the failure reason
             self.logger.log(
                 f"Failed to save items: {e}",
@@ -100,9 +94,6 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
 
             # Re-raise the exception to propagate the error
             raise
-        finally:
-            # Ensure the session is always closed after execution
-            session.close()
 
     # def get_all(self, batch_size: int = 100) -> List[T]:
     #     """Retrieve all DTOs using keyset pagination over the primary key.
