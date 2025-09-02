@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Iterable, List, Dict, Any, Optional
 from urllib.parse import quote_plus
 from bs4 import BeautifulSoup, Tag
+import requests
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -9,7 +10,8 @@ from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-from infrastructure.http.http_client import RequestsAffinityHttpClient
+# from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
+from application.ports.http_client_port import AffinityHttpClientPort
 
 
 class ScraperStatementRaw(ScraperStatementRawPort):
@@ -24,7 +26,7 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         config: ConfigPort,
         logger: LoggerPort,
 
-        http_client: RequestsAffinityHttpClient,
+        http_client: AffinityHttpClientPort,
     ) -> None:
         self.config = config
         self.logger = logger
@@ -40,45 +42,48 @@ class ScraperStatementRaw(ScraperStatementRawPort):
     def fetch(self, nsd: NsdDTO) -> Iterable[StatementRawDTO]:
         # 1) baixa página do NSD e extrai hash
         nsd_url = self.config.exchange.nsd_endpoint.format(nsd=nsd.nsd)
-        html = self._get(nsd_url)
-        hdn_hash = self._extract_hash(html)
+        with self.http.borrow_session() as session:
+            html = self._get(url=nsd_url, session=session)
+            hdn_hash = self._extract_hash(html)
 
-        # 2) monta a lista de URLs por grupo/quadro
-        items = self.config.statements.statement_items
-        urls = self._build_urls(nsd, items, hdn_hash)
+            # 2) monta a lista de URLs por grupo/quadro
+            items = self.config.statements.statement_items
+            urls = self._build_urls(nsd, items, hdn_hash)
 
-        # 3) para cada URL, baixa e parseia linhas
-        out: List[StatementRawDTO] = []
-        for item in urls:
-            page_html = self._get(item["url"])
-            rows = self._parse_statement_page(BeautifulSoup(page_html, "html.parser"), item["grupo"])
+            # 3) para cada URL, baixa e parseia linhas
+            out: List[StatementRawDTO] = []
+            for item in urls:
+                page_html = self._get(url=item["url"], session=session)
+                rows = self._parse_statement_page(BeautifulSoup(page_html, "html.parser"), item["grupo"])
 
-            # 4) converte linhas para DTOs idempotentes
-            # quarter como data completa (string ISO ou pt-BR; escolha UMA e padronize)
-            quarter_str = nsd.quarter.strftime("%Y-%m-%d")  # ou "%d/%m/%Y"
-
-            for r in rows:
-                out.append(
-                    StatementRawDTO(
-                        nsd=str(nsd.nsd),
-                        company_name=nsd.company_name,
-                        quarter=quarter_str,           # data completa
-                        version=str(nsd.version),      # StatementRawDTO espera str
-                        grupo=item["grupo"],
-                        quadro=item["quadro"],
-                        account=r["account"],
-                        description=r["description"],
-                        value=float(r["value"]),
+                # 4) converte linhas para DTOs idempotentes
+                # quarter como data completa (string ISO ou pt-BR; escolha UMA e padronize)
+                quarter_str = nsd.quarter.strftime("%Y-%m-%d")  # ou "%d/%m/%Y"
+                
+                for r in rows:
+                    out.append(
+                        StatementRawDTO(
+                            nsd=str(nsd.nsd),
+                            company_name=nsd.company_name,
+                            quarter=quarter_str,           # data completa
+                            version=str(nsd.version),      # StatementRawDTO espera str
+                            grupo=item["grupo"],
+                            quadro=item["quadro"],
+                            account=r["account"],
+                            description=r["description"],
+                            value=float(r["value"]),
+                        )
                     )
-                )
         return out
 
     # ---------- helpers legado-essência ----------
 
-    def _get(self, url: str) -> str:
-        with self.http.borrow_session() as s:
-            print(s.headers)
-            body = self.http.fetch_with(s, url, headers=s.headers)
+    def _get(self, url: str, session: requests.Session | None = None) -> str:
+        if session is None:
+            with self.http.borrow_session() as s:
+                body = self.http.fetch_with(s, url, headers=s.headers)
+                return body.decode("utf-8")
+        body = self.http.fetch_with(session, url, headers=session.headers)
         return body.decode("utf-8")
 
     def _extract_hash(self, html: str) -> str:

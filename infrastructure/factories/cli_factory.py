@@ -10,7 +10,8 @@ from domain.services.financial_normalizer import FinancialNormalizer
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
-from infrastructure.http.http_client import RequestsAffinityHttpClient
+# from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
+from infrastructure.http.builders import build_http_client
 from infrastructure.repositories.repository_company_data import RepositoryCompanyData
 from infrastructure.repositories.repository_nsd import RepositoryNsd
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
@@ -56,7 +57,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     # Provision a worker pool sized by configuration for concurrent tasks
     worker_pool = WorkerPool(config, metrics_collector, config.worker_pool.max_workers)
     # Instantiate the HTTP client with request affinity/session handling
-    http_client = RequestsAffinityHttpClient()
+    http_client = build_http_client(config, logger)
 
     # Assemble the scraper with all required cross-cutting dependencies
     scraper_company_data = CompanyDataScraper(

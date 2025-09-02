@@ -153,6 +153,40 @@ class NsdProcessor:
 
             raw_lines = list(self.scraper_statements_raw.fetch(nsd))
 
+            # from dataclasses import asdict
+            # import pandas as pd
+            # from pathlib import Path
+
+            # # salvar
+            # path = Path("raw_lines.csv")
+            # pd.DataFrame([asdict(x) for x in raw_lines]).to_csv(path, index=False, encoding="utf-8")
+
+            # ler
+            from pathlib import Path
+            import pandas as pd
+            path = Path("raw_lines.csv")
+            df = pd.read_csv(path, encoding="utf-8")
+            from dataclasses import fields
+            from domain.dtos.statement_raw_dto import StatementRawDTO  # ajuste o import
+
+            cols = [f.name for f in fields(StatementRawDTO)]
+            raw_lines = []
+            for _, row in df[cols].iterrows():
+                raw_lines.append(
+                    StatementRawDTO(
+                        nsd=str(row["nsd"]),
+                        company_name=str(row["company_name"]),
+                        quarter=row["quarter"],
+                        version=row["version"],
+                        grupo=str(row["grupo"]),
+                        quadro=str(row["quadro"]),
+                        account=str(row["account"]),
+                        description=str(row["description"]),
+                        value=float(row["value"]),
+                    )
+                )
+            
+
             if action.is_raw():
                 agg.add_raw_many(raw_lines)
                 agg.set_nsd(nsd)

@@ -73,9 +73,10 @@ class DetailFetcher:
         url = self.endpoint_detail + token
 
         # Execute the HTTP request using the shared client/session
-        with self.http_client.borrow_session() as session:
-            body = self.http_client.fetch_with(session, url)
-
+        # with self.http_client.borrow_session() as session:
+        #     body = self.http_client.fetch_with(session, url)
+        body = self.http_client.fetch_with(session, url, headers=session.headers)
+        
         # Update network metrics with the size of the downloaded payload
         self._metrics_collector.add_network_bytes(len(body))
 
