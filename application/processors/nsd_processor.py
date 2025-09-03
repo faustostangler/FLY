@@ -28,30 +28,30 @@ class _NsdTxnAggregator:
         self.nsd_repository = nsd_repository
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
-        self._nsd: Optional[NsdDTO] = None
-        self._raw = []
-        self._fetched = []
+        self._nsd_data: Optional[NsdDTO] = None
+        self._raw_data = []
+        self._fetched_data = []
 
     def set_nsd(self, nsd: NsdDTO) -> None:
-        self._nsd = nsd
+        self._nsd_data = nsd
 
     def add_raw_many(self, items) -> None:
-        self._raw.extend(items)
+        self._raw_data.extend(items)
 
     def add_fetched_many(self, items) -> None:
-        self._fetched.extend(items)
+        self._fetched_data.extend(items)
 
     def flush(self, *, uow: Uow) -> None:
-        if self._raw:
-            self.statements_raw_repository.save_all(self._raw, uow=uow)
-        if self._fetched:
-            self.statements_fetched_repository.save_all(self._fetched, uow=uow)
-        if self._nsd is not None:
-            self.nsd_repository.save_all([self._nsd], uow=uow)
+        if self._nsd_data is not None:
+            self.nsd_repository.save_all([self._nsd_data], uow=uow)
+        if self._raw_data:
+            self.statements_raw_repository.save_all(self._raw_data, uow=uow)
+        if self._fetched_data:
+            self.statements_fetched_repository.save_all(self._fetched_data, uow=uow)
 
-        self._nsd = None
-        self._raw.clear()
-        self._fetched.clear()
+        self._nsd_data = None
+        self._raw_data.clear()
+        self._fetched_data.clear()
 
 
 class NsdProcessor:
@@ -96,15 +96,18 @@ class NsdProcessor:
 
     # compat com pools que chamam .run(task) ou chamam o objeto
     def __call__(self, task: WorkerTaskDTO) -> NsdDTO:
-        return self.run(task)
+        try:
+            return self.run(task)
+        except Exception as e:
+            pass
 
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
-        data = 82408
+        # data = 82408  
         nsd = NsdDTO(id=None, nsd=82408, company_name='LOJAS RENNER SA', quarter=datetime.datetime(2019, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='LAURENCE BELTRAO GOMES', auditor='KPMG AUDITORES INDEPENDENTES', responsible_auditor='CRISTIANO JARDIM SEGUECIO', protocol='008133ITR310320190100082408-72', sent_date=datetime.datetime(2019, 4, 25, 19, 13, 11), reason=None)
 
         start_time = time.perf_counter()
-        # nsd = self.scraper_nsd.fetch_one(int(data))
+        nsd = self.scraper_nsd.fetch_one(int(data))
 
         if nsd is None:
             self.logger.log(f"NSD not found: {data}", level="info")
@@ -151,7 +154,7 @@ class NsdProcessor:
                 is_december=q.is_december, is_recent=recency.is_recent,
             )
 
-            raw_lines = list(self.scraper_statements_raw.fetch(nsd))
+            # raw_lines = list(self.scraper_statements_raw.fetch(nsd))
 
             # from dataclasses import asdict
             # import pandas as pd

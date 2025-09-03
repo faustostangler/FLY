@@ -13,6 +13,7 @@ from domain.ports.repository_statements_raw_port import RepositoryStatementsRawP
 from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.raw_statements_model import StatementRawModel
 from infrastructure.repositories.repository_base import RepositoryBase
+from application.ports.uow_port import Uow
 
 
 class StatementRawRepository(
@@ -37,41 +38,34 @@ class StatementRawRepository(
         """
         return StatementRawModel, (StatementRawModel.id,)
 
-    def save_all(self, items: List[StatementRawDTO]) -> None:
+    def save_all(self, items: List[StatementRawDTO], *, uow: Uow) -> None:
         """Persist raw statements using SQLite upserts."""
-        session = self.Session()
-        try:
-            model, pk_columns = self.get_model_class()
-            flat_items = ListFlattener.flatten(items)
-            valid_items = [i for i in flat_items if i is not None]
-            for dto in valid_items:
-                obj = model.from_dto(dto)
-                data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
-                stmt = insert(model).values(**data)
-                update_dict = {
-                    c.name: getattr(stmt.excluded, c.name)
-                    for c in model.__table__.columns
-                    if c.name != "id"
-                }
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "nsd",
-                        "company_name",
-                        "quarter",
-                        "version",
-                        "grupo",
-                        "quadro",
-                        "account",
-                    ],
-                    set_=update_dict,
-                )
-                session.execute(stmt)
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        session = uow.session
+        model, pk_columns = self.get_model_class()
+        flat_items = ListFlattener.flatten(items)
+        valid_items = [i for i in flat_items if i is not None]
+        for dto in valid_items:
+            obj = model.from_dto(dto)
+            data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
+            stmt = insert(model).values(**data)
+            update_dict = {
+                c.name: getattr(stmt.excluded, c.name)
+                for c in model.__table__.columns
+                if c.name != "id"
+            }
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[
+                    "nsd",
+                    "company_name",
+                    "quarter",
+                    "version",
+                    "grupo",
+                    "quadro",
+                    "account",
+                ],
+                set_=update_dict,
+            )
+            session.execute(stmt)
 
     def get_by_company_name(self, company_name: str) -> list[StatementRawDTO]:
         """Return raw statement rows for the given company."""
