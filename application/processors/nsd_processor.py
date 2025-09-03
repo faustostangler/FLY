@@ -104,7 +104,7 @@ class NsdProcessor:
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
         # data = 82408  
-        nsd = NsdDTO(id=None, nsd=82408, company_name='LOJAS RENNER SA', quarter=datetime.datetime(2019, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='LAURENCE BELTRAO GOMES', auditor='KPMG AUDITORES INDEPENDENTES', responsible_auditor='CRISTIANO JARDIM SEGUECIO', protocol='008133ITR310320190100082408-72', sent_date=datetime.datetime(2019, 4, 25, 19, 13, 11), reason=None)
+        # nsd = NsdDTO(id=None, nsd=82408, company_name='LOJAS RENNER SA', quarter=datetime.datetime(2019, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='LAURENCE BELTRAO GOMES', auditor='KPMG AUDITORES INDEPENDENTES', responsible_auditor='CRISTIANO JARDIM SEGUECIO', protocol='008133ITR310320190100082408-72', sent_date=datetime.datetime(2019, 4, 25, 19, 13, 11), reason=None)
 
         start_time = time.perf_counter()
         nsd = self.scraper_nsd.fetch_one(int(data))
@@ -154,7 +154,7 @@ class NsdProcessor:
                 is_december=q.is_december, is_recent=recency.is_recent,
             )
 
-            # raw_lines = list(self.scraper_statements_raw.fetch(nsd))
+            raw_lines = list(self.scraper_statements_raw.fetch(nsd))
 
             # from dataclasses import asdict
             # import pandas as pd
@@ -165,29 +165,29 @@ class NsdProcessor:
             # pd.DataFrame([asdict(x) for x in raw_lines]).to_csv(path, index=False, encoding="utf-8")
 
             # ler
-            from pathlib import Path
-            import pandas as pd
-            path = Path("raw_lines.csv")
-            df = pd.read_csv(path, encoding="utf-8")
-            from dataclasses import fields
-            from domain.dtos.statement_raw_dto import StatementRawDTO  # ajuste o import
+            # from pathlib import Path
+            # import pandas as pd
+            # path = Path("raw_lines.csv")
+            # df = pd.read_csv(path, encoding="utf-8")
+            # from dataclasses import fields
+            # from domain.dtos.statement_raw_dto import StatementRawDTO  # ajuste o import
 
-            cols = [f.name for f in fields(StatementRawDTO)]
-            raw_lines = []
-            for _, row in df[cols].iterrows():
-                raw_lines.append(
-                    StatementRawDTO(
-                        nsd=str(row["nsd"]),
-                        company_name=str(row["company_name"]),
-                        quarter=row["quarter"],
-                        version=row["version"],
-                        grupo=str(row["grupo"]),
-                        quadro=str(row["quadro"]),
-                        account=str(row["account"]),
-                        description=str(row["description"]),
-                        value=float(row["value"]),
-                    )
-                )
+            # cols = [f.name for f in fields(StatementRawDTO)]
+            # raw_lines = []
+            # for _, row in df[cols].iterrows():
+            #     raw_lines.append(
+            #         StatementRawDTO(
+            #             nsd=str(row["nsd"]),
+            #             company_name=str(row["company_name"]),
+            #             quarter=row["quarter"],
+            #             version=row["version"],
+            #             grupo=str(row["grupo"]),
+            #             quadro=str(row["quadro"]),
+            #             account=str(row["account"]),
+            #             description=str(row["description"]),
+            #             value=float(row["value"]),
+            #         )
+            #     )
             
 
             if action.is_raw():
