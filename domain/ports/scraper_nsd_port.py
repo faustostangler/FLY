@@ -18,7 +18,7 @@ class ScraperNsdPort(ScraperBasePort[NsdDTO]):
         *,
         start: int = 1,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[int]] = None,
+        existing_codes: Optional[List[int]] = None,
         max_nsd: int = 1,
         **kwargs,
     ) -> Iterable[NsdDTO]:

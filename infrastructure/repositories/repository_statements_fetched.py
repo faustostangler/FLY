@@ -11,7 +11,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from infrastructure.utils.list_flatenner import ListFlattener
-from infrastructure.models.fetched_statements_model import StatementFetchedModel
+from infrastructure.models.statements_fetched_model import StatementFetchedModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from application.ports.uow_port import Uow
 

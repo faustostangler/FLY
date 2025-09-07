@@ -35,38 +35,53 @@ class SyncNSDUseCase:
 
     def stream_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[NsdDTO]:
         with self.uow_factory() as uow:
-            skip_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
+            existing_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
 
-            max_nsd_probable = max(start, self._find_next_probable_nsd(start=start, skip_codes=skip_codes, safety_factor=1.10, uow=uow))
+            max_nsd_probable = max(start, self._find_next_probable_nsd(start=start, existing_codes=existing_codes, safety_factor=1.10, uow=uow))
 
         # leitura apenas; sem commit explícito
-        for dto in self.scraper.iter_nsd(start=start, skip_codes=skip_codes, max_nsd=max_nsd_probable):
+        for dto in self.scraper.iter_nsd(start=start, existing_codes=existing_codes, max_nsd=max_nsd_probable):
             yield dto
 
-    def build_code_list(self, *, start: int = 1, max_nsd: int = 1) -> List[int]:
-        """Calcula uma única vez a lista de NSDs a processar (sem rede)."""
-        # probe = getattr(self.scraper, "_find_last_existing_nsd", None)
-        # max_nsd_existing: int = 1
-        # if callable(probe):
-        #     try:
-        #         max_nsd_existing = int(probe(start=start, max_limit=10**10))
-        #     except Exception:
-        #         max_nsd_existing = 1
-        max_nsd_existing =1
-        start=10007
+    def build_code_list(self, *, start: int = 1, max_nsd: Optional[int] = None) -> List[int]:
+        """Lista de NSDs a processar:
+        missing = [start..last_nsd] \ skip_codes
+        tail    = [last_nsd+1..end], onde end = max(max_nsd_existing, max_nsd_probable, cap_param)
+        """
+        start = max(1, int(start))
+        cap_param = max_nsd or self.config.repository.batch_size or 50
 
         with self.uow_factory() as uow:
-            skip_codes: List[int] = [
-                int(code) for (code,)
-                in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)
-            ]
+            existing_codes: list[int] = [int(c) for (c,) in self.nsd_repository.get_all_by_columns("nsd", uow=uow)]
+            skip_codes = set(existing_codes)
+            last_nsd = max(existing_codes) if existing_codes else 1
+
             max_nsd_probable: int = self._find_next_probable_nsd(
-                start=start, skip_codes=skip_codes, uow=uow
+                start=start,
+                existing_codes=existing_codes,
+                uow=uow,
             )
 
-        max_nsd_final: int = max(start, max_nsd_existing, max_nsd_probable, max_nsd)
+        # limites base
+        probe = getattr(self.scraper, "_find_last_existing_nsd", None)
+        if callable(probe):
+            try:
+                max_nsd_existing = int(probe(start=last_nsd, max_limit=10**10))
+            except Exception:
+                max_nsd_existing = 1
+        else:
+            max_nsd_existing = 1
 
-        return [c for c in range(start, max_nsd_final + 1) if c not in skip_codes]
+        end = max(max_nsd_existing, max_nsd_probable, cap_param)
+
+        # missing até last_nsd, mas limitado por end
+        missing_nsd = [c for c in range(start, min(last_nsd, end) + 1) if c not in skip_codes]
+
+        # cauda nova a partir do próximo após o último existente
+        tail_start = max(last_nsd + 1, start)
+        tail = list(range(tail_start, end + 1)) if end >= tail_start else []
+
+        return tail + missing_nsd if len(missing_nsd) > (end - last_nsd) else tail
 
     def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
         """Gerador preguiçoso sobre a lista já calculada externamente."""
@@ -76,19 +91,19 @@ class SyncNSDUseCase:
     def _find_next_probable_nsd(
         self,
         *,
-        skip_codes: list[int],
+        existing_codes: list[int],
         uow,
         start: int,
         safety_factor: float = 1.10,
     ) -> int:
-        if not skip_codes:
+        if not existing_codes:
             return start
 
         # lê datas válidas do banco
         dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date", uow=uow, include_nulls=False)]
 
         if not dates:
-            return max(start, max(skip_codes))
+            return max(start, max(existing_codes))
 
         first_date = min(dates)
         last_date = max(dates)
@@ -97,7 +112,7 @@ class SyncNSDUseCase:
         total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
 
         # Daily nsd per day Average
-        daily_avg = len(skip_codes) / total_span_days
+        daily_avg = len(existing_codes) / total_span_days
 
         # days elapsed since last_date
         days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]
@@ -125,7 +140,7 @@ class SyncNSDUseCase:
     #     # Fetch all documents from the scraper, persisting them in batches.
     #     # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
     #     self.scraper.fetch_all(
-    #         skip_codes=existing_nsd,
+    #         existing_codes=existing_nsd,
     #         save_callback=self._save_batch,
     #     )
     #     # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")

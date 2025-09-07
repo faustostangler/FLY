@@ -17,7 +17,7 @@ class ScraperNsdPort(ScraperBasePort[NsdDTO]):
     # def fetch_nsd(
     #     self,
     #     threshold: Optional[int] = None,
-    #     skip_codes: Optional[List[str]] = None,
+    #     existing_codes: Optional[List[str]] = None,
     #     save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
     #     start: int = 1,
     #     max_nsd: Optional[int] = None,

@@ -59,7 +59,7 @@ class NsdScraper(ScraperNsdPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
+        existing_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
         start: int = 1,
         max_nsd: Optional[int] = None,
@@ -73,9 +73,9 @@ class NsdScraper(ScraperNsdPort):
         # )
         byte_formatter = ByteFormatter()
 
-        self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
+        self.existing_codes = {int(code) for code in existing_codes} if existing_codes else set()
 
-        start = max(start, max(self.skip_codes, default=0) + 1)
+        start = max(start, max(self.existing_codes, default=0) + 1)
 
         max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
         max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
@@ -87,9 +87,9 @@ class NsdScraper(ScraperNsdPort):
 
         self.logger.log("Fetch NSD list", level="info")
 
-        if len(self.skip_codes) > nsd_diff:
+        if len(self.existing_codes) > nsd_diff:
             codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
-            codes = [c for c in codes if c not in self.skip_codes]
+            codes = [c for c in codes if c not in self.existing_codes]
         else:
             codes = list(range(start, max_nsd + 1))
 
@@ -114,7 +114,7 @@ class NsdScraper(ScraperNsdPort):
                 "start_time": start_time,
             }
 
-            if nsd in self.skip_codes:
+            if nsd in self.existing_codes:
                 self.logger.log(
                     f"{nsd}", level="info", progress=progress, worker_id=worker_id
                 )
@@ -373,7 +373,7 @@ class NsdScraper(ScraperNsdPort):
             after the last stored record.
         """
         # Get all nsd with valid sent_date
-        if not self.skip_codes:
+        if not self.existing_codes:
             return start
 
         dates = [d for (d,) in self.repository.iter_existing_by_columns("sent_date")]
@@ -385,7 +385,7 @@ class NsdScraper(ScraperNsdPort):
         total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
 
         # Daily nsd per day Average
-        daily_avg = len(self.skip_codes) / total_span_days
+        daily_avg = len(self.existing_codes) / total_span_days
 
         # days elapsed since last_date
         days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]

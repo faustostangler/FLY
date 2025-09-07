@@ -19,7 +19,7 @@ class ScraperBasePort(ABC, Generic[T]):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
+        existing_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[T]], None]] = None,
         **kwargs,
     ) -> ExecutionResultDTO[T]:

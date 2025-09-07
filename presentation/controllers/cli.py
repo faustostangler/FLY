@@ -78,7 +78,10 @@ class Cli:
         self.byte_formatter = ByteFormatter()
 
     def __call__(self) -> None:
-        return self.run()
+        try:
+            return self.run()
+        except Exception as e:
+            pass
 
     def run(self) -> None:
         """Execute the top-level application workflow."""

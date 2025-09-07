@@ -46,14 +46,14 @@ class SyncCompanyDataUseCase:
         start = time.perf_counter()
 
         # busca todos os company_name que já estão na tabela
-        skip_codes = [
+        existing_codes = [
             code for (code,) in self.repository.iter_existing_by_columns("company_name")
         ]
 
         # self.logger.log("Call Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
         # Fetch all companies from the scraper and persist them batch-wise.
         results = self.scraper.fetch_all(
-            skip_codes=skip_codes,
+            existing_codes=existing_codes,
             save_callback=self._save_batch,
         )
         # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
@@ -66,7 +66,7 @@ class SyncCompanyDataUseCase:
 
         return SyncCompanyDataResultDTO(
             processed_count=len(results.items),
-            skipped_count=len(skip_codes),
+            skipped_count=len(existing_codes),
             bytes_downloaded=bytes_downloaded,
             elapsed_time=elapsed,
         )

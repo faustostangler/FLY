@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from typing import (
+    Any,
     Generic,
     Iterator,
     List,
     Protocol,
     Tuple,
     TypeVar,
+    Sequence,
     Union,
     runtime_checkable,
 )
@@ -53,16 +55,6 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
 
     def save_all(self, items: List[T], *, uow: Uow) -> None: ...
 
-    # def get_all(self) -> List[T]: ...
-
-    # def iter_all(self, batch_size: int | None = None) -> Generator[T, None, None]: ...
-
-    # def get_all_primary_keys(self) -> List[str]: ...
-
-    # def get_existing_by_columns(
-    #     self, column_names: Union[str, List[str]]
-    # ) -> List[Tuple]: ...
-
     def iter_existing_by_columns(
         self,
         column_names: Union[str, List[str]],
@@ -71,6 +63,30 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         batch_size: int | None = None,
         include_nulls: bool = False,
     ) -> Iterator[Tuple]: ...
+
+    def get_all_by_columns(
+        self,
+        column_names: Union[str, List[str], Tuple[str, ...]],
+        *,
+        uow: Uow,
+        include_nulls: bool = False,
+        batch_size: int | None = None,
+    ) -> List[Tuple]: ...
+
+    # def get_existing_by_columns(
+    #     self, column_names: Union[str, List[str]],
+    #     uow: Uow, 
+    # ) -> List[Tuple]: ...
+
+    # def _safe_cast(self, value: Any) -> Union[int, str]: ...
+
+    # def _sort_key(self, obj: Any, pk_columns: Sequence) -> tuple[Union[int, str], ...]: ...
+
+    # def get_all(self) -> List[T]: ...
+
+    # def iter_all(self, batch_size: int | None = None) -> Generator[T, None, None]: ...
+
+    # def get_all_primary_keys(self) -> List[str]: ...
 
     # def has_item(self, identifier: K) -> bool: ...
 
@@ -83,7 +99,3 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
     # ) -> List[T]: ...
 
     # def get_page_after(self, last_id: int, limit: int) -> List[T]: ...
-
-    # def _safe_cast(self, value: Any) -> Union[int, str]: ...
-
-    # def _sort_key(self, obj: Any, pk_columns: Sequence) -> tuple[Union[int, str], ...]: ...

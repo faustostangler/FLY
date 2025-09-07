@@ -11,7 +11,7 @@ TABLES = {
     "company": "tbl_company",
     "nsd": "tbl_nsd",
     "raw_statements": "tbl_raw_statements",
-    "fetched_statements": "tbl_fetched_statements",
+    "fetched_statements": "tbl_statements_fetched",
 }
 
 

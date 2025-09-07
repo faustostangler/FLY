@@ -55,7 +55,7 @@ class NsdScraper(ScraperNsdPort):
 
         # self.logger.log(f"Load Class {self.__class__.__name__}", level="info")
 
-    def fetch_all(self, threshold: int | None = None, skip_codes: List[str] | None = None, save_callback: Callable[[List[NsdDTO]], None] | None = None, **kwargs) -> List[NsdDTO]:
+    def fetch_all(self, threshold: int | None = None, existing_codes: List[str] | None = None, save_callback: Callable[[List[NsdDTO]], None] | None = None, **kwargs) -> List[NsdDTO]:
         return None
     
     def fetch_one(self, nsd: int) -> NsdDTO | None:
@@ -73,20 +73,20 @@ class NsdScraper(ScraperNsdPort):
         *,
         start: int = 1,
         threshold: Optional[int] = None,  # mantido por compatibilidade, não usado aqui
-        skip_codes: Optional[List[int]] = [],  # mantido por compatibilidade, não usado aqui
+        existing_codes: Optional[List[int]] = [],  # mantido por compatibilidade, não usado aqui
         max_nsd: int = 1,
         **kwargs,
     ) -> Iterable[NsdDTO]:
 
-        self.skip_codes = [int(code) for code in skip_codes] if skip_codes else []
-        start = max(start, max(self.skip_codes, default=0) + 1)
+        self.existing_codes = [int(code) for code in existing_codes] if existing_codes else []
+        start = max(start, max(self.existing_codes, default=0) + 1)
         # top_limit = max(max_nsd, self._find_last_existing_nsd(start=start), 50)
 
         self.logger.log(f"Using top limit: {top_limit}", level="info")
 
-        self.logger.log(f"Streaming NSD from {start} to {top_limit or 'infinity'}, skipping {len(self.skip_codes)} existing", level="info")
+        self.logger.log(f"Streaming NSD from {start} to {top_limit or 'infinity'}, skipping {len(self.existing_codes)} existing", level="info")
         for code in range(start, top_limit + 1):
-            if code in self.skip_codes:
+            if code in self.existing_codes:
                 self.logger.log(f"Processed NSD: {code} Done", level="info")
                 continue
             url = self.nsd_endpoint.format(nsd=code)
@@ -111,7 +111,7 @@ class NsdScraper(ScraperNsdPort):
     # def fetch_all(
     #     self,
     #     threshold: Optional[int] = None,
-    #     skip_codes: Optional[List[str]] = None,
+    #     existing_codes: Optional[List[str]] = None,
     #     save_callback=None,
     #     start: int = 1,
     #     max_nsd: Optional[int] = None,
@@ -120,7 +120,7 @@ class NsdScraper(ScraperNsdPort):
     #     return list(self.iter_nsd(
     #         start=start,
     #         threshold=threshold,
-    #         skip_codes=skip_codes,
+    #         existing_codes=existing_codes,
     #         max_nsd=max_nsd,
     #         **kwargs,
     #     ))
@@ -128,7 +128,7 @@ class NsdScraper(ScraperNsdPort):
     # def fetch_all(
     #     self,
     #     threshold: Optional[int] = None,
-    #     skip_codes: Optional[List[str]] = None,
+    #     existing_codes: Optional[List[str]] = None,
     #     save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
     #     start: int = 1,
     #     max_nsd: Optional[int] = None,
@@ -142,9 +142,9 @@ class NsdScraper(ScraperNsdPort):
     #     # )
     #     byte_formatter = ByteFormatter()
 
-    #     self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
+    #     self.existing_codes = {int(code) for code in existing_codes} if existing_codes else set()
 
-    #     start = max(start, max(self.skip_codes, default=0) + 1)
+    #     start = max(start, max(self.existing_codes, default=0) + 1)
 
     #     max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
     #     max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
@@ -156,9 +156,9 @@ class NsdScraper(ScraperNsdPort):
 
     #     self.logger.log("Fetch NSD list", level="info")
 
-    #     if len(self.skip_codes) > nsd_diff:
+    #     if len(self.existing_codes) > nsd_diff:
     #         codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
-    #         codes = [c for c in codes if c not in self.skip_codes]
+    #         codes = [c for c in codes if c not in self.existing_codes]
     #     else:
     #         codes = list(range(start, max_nsd + 1))
 
@@ -183,7 +183,7 @@ class NsdScraper(ScraperNsdPort):
     #             "start_time": start_time,
     #         }
 
-    #         if nsd in self.skip_codes:
+    #         if nsd in self.existing_codes:
     #             self.logger.log(
     #                 f"{nsd}", level="info", progress=progress, worker_id=task.worker_id
     #             )
@@ -364,7 +364,7 @@ class NsdScraper(ScraperNsdPort):
         Returns:
             int: The last NSD with valid content.
         """
-        nsd = start - 1
+        nsd = start + 1
         last_valid = None
 
         max_linear_holes = self.config.scraping.linear_holes or 2000
@@ -381,14 +381,16 @@ class NsdScraper(ScraperNsdPort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
-        multiplier = 1
+        multiplier = 1.5
+        count = 0
         nsd += 1
         while nsd <= max_limit and hole_count < max_linear_holes:
             fetched = self._try_nsd(nsd)
             if fetched:
                 last_valid = nsd
-                multiplier += 1
-                nsd = nsd * multiplier
+                # multiplier += 1
+                count += 1
+                nsd = int(nsd * multiplier)
             else:
                 break
 
@@ -437,7 +439,7 @@ class NsdScraper(ScraperNsdPort):
     #         after the last stored record.
     #     """
     #     # Get all nsd with valid sent_date
-    #     if not self.skip_codes:
+    #     if not self.existing_codes:
     #         return start
 
     #     dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date")]
@@ -449,7 +451,7 @@ class NsdScraper(ScraperNsdPort):
     #     total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
 
     #     # Daily nsd per day Average
-    #     daily_avg = len(self.skip_codes) / total_span_days
+    #     daily_avg = len(self.existing_codes) / total_span_days
 
     #     # days elapsed since last_date
     #     days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]

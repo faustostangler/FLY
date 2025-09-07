@@ -97,7 +97,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     # Policy
     policy = NsdPolicy(
         allowed_types=tuple(config.domain.statements_types),
-        recency_year=None,  # se quiser, leia também de config (ex.: config.domain.recency_year)
+        recency_year=config.domain.recency_year,
     )
 
     # Unit of Work

@@ -22,3 +22,6 @@ class WorkerTaskDTO:
 
     # Worker identifier to track assignment or ownership
     worker_id: str
+
+    # Total Worker Batch Size
+    total_size: int | None = None

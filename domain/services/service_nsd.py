@@ -99,8 +99,11 @@ class NsdService:
             uow_factory=uow_factory,
         )
 
-    def __call__(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
-        return self.run()
+    def __call__(self, *, start: int = 1, max_nsd: int = 1) -> None:
+        try:
+            return self.run(start=start, max_nsd=max_nsd)
+        except Exception as e:
+            pass
 
     # def sync_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> None:
     #     stream = self.sync_nsd_usecase.stream_nsd(start=start, max_nsd=max_nsd)
@@ -126,4 +129,5 @@ class NsdService:
             logger=self.logger,
             tasks=enumerate(code_stream),
             processor=self._processor,
+            total_size=len(codes)
         )

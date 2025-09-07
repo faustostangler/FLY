@@ -24,7 +24,7 @@ class NsdTypePolicy:
 @dataclass(frozen=True)
 class QuarterPolicy:
     year: int
-    quarter: int
+    month: int
     is_december: bool
 
 
@@ -63,8 +63,8 @@ class NsdPolicy(NsdPolicyPort):
                     y, m = sent.year, sent.month
                 else:
                     raise ValueError("NsdDTO.quarter precisa ser date/datetime ou informar year/month")
-        q = 1 if m <= 3 else 2 if m <= 6 else 3 if m <= 9 else 4
-        return QuarterPolicy(year=int(y), quarter=q, is_december=(m == 12))
+        q = 3 if m <= 3 else 6 if m <= 6 else 9 if m <= 9 else 12
+        return QuarterPolicy(year=int(y), month=q, is_december=(q == 12))
 
     # recência: None => ano corrente; int => >= recency_year
     def compute_recency_window(self, when: date) -> RecencyPolicy:
@@ -84,17 +84,28 @@ class NsdPolicy(NsdPolicyPort):
 
     # dedup por versão: mantém a maior versão por (company_id, year, quarter, account/account_code)
     def version_deduplicate(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementRawDTO]:
-        latest: dict[tuple, StatementRawDTO] = {}
-        for r in raws:
-            key = (
-                getattr(r, "company_id", None),
-                int(getattr(r, "year", 0)),
-                int(getattr(r, "quarter", 0)),
-                str(getattr(r, "account", getattr(r, "account_code", ""))),
-            )
-            cur = latest.get(key)
-            rv = int(getattr(r, "version", 0))
-            cv = int(getattr(cur, "version", -1)) if cur is not None else -1
-            if cur is None or rv > cv:
-                latest[key] = r
-        return list(latest.values())
+        try:
+            latest: dict[tuple, StatementRawDTO] = {}
+            for r in raws:
+                r_quarter = datetime.strptime(r.quarter, "%Y-%m-%d").date()
+                y, m = r_quarter.year, r_quarter.month
+                q_bucket = 3 if m <= 3 else 6 if m <= 6 else 9 if m <= 9 else 12
+
+                company_key = (
+                    getattr(r, "company_id", None)
+                    or getattr(r, "cvm_code", None)
+                    or getattr(r, "nsd", None)
+                    or getattr(r, "company_name", None)
+                )
+                account_key = str(getattr(r, "account", getattr(r, "account_code", "")))
+
+                key = (company_key, int(y), int(q_bucket), account_key)
+
+                cur = latest.get(key)
+                rv = int(getattr(r, "version", 1))
+                cv = int(getattr(cur, "version", -1)) if cur is not None else -1
+                if cur is None or rv > cv:
+                    latest[key] = r
+            return list(latest.values())
+        except Exception as e:
+            pass

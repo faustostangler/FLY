@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date
-import datetime
+from datetime import datetime
 import time
 from typing import Optional
 
@@ -104,13 +104,13 @@ class NsdProcessor:
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
         # data = 82408  
-        # nsd = NsdDTO(id=None, nsd=82408, company_name='LOJAS RENNER SA', quarter=datetime.datetime(2019, 3, 31, 0, 0), version=1, nsd_type='INFORMACOES TRIMESTRAIS', dri='LAURENCE BELTRAO GOMES', auditor='KPMG AUDITORES INDEPENDENTES', responsible_auditor='CRISTIANO JARDIM SEGUECIO', protocol='008133ITR310320190100082408-72', sent_date=datetime.datetime(2019, 4, 25, 19, 13, 11), reason=None)
+        # nsd = NsdDTO(id=None, nsd=10012, company_name='IND MAQS AGRICOLAS FUCHS SA', quarter=datetime.datetime(2011, 3, 31, 0, 0), version=2, nsd_type='INFORMACOES TRIMESTRAIS', dri='JALMAR JOSE MARTEL', auditor='MULTICON AUDITORIA E ASSESSORIA CONTABIL SS', responsible_auditor='MARCO ANTONIO PALERMO', protocol='007064ITR310320110200010012-79', sent_date=datetime.datetime(2011, 7, 7, 11, 7, 36), reason='AS INFORMACOES NO RELATORIO DA REVISAO ESPECIAL NAO SE REFEREM AO TRIMESTRE EM QUESTAO E SIM SOBRE O MESMO PERIODO POREM DO EXERCICIO ANTERIOR E QUE AGORA ESTAMOS TRANSCREVENDO O CONTEUDO CORRETO')
 
         start_time = time.perf_counter()
         nsd = self.scraper_nsd.fetch_one(int(data))
 
         if nsd is None:
-            self.logger.log(f"NSD not found: {data}", level="info")
+            self.logger.log(f"NSD: {data}", level="info")
             return task.data
 
         with self.uow_factory() as uow:
@@ -130,10 +130,12 @@ class NsdProcessor:
 
                 progress = {
                     "index": task.index,
-                    "size": 100000,  # len(tasks),
+                    "size": task.total_size,
                     "start_time": start_time,
                 }
-                extra_info = [ f"{nsd.nsd} {nsd.quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+
+                nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
+                extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
                 self.logger.log(
                     f"{nsd.nsd}",
                     level="info",
@@ -143,15 +145,15 @@ class NsdProcessor:
 
                 return nsd
 
-            q = self.policy.normalize_quarter(nsd)
+            quarter_police = self.policy.normalize_quarter(nsd)
             sd = getattr(nsd, "sent_date")
             if hasattr(sd, "date"):
                 sd = sd.date()
-            when = sd or date(q.year, q.quarter * 3, 1)
+            when = sd or date(quarter_police.year, quarter_police.month, 1)
             recency = self.policy.compute_recency_window(when)
             action = self.policy.decide_action(
-                year=q.year, quarter=q.quarter, version=nsd.version,
-                is_december=q.is_december, is_recent=recency.is_recent,
+                year=quarter_police.year, quarter=quarter_police.month, version=nsd.version,
+                is_december=quarter_police.is_december, is_recent=recency.is_recent,
             )
 
             raw_lines = list(self.scraper_statements_raw.fetch(nsd))
@@ -164,7 +166,7 @@ class NsdProcessor:
             # path = Path("raw_lines.csv")
             # pd.DataFrame([asdict(x) for x in raw_lines]).to_csv(path, index=False, encoding="utf-8")
 
-            # ler
+            # # ler
             # from pathlib import Path
             # import pandas as pd
             # path = Path("raw_lines.csv")
@@ -204,7 +206,11 @@ class NsdProcessor:
             # PROCESS
             company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
             year_view = list(
-                self.statements_raw_repository.get_company_year_view(company_id=company_id, year=q.year, uow=uow)
+                self.statements_raw_repository.get_company_year_view(
+                    company_id=company_id,
+                    year=quarter_police.year,
+                    uow=uow,
+                )
             )
             deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
             standardized = self.financial_normalizer.standardize(deduped)

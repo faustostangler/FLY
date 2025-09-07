@@ -31,13 +31,13 @@ class StatementRawModel(BaseStatementModel):
             "grupo",
             "quadro",
             "account",
-            name="uq_raw_statements_fullkey",
+            name="uq_statements_raw_fullkey",
         ),
-        Index("ix_raw_statements_company_name", "company_name"),
-        Index("ix_raw_statements_quarter", "quarter"),
-        Index("ix_raw_statements_account", "account"),
-        Index("ix_raw_statements_nsd", "nsd"),
-        Index("ix_raw_statements_company_name_quarter", "company_name", "quarter"),
+        Index("ix_statements_raw_company_name", "company_name"),
+        Index("ix_statements_raw_quarter", "quarter"),
+        Index("ix_statements_raw_account", "account"),
+        Index("ix_statements_raw_nsd", "nsd"),
+        Index("ix_statements_raw_company_name_quarter", "company_name", "quarter"),
     )
 
     @staticmethod

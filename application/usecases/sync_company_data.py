@@ -44,7 +44,10 @@ class SyncCompanyDataUseCase:
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return self.run()
+        try:
+            return self.run()
+        except Exception as e:
+            pass
 
     def run(self) -> SyncResultsDTO:
         """Run the full company synchronization pipeline.
@@ -60,10 +63,10 @@ class SyncCompanyDataUseCase:
         """
         # Collect company identifiers already stored in the repository
         with self.uow_factory() as uow:
-            skip_codes = [code for (code,) in self.repository.iter_existing_by_columns("company_name", uow=uow)]
+            existing_codes = [code for (code,) in self.repository.iter_existing_by_columns("company_name", uow=uow)]
 
             # Fetch companies from scraper and persist them in batch mode
-            results = self.scraper.fetch_all(skip_codes=skip_codes,save_callback=self._save_batch)
+            results = self.scraper.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
 
             return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
 

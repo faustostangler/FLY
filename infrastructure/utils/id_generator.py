@@ -46,7 +46,7 @@ class IdGenerator:
         # Resolve the effective logger/app name with sensible fallbacks
         self.logger_name = logger_name or self.config.fly_settings.app_name or "FLY"
 
-    def create_id(self, size: int = 0, string_id: Optional[str] = None) -> str:
+    def create_id(self, size: int = 0, string_id: Optional[str] = None, random: bool = True) -> str:
         """Return a new identifier as a hex digest (optionally truncated).
 
         If `string_id` is provided, it becomes the sole basis for the hash.
@@ -80,18 +80,23 @@ class IdGenerator:
 
             # Gather network/host identifiers
             hostname = socket.gethostname()
-            fqdn = socket.getfqdn()
+            # fqdn = socket.getfqdn()
+            fqdn = ''
             node = platform.node()
 
             # Add user-specific context from environment, when present
             user = os.environ.get("USER") or os.environ.get("USERNAME")
             home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
 
-            # Include a high-resolution timestamp for temporal uniqueness
-            ts = time.time_ns()
+            if random:
+                # Include a high-resolution timestamp for temporal uniqueness
+                ts = time.time_ns()
 
-            # Add a random UUID4 component for extra entropy
-            rand = uuid.uuid4().hex
+                # Add a random UUID4 component for extra entropy
+                rand = uuid.uuid4().hex
+            else:
+                ts = ''
+                rand = ''
 
             # Build the composite string deterministically from all pieces
             composite_str = f"{salt}-{system}-{release}-{version}-{machine}-{processor}-{mac}-{hostname}-{fqdn}-{node}-{user}-{home}-{ts}-{rand}"

@@ -113,7 +113,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
+        existing_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[CompanyDataDTO]], None]] = None,
         **kwargs,
     ) -> List[CompanyDataDTO]:
@@ -126,7 +126,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         Args:
             threshold (Optional[int]): Number of companies to buffer before flushing.
                 Falls back to repository configuration or 50 if not provided.
-            skip_codes (Optional[List[str]]): Collection of company identifiers to skip.
+            existing_codes (Optional[List[str]]): Collection of company identifiers to skip.
             save_callback (Optional[Callable[[List[CompanyDataDTO]], None]]):
                 Callback to persist buffered DTOs when the threshold is reached.
             **kwargs: Reserved for future extensions.
@@ -135,7 +135,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             List[CompanyDataDTO]: Fully fetched company detail DTOs.
         """
         # Normalize list of codes to a set for O(1) membership checks
-        self.skip_codes = skip_codes or set()
+        self.existing_codes = existing_codes or set()
 
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
@@ -282,7 +282,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         Streams companies through a detail processor and buffers fetched results,
         periodically flushing via ``save_callback`` according to the configured
-        threshold. Skips entries present in ``self.skip_codes``.
+        threshold. Skips entries present in ``self.existing_codes``.
 
         Args:
             companies_list (List[Dict]): Raw company entries with at least ``codeCVM``.
@@ -321,7 +321,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             company_name = self.datacleaner.clean_text(entry.get("companyName"))
 
             # Skip if company is already persisted or filtered out
-            if company_name in self.skip_codes:
+            if company_name in self.existing_codes:
                 # Log a concise progress update for the skipped record
                 extra_info = {
                     "issuingCompany": entry["issuingCompany"],

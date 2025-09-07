@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import replace, is_dataclass
 from decimal import Decimal
+from datetime import datetime
 from typing import Any, Iterable, List, Sequence, Dict, Tuple, Callable
 
 from domain.dtos.statement_raw_dto import StatementRawDTO
@@ -34,20 +35,79 @@ class FinancialNormalizer(FinancialNormalizerPort):
         return fetched
 
     # ---------- 1) Matemática de quarter sobre RAW do ano deduplicado ----------
+    # Caminho ATUAL: usa DATA do quarter; identifica pelo mês (03, 06, 09, 12) e converte acumulados conforme regras.
     def _apply_quarter_math(self, raws: Sequence[StatementRawDTO]) -> Iterable[StatementRawDTO]:
-        groups: Dict[Tuple[str, int, str], Dict[int, StatementRawDTO]] = {}
-        for r in raws:
-            key = (r.company_name, int(r.quarter.year), self._account_of(r))
-            groups.setdefault(key, {})[int(r.quarter)] = r
+        # 1) extrai a data do quarter (string -> datetime) e o mês do quarter
+        def qdate_of(r: StatementRawDTO) -> datetime | None:
+            # aceita "YYYY-MM[-DD]" ou "DD/MM/YYYY"; idealmente delegar ao DataCleaner
+            txt = getattr(r, "quarter", None)
+            if not txt:
+                return None
+            for fmt in ("%Y-%m-%d", "%Y-%m", "%d/%m/%Y"):
+                try:
+                    return datetime.strptime(str(txt), fmt)
+                except ValueError:
+                    pass
+            return None
 
-        for (_, _, account), qmap in groups.items():
+        # 2) agrupa por (company, ano, conta) e indexa por mês do quarter {3,6,9,12}
+        groups: dict[tuple[str | None, int, str], dict[int, StatementRawDTO]] = {}
+        for r in raws:
+            d = qdate_of(r)
+            if not d:
+                # sem data válida: trata como cópia direta
+                key = (r.company_name, 0, self._account_of(r))
+                groups.setdefault(key, {})[0] = r
+                continue
+            ym = (d.year, d.month)
+            key = (r.company_name, ym[0], self._account_of(r))
+            groups.setdefault(key, {})[ym[1]] = r  # meses 3,6,9,12
+
+        # 3) aplica regras preservando ordem dos meses
+        for (_, _, account), mmap in groups.items():
             family = (account or "")[:1]
+            # remapeia para índices "quarto" por mês
+            qmap: dict[int, StatementRawDTO] = {}
+            for m, row in mmap.items():
+                qidx = {3: 1, 6: 2, 9: 3, 12: 4}.get(m, 0)
+                qmap[qidx] = row
             if family in {"6", "7"}:
                 yield from self._diff_quarters(qmap)
             elif family in {"3", "4"}:
                 yield from self._adjust_q4(qmap)
             else:
                 yield from self._copy(qmap)
+
+    @staticmethod
+    def _default_builder(raw: StatementRawDTO, target_line: str, value: Decimal) -> StatementFetchedDTO:
+        # quarter como texto YYYY-MM (mês do quarter)
+        qtxt = getattr(raw, "quarter", None)
+        q_out = None
+        if qtxt:
+            for fmt in ("%Y-%m-%d", "%Y-%m", "%d/%m/%Y"):
+                try:
+                    d = datetime.strptime(str(qtxt), fmt)
+                    q_out = f"{d.year:04d}-{d.month:02d}"
+                    break
+                except ValueError:
+                    continue
+
+        ver = getattr(raw, "version", None)
+        ver_str = str(ver) if ver is not None else None
+
+        return StatementFetchedDTO(
+            id=None,
+            nsd=str(getattr(raw, "nsd", "")),
+            company_name=getattr(raw, "company_name", None),
+            quarter=q_out,  # data normalizada YYYY-MM
+            version=ver_str,
+            grupo=str(getattr(raw, "grupo", "")),
+            quadro=str(getattr(raw, "quadro", "")),
+            account=str(getattr(raw, "account", getattr(raw, "account_code", ""))),
+            description=str(getattr(raw, "description", "")),
+            value=float(value),
+            processing_hash="",
+        )
 
     def _diff_quarters(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
         q1 = qmap.get(1); q2 = qmap.get(2); q3 = qmap.get(3); q4 = qmap.get(4)
@@ -169,25 +229,40 @@ class FinancialNormalizer(FinancialNormalizerPort):
     def _account_of(raw: StatementRawDTO) -> str:
         return getattr(raw, "account_code", None) or getattr(raw, "account", "") or ""
 
-    @staticmethod
-    def _default_builder(raw: StatementRawDTO, target_line: str, value: Decimal) -> StatementFetchedDTO:
-        # Constrói um FETCHED simples, usando o código classificado como 'account_code' padrão.
-        q = getattr(raw, "quarter", None)
-        quarter_str = f"Q{int(q)}" if q is not None else None
-        ver = getattr(raw, "version", None)
-        ver_str = str(ver) if ver is not None else None
+    # --------- [LEGACY NÃO USADO] caminho antigo baseado em ordinal de quarter ---------
+    # Mantido comentado para referência. O projeto agora trabalha com datas de quarter.
+    #
+    # def _apply_quarter_math(self, raws: Sequence[StatementRawDTO]) -> Iterable[StatementRawDTO]:
+    #     groups: Dict[Tuple[str, int, str], Dict[int, StatementRawDTO]] = {}
+    #     for r in raws:
+    #         key = (r.company_name, int(r.quarter.year), self._account_of(r))
+    #         groups.setdefault(key, {})[int(r.quarter)] = r
+    #     for (_, _, account), qmap in groups.items():
+    #         family = (account or "")[:1]
+    #         if family in {"6", "7"}:
+    #             yield from self._diff_quarters(qmap)
+    #         elif family in {"3", "4"}:
+    #             yield from self._adjust_q4(qmap)
+    #         else:
+    #             yield from self._copy(qmap)
 
-        # Se o seu StatementFetchedDTO tiver campos extras obrigatórios, ajuste este builder em um só lugar.
-        return StatementFetchedDTO(
-            id=None,
-            nsd=str(getattr(raw, "nsd", "")),
-            company_name=getattr(raw, "company_name", None),
-            quarter=quarter_str,
-            version=ver_str,
-            grupo=str(getattr(raw, "grupo", "")),
-            quadro=str(getattr(raw, "quadro", "")),
-            account=str(getattr(raw, "account", getattr(raw, "account_code", ""))),
-            description=str(getattr(raw, "description", "")),
-            value=float(value),
-            processing_hash="",
-        )
+    # @staticmethod
+    # def _default_builder(raw: StatementRawDTO, target_line: str, value: Decimal) -> StatementFetchedDTO:
+    #     # Construía quarter como "Qn" (ordinal). Substituído por YYYY-MM.
+    #     q = getattr(raw, "quarter", None)
+    #     quarter_str = f"Q{int(q)}" if q is not None else None
+    #     ver = getattr(raw, "version", None)
+    #     ver_str = str(ver) if ver is not None else None
+    #     return StatementFetchedDTO(
+    #         id=None,
+    #         nsd=str(getattr(raw, "nsd", "")),
+    #         company_name=getattr(raw, "company_name", None),
+    #         quarter=quarter_str,
+    #         version=ver_str,
+    #         grupo=str(getattr(raw, "grupo", "")),
+    #         quadro=str(getattr(raw, "quadro", "")),
+    #         account=str(getattr(raw, "account", getattr(raw, "account_code", ""))),
+    #         description=str(getattr(raw, "description", "")),
+    #         value=float(value),
+    #         processing_hash="",
+    #     )

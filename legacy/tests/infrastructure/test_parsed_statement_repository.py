@@ -54,10 +54,10 @@ def test_replace_and_exists(SessionLocal, engine):
 
     with engine.connect() as conn:
         count = conn.execute(
-            text("SELECT COUNT(*) FROM tbl_fetched_statements")
+            text("SELECT COUNT(*) FROM tbl_statements_fetched")
         ).scalar()
         phash = conn.execute(
-            text("SELECT processing_hash FROM tbl_fetched_statements")
+            text("SELECT processing_hash FROM tbl_statements_fetched")
         ).scalar()
 
     assert count == 1
@@ -94,12 +94,12 @@ def test_save_all_upserts(SessionLocal, engine):
 
     with engine.connect() as conn:
         count = conn.execute(
-            text("SELECT COUNT(*) FROM tbl_fetched_statements")
+            text("SELECT COUNT(*) FROM tbl_statements_fetched")
         ).scalar()
         value = conn.execute(
             text(
                 """
-                SELECT value FROM tbl_fetched_statements
+                SELECT value FROM tbl_statements_fetched
                 WHERE nsd='1' AND account='01'
                 """
             )

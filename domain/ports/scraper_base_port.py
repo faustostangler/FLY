@@ -26,7 +26,7 @@ class ScraperBasePort(Protocol, Generic[T]):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
+        existing_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[T]], None]] = None,
         **kwargs,
     ) -> List[T]:
@@ -35,7 +35,7 @@ class ScraperBasePort(Protocol, Generic[T]):
         Args:
             threshold (Optional[int]): Maximum number of items to fetch.
                 If None, no limit is applied.
-            skip_codes (Optional[List[str]]): Identifiers to exclude
+            existing_codes (Optional[List[str]]): Identifiers to exclude
                 from the scraping process.
             save_callback (Optional[Callable[[List[T]], None]]): Optional
                 callback function executed after fetching, typically for

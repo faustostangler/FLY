@@ -113,7 +113,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        skip_codes: Optional[List[str]] = None,
+        existing_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[CompanyDataRawDTO]], None]] = None,
         **kwargs,
     ) -> ExecutionResultDTO[CompanyDataRawDTO]:
@@ -121,7 +121,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         Args:
             threshold: Number of companies to buffer before saving.
-            skip_codes: CVM codes to ignore.
+            existing_codes: CVM codes to ignore.
             save_callback: Optional callback to persist partial results.
             max_workers: Optional thread count for future parallelism.
 
@@ -130,8 +130,8 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         """
         # self.logger.log("Run  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
 
-        # Ensure skip_codes is a set (to avoid None and allow fast lookup)
-        self.skip_codes = skip_codes or set()
+        # Ensure existing_codes is a set (to avoid None and allow fast lookup)
+        self.existing_codes = existing_codes or set()
         # Determine the save threshold (number of companies before saving buffer)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
         # Determine the number of simultaneous process
@@ -280,7 +280,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         Fetches and parses detailed information for a list of companies, with optional skipping and periodic saving.
         Args:
             companies_list (List[Dict]): List of company dictionaries, each containing at least a "codeCVM" key.
-            skip_codes (Optional[Set[str]], optional): Set of CVM codes to skip during processing. Defaults to None.
+            existing_codes (Optional[Set[str]], optional): Set of CVM codes to skip during processing. Defaults to None.
             save_callback (Optional[Callable[[List[CompanyDataRawDTO]], None]], optional):
                 Callback function to save buffered company details periodically.
                 Defaults to None.
@@ -315,7 +315,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             worker_id = task.worker_id
 
             company_name = self.datacleaner.clean_text(entry.get("companyName"))
-            if company_name in self.skip_codes:
+            if company_name in self.existing_codes:
                 # download_bytes_pre = self._metrics_collector.network_bytes
                 # download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
 

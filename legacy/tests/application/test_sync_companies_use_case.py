@@ -53,11 +53,11 @@ def test_execute_converts_and_saves():
 
     def fake_fetch_all(
         threshold=None,
-        skip_codes=None,
+        existing_codes=None,
         save_callback=None,
         max_workers=None,
     ):
-        assert skip_codes == ["SKIP"]
+        assert existing_codes == ["SKIP"]
         if save_callback:
             save_callback([raw])
         metrics = MetricsDTO(elapsed_time=0.0, network_bytes=100, processing_bytes=0)

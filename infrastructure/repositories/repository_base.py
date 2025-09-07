@@ -1,15 +1,15 @@
-from itertools import product
+from __future__ import annotations
+
 from typing import (
     Any,
-    Generator,
     Iterator,
     List,
-    Optional,
-    Sequence,
     Tuple,
     TypeVar,
+    Sequence,
     Union,
 )
+
 from sqlalchemy.engine import Row
 
 from application.ports.config_port import ConfigPort
@@ -94,6 +94,190 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
 
             # Re-raise the exception to propagate the error
             raise
+
+    def iter_existing_by_columns(
+        self,
+        column_names: Union[str, List[str]],
+        *,
+        uow: Uow, 
+        batch_size: int | None = None,
+        include_nulls: bool = False,
+    ) -> Iterator[Tuple]:
+        """Stream distinct values for one or more columns in stable order.
+
+        Uses ``yield_per`` to reduce memory pressure and keep deterministic
+        ordering. ``stream_results=True`` is kept for consistency; note that
+        SQLite does not enable server-side cursors.
+
+        Args:
+            column_names (Union[str, List[str]]): Column name or list of names.
+            batch_size (int | None): Page size; falls back to repository default.
+            include_nulls (bool): Whether to keep rows containing ``NULL``.
+                Defaults to ``False``.
+
+        Yields:
+            Tuple: Distinct row of selected column values.
+        """
+        # Resolve page size with repository default
+        size = batch_size or self.config.repository.batch_size or 50
+
+        # Resolve model; PK columns are not needed here
+        model, _ = self.get_model_class()
+        session = uow.session
+
+        # Normalize the column name(s) to a list
+        if isinstance(column_names, str):
+            column_names = [column_names]
+        
+        # Resolve ORM columns from names
+        columns = [getattr(model, col) for col in column_names]
+
+        q = session.query(*columns)
+        if not include_nulls:
+            for c in columns:
+                q = q.filter(c.isnot(None))
+
+        def yield_rows(rows):
+            if len(columns) == 1:
+                for v in rows:
+                    # SQLAlchemy pode devolver escalar ou (v,) dependendo da versão
+                    if isinstance(v, Row):
+                        yield (v[0],)
+                    elif isinstance(v, tuple):
+                        yield v
+                    else:
+                        try:
+                            yield (v[0],)
+                        except Exception as e:
+                            yield (v,)
+            else:
+                for r in rows:
+                    yield tuple(r) if isinstance(r, tuple) else (r,)
+
+        if size and size > 0:
+            offset = 0
+            while True:
+                chunk = q.offset(offset).limit(size).all()
+                if not chunk:
+                    break
+                yield from yield_rows(chunk)
+                offset += size
+            return
+
+        rows = q.all()
+        yield from yield_rows(rows)
+
+    def get_all_by_columns(
+        self,
+        column_names: Union[str, List[str], Tuple[str, ...]],
+        *,
+        uow: Uow,
+        include_nulls: bool = False,
+        batch_size: int | None = None,
+    ) -> List[Tuple]:
+        """Lista de tuplas com valores de múltiplas colunas.
+
+        Aceita também ``str`` e normaliza para lista com um item.
+        Ex.: ``repo.get_all_by_columns(["nsd","version"], uow=uow) -> [(1,"1"), (2,"2"), ...]``
+        """
+        if isinstance(column_names, str):
+            column_names = [column_names]
+        return list(
+            self.iter_existing_by_columns(
+                list(column_names),
+                uow=uow,
+                include_nulls=include_nulls,
+                batch_size=batch_size,
+            )
+        )
+
+    # def get_existing_by_columns(
+    #     self, column_names: Union[str, List[str]],
+    #     uow: Uow, 
+    # ) -> List[Tuple]:
+    #     """Return distinct, ordered tuples for one or more given columns.
+
+    #     Examples:
+    #         >>> repo.get_existing_by_columns("nsd")
+    #         [('94790',), ('12345',)]
+
+    #         >>> repo.get_existing_by_columns(["nsd", "company_name"])
+    #         [('12345', 'ROMI'), ('94790', 'ACME')]
+
+    #     Args:
+    #         column_names (Union[str, List[str]]): Single column name or a list
+    #             of column names to retrieve.
+
+    #     Returns:
+    #         List[Tuple]: Distinct and ordered tuples of the requested columns.
+    #     """
+    #     # Open a session for the read-only operation
+    #     session = uow.session()
+
+    #     # Retrieve the SQLAlchemy model class associated with the DTO type
+    #     model, pk_columns = self.get_model_class()
+
+    #     try:
+    #         # Normalize column_names to a list
+    #         if isinstance(column_names, str):
+    #             column_names = [column_names]
+
+    #         # Resolve ORM columns to select
+    #         kw_columns = [getattr(model, name) for name in column_names]
+
+    #         # Fetch distinct values (unordered by default)
+    #         rows = session.query(*kw_columns).distinct().all()
+
+    #         # Remove rows that contain any NULL field
+    #         results = [row for row in rows if not any(field is None for field in row)]
+
+    #         # Create a lightweight wrapper to simulate attribute access on a tuple
+    #         class RowWrapper:
+    #             def __init__(self, values):
+    #                 # Store the original tuple of values
+    #                 self._values = values
+
+    #             def __getattr__(self, key):
+    #                 # Find the index of the requested column name
+    #                 idx = column_names.index(key)
+    #                 # Return the value at that index in the tuple
+    #                 return self._values[idx]
+
+    #         # Sort using the repository's robust PK-aware key function
+    #         results.sort(
+    #             key=lambda row:
+    #             # Wrap the tuple to enable attribute-style access
+    #             self._sort_key(RowWrapper(row), kw_columns)
+    #         )
+
+    #         # Return the cleaned and sorted tuples
+    #         return results
+    #     finally:
+    #         # Ensure the session is closed
+    #         session.close()
+
+    # def _safe_cast(self, value: Any) -> Union[int, str]:
+    #     """Convert to ``int`` when possible; otherwise return the original as ``str``."""
+    #     try:
+    #         return int(value)
+    #     except (ValueError, TypeError):
+    #         return str(value)
+
+    # def _sort_key(self, obj: Any, pk_columns: Sequence) -> tuple[Union[int, str], ...]:
+    #     """Build a numeric-aware tuple key from object attributes.
+
+    #     Ensures mixed numeric/string PKs sort consistently by attempting integer
+    #     casts first and falling back to string comparison.
+
+    #     Args:
+    #         obj (Any): An object exposing attributes with names matching ``pk_columns``.
+    #         pk_columns (Sequence): Column expressions whose ``.key`` names are used
+    #             to access attributes on ``obj``.
+
+    #     Returns:
+    #         tuple[Union[int, str], ...]: Composite sort key suitable for ``list.sort``.
+    #     """
+    #     return tuple(self._safe_cast(getattr(obj, col.key)) for col in pk_columns)
 
     # def get_all(self, batch_size: int = 100) -> List[T]:
     #     """Retrieve all DTOs using keyset pagination over the primary key.
@@ -323,143 +507,6 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
     #         # Ensure session is always closed
     #         session.close()
 
-    def iter_existing_by_columns(
-        self,
-        column_names: Union[str, List[str]],
-        *,
-        uow: Uow, 
-        batch_size: int | None = None,
-        include_nulls: bool = False,
-    ) -> Iterator[Tuple]:
-        """Stream distinct values for one or more columns in stable order.
-
-        Uses ``yield_per`` to reduce memory pressure and keep deterministic
-        ordering. ``stream_results=True`` is kept for consistency; note that
-        SQLite does not enable server-side cursors.
-
-        Args:
-            column_names (Union[str, List[str]]): Column name or list of names.
-            batch_size (int | None): Page size; falls back to repository default.
-            include_nulls (bool): Whether to keep rows containing ``NULL``.
-                Defaults to ``False``.
-
-        Yields:
-            Tuple: Distinct row of selected column values.
-        """
-        # Resolve page size with repository default
-        size = batch_size or self.config.repository.batch_size or 50
-
-        # Resolve model; PK columns are not needed here
-        model, _ = self.get_model_class()
-        session = uow.session
-
-        # Normalize the column name(s) to a list
-        if isinstance(column_names, str):
-            column_names = [column_names]
-        
-        # Resolve ORM columns from names
-        columns = [getattr(model, col) for col in column_names]
-
-        q = session.query(*columns)
-        if not include_nulls:
-            for c in columns:
-                q = q.filter(c.isnot(None))
-
-        def yield_rows(rows):
-            if len(columns) == 1:
-                for v in rows:
-                    # SQLAlchemy pode devolver escalar ou (v,) dependendo da versão
-                    if isinstance(v, Row):
-                        yield (v[0],)
-                    elif isinstance(v, tuple):
-                        yield v
-                    else:
-                        try:
-                            yield (v[0],)
-                        except Exception as e:
-                            yield (v,)
-            else:
-                for r in rows:
-                    yield tuple(r) if isinstance(r, tuple) else (r,)
-
-        if size and size > 0:
-            offset = 0
-            while True:
-                chunk = q.offset(offset).limit(size).all()
-                if not chunk:
-                    break
-                yield from yield_rows(chunk)
-                offset += size
-            return
-
-        rows = q.all()
-        yield from yield_rows(rows)
-
-
-    # def get_existing_by_columns(
-    #     self, column_names: Union[str, List[str]]
-    # ) -> List[Tuple]:
-    #     """Return distinct, ordered tuples for one or more given columns.
-
-    #     Examples:
-    #         >>> repo.get_existing_by_columns("nsd")
-    #         [('94790',), ('12345',)]
-
-    #         >>> repo.get_existing_by_columns(["nsd", "company_name"])
-    #         [('12345', 'ROMI'), ('94790', 'ACME')]
-
-    #     Args:
-    #         column_names (Union[str, List[str]]): Single column name or a list
-    #             of column names to retrieve.
-
-    #     Returns:
-    #         List[Tuple]: Distinct and ordered tuples of the requested columns.
-    #     """
-    #     # Open a session for the read-only operation
-    #     session = self.Session()
-
-    #     # Retrieve the SQLAlchemy model class associated with the DTO type
-    #     model, pk_columns = self.get_model_class()
-
-    #     try:
-    #         # Normalize column_names to a list
-    #         if isinstance(column_names, str):
-    #             column_names = [column_names]
-
-    #         # Resolve ORM columns to select
-    #         kw_columns = [getattr(model, name) for name in column_names]
-
-    #         # Fetch distinct values (unordered by default)
-    #         rows = session.query(*kw_columns).distinct().all()
-
-    #         # Remove rows that contain any NULL field
-    #         results = [row for row in rows if not any(field is None for field in row)]
-
-    #         # Create a lightweight wrapper to simulate attribute access on a tuple
-    #         class RowWrapper:
-    #             def __init__(self, values):
-    #                 # Store the original tuple of values
-    #                 self._values = values
-
-    #             def __getattr__(self, key):
-    #                 # Find the index of the requested column name
-    #                 idx = column_names.index(key)
-    #                 # Return the value at that index in the tuple
-    #                 return self._values[idx]
-
-    #         # Sort using the repository's robust PK-aware key function
-    #         results.sort(
-    #             key=lambda row:
-    #             # Wrap the tuple to enable attribute-style access
-    #             self._sort_key(RowWrapper(row), kw_columns)
-    #         )
-
-    #         # Return the cleaned and sorted tuples
-    #         return results
-    #     finally:
-    #         # Ensure the session is closed
-    #         session.close()
-
     # def has_item(self, identifier: K) -> bool:
     #     """Check whether a record with the given identifier exists.
 
@@ -657,26 +704,3 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
     #     finally:
     #         # Close the session
     #         session.close()
-
-    # def _safe_cast(self, value: Any) -> Union[int, str]:
-    #     """Convert to ``int`` when possible; otherwise return the original as ``str``."""
-    #     try:
-    #         return int(value)
-    #     except (ValueError, TypeError):
-    #         return str(value)
-
-    # def _sort_key(self, obj: Any, pk_columns: Sequence) -> tuple[Union[int, str], ...]:
-    #     """Build a numeric-aware tuple key from object attributes.
-
-    #     Ensures mixed numeric/string PKs sort consistently by attempting integer
-    #     casts first and falling back to string comparison.
-
-    #     Args:
-    #         obj (Any): An object exposing attributes with names matching ``pk_columns``.
-    #         pk_columns (Sequence): Column expressions whose ``.key`` names are used
-    #             to access attributes on ``obj``.
-
-    #     Returns:
-    #         tuple[Union[int, str], ...]: Composite sort key suitable for ``list.sort``.
-    #     """
-    #     return tuple(self._safe_cast(getattr(obj, col.key)) for col in pk_columns)

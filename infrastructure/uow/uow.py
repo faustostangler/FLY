@@ -10,20 +10,23 @@ class UowFactory(UowFactoryPort):
 
     @contextmanager
     def __call__(self):
-        session: Session = self._session_factory()
-        uow = _SqlAlchemyUoW(session)
         try:
-            yield uow
+            session: Session = self._session_factory()
+            uow = _SqlAlchemyUoW(session)
+            try:
+                yield uow
+            except Exception as e:
+                uow.rollback()
+                raise
+            finally:
+                if session.in_transaction():
+                    try:
+                        session.rollback()
+                    except Exception:
+                        pass
+                session.close()
         except Exception as e:
-            uow.rollback()
-            raise
-        finally:
-            if session.in_transaction():
-                try:
-                    session.rollback()
-                except Exception:
-                    pass
-            session.close()
+            pass
 
 class _SqlAlchemyUoW(Uow):
     def __init__(self, session: Session) -> None:

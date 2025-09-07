@@ -5,13 +5,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
-from infrastructure.models.base_statements_model import BaseStatementModel
+from infrastructure.models.statements_base_model import BaseStatementModel
 
 
 class StatementFetchedModel(BaseStatementModel):
     """ORM model for fetched statement rows."""
 
-    __tablename__ = "tbl_fetched_statements"
+    __tablename__ = "tbl_statements_fetched"
 
     nsd: Mapped[str] = mapped_column(
         String,
@@ -31,13 +31,13 @@ class StatementFetchedModel(BaseStatementModel):
             "grupo",
             "quadro",
             "account",
-            name="uq_fetched_statements_fullkey",
+            name="uq_statements_fetched_fullkey",
         ),
-        Index("ix_fetched_statements_company_name", "company_name"),
-        Index("ix_fetched_statements_quarter", "quarter"),
-        Index("ix_fetched_statements_account", "account"),
-        Index("ix_fetched_statements_nsd", "nsd"),
-        Index("ix_fetched_statements_company_name_quarter", "company_name", "quarter"),
+        Index("ix_statements_fetched_company_name", "company_name"),
+        Index("ix_statements_fetched_quarter", "quarter"),
+        Index("ix_statements_fetched_account", "account"),
+        Index("ix_statements_fetched_nsd", "nsd"),
+        Index("ix_statements_fetched_company_name_quarter", "company_name", "quarter"),
     )
 
     processing_hash: Mapped[str | None] = mapped_column(String, index=True)

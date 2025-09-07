@@ -1,3 +1,5 @@
+# application/ports/config_port.py
+
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Protocol, Tuple, runtime_checkable
 
@@ -8,24 +10,13 @@ class PathConfigPort(Protocol):
     """Contract for path-related configuration."""
 
     @property
-    def temp_dir(self) -> Path:
-        """Temporary directory used for ephemeral files."""
-        ...
-
+    def temp_dir(self) -> Path: ...
     @property
-    def log_dir(self) -> Path:
-        """Directory where application logs are written."""
-        ...
-
+    def log_dir(self) -> Path: ...
     @property
-    def data_dir(self) -> Path:
-        """Directory that stores application data artifacts."""
-        ...
-
+    def data_dir(self) -> Path: ...
     @property
-    def root_dir(self) -> Path:
-        """Project/application root directory."""
-        ...
+    def root_dir(self) -> Path: ...
 
 
 # Declares application identity and runtime flags exposed to the UI/CLIs
@@ -34,19 +25,11 @@ class FlyConfigPort(Protocol):
     """Contract for application identity and runtime feature flags."""
 
     @property
-    def app_name(self) -> str:
-        """Human-friendly application name."""
-        ...
-
+    def app_name(self) -> str: ...
     @property
-    def version(self) -> str:
-        """Semantic version of the running application."""
-        ...
-
+    def version(self) -> str: ...
     @property
-    def show_path(self) -> bool:
-        """Whether to include path information in outputs."""
-        ...
+    def show_path(self) -> bool: ...
 
 
 # Exposes database connectivity and table naming conventions
@@ -55,19 +38,11 @@ class DatabaseConfigPort(Protocol):
     """Contract for database configuration and connection details."""
 
     @property
-    def db_filename(self) -> str:
-        """Underlying database filename (e.g., SQLite file)."""
-        ...
-
+    def db_filename(self) -> str: ...
     @property
-    def connection_string(self) -> str:
-        """SQLAlchemy-style connection URI."""
-        ...
-
+    def connection_string(self) -> str: ...
     @property
-    def tables(self) -> Mapping[str, str]:
-        """Mapping of logical table keys to physical table names."""
-        ...
+    def tables(self) -> Mapping[str, str]: ...
 
 
 # Controls logging output: where, how, and how much to log
@@ -76,24 +51,13 @@ class LoggerConfigPort(Protocol):
     """Contract for logging configuration."""
 
     @property
-    def log_dir(self) -> Path:
-        """Directory where log files are stored."""
-        ...
-
+    def log_dir(self) -> Path: ...
     @property
-    def log_file_name(self) -> str:
-        """Name of the primary log file."""
-        ...
-
+    def log_file_name(self) -> str: ...
     @property
-    def level(self) -> str:
-        """Minimum log level (e.g., DEBUG, INFO)."""
-        ...
-
+    def level(self) -> str: ...
     @property
-    def show_path(self) -> bool:
-        """Whether to include file path details in log messages."""
-        ...
+    def show_path(self) -> bool: ...
 
 
 # Encapsulates business rules and domain-wide defaults
@@ -102,24 +66,15 @@ class DomainConfigPort(Protocol):
     """Contract for domain-specific rules and defaults."""
 
     @property
-    def words_to_remove(self) -> Tuple[str, ...]:
-        """Stopwords or tokens to remove from inputs."""
-        ...
-
+    def words_to_remove(self) -> Tuple[str, ...]: ...
     @property
-    def statements_types(self) -> Tuple[str, ...]:
-        """Accepted statement types within the domain."""
-        ...
-
+    def statements_types(self) -> Tuple[str, ...]: ...
     @property
-    def base_currency(self) -> str:
-        """Canonical currency used for normalization."""
-        ...
-
+    def base_currency(self) -> str: ...
     @property
-    def nsd_gap_days(self) -> int:
-        """Minimum day gap used for NSD calculations."""
-        ...
+    def nsd_gap_days(self) -> int: ...
+    @property
+    def recency_year(self) -> int: ...  # novo campo para NsdPolicy
 
 
 @runtime_checkable
@@ -127,39 +82,20 @@ class ScrapingConfig(Protocol):
     """Contract for web scraping configuration."""
 
     @property
-    def user_agents(self) -> List[str]:
-        """Filename of the JSON file containing user-agent strings."""
-        ...
-
+    def user_agents(self) -> List[str]: ...
     @property
-    def referers(self) -> List[str]:
-        """Filename of the JSON file containing referer URLs."""
-        ...
-
+    def referers(self) -> List[str]: ...
     @property
-    def languages(self) -> List[str]:
-        """Filename of the JSON file containing Accept-Language headers."""
-        ...
-
+    def languages(self) -> List[str]: ...
     @property
-    def test_internet(self) -> str:
-        """URL used to verify internet connectivity."""
-        ...
-
+    def test_internet(self) -> str: ...
     @property
-    def timeout(self) -> int:
-        """Timeout in seconds for HTTP requests."""
-        ...
-
+    def timeout(self) -> int: ...
     @property
-    def max_attempts(self) -> int:
-        """Maximum number of retry attempts per request."""
-        ...
-
+    def max_attempts(self) -> int: ...
     @property
-    def linear_holes(self) -> int:
-        """Maximum number of linear holes allowed in the NSD scraping process."""
-        ...
+    def linear_holes(self) -> int: ...
+
 
 # Defines batching and durability thresholds for repositories
 @runtime_checkable
@@ -167,14 +103,9 @@ class RepositoryConfig(Protocol):
     """Contract for repository batching and persistence thresholds."""
 
     @property
-    def batch_size(self) -> int:
-        """Preferred number of items processed per batch."""
-        ...
-
+    def batch_size(self) -> int: ...
     @property
-    def persistence_threshold(self) -> int:
-        """Count threshold that triggers persistence."""
-        ...
+    def persistence_threshold(self) -> int: ...
 
 
 # Describes external market data endpoints and localization
@@ -183,19 +114,11 @@ class ExchangeApiConfig(Protocol):
     """Contract for stock exchange API configuration."""
 
     @property
-    def language(self) -> str:
-        """Preferred language for API requests/responses."""
-        ...
-
+    def language(self) -> str: ...
     @property
-    def company_data_endpoint(self) -> Mapping[str, str]:
-        """Mapping of company data endpoints by provider or resource."""
-        ...
-
+    def company_data_endpoint(self) -> Mapping[str, str]: ...
     @property
-    def nsd_endpoint(self) -> str:
-        """Endpoint used to fetch NSD-related data."""
-        ...
+    def nsd_endpoint(self) -> str: ...
 
 
 # Governs concurrency and queueing for local worker pools
@@ -204,14 +127,9 @@ class WorkerPoolConfig(Protocol):
     """Contract for worker pool sizing and queue limits."""
 
     @property
-    def max_workers(self) -> int:
-        """Maximum number of concurrent worker threads/processes."""
-        ...
-
+    def max_workers(self) -> int: ...
     @property
-    def queue_size(self) -> int:
-        """Maximum number of pending tasks in the queue."""
-        ...
+    def queue_size(self) -> int: ...
 
 
 @runtime_checkable
@@ -227,57 +145,29 @@ class StatementsConfigPort(Protocol):
     @property
     def url_capital(self) -> str: ...
 
+
 # Aggregates all configuration ports into a single access surface
 @runtime_checkable
 class ConfigPort(Protocol):
     """High-level configuration contract that aggregates all sub-configs."""
 
     @property
-    def paths(self) -> PathConfigPort:
-        """Filesystem path configuration."""
-        ...
-
+    def paths(self) -> PathConfigPort: ...
     @property
-    def fly_settings(self) -> FlyConfigPort:
-        """Application identity and runtime flags."""
-        ...
-
+    def fly_settings(self) -> FlyConfigPort: ...
     @property
-    def database(self) -> DatabaseConfigPort:
-        """Database connection and table naming details."""
-        ...
-
+    def database(self) -> DatabaseConfigPort: ...
     @property
-    def logging(self) -> LoggerConfigPort:
-        """Logging output destination and verbosity."""
-        ...
-
+    def logging(self) -> LoggerConfigPort: ...
     @property
-    def scraping(self) -> ScrapingConfig:
-        """Domain-specific rules and defaults."""
-        ...
-
+    def scraping(self) -> ScrapingConfig: ...
     @property
-    def domain(self) -> DomainConfigPort:
-        """Domain-specific rules and defaults."""
-        ...
-
+    def domain(self) -> DomainConfigPort: ...
     @property
-    def repository(self) -> RepositoryConfig:
-        """Repository batching and durability thresholds."""
-        ...
-
+    def repository(self) -> RepositoryConfig: ...
     @property
-    def exchange(self) -> ExchangeApiConfig:
-        """External market data endpoints and localization."""
-        ...
-
+    def exchange(self) -> ExchangeApiConfig: ...
     @property
-    def worker_pool(self) -> WorkerPoolConfig:
-        """Local concurrency configuration for worker pools."""
-        ...
-
+    def worker_pool(self) -> WorkerPoolConfig: ...
     @property
     def statements(self) -> StatementsConfigPort: ...
-
-# Encapsulates global settings used across various components

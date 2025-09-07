@@ -41,7 +41,9 @@ class WorkerPoolPort(Protocol):
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
 
-        max_workers: Optional[int] = 1
+        max_workers: Optional[int] = 1,
+        *,
+        total_size: Optional[int] = None,
     ) -> List[R]:
         ...
 
@@ -54,7 +56,9 @@ class WorkerPoolPort(Protocol):
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
 
-        max_workers: Optional[int] = 1
+        max_workers: Optional[int] = 1,
+        *,
+        total_size: Optional[int] = None,
     ) -> List[R]:
         """Run a batch of tasks using the worker pool.
 

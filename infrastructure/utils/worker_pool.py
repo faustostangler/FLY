@@ -64,9 +64,14 @@ class WorkerPool(WorkerPoolPort):
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
 
-        max_workers: Optional[int] = 1
+        max_workers: Optional[int] = 1,
+        *,
+        total_size: Optional[int] = None,
     ) -> List[R]:
-        return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers)
+        try:
+            return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers, total_size=total_size)
+        except Exception as e:
+            pass
 
     def run(
         self,
@@ -77,7 +82,9 @@ class WorkerPool(WorkerPoolPort):
         on_result: Optional[Callable[[R], None]] = None,
         post_callback: Optional[Callable[[List[R]], None]] = None,
 
-        max_workers: Optional[int] = 1
+        max_workers: Optional[int] = 1,
+        *,
+        total_size: Optional[int] = None,
     ) -> List[R]:
         """Process tasks concurrently using the provided processor.
 
@@ -130,7 +137,7 @@ class WorkerPool(WorkerPoolPort):
 
                 # Unpack the work item and build a task DTO
                 index, entry = item
-                task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id)
+                task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id, total_size=total_size)
 
                 # Execute the task-specific processor
                 result = processor(task)

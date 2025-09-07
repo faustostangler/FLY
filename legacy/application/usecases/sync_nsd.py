@@ -46,7 +46,7 @@ class SyncNSDUseCase:
         # Fetch all documents from the scraper, persisting them in batches.
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
         self.scraper.fetch_all(
-            skip_codes=existing_nsd,
+            existing_codes=existing_nsd,
             save_callback=self._save_batch,
         )
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")

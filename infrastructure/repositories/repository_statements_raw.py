@@ -5,13 +5,14 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy import func
 
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.utils.list_flatenner import ListFlattener
-from infrastructure.models.raw_statements_model import StatementRawModel
+from infrastructure.models.statements_raw_model import StatementRawModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from application.ports.uow_port import Uow
 
@@ -76,3 +77,57 @@ class StatementRawRepository(
                 .all()
             )
             return [r.to_dto() for r in results]
+
+    def get_company_year_view(
+        self,
+        *,
+        company_id: int | str,
+        year: int,
+        uow: Uow,
+    ) -> List[StatementRawDTO]:
+        """
+        Retorna todos os RAW da companhia no ano informado, sem deduplicar por versão.
+        Usa a mesma sessão do UoW e ordena de forma estável para a deduplicação no serviço.
+        """
+        try:
+            session = uow.session
+            model, _ = self.get_model_class()
+
+            cols = {c.name for c in model.__table__.columns}
+
+            # filtro de companhia: priorize 'id'; fallback para 'company_name' somente se você for passar nome
+            if "id" in cols:
+                company_filter = (getattr(model, "id") == company_id)
+            elif "cvm_code" in cols:  # se existir no seu schema
+                company_filter = (getattr(model, "cvm_code") == company_id)
+            elif "company_name" in cols:
+                company_filter = (getattr(model, "company_name") == company_id)  # só funciona se company_id for nome
+            else:
+                raise AttributeError("Nenhuma coluna de companhia encontrada em StatementRawModel.")
+
+            # Filtro por ano a partir de quarter (ISO 'YYYY-MM-DD' compatível com strftime do SQLite).
+            year_filter = func.strftime("%Y", getattr(model, "quarter")) == str(year)
+
+            q = (
+                session.query(model)
+                .filter(company_filter)
+                .filter(year_filter)
+            )
+
+            # Ordenação determinística: chave natural + maior versão primeiro + nsd para desempate.
+            order_cols = []
+            for name in ("account", "quadro", "grupo"):
+                if hasattr(model, name):
+                    order_cols.append(getattr(model, name))
+            if hasattr(model, "version"):
+                order_cols.append(getattr(model, "version").desc())
+            if hasattr(model, "nsd"):
+                order_cols.append(getattr(model, "nsd"))
+
+            if order_cols:
+                q = q.order_by(*order_cols)
+
+            rows = q.all()
+            return [m.to_dto() for m in rows]
+        except Exception as e:
+            pass
