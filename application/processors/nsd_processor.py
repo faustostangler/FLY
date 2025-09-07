@@ -204,10 +204,10 @@ class NsdProcessor:
                 return nsd
 
             # PROCESS
-            company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
+            # company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
             year_view = list(
                 self.statements_raw_repository.get_company_year_view(
-                    company_id=company_id,
+                    company_name=nsd.company_name,
                     year=quarter_police.year,
                     uow=uow,
                 )

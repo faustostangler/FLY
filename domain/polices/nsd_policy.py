@@ -84,28 +84,30 @@ class NsdPolicy(NsdPolicyPort):
 
     # dedup por versão: mantém a maior versão por (company_id, year, quarter, account/account_code)
     def version_deduplicate(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementRawDTO]:
-        try:
-            latest: dict[tuple, StatementRawDTO] = {}
-            for r in raws:
-                r_quarter = datetime.strptime(r.quarter, "%Y-%m-%d").date()
-                y, m = r_quarter.year, r_quarter.month
-                q_bucket = 3 if m <= 3 else 6 if m <= 6 else 9 if m <= 9 else 12
+        latest: dict[tuple, StatementRawDTO] = {}
+        for r in raws:
+            # r_quarter = datetime.strptime(r.quarter, "%Y-%m-%d").date()
+            # y, m = r_quarter.year, r_quarter.month
+            q = r.quarter
+            if hasattr(q, "year"):
+                year, month = q.year, q.month
+            else:
+                y, m, *_ = str(q).split("-") + ["0", "0"]
+                year, month = int(y), int(m)
 
-                company_key = (
-                    getattr(r, "company_id", None)
-                    or getattr(r, "cvm_code", None)
-                    or getattr(r, "nsd", None)
-                    or getattr(r, "company_name", None)
-                )
-                account_key = str(getattr(r, "account", getattr(r, "account_code", "")))
+            key = (r.company_name, year, month, r.grupo, r.quadro, r.account)
 
-                key = (company_key, int(y), int(q_bucket), account_key)
+            cur = latest.get(key)
+            rv = int(getattr(r, "version", 1))
+            cv = int(getattr(cur, "version", -1)) if cur is not None else -1
 
-                cur = latest.get(key)
-                rv = int(getattr(r, "version", 1))
-                cv = int(getattr(cur, "version", -1)) if cur is not None else -1
-                if cur is None or rv > cv:
-                    latest[key] = r
-            return list(latest.values())
-        except Exception as e:
-            pass
+            if cur is None or rv > cv:
+                latest[key] = r
+            elif rv == cv:
+                try:
+                    if int(getattr(r, "nsd", 0)) > int(getattr(cur, "nsd", 0)):
+                        latest[key] = r
+                except Exception:
+                    pass
+
+        return list(latest.values())

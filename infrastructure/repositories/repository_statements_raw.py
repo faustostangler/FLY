@@ -81,7 +81,7 @@ class StatementRawRepository(
     def get_company_year_view(
         self,
         *,
-        company_id: int | str,
+        company_name: str,
         year: int,
         uow: Uow,
     ) -> List[StatementRawDTO]:
@@ -93,20 +93,11 @@ class StatementRawRepository(
             session = uow.session
             model, _ = self.get_model_class()
 
-            cols = {c.name for c in model.__table__.columns}
-
-            # filtro de companhia: priorize 'id'; fallback para 'company_name' somente se você for passar nome
-            if "id" in cols:
-                company_filter = (getattr(model, "id") == company_id)
-            elif "cvm_code" in cols:  # se existir no seu schema
-                company_filter = (getattr(model, "cvm_code") == company_id)
-            elif "company_name" in cols:
-                company_filter = (getattr(model, "company_name") == company_id)  # só funciona se company_id for nome
-            else:
-                raise AttributeError("Nenhuma coluna de companhia encontrada em StatementRawModel.")
-
             # Filtro por ano a partir de quarter (ISO 'YYYY-MM-DD' compatível com strftime do SQLite).
             year_filter = func.strftime("%Y", getattr(model, "quarter")) == str(year)
+
+            # company filter
+            company_filter = getattr(model, "company_name") == company_name
 
             q = (
                 session.query(model)

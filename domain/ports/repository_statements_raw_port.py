@@ -27,7 +27,7 @@ class RepositoryStatementsRawPort(RepositoryBasePort[StatementRawDTO, int], Prot
     def get_company_year_view(
         self,
         *,
-        company_id: int | str,
+        company_name: str,
         year: int,
         uow: Uow,
     ) -> List[StatementRawDTO]:...
