@@ -37,40 +37,21 @@ class FinancialNormalizer(FinancialNormalizerPort):
     # ---------- 1) Matemática de quarter sobre RAW do ano deduplicado ----------
     # Caminho ATUAL: usa DATA do quarter; identifica pelo mês (03, 06, 09, 12) e converte acumulados conforme regras.
     def _apply_quarter_math(self, raws: Sequence[StatementRawDTO]) -> Iterable[StatementRawDTO]:
-        # 1) extrai a data do quarter (string -> datetime) e o mês do quarter
-        def qdate_of(r: StatementRawDTO) -> datetime | None:
-            # aceita "YYYY-MM[-DD]" ou "DD/MM/YYYY"; idealmente delegar ao DataCleaner
-            txt = getattr(r, "quarter", None)
-            if not txt:
-                return None
-            for fmt in ("%Y-%m-%d", "%Y-%m", "%d/%m/%Y"):
-                try:
-                    return datetime.strptime(str(txt), fmt)
-                except ValueError:
-                    pass
-            return None
-
-        # 2) agrupa por (company, ano, conta) e indexa por mês do quarter {3,6,9,12}
+        # agrupa por (company, ano, conta) e indexa por mês do quarter {3,6,9,12}
         groups: dict[tuple[str | None, int, str], dict[int, StatementRawDTO]] = {}
         for r in raws:
-            d = qdate_of(r)
-            if not d:
-                # sem data válida: trata como cópia direta
-                key = (r.company_name, 0, self._account_of(r))
-                groups.setdefault(key, {})[0] = r
-                continue
-            ym = (d.year, d.month)
-            key = (r.company_name, ym[0], self._account_of(r))
-            groups.setdefault(key, {})[ym[1]] = r  # meses 3,6,9,12
+            d = datetime.strptime(str(r.quarter), "%Y-%m-%d")
+            y, m = (d.year, d.month)
+            key = (r.company_name, y, self._account_of(r))
+            groups.setdefault(key, {})[m] = r  # meses 3,6,9,12
 
         # 3) aplica regras preservando ordem dos meses
-        for (_, _, account), mmap in groups.items():
+        for (company_name, year, account), mmap in groups.items():
             family = (account or "")[:1]
-            # remapeia para índices "quarto" por mês
-            qmap: dict[int, StatementRawDTO] = {}
-            for m, row in mmap.items():
-                qidx = {3: 1, 6: 2, 9: 3, 12: 4}.get(m, 0)
-                qmap[qidx] = row
+
+            # qmap com meses reais como chaves (3, 6, 9, 12)
+            qmap: dict[int, StatementRawDTO] = {int(m): row for m, row in mmap.items()}
+
             if family in {"6", "7"}:
                 yield from self._diff_quarters(qmap)
             elif family in {"3", "4"}:
@@ -110,29 +91,29 @@ class FinancialNormalizer(FinancialNormalizerPort):
         )
 
     def _diff_quarters(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
-        q1 = qmap.get(1); q2 = qmap.get(2); q3 = qmap.get(3); q4 = qmap.get(4)
-        if q1: yield self._with_value(q1, self._dec(q1.value))
-        if q2:
-            base = self._dec(q1.value) if q1 else Decimal(0)
-            yield self._with_value(q2, self._dec(q2.value) - base)
-        if q3:
-            base = self._dec(q2.value) if q2 else (self._dec(q1.value) if q1 else Decimal(0))
-            yield self._with_value(q3, self._dec(q3.value) - base)
-        if q4:
-            base = self._dec(q3.value) if q3 else (self._dec(q2.value) if q2 else (self._dec(q1.value) if q1 else Decimal(0)))
-            yield self._with_value(q4, self._dec(q4.value) - base)
+        prev = None
+        for m in (3, 6, 9, 12):
+            r = qmap.get(m)
+            if r is None:
+                continue
+            cur = float(getattr(r, "value", 0.0) or 0.0)
+            out_val = cur if prev is None else cur - prev
+            prev = cur
+            yield replace(r, value=out_val)
 
     def _adjust_q4(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
-        q1 = qmap.get(1); q2 = qmap.get(2); q3 = qmap.get(3); q4 = qmap.get(4)
-        if q1: yield self._with_value(q1, self._dec(q1.value))
-        if q2: yield self._with_value(q2, self._dec(q2.value))
-        if q3: yield self._with_value(q3, self._dec(q3.value))
-        if q4:
-            soma = Decimal(0)
-            if q1: soma += self._dec(q1.value)
-            if q2: soma += self._dec(q2.value)
-            if q3: soma += self._dec(q3.value)
-            yield self._with_value(q4, self._dec(q4.value) - soma)
+        m3, m6, m9, m12 = qmap.get(3), qmap.get(6), qmap.get(9), qmap.get(12)
+
+        for r in (m3, m6, m9):
+            if r is not None:
+                yield r
+
+        if m12 is not None:
+            s3 = float(getattr(m3, "value", 0.0) or 0.0) if m3 else 0.0
+            s6 = float(getattr(m6, "value", 0.0) or 0.0) if m6 else 0.0
+            s9 = float(getattr(m9, "value", 0.0) or 0.0) if m9 else 0.0
+            v12 = float(getattr(m12, "value", 0.0) or 0.0)
+            yield replace(m12, value=v12 - (s3 + s6 + s9))
 
     def _copy(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
         for q in sorted(qmap):
