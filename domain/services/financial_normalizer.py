@@ -24,7 +24,7 @@ class FinancialNormalizer(FinancialNormalizerPort):
         self,
         *,
         fetched_builder: Callable[[StatementRawDTO, str, Decimal], StatementFetchedDTO] | None = None,
-        intel_module_path: str = "legacy.domain.utils.intel",
+        intel_module_path: str = "domain.utils.intel",
     ) -> None:
         self._build_fetched = fetched_builder or self._default_builder
         self._intel_module_path = intel_module_path
@@ -122,79 +122,81 @@ class FinancialNormalizer(FinancialNormalizerPort):
 
     # ---------- 2) 'Intel': classifica e gera FETCHED ----------
     def _classify_with_intel(self, rows: Sequence[StatementRawDTO]) -> List[StatementFetchedDTO]:
-        from importlib import import_module
-        intel = import_module(self._intel_module_path)
+        try:
+            from importlib import import_module
+            intel = import_module(self._intel_module_path)
 
-        def normalize_account(val: str) -> str:
-            parts = [(p.lstrip("0") or "0") for p in (val or "").split(".")]
-            return ".".join(seg.zfill(2) for seg in parts)
+            def normalize_account(val: str) -> str:
+                parts = [(p.lstrip("0") or "0") for p in (val or "").split(".")]
+                return ".".join(seg.zfill(2) for seg in parts)
 
-        def account_of_raw(r: StatementRawDTO) -> str:
-            # Suporta tanto raw.account quanto raw.account_code
-            return getattr(r, "account_code", None) or getattr(r, "account", "") or ""
+            def account_of_raw(r: StatementRawDTO) -> str:
+                # Suporta tanto raw.account quanto raw.account_code
+                return getattr(r, "account_code", None) or getattr(r, "account", "") or ""
 
-        def matches(row: StatementRawDTO, crit: list[tuple[str, str, Any]]) -> bool:
-            for column, cond, needle in crit:
-                raw_val = getattr(row, column, None)
-                if raw_val is None and column == "account":
-                    raw_val = account_of_raw(row)
-                value = str(raw_val or "").lower()
+            def matches(row: StatementRawDTO, crit: list[tuple[str, str, Any]]) -> bool:
+                for column, cond, needle in crit:
+                    raw_val = getattr(row, column, None)
+                    if raw_val is None and column == "account":
+                        raw_val = account_of_raw(row)
+                    value = str(raw_val or "").lower()
 
-                if column in ("account", "account_code"):
-                    v_cmp = normalize_account(value)
-                    n_cmp = normalize_account(str(needle))
-                else:
-                    v_cmp = value
-                    n_cmp = str(needle).lower()
+                    if column in ("account", "account_code"):
+                        v_cmp = normalize_account(value)
+                        n_cmp = normalize_account(str(needle))
+                    else:
+                        v_cmp = value
+                        n_cmp = str(needle).lower()
 
-                bag = needle if isinstance(needle, (list, tuple)) else [needle]
-                bag = [str(x).lower() for x in bag]
+                    bag = needle if isinstance(needle, (list, tuple)) else [needle]
+                    bag = [str(x).lower() for x in bag]
 
-                if cond == "equals" and v_cmp != n_cmp: return False
-                if cond == "not_equals" and v_cmp == n_cmp: return False
-                if cond == "startswith" and not v_cmp.startswith(n_cmp): return False
-                if cond == "contains_any" and not any(tok in value for tok in bag): return False
-                if cond in ("contains_all",) and not all(tok in value for tok in bag): return False
-                if cond in ("not_contains", "contains_none") and any(tok in value for tok in bag): return False
-                if cond == "level":
-                    level = value.count(".") + 1 if value else 1
-                    try:
-                        expected = int(needle)
-                    except Exception:
-                        return False
-                    if level != expected: return False
-            return True
+                    if cond == "equals" and v_cmp != n_cmp: return False
+                    if cond == "not_equals" and v_cmp == n_cmp: return False
+                    if cond == "startswith" and not v_cmp.startswith(n_cmp): return False
+                    if cond == "contains_any" and not any(tok in value for tok in bag): return False
+                    if cond in ("contains_all",) and not all(tok in value for tok in bag): return False
+                    if cond in ("not_contains", "contains_none") and any(tok in value for tok in bag): return False
+                    if cond == "level":
+                        level = value.count(".") + 1 if value else 1
+                        try:
+                            expected = int(needle)
+                        except Exception:
+                            return False
+                        if level != expected: return False
+                return True
 
-        def map_node(d: dict):
-            return {
-                "target_line": d.get("target_line", ""),
-                "criteria": [tuple(c) for c in d.get("criteria", [])],
-                "children": [map_node(c) for c in d.get("sub_criteria", [])],
-            }
+            def map_node(d: dict):
+                return {
+                    "target_line": d.get("target_line", ""),
+                    "criteria": [tuple(c) for c in d.get("criteria", [])],
+                    "children": [map_node(c) for c in d.get("sub_criteria", [])],
+                }
 
-        roots: list[dict] = []
-        for name in dir(intel):
-            if name.endswith("_criteria"):
-                value = getattr(intel, name)
-                if isinstance(value, list):
-                    roots.extend(map(map_node, value))
+            roots: list[dict] = []
+            for name in dir(intel):
+                if name.endswith("_criteria"):
+                    value = getattr(intel, name)
+                    if isinstance(value, list):
+                        roots.extend(map(map_node, value))
 
-        def walk(node: dict, universe: list[StatementRawDTO]) -> list[StatementFetchedDTO]:
-            hits = [r for r in universe if matches(r, node["criteria"])]
-            fetched = [self._build_fetched(r, node["target_line"], self._dec(getattr(r, "value", 0))) for r in hits]
-            parents = {normalize_account(getattr(f, "account_code", "")) for f in fetched}
-            if not parents:
+            def walk(node: dict, universe: list[StatementRawDTO]) -> list[StatementFetchedDTO]:
+                hits = [r for r in universe if matches(r, node["criteria"])]
+                fetched = [self._build_fetched(r, node["target_line"], self._dec(getattr(r, "value", 0))) for r in hits]
+                parents = {normalize_account(getattr(f, "account_code", "")) for f in fetched}
+                if not parents:
+                    return fetched
+                children_rows = [r for r in universe if any(normalize_account(account_of_raw(r)).startswith(p) for p in parents)]
+                for child in node["children"]:
+                    fetched.extend(walk(child, children_rows))
                 return fetched
-            children_rows = [r for r in universe if any(normalize_account(account_of_raw(r)).startswith(p) for p in parents)]
-            for child in node["children"]:
-                fetched.extend(walk(child, children_rows))
-            return fetched
 
-        out: list[StatementFetchedDTO] = []
-        for node in roots:
-            out.extend(walk(node, list(rows)))
-        return out
-
+            out: list[StatementFetchedDTO] = []
+            for node in roots:
+                out.extend(walk(node, list(rows)))
+            return out
+        except Exception as e:
+            print(e)
     # ---------- utilitários ----------
     @staticmethod
     def _dec(x) -> Decimal:
