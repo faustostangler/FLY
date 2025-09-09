@@ -108,9 +108,20 @@ class NsdProcessor:
 
         start_time = time.perf_counter()
         nsd = self.scraper_nsd.fetch_one(int(data))
+        progress = {
+            "index": task.index,
+            "size": task.total_size,
+            "start_time": start_time,
+        }
 
         if nsd is None:
-            self.logger.log(f"NSD: {data}", level="info")
+            extra_info = [ f""]
+            self.logger.log(
+                f"NSD {data}",
+                level="info",
+                progress={**progress, "extra_info": extra_info},
+                worker_id=task.worker_id,
+            )
             return task.data
 
         with self.uow_factory() as uow:
@@ -123,25 +134,19 @@ class NsdProcessor:
                 statements_fetched_repository=self.statements_fetched_repository,
             )
 
+            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
+            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+            self.logger.log(
+                f"NSD {nsd.nsd}",
+                level="info",
+                progress={**progress, "extra_info": extra_info},
+                worker_id=task.worker_id,
+            )
+
             if not nsd_type.is_statement:
                 agg.set_nsd(nsd)
                 agg.flush(uow=uow)
                 uow.commit()
-
-                progress = {
-                    "index": task.index,
-                    "size": task.total_size,
-                    "start_time": start_time,
-                }
-
-                nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
-                extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
-                self.logger.log(
-                    f"{nsd.nsd}",
-                    level="info",
-                    progress={**progress, "extra_info": extra_info},
-                    worker_id=task.worker_id,
-                )
 
                 return nsd
 
@@ -157,6 +162,15 @@ class NsdProcessor:
             )
 
             raw_lines = list(self.scraper_statements_raw.fetch(nsd))
+
+            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
+            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+            self.logger.log(
+                f"RAW {nsd.nsd}",
+                level="info",
+                progress={**progress, "extra_info": extra_info},
+                worker_id=task.worker_id,
+            )
 
             # from dataclasses import asdict
             # import pandas as pd
@@ -197,10 +211,6 @@ class NsdProcessor:
                 agg.set_nsd(nsd)
                 agg.flush(uow=uow)
                 uow.commit()
-                self.logger.log(
-                    f"Processed NSD_RAW NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
-                    level="info",
-                )
                 return nsd
 
             # PROCESS
@@ -214,7 +224,17 @@ class NsdProcessor:
             )
             deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
             standardized = self.financial_normalizer.standardize(deduped)
-            fetched = self.ratios_calculator.calculate(standardized)
+            ratios = self.ratios_calculator.calculate(standardized)
+            fetched = list(standardized) + list(ratios)
+
+            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
+            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+            self.logger.log(
+                f"FTD {nsd.nsd}",
+                level="info",
+                progress={**progress, "extra_info": extra_info},
+                worker_id=task.worker_id,
+            )
 
             agg.add_raw_many(raw_lines)
             agg.add_fetched_many(list(fetched))
@@ -222,10 +242,6 @@ class NsdProcessor:
             agg.flush(uow=uow)
             uow.commit()
 
-            self.logger.log(
-                f"Processed NSD_RAW_FETCHED NSD: {nsd.nsd} {nsd.quarter} {nsd.sent_date} v{nsd.version} {nsd.nsd_type} {nsd.company_name}",
-                level="info",
-            )
             return nsd
 
     def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:

@@ -122,7 +122,12 @@ class NsdService:
     #         logger=self.logger,
     #     )
     def run(self, *, start: int = 1, max_nsd: int = 1) -> None:
-        codes = self.sync_nsd_usecase.build_code_list(start=start, max_nsd=max_nsd)
+        # codes = self.sync_nsd_usecase.build_code_list(start=start, max_nsd=max_nsd)
+        # from infrastructure.utils import file
+        # file.save_list_to_csv(codes, "code_list.csv")
+
+        from infrastructure.utils import file
+        codes = file.read_list_from_csv("code_list.csv")
         code_stream = self.sync_nsd_usecase.stream_codes(codes)
 
         self.worker_pool(

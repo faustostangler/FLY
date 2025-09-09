@@ -6,6 +6,7 @@ from application.ports.logger_port import LoggerPort
 
 from domain.polices.nsd_policy import NsdPolicy
 from domain.services.financial_normalizer import FinancialNormalizer
+from domain.services.ratios_calculator import RatiosCalculator
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
@@ -107,10 +108,9 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     financial_normalizer = FinancialNormalizer()
 
     # Ratios
-    class _RatiosPassthrough:
-        def calculate(self, normalized):
-            return list(normalized)
-    ratios_calculator = _RatiosPassthrough()
+    ratios_calculator = RatiosCalculator(
+            intel_module_path=(getattr(config.domain, "intel_module_path", None))
+        )
 
     # Return the CLI controller with its dependencies injected
     cli = Cli(

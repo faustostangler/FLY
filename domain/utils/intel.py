@@ -1,5 +1,156 @@
 import numpy as np
 
+class Formula:
+    """Base class for all formula operations."""
+
+    def __call__(self, df):
+        raise NotImplementedError("Each formula must implement the __call__ method.")
+
+
+class Addition(Formula):
+    def __init__(self, *accounts, multiplier=1):
+        """Initializes the Addition operation.
+
+        Parameters:
+        - *accounts: A list of account names or Formula instances to be summed.
+        """
+        if len(accounts) < 1:
+            raise ValueError("Addition requires at least one account.")
+        self.accounts = accounts
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Sum all accounts or formulas
+            result = sum(
+                acc(df) if isinstance(acc, Formula) else df[acc]
+                for acc in self.accounts
+            )
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+
+class Subtraction(Formula):
+    def __init__(self, minuend, *subtrahends, multiplier=1):
+        """Initializes the Subtraction operation.
+
+        Parameters:
+        - minuend (str or Formula): The account name or Formula instance from which to subtract.
+        - *subtrahends: A list of account names or Formula instances to subtract.
+        """
+        if len(subtrahends) < 1:
+            raise ValueError("Subtraction requires at least one subtrahend.")
+        self.minuend = minuend
+        self.subtrahends = subtrahends
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Compute minuend value
+            result = (
+                self.minuend(df)
+                if isinstance(self.minuend, Formula)
+                else df[self.minuend]
+            )
+            # Subtract each subtrahend
+            for acc in self.subtrahends:
+                sub_val = acc(df) if isinstance(acc, Formula) else df[acc]
+                result -= sub_val
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+
+class Multiplication(Formula):
+    def __init__(self, *multiplicands, multiplier=1):
+        """Initializes the Multiplication operation.
+
+        Parameters:
+        - *multiplicands: A list of account names or Formula instances to be multiplied.
+        """
+        if len(multiplicands) < 1:
+            raise ValueError("Multiplication requires at least one multiplicand.")
+        self.multiplicands = multiplicands
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Run with an initial value of 1 for multiplication
+            result = np.ones(len(df))
+            # Multiply each multiplicand
+            for acc in self.multiplicands:
+                val = acc(df) if isinstance(acc, Formula) else df[acc]
+                result *= val
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+
+class Division(Formula):
+    def __init__(self, numerator, denominator, multiplier=1):
+        """Initializes the Division operation.
+
+        Parameters:
+        - numerator (str or Formula): The account name or Formula instance for the numerator.
+        - denominator (str or Formula): The account name or Formula instance for the denominator.
+        - multiplier (float): A constant to multiply the result by. Defaults to 1.
+        """
+        self.numerator = numerator
+        self.denominator = denominator
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Compute numerator and denominator values
+            numerator_val = (
+                self.numerator(df)
+                if isinstance(self.numerator, Formula)
+                else df[self.numerator]
+            )
+            denominator_val = (
+                self.denominator(df)
+                if isinstance(self.denominator, Formula)
+                else df[self.denominator]
+            )
+            # Handle division by zero
+            result = np.where(
+                denominator_val != 0,
+                (numerator_val / denominator_val) * self.multiplier,
+                np.nan,
+            )
+            return result
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+
+class Average(Formula):
+    def __init__(self, *accounts, multiplier=1):
+        """Initializes the Average operation.
+
+        Parameters:
+        - *accounts: A list of account names or Formula instances for which the average will be calculated.
+        - multiplier (float): A constant to multiply the result by. Defaults to 1.
+        """
+        if len(accounts) < 1:
+            raise ValueError("Average requires at least one account.")
+        self.accounts = accounts
+        self.multiplier = multiplier
+
+    def __call__(self, df):
+        try:
+            # Calculate the sum of all accounts or formulas
+            total = sum(
+                acc(df) if isinstance(acc, Formula) else df[acc]
+                for acc in self.accounts
+            )
+            # Calculate the average
+            result = total / len(self.accounts)
+            return result * self.multiplier
+        except KeyError as e:
+            raise KeyError(f"Missing account: {e}")
+
+
 # statements standardization
 
 # 00.01.01 - Ações ON Ordinárias
@@ -2208,157 +2359,6 @@ all_financing_related_keywords = list(
         + dividends_interest_keywords
     )
 )
-
-
-class Formula:
-    """Base class for all formula operations."""
-
-    def __call__(self, df):
-        raise NotImplementedError("Each formula must implement the __call__ method.")
-
-
-class Addition(Formula):
-    def __init__(self, *accounts, multiplier=1):
-        """Initializes the Addition operation.
-
-        Parameters:
-        - *accounts: A list of account names or Formula instances to be summed.
-        """
-        if len(accounts) < 1:
-            raise ValueError("Addition requires at least one account.")
-        self.accounts = accounts
-        self.multiplier = multiplier
-
-    def __call__(self, df):
-        try:
-            # Sum all accounts or formulas
-            result = sum(
-                acc(df) if isinstance(acc, Formula) else df[acc]
-                for acc in self.accounts
-            )
-            return result * self.multiplier
-        except KeyError as e:
-            raise KeyError(f"Missing account: {e}")
-
-
-class Subtraction(Formula):
-    def __init__(self, minuend, *subtrahends, multiplier=1):
-        """Initializes the Subtraction operation.
-
-        Parameters:
-        - minuend (str or Formula): The account name or Formula instance from which to subtract.
-        - *subtrahends: A list of account names or Formula instances to subtract.
-        """
-        if len(subtrahends) < 1:
-            raise ValueError("Subtraction requires at least one subtrahend.")
-        self.minuend = minuend
-        self.subtrahends = subtrahends
-        self.multiplier = multiplier
-
-    def __call__(self, df):
-        try:
-            # Compute minuend value
-            result = (
-                self.minuend(df)
-                if isinstance(self.minuend, Formula)
-                else df[self.minuend]
-            )
-            # Subtract each subtrahend
-            for acc in self.subtrahends:
-                sub_val = acc(df) if isinstance(acc, Formula) else df[acc]
-                result -= sub_val
-            return result * self.multiplier
-        except KeyError as e:
-            raise KeyError(f"Missing account: {e}")
-
-
-class Multiplication(Formula):
-    def __init__(self, *multiplicands, multiplier=1):
-        """Initializes the Multiplication operation.
-
-        Parameters:
-        - *multiplicands: A list of account names or Formula instances to be multiplied.
-        """
-        if len(multiplicands) < 1:
-            raise ValueError("Multiplication requires at least one multiplicand.")
-        self.multiplicands = multiplicands
-        self.multiplier = multiplier
-
-    def __call__(self, df):
-        try:
-            # Run with an initial value of 1 for multiplication
-            result = np.ones(len(df))
-            # Multiply each multiplicand
-            for acc in self.multiplicands:
-                val = acc(df) if isinstance(acc, Formula) else df[acc]
-                result *= val
-            return result * self.multiplier
-        except KeyError as e:
-            raise KeyError(f"Missing account: {e}")
-
-
-class Division(Formula):
-    def __init__(self, numerator, denominator, multiplier=1):
-        """Initializes the Division operation.
-
-        Parameters:
-        - numerator (str or Formula): The account name or Formula instance for the numerator.
-        - denominator (str or Formula): The account name or Formula instance for the denominator.
-        - multiplier (float): A constant to multiply the result by. Defaults to 1.
-        """
-        self.numerator = numerator
-        self.denominator = denominator
-        self.multiplier = multiplier
-
-    def __call__(self, df):
-        try:
-            # Compute numerator and denominator values
-            numerator_val = (
-                self.numerator(df)
-                if isinstance(self.numerator, Formula)
-                else df[self.numerator]
-            )
-            denominator_val = (
-                self.denominator(df)
-                if isinstance(self.denominator, Formula)
-                else df[self.denominator]
-            )
-            # Handle division by zero
-            result = np.where(
-                denominator_val != 0,
-                (numerator_val / denominator_val) * self.multiplier,
-                np.nan,
-            )
-            return result
-        except KeyError as e:
-            raise KeyError(f"Missing account: {e}")
-
-
-class Average(Formula):
-    def __init__(self, *accounts, multiplier=1):
-        """Initializes the Average operation.
-
-        Parameters:
-        - *accounts: A list of account names or Formula instances for which the average will be calculated.
-        - multiplier (float): A constant to multiply the result by. Defaults to 1.
-        """
-        if len(accounts) < 1:
-            raise ValueError("Average requires at least one account.")
-        self.accounts = accounts
-        self.multiplier = multiplier
-
-    def __call__(self, df):
-        try:
-            # Calculate the sum of all accounts or formulas
-            total = sum(
-                acc(df) if isinstance(acc, Formula) else df[acc]
-                for acc in self.accounts
-            )
-            # Calculate the average
-            result = total / len(self.accounts)
-            return result * self.multiplier
-        except KeyError as e:
-            raise KeyError(f"Missing account: {e}")
 
 
 ##### New Indicators
