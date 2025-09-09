@@ -7,18 +7,19 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.mappers.company_data_merger import CompanyDataMerger
+from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
 from application.processors.company_detail_processor import CompanyDataDetailProcessor
 from application.processors.entry_cleaner import EntryCleaner
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
 from domain.ports.datacleaner_port import DataCleanerPort
-from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.metrics_collector_port import MetricsCollectorPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
-from application.ports.worker_pool_port import WorkerPoolPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 
 # from infrastructure.scrapers.company_data_processors import (
@@ -69,6 +70,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         metrics_collector: MetricsCollectorPort,
         worker_pool: WorkerPoolPort,
         http_client: AffinityHttpClientPort,
+        uow_factory: UowFactoryPort,
     ):
         # Fixed pagination defaults used by the remote API
         self.PAGE_NUMBER = 1
@@ -81,6 +83,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self.mapper = mapper
         self.worker_pool_executor = worker_pool
         self._metrics_collector = metrics_collector
+        self.uow_factory = uow_factory
 
         # Shared HTTP client for connection reuse, rate limiting and caching
         self.http_client = http_client
@@ -145,7 +148,9 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
-        companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(save_callback=noop)
+        companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(
+            save_callback=noop
+        )
         # with open("temp/companies_entries.json", "w", encoding="utf-8") as f:
         #     json.dump(companies_entries, f, ensure_ascii=False, indent=2)
         # with open("temp/companies_entries.json", "r", encoding="utf-8") as f:
@@ -182,7 +187,10 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         # Build a save strategy to flush items while iterating pages
         strategy: SaveStrategy[Dict] = SaveStrategy.from_config(
-            save_callback, self.threshold, config=self.config
+            save_callback,
+            self.threshold,
+            config=self.config,
+            uow_factory=self.uow_factory,
         )
 
         # Accumulate all page results for the final merged list
@@ -203,7 +211,9 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         # Extra diagnostic info for logging and progress observers
         extra_info = {
-            "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+            "Download": self.byte_formatter.format_bytes(
+                self._metrics_collector.download_bytes
+            ),
             "Total download": self.byte_formatter.format_bytes(
                 self._metrics_collector.network_bytes
             ),
@@ -233,7 +243,9 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
                 # Prepare diagnostics for this worker's page
                 extra_info = {
-                    "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                    "Download": self.byte_formatter.format_bytes(
+                        self._metrics_collector.download_bytes
+                    ),
                     "Total download": self.byte_formatter.format_bytes(
                         self._metrics_collector.network_bytes
                     ),
@@ -249,7 +261,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                         "start_time": start_time,  # noqa: F821
                     },
                     extra=extra_info,
-                    worker_id=worker_id,
+                    worker_id=task.worker_id,
                 )
 
                 # Return the page payload to be merged by the caller
@@ -302,8 +314,11 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         """
         # Build a save strategy that buffers detail DTOs and flushes on threshold
         strategy: SaveStrategy[CompanyDataDTO] = SaveStrategy.from_config(
-            save_callback, self.threshold, config=self.config
-            )
+            save_callback,
+            self.threshold,
+            config=self.config,
+            uow_factory=self.uow_factory,
+        )
 
         # Pair each entry with its index for progress reporting
         tasks = list(enumerate(companies_list))
@@ -341,15 +356,21 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                 return None
 
             # Process one entry through fetch + clean + merge
-            result = self.detail_processor.process_entry(entry, metrics_collector=self._metrics_collector)
+            result = self.detail_processor.process_entry(
+                entry, metrics_collector=self._metrics_collector
+            )
 
             # Prepare diagnostic metadata for logs
-            issuingCompany = result.issuing_company if result else entry.get("issuingCompany")
+            issuingCompany = (
+                result.issuing_company if result else entry.get("issuingCompany")
+            )
             tradingName = result.trading_name if result else entry.get("tradingName")
             extra_info = {
                 "issuingCompany": issuingCompany,
                 "trading_name": tradingName,
-                "Download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                "Download": self.byte_formatter.format_bytes(
+                    self._metrics_collector.download_bytes
+                ),
                 "Total download": self.byte_formatter.format_bytes(
                     self._metrics_collector.network_bytes
                 ),
