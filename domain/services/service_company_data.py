@@ -1,8 +1,10 @@
 from typing import Any
-from application.usecases import SyncCompanyDataUseCase
-from domain.dtos.sync_results_dto import SyncResultsDTO
+
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.usecases import SyncCompanyDataUseCase
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 
@@ -16,6 +18,7 @@ class CompanyDataService:
         logger: LoggerPort,
         repository: RepositoryCompanyDataPort,
         scraper: ScraperCompanyDataPort,
+        uow_factory: UowFactoryPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -29,19 +32,22 @@ class CompanyDataService:
         self.logger = logger
         self.config = config
 
+        self.uow_factory = uow_factory
+
         # Initialize the use case responsible for company synchronization
         self.sync_companies_usecase = SyncCompanyDataUseCase(
             config=self.config,
             logger=self.logger,
             repository=repository,
             scraper=scraper,
+            uow_factory=self.uow_factory,
             max_workers=self.config.worker_pool.max_workers,
         )
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         try:
             return self.run()
-        except Exception as e:
+        except Exception:
             pass
 
     def run(self) -> SyncResultsDTO:
