@@ -4,9 +4,9 @@ from typing import (
     Any,
     Iterator,
     List,
+    Sequence,
     Tuple,
     TypeVar,
-    Sequence,
     Union,
 )
 

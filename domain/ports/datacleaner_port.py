@@ -48,7 +48,7 @@ class DataCleanerPort(Protocol):
         """
         ...
 
-    def clean_date(self, text: Optional[str]) -> Optional[datetime]:
+    def cleandate(self, text: Optional[str]) -> Optional[datetime]:
         """Parse and normalize a date/time from text.
 
         Implementations should accept common date formats, handle timezone

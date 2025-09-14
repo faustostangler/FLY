@@ -1,17 +1,20 @@
 from __future__ import annotations
-from typing import Iterable, List, Dict, Any, Optional
+
+from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import quote_plus
-from bs4 import BeautifulSoup, Tag
+
 import requests
+from bs4 import BeautifulSoup, Tag
 
 from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos.statement_raw_dto import StatementRawDTO
-from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
 from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 
 
 class ScraperStatementRaw(ScraperStatementRawPort):

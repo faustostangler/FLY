@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ class CompanyDataListingDTO:
     market: Optional[str]
 
     @staticmethod
-    def from_dict(raw: dict[str, Any]) -> "CompanyDataListingDTO":
+    def from_dict(raw: dict[str, Any], *, cleandate: Callable[[object], datetime|None]) -> "CompanyDataListingDTO":
         """Create a listing DTO from raw dictionary data (as-is mapping)."""
         return CompanyDataListingDTO(
             cvm_code=raw.get("codeCVM"),
@@ -45,7 +45,7 @@ class CompanyDataListingDTO:
             cnpj=raw.get("cnpj"),
             market_indicator=raw.get("marketIndicator"),
             type_bdr=raw.get("typeBDR"),
-            listing_date=raw.get("dateListing"),
+            listing_date=cleandate(raw.get("quarter")),
             status=raw.get("status"),
             segment=raw.get("segment"),
             segment_eng=raw.get("segmentEng"),

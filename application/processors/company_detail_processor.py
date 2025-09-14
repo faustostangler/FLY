@@ -4,9 +4,11 @@ from typing import Dict, Optional, cast
 
 from application.mappers.company_data_merger import CompanyDataMerger
 from application.processors.entry_cleaner import EntryCleaner
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.company_data_dto import CompanyDataDetailDTO
-from domain.dtos.company_data_dto import CompanyDataListingDTO
+from domain.dtos.company_data_dto import (
+    CompanyDataDetailDTO,
+    CompanyDataDTO,
+    CompanyDataListingDTO,
+)
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 
 

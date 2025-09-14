@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
+from typing import Any, Callable, Optional
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -25,7 +26,7 @@ class StatementFetchedDTO:
     id: Optional[int] = None
     nsd: str
     company_name: Optional[str]
-    quarter: Optional[str]
+    quarter: datetime
     version: Optional[str]
     grupo: str
     quadro: str
@@ -35,7 +36,7 @@ class StatementFetchedDTO:
     processing_hash: str = ""
 
     @staticmethod
-    def from_dict(raw: dict) -> "StatementFetchedDTO":
+    def from_dict(raw: dict[str, Any], *, cleandate: Callable[[object], datetime]) -> "StatementFetchedDTO":
         """Convert a raw dictionary into a ``StatementFetchedDTO``.
 
         Validates and coerces types where necessary to ensure the DTO
@@ -55,13 +56,16 @@ class StatementFetchedDTO:
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
+        q = cleandate(raw.get("quarter"))
+        if q is None:
+            raise ValueError("quarter obrigatório não informado ou inválido")
 
         # Build and return DTO with normalized fields
         return StatementFetchedDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
-            quarter=raw.get("quarter"),
+            quarter=q,
             version=raw.get("version"),
             grupo=str(raw.get("grupo", "")),
             quadro=str(raw.get("quadro", "")),

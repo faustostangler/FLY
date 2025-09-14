@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Iterator, Optional, Protocol, runtime_checkable, Iterable, List
+from typing import Iterable, Iterator, List, Optional, Protocol, runtime_checkable
 
-from domain.dtos.nsd_dto import NsdDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow, UowFactoryPort
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
-from application.ports.uow_port import UowFactoryPort, Uow
+
 
 @runtime_checkable
 class _ScraperProbe(Protocol):
@@ -43,7 +44,7 @@ class SyncNSDUseCase:
         for dto in self.scraper.iter_nsd(start=start, existing_codes=existing_codes, max_nsd=max_nsd_probable):
             yield dto
 
-    def build_code_list(self, *, start: int = 1, max_nsd: Optional[int] = None) -> List[int]:
+    def build_code_list(self, *, start: int = 0, max_nsd: Optional[int] = None) -> List[int]:
         """Lista de NSDs a processar:
         missing = [start..last_nsd] \ skip_codes
         tail    = [last_nsd+1..end], onde end = max(max_nsd_existing, max_nsd_probable, cap_param)
@@ -78,7 +79,7 @@ class SyncNSDUseCase:
         missing_nsd = [c for c in range(start, min(last_nsd, end) + 1) if c not in skip_codes]
 
         # cauda nova a partir do próximo após o último existente
-        tail_start = max(last_nsd + 1, start)
+        tail_start = max(last_nsd, start)
         tail = list(range(tail_start, end + 1)) if end >= tail_start else []
 
         return tail + missing_nsd if len(missing_nsd) > (end - last_nsd) else tail

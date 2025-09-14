@@ -21,7 +21,7 @@ class DataCleanerPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def clean_date(self, text: Optional[str]) -> Optional[datetime]:
+    def cleandate(self, text: Optional[str]) -> Optional[datetime]:
         """Parse a date string into ``datetime``."""
         raise NotImplementedError
 

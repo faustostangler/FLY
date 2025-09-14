@@ -1,11 +1,15 @@
 # infrastructure/http/builders.py
 from __future__ import annotations
+
 from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
-from infrastructure.http.cloudscraper_affinity_http_client import CloudscraperAffinityHttpClient
-from infrastructure.http.circuit_breaker import CircuitBreakerClient, BreakerPolicy
+from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerClient
+from infrastructure.http.cloudscraper_affinity_http_client import (
+    CloudscraperAffinityHttpClient,
+)
 from infrastructure.http.rate_limiter import RateLimitedClient, TokenBucket
+
 
 def build_http_client(config: ConfigPort, logger: LoggerPort) -> AffinityHttpClientPort:
     # base com sessão compartilhável, headers sorteados, pool e cache condicional

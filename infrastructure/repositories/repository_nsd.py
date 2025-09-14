@@ -6,14 +6,14 @@ from typing import List, Set, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dtos.nsd_dto import NsdDTO
-from application.ports.uow_port import Uow
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.repository_base import RepositoryBase
+from infrastructure.utils.list_flatenner import ListFlattener
 
 T = TypeVar("T")
 

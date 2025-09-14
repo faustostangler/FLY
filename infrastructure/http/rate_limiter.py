@@ -1,7 +1,11 @@
 # infrastructure/http/rate_limiter.py
 from __future__ import annotations
-import random, threading, time
+
+import random
+import threading
+import time
 from typing import Any
+
 
 class TokenBucket:
     def __init__(self, rate_per_sec: float, burst: int) -> None:

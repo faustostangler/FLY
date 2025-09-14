@@ -6,14 +6,16 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
-from infrastructure.utils.list_flatenner import ListFlattener
+from application.ports.uow_port import Uow
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
 from infrastructure.models.statements_fetched_model import StatementFetchedModel
 from infrastructure.repositories.repository_base import RepositoryBase
-from application.ports.uow_port import Uow
+from infrastructure.utils.list_flatenner import ListFlattener
 
 
 class StatementFetchedRepository(

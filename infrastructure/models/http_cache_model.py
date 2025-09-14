@@ -1,9 +1,13 @@
 # infrastructure/models/http_cache_model.py
 from __future__ import annotations
+
 from datetime import datetime
+
 from sqlalchemy import DateTime, Index, LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from .base_model import BaseModel
+
 
 class HttpCacheModel(BaseModel):
     __tablename__ = "http_cache"

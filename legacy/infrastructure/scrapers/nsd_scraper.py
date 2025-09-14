@@ -255,7 +255,7 @@ class NsdScraper(ScraperNsdPort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        data["quarter"] = self.datacleaner.clean_date(quarter) if quarter else None
+        data["quarter"] = self.datacleaner.cleandate(quarter) if quarter else None
 
         nsd_type_version = text_of("#lblDescricaoCategoria")
         if nsd_type_version:
@@ -269,7 +269,7 @@ class NsdScraper(ScraperNsdPort):
                 )
 
         data["sent_date"] = (
-            self.datacleaner.clean_date(sent_date) if sent_date else None
+            self.datacleaner.cleandate(sent_date) if sent_date else None
         )
 
         return data

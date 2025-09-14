@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 

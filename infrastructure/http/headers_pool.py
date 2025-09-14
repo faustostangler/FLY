@@ -1,9 +1,12 @@
 # infrastructure/http/headers_pool.py
 from __future__ import annotations
+
 import random
 from dataclasses import dataclass
 from typing import Dict
+
 from infrastructure.config.scraping import load_scraping_config
+
 
 @dataclass(frozen=True)
 class HeadersPool:

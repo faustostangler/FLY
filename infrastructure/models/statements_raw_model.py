@@ -4,7 +4,6 @@ from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.statement_raw_dto import StatementRawDTO
-
 from infrastructure.models.statements_base_model import BaseStatementModel
 
 

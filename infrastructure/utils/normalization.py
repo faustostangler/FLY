@@ -3,11 +3,12 @@ from __future__ import annotations
 import re
 import string
 from datetime import datetime
-from typing import Dict, List, List, Mapping, Optional
+from typing import Dict, List, Mapping, Optional
 
 import unidecode
 
 from application.ports.logger_port import LoggerPort
+
 
 def clean_text(
     text: Optional[str],
@@ -117,7 +118,7 @@ def clean_number(
             logger.log(f"Failed to clean number: {exc}", level="warning")
         return 0.0
 
-def clean_date(
+def cleandate(
     text: Optional[str],
     normalization: Optional[bool] = False,
     logger: Optional[LoggerPort] = None,
@@ -165,9 +166,9 @@ def clean_date(
     for fmt in patterns:
         try:
             dt = datetime.strptime(text.strip(), fmt)
-            
+
             # Find end of quarter
-            if normalization == True:
+            if normalization:
                 q = (dt.month - 1) // 3 + 1
                 if q == 1:
                     dt = datetime(dt.year, 3, 31)
@@ -202,7 +203,7 @@ def clean_dict_fields(
 
     Applies field-wise normalization on a shallow copy of ``entry``:
     - Text keys are normalized via :func:`clean_text`.
-    - Date keys are fetched via :func:`clean_date`.
+    - Date keys are fetched via :func:`cleandate`.
     - Number keys are coerced via :func:`clean_number`.
 
     Args:
@@ -243,7 +244,7 @@ def clean_dict_fields(
         if key in cleaned:
             # Guard type: only strings are fetched; others become None
             val = entry.get(key)
-            cleaned[key] = clean_date(
+            cleaned[key] = cleandate(
                 text=val if isinstance(val, str) else None,
                 normalization=False,
                 logger=logger,
@@ -253,7 +254,7 @@ def clean_dict_fields(
         if key in cleaned:
             # Guard type: only strings are fetched; others become None
             val = entry.get(key)
-            cleaned[key] = clean_date(
+            cleaned[key] = cleandate(
                 text=val if isinstance(val, str) else None,
                 normalization=True,
                 logger=logger,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, Sequence, runtime_checkable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, Sequence, runtime_checkable
 
 if TYPE_CHECKING:
     # Evita import circular. Substitua pelos seus DTOs reais.

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, List, Mapping, Optional, cast
 
 import infrastructure.utils.normalization as norm
 from application.ports.config_port import ConfigPort
-from domain.ports.datacleaner_port import DataCleanerPort
 from application.ports.logger_port import LoggerPort
+from domain.ports.datacleaner_port import DataCleanerPort
 
 if TYPE_CHECKING:
     from infrastructure.logging.logger_adapter import Logger
@@ -70,7 +70,7 @@ class DataCleaner(DataCleanerPort):
         """
         return norm.clean_number(text, logger=cast("Logger", self.logger))
 
-    def clean_date(self, text: Optional[str]) -> Optional[datetime]:
+    def cleandate(self, text: Optional[str]) -> Optional[datetime]:
         """Parse and normalize a date string.
 
         Args:
@@ -79,7 +79,7 @@ class DataCleaner(DataCleanerPort):
         Returns:
             Optional[datetime]: Fetched datetime object, or None if invalid.
         """
-        return norm.clean_date(text, logger=cast("Logger", self.logger))
+        return norm.cleandate(text, logger=cast("Logger", self.logger))
 
     def clean_dict_fields(
         self,

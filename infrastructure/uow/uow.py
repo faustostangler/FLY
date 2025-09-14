@@ -1,8 +1,12 @@
 # infrastructure/uow/sqlalchemy_uow.py
 from __future__ import annotations
+
 from contextlib import contextmanager
+
 from sqlalchemy.orm import Session
+
 from application.ports.uow_port import Uow, UowFactoryPort
+
 
 class UowFactory(UowFactoryPort):
     def __init__(self, session_factory) -> None:

@@ -1,11 +1,13 @@
 # domain/services/ratios_calculator.py
 from __future__ import annotations
-from typing import Sequence, Dict, Tuple, Any, Protocol, runtime_checkable
+
 from importlib import import_module
+from typing import Any, Dict, Protocol, Sequence, Tuple, runtime_checkable
+from datetime import datetime
 import numpy as np
 
-from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
 
 
 @runtime_checkable
@@ -28,12 +30,13 @@ class _ColumnarFrame:
     __slots__ = ("_index", "_cols")
 
     def __init__(self, rows: Sequence[StatementRawDTO]) -> None:
-        buckets: Dict[Tuple[str, str | None, str], Dict[str, float]] = {}
+        buckets: Dict[Tuple[str, str | None, datetime], Dict[str, float]] = {}
+        
         for r in rows:
             key = (
                 str(getattr(r, "nsd", "")),
                 getattr(r, "company_name", None),
-                str(getattr(r, "quarter", None)),
+                r.quarter,
             )
             raw_acc = _norm_acc(str(getattr(r, "account", getattr(r, "account_code", "")) or ""))
             val = float(getattr(r, "value", 0.0) or 0.0)

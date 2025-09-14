@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 from typing import Sequence, Union
 
+
 def save_list_to_csv(data: Union[Sequence, str], filepath: str) -> None:
     """Save list, tuple, or str (split by commas) to CSV file."""
     if isinstance(data, str):

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
+from typing import Any, Callable, Optional
 
 from .statement_fetched_dto import StatementFetchedDTO
 
@@ -26,7 +27,7 @@ class StatementRawDTO:
     id: Optional[int] = None
     nsd: str
     company_name: Optional[str]
-    quarter: Optional[str]
+    quarter: datetime
     version: Optional[str]
     grupo: str
     quadro: str
@@ -35,7 +36,7 @@ class StatementRawDTO:
     value: float
 
     @staticmethod
-    def from_dict(raw: dict) -> "StatementRawDTO":
+    def from_dict(raw: dict[str, Any], *, cleandate: Callable[[object], datetime]) -> "StatementRawDTO":
         """Build a ``StatementRawDTO`` from a raw dictionary.
 
         Args:
@@ -52,13 +53,16 @@ class StatementRawDTO:
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
+        q = cleandate(raw.get("quarter"))
+        if q is None:
+            raise ValueError("quarter obrigatório não informado ou inválido")
 
         # Construct and return a fully initialized DTO
         return StatementRawDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),
-            quarter=raw.get("quarter"),
+            quarter=q,
             version=raw.get("version"),
             grupo=str(raw.get("grupo", "")),
             quadro=str(raw.get("quadro", "")),

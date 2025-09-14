@@ -1,25 +1,27 @@
 from __future__ import annotations
-from datetime import date
-from datetime import datetime
+
 import time
+from datetime import date, datetime
 from typing import Optional
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from infrastructure.utils.id_generator import IdGenerator
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
-from domain.ports.scraper_nsd_port import ScraperNsdPort
+from infrastructure.utils.id_generator import IdGenerator
 
 
 class _NsdTxnAggregator:
@@ -258,7 +260,8 @@ class NsdProcessor:
         return dto.cvm_code
 
     def _hash_run(self, *parts) -> str:
-        import hashlib, json
+        import hashlib
+        import json
 
         def to_prim(obj):
             if isinstance(obj, (list, tuple)):

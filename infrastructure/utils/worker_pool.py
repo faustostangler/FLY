@@ -7,11 +7,11 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
-from domain.dtos.worker_task_dto import WorkerTaskDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.worker_pool_port import WorkerPoolPort
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from infrastructure.utils.id_generator import IdGenerator
 
 # Generic type variable representing the processor's return type

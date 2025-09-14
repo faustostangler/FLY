@@ -72,7 +72,7 @@ def clean_number(
         return 0.0
 
 
-def clean_date(
+def cleandate(
     text: Optional[str],
     logger: Optional[Logger] = None,
 ) -> Optional[datetime]:
@@ -124,7 +124,7 @@ def clean_dict_fields(
 
     for key in date_keys:
         if key in cleaned:
-            cleaned[key] = clean_date(cleaned.get(key), logger)
+            cleaned[key] = cleandate(cleaned.get(key), logger)
 
     for key in number_keys:
         if key in cleaned:

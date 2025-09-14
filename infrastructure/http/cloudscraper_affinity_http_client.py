@@ -1,7 +1,9 @@
 # infrastructure/http/cloudscraper_affinity_http_client.py
 from __future__ import annotations
+
 from contextlib import contextmanager
-from typing import Iterator, Any, Dict
+from typing import Any, Dict, Iterator
+
 import requests
 
 try:
@@ -16,9 +18,10 @@ from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from infrastructure.adapters.engine_setup import EngineSetup
 from infrastructure.config.scraping import load_scraping_config
-from infrastructure.http.headers_pool import HeadersPool
 from infrastructure.http.backoff import sleep_expo_jitter
+from infrastructure.http.headers_pool import HeadersPool
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
+
 
 class CloudscraperAffinityHttpClient(AffinityHttpClientPort, EngineSetup):
     """Cliente HTTP com Cloudscraper, randomização de headers, pool, retries, backoff e cache condicional."""

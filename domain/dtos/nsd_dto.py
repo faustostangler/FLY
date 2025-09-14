@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from marshal import version
-from typing import Optional
+from typing import Any, Callable, Optional
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -31,18 +30,18 @@ class NsdDTO:
     id: Optional[int] = None
     nsd: int
     company_name: str
-    quarter: Optional[datetime]
+    quarter: datetime
     version: int
     nsd_type: Optional[str]
     dri: Optional[str]
     auditor: Optional[str]
     responsible_auditor: Optional[str]
     protocol: Optional[str]
-    sent_date: Optional[datetime]
+    sent_date: datetime
     reason: Optional[str]
 
     @staticmethod
-    def from_dict(raw: dict) -> Optional[NsdDTO]:
+    def from_dict(raw: dict[str, Any], *, cleandate: Callable[[object], datetime]) -> Optional[NsdDTO]:
         """Build an ``NsdDTO`` from a raw scraped dictionary.
 
         Args:
@@ -69,14 +68,14 @@ class NsdDTO:
             id=raw.get("id"),
             nsd=int(nsd_raw),
             company_name=str(raw.get("company_name") or ""),
-            quarter=raw.get("quarter"),
+            quarter=cleandate(raw.get("quarter")),
             version=int(''.join(c for c in str(raw.get("version") or 1) if c.isdigit())), # Normalized version
             nsd_type=raw.get("nsd_type"),
             dri=raw.get("dri"),
             auditor=raw.get("auditor"),
             responsible_auditor=raw.get("responsible_auditor"),
             protocol=raw.get("protocol"),
-            sent_date=raw.get("sent_date"),
+            sent_date=cleandate(raw.get("sent_date")),
             reason=raw.get("reason"),
         )
 

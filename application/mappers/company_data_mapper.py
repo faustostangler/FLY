@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.company_data_dto import CompanyDataDetailDTO
-from domain.dtos.company_data_dto import CompanyDataListingDTO
+from domain.dtos.company_data_dto import (
+    CompanyDataDetailDTO,
+    CompanyDataDTO,
+    CompanyDataListingDTO,
+)
 from domain.ports.datacleaner_port import DataCleanerPort
 
 

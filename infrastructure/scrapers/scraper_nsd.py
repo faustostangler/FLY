@@ -5,22 +5,22 @@ from __future__ import annotations
 import re
 import time
 from datetime import datetime
-from typing import  Callable, Dict, List, Iterable, Optional
+from typing import Callable, Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
 
-from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
 from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
+from infrastructure.adapters.datacleaner_adapter import DataCleaner
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
-from infrastructure.adapters.datacleaner_adapter import DataCleaner
-from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.worker_pool_port import WorkerPoolPort
 
 
 class NsdScraper(ScraperNsdPort):
@@ -325,7 +325,7 @@ class NsdScraper(ScraperNsdPort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        q = self.datacleaner.clean_date(quarter) if quarter else None
+        q = self.datacleaner.cleandate(quarter) if quarter else None
         y = datetime.today().year
         m = datetime.today().month
         if isinstance(q, datetime):
@@ -346,7 +346,7 @@ class NsdScraper(ScraperNsdPort):
                 )
 
         data["sent_date"] = (
-            self.datacleaner.clean_date(sent_date) if sent_date else None
+            self.datacleaner.cleandate(sent_date) if sent_date else None
         )
 
         return data
@@ -364,7 +364,7 @@ class NsdScraper(ScraperNsdPort):
         Returns:
             int: The last NSD with valid content.
         """
-        nsd = start + 1
+        nsd = start if start == 1 else start + 1
         last_valid = None
 
         max_linear_holes = self.config.scraping.linear_holes or 2000

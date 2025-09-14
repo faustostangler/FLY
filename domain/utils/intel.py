@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Formula:
     """Base class for all formula operations."""
 

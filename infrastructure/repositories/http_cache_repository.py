@@ -1,8 +1,12 @@
 # infrastructure/repositories/http_cache_repository.py
 from __future__ import annotations
+
 from typing import Callable
+
 from sqlalchemy.orm import Session
+
 from infrastructure.models.http_cache_model import HttpCacheModel
+
 
 class HttpCacheRepository:
     def __init__(self, session_factory: Callable[[], Session]) -> None:

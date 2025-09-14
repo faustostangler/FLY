@@ -1,13 +1,13 @@
-from typing import Any, List
+from typing import Any
 
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.sync_results_dto import SyncResultsDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow, UowFactoryPort
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.utils.list_flatenner import ListFlattener
-from application.ports.uow_port import UowFactoryPort, Uow
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -70,7 +70,12 @@ class SyncCompanyDataUseCase:
 
             return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
 
-    def _save_batch(self, buffer: List[CompanyDataDTO]) -> None:
+    def _save_batch(
+        self,
+        buffer: list[CompanyDataDTO],
+        *,
+        uow: Uow | None = None,  # <- aceitar uow
+    ) -> None:
         """Transform and persist a batch of company data.
 
         Args:
@@ -84,4 +89,4 @@ class SyncCompanyDataUseCase:
             dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
 
             # Persist the transformed DTOs in bulk
-            self.repository.save_all(dtos)
+            self.repository.save_all(dtos, uow=uow)

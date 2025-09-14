@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 # Default maximum number of concurrent worker threads or processes
-MAX_WORKERS = 1
+MAX_WORKERS = 30
 
 # Default queue size for producer/consumer pipelines (commonly 2× workers)
 QUEUE_SIZE = 1 # * MAX_WORKERS

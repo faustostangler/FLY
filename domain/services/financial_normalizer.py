@@ -1,12 +1,13 @@
 # domain/services/financial_normalizer.py
 from __future__ import annotations
-from dataclasses import replace, is_dataclass
-from decimal import Decimal
-from datetime import datetime
-from typing import Any, Iterable, List, Sequence, Dict, Tuple, Callable
 
-from domain.dtos.statement_raw_dto import StatementRawDTO
+from dataclasses import is_dataclass, replace
+from datetime import datetime
+# from decimal import Decimal
+from typing import Any, Callable, Dict, Iterable, List, Sequence
+
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
 
 
 class FinancialNormalizerPort:
@@ -23,7 +24,8 @@ class FinancialNormalizer(FinancialNormalizerPort):
     def __init__(
         self,
         *,
-        fetched_builder: Callable[[StatementRawDTO, str, Decimal], StatementFetchedDTO] | None = None,
+        # fetched_builder: Callable[[StatementRawDTO, str, Decimal], StatementFetchedDTO] | None = None,
+        fetched_builder: Callable[[StatementRawDTO, str, float], StatementFetchedDTO] | None = None,
         intel_module_path: str = "domain.utils.intel",
     ) -> None:
         self._build_fetched = fetched_builder or self._default_builder
@@ -40,8 +42,8 @@ class FinancialNormalizer(FinancialNormalizerPort):
         # agrupa por (company, ano, conta) e indexa por mês do quarter {3,6,9,12}
         groups: dict[tuple[str | None, int, str], dict[int, StatementRawDTO]] = {}
         for r in raws:
-            d = datetime.strptime(str(r.quarter), "%Y-%m-%d")
-            y, m = (d.year, d.month)
+            d: datetime = r.quarter
+            y, m = d.year, d.month
             key = (r.company_name, y, self._account_of(r))
             groups.setdefault(key, {})[m] = r  # meses 3,6,9,12
 
@@ -60,19 +62,10 @@ class FinancialNormalizer(FinancialNormalizerPort):
                 yield from self._copy(qmap)
 
     @staticmethod
-    def _default_builder(raw: StatementRawDTO, target_line: str, value: Decimal) -> StatementFetchedDTO:
+    # def _default_builder(raw: StatementRawDTO, target_line: str, value: Decimal) -> StatementFetchedDTO:
+    def _default_builder(raw: StatementRawDTO, target_line: str, value: float) -> StatementFetchedDTO:
         # quarter como texto YYYY-MM (mês do quarter)
-        qtxt = getattr(raw, "quarter", None)
-        q_out = None
-        if qtxt:
-            for fmt in ("%Y-%m-%d", "%Y-%m", "%d/%m/%Y"):
-                try:
-                    d = datetime.strptime(str(qtxt), fmt)
-                    q_out = f"{d.year:04d}-{d.month:02d}"
-                    break
-                except ValueError:
-                    continue
-
+        q: datetime = raw.quarter
         ver = getattr(raw, "version", None)
         ver_str = str(ver) if ver is not None else None
 
@@ -80,7 +73,7 @@ class FinancialNormalizer(FinancialNormalizerPort):
             id=None,
             nsd=str(getattr(raw, "nsd", "")),
             company_name=getattr(raw, "company_name", None),
-            quarter=q_out,  # data normalizada YYYY-MM
+            quarter=q,  # data normalizada YYYY-MM
             version=ver_str,
             grupo=str(getattr(raw, "grupo", "")),
             quadro=str(getattr(raw, "quadro", "")),
@@ -89,6 +82,17 @@ class FinancialNormalizer(FinancialNormalizerPort):
             value=float(value),
             processing_hash="",
         )
+
+    # def _diff_quarters(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
+    #     prev = None
+    #     for m in (3, 6, 9, 12):
+    #         r = qmap.get(m)
+    #         if r is None:
+    #             continue
+    #         cur = float(getattr(r, "value", 0.0) or 0.0)
+    #         out_val = cur if prev is None else cur - prev
+    #         prev = cur
+    #         yield self._with_value(r, self._dec(out_val))
 
     def _diff_quarters(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
         prev = None
@@ -99,7 +103,21 @@ class FinancialNormalizer(FinancialNormalizerPort):
             cur = float(getattr(r, "value", 0.0) or 0.0)
             out_val = cur if prev is None else cur - prev
             prev = cur
-            yield replace(r, value=out_val)
+            yield self._with_value(r, float(out_val))
+
+    # def _adjust_q4(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
+    #     m3, m6, m9, m12 = qmap.get(3), qmap.get(6), qmap.get(9), qmap.get(12)
+
+    #     for r in (m3, m6, m9):
+    #         if r is not None:
+    #             yield r
+
+    #     if m12 is not None:
+    #         s3 = float(getattr(m3, "value", 0.0) or 0.0) if m3 else 0.0
+    #         s6 = float(getattr(m6, "value", 0.0) or 0.0) if m6 else 0.0
+    #         s9 = float(getattr(m9, "value", 0.0) or 0.0) if m9 else 0.0
+    #         v12 = float(getattr(m12, "value", 0.0) or 0.0)
+    #         yield self._with_value(m12, self._dec(v12 - (s3 + s6 + s9)))
 
     def _adjust_q4(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
         m3, m6, m9, m12 = qmap.get(3), qmap.get(6), qmap.get(9), qmap.get(12)
@@ -113,12 +131,24 @@ class FinancialNormalizer(FinancialNormalizerPort):
             s6 = float(getattr(m6, "value", 0.0) or 0.0) if m6 else 0.0
             s9 = float(getattr(m9, "value", 0.0) or 0.0) if m9 else 0.0
             v12 = float(getattr(m12, "value", 0.0) or 0.0)
-            yield replace(m12, value=v12 - (s3 + s6 + s9))
+            yield self._with_value(m12, float(v12 - (s3 + s6 + s9)))
+
+    # def _copy(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
+    #     for q in sorted(qmap):
+    #         r = qmap[q]
+    #         val_raw = getattr(r, "value", 0.0)
+    #         if not isinstance(val_raw, (int, float, str, Decimal)):
+    #             raise TypeError(f"Unexpected value type for 'value': {type(val_raw).__name__}")
+    #         yield self._with_value(r, self._dec(val_raw))
 
     def _copy(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
         for q in sorted(qmap):
             r = qmap[q]
-            yield self._with_value(r, self._dec(r.value))
+            val_raw = getattr(r, "value", 0.0)
+            # if not isinstance(val_raw, (int, float, str, Decimal)):
+            if not isinstance(val_raw, (int, float, str)):
+                raise TypeError(f"Unexpected value type for 'value': {type(val_raw).__name__}")
+            yield self._with_value(r, float(val_raw))
 
     # ---------- 2) 'Intel': classifica e gera FETCHED ----------
     def _classify_with_intel(self, rows: Sequence[StatementRawDTO]) -> List[StatementFetchedDTO]:
@@ -151,19 +181,34 @@ class FinancialNormalizer(FinancialNormalizerPort):
                     bag = needle if isinstance(needle, (list, tuple)) else [needle]
                     bag = [str(x).lower() for x in bag]
 
-                    if cond == "equals" and v_cmp != n_cmp: return False
-                    if cond == "not_equals" and v_cmp == n_cmp: return False
-                    if cond == "startswith" and not v_cmp.startswith(n_cmp): return False
-                    if cond == "contains_any" and not any(tok in value for tok in bag): return False
-                    if cond in ("contains_all",) and not all(tok in value for tok in bag): return False
-                    if cond in ("not_contains", "contains_none") and any(tok in value for tok in bag): return False
-                    if cond == "level":
+                    if cond == "equals":
+                        if v_cmp != n_cmp:
+                            return False
+                    elif cond == "not_equals":
+                        if v_cmp == n_cmp:
+                            return False
+                    elif cond == "startswith":
+                        if not v_cmp.startswith(n_cmp):
+                            return False
+                    elif cond == "contains_any":
+                        if not any(tok in value for tok in bag):
+                            return False
+                    elif cond in ("contains_all",):
+                        if not all(tok in value for tok in bag):
+                            return False
+                    elif cond in ("not_contains", "contains_none"):
+                        if any(tok in value for tok in bag):
+                            return False
+                    elif cond == "level":
                         level = value.count(".") + 1 if value else 1
+                        needle_val = needle[0] if isinstance(needle, (list, tuple)) and needle else needle
                         try:
-                            expected = int(needle)
+                            expected = needle_val  # int(needle_val)
                         except Exception:
                             return False
-                        if level != expected: return False
+                        if level != expected:
+                            return False
+
                 return True
 
             def map_node(d: dict):
@@ -182,7 +227,24 @@ class FinancialNormalizer(FinancialNormalizerPort):
 
             def walk(node: dict, universe: list[StatementRawDTO]) -> list[StatementFetchedDTO]:
                 hits = [r for r in universe if matches(r, node["criteria"])]
-                fetched = [self._build_fetched(r, node["target_line"], self._dec(getattr(r, "value", 0))) for r in hits]
+                fetched: list[StatementFetchedDTO] = []
+                for r in hits:
+                    val_raw = getattr(r, "value", 0.0)
+                    # if not isinstance(val_raw, (int, float, str, Decimal)):
+                    if not isinstance(val_raw, (int, float, str)):
+                        raise TypeError(f"Unexpected value type for 'value': {type(val_raw).__name__}")
+                    val = float(val_raw)
+                    fetched.append(self._build_fetched(r, node["target_line"], val))
+
+            # def walk(node: dict, universe: list[StatementRawDTO]) -> list[StatementFetchedDTO]:
+            #     hits = [r for r in universe if matches(r, node["criteria"])]
+            #     fetched: list[StatementFetchedDTO] = []
+            #     for r in hits:
+            #         val_raw = getattr(r, "value", 0.0)
+            #         if not isinstance(val_raw, (int, float, str, Decimal)):
+            #             raise TypeError(f"Unexpected value type for 'value': {type(val_raw).__name__}")
+            #         val = self._dec(val_raw)
+            #         fetched.append(self._build_fetched(r, node["target_line"], val))
                 parents = {normalize_account(getattr(f, "account_code", "")) for f in fetched}
                 if not parents:
                     return fetched
@@ -197,16 +259,32 @@ class FinancialNormalizer(FinancialNormalizerPort):
             return out
         except Exception as e:
             print(e)
+        return []
     # ---------- utilitários ----------
-    @staticmethod
-    def _dec(x) -> Decimal:
-        return x if isinstance(x, Decimal) else Decimal(str(x))
+    # @staticmethod
+    # def _dec(x: Any) -> Decimal:
+    #     if isinstance(x, Decimal):
+    #         return x
+        
+    #     if isinstance(x, (int, float, str)):
+    #         return Decimal(str(x))
+        
+    #     try:
+    #         return Decimal(x)
+    #     except Exception as e:
+    #         raise TypeError(f"Value of type {type(x).__name__} is not convertible to Decimal.") from e
+
+    # @staticmethod
+    # def _with_value(raw: StatementRawDTO, value: Decimal) -> StatementRawDTO:
+    #     if is_dataclass(raw):
+    #         return replace(raw, value=value)
+    #     raise TypeError("StatementRawDTO must be a dataclass to clone with a new value.")
 
     @staticmethod
-    def _with_value(raw: StatementRawDTO, value: Decimal) -> StatementRawDTO:
+    def _with_value(raw: StatementRawDTO, value: float) -> StatementRawDTO:
         if is_dataclass(raw):
-            return replace(raw, value=value)
-        raise TypeError("StatementRawDTO precisa ser dataclass para clonar com novo valor.")
+            return replace(raw, value=float(value))
+        raise TypeError("StatementRawDTO must be a dataclass to clone with a new value.")
 
     @staticmethod
     def _account_of(raw: StatementRawDTO) -> str:

@@ -7,7 +7,6 @@ from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.nsd_dto import NsdDTO
-
 from infrastructure.models.base_model import BaseModel
 
 
@@ -23,15 +22,15 @@ class NSDModel(BaseModel):
         ForeignKey("tbl_company.company_name"),
         nullable=False,
     )
-    quarter: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    version: Mapped[Optional[str]] = mapped_column()
-    nsd_type: Mapped[Optional[str]] = mapped_column()
-    dri: Mapped[Optional[str]] = mapped_column()
-    auditor: Mapped[Optional[str]] = mapped_column()
-    responsible_auditor: Mapped[Optional[str]] = mapped_column()
-    protocol: Mapped[Optional[str]] = mapped_column()
-    sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    reason: Mapped[Optional[str]] = mapped_column()
+    quarter: Mapped[datetime] = mapped_column(DateTime)
+    version: Mapped[int]= mapped_column()
+    nsd_type: Mapped[str | None] = mapped_column()
+    dri: Mapped[str | None] = mapped_column()
+    auditor: Mapped[str | None] = mapped_column()
+    responsible_auditor: Mapped[str | None] = mapped_column()
+    protocol: Mapped[str | None] = mapped_column()
+    sent_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    reason: Mapped[str | None] = mapped_column()
 
     __table_args__ = (Index("ix_nsd_company_name", "company_name"),)
 

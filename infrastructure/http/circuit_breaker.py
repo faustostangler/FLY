@@ -1,8 +1,11 @@
 # infrastructure/http/circuit_breaker.py
 from __future__ import annotations
-import threading, time
+
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any
+
 
 @dataclass(frozen=True)
 class BreakerPolicy:

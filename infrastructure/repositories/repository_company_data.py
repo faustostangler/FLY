@@ -4,13 +4,13 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dtos.company_data_dto import CompanyDataDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.repository_base import RepositoryBase
-from application.ports.uow_port import Uow
 
 # from infrastructure.uils.list_flattener import ListFlattener
 

@@ -65,7 +65,7 @@ class StatementTransformer:
         payload = "|".join([
             fetched.nsd,
             fetched.company_name or "",
-            fetched.quarter or "",
+            fetched.quarter.strftime("%Y-%m-%d") if fetched.quarter else "",
             fetched.version or "",
             fetched.grupo,
             fetched.quadro,

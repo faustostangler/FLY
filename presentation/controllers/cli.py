@@ -135,6 +135,4 @@ class Cli:
         )
 
         # Run the synchronization step
-        nsd_service()
-
-        # return statements_service.sync_statements()
+        return nsd_service()

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Optional, Sequence, cast
 
 from domain.ports import ConfigPort, LoggerPort
 from domain.ports.datacleaner_port import DataCleanerPort
-from infrastructure.utils.normalization import clean_date as util_clean_date
+from infrastructure.utils.normalization import cleandate as util_cleandate
 from infrastructure.utils.normalization import (
     clean_dict_fields as util_clean_dict_fields,
 )
@@ -41,8 +41,8 @@ class DataCleaner(DataCleanerPort):
     def clean_number(self, text: str) -> float:
         return util_clean_number(text, logger=cast("InfraLogger", self.logger))
 
-    def clean_date(self, text: Optional[str]) -> Optional[datetime]:
-        return util_clean_date(text, logger=cast("InfraLogger", self.logger))
+    def cleandate(self, text: Optional[str]) -> Optional[datetime]:
+        return util_cleandate(text, logger=cast("InfraLogger", self.logger))
 
     def clean_dict_fields(
         self,

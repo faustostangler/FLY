@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from typing import (
-    Any,
     Generic,
     Iterator,
     List,
     Protocol,
     Tuple,
     TypeVar,
-    Sequence,
     Union,
     runtime_checkable,
 )
@@ -59,7 +57,7 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         self,
         column_names: Union[str, List[str]],
         *,
-        uow: Uow, 
+        uow: Uow,
         batch_size: int | None = None,
         include_nulls: bool = False,
     ) -> Iterator[Tuple]: ...
@@ -75,7 +73,7 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
 
     # def get_existing_by_columns(
     #     self, column_names: Union[str, List[str]],
-    #     uow: Uow, 
+    #     uow: Uow,
     # ) -> List[Tuple]: ...
 
     # def _safe_cast(self, value: Any) -> Union[int, str]: ...

@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
-from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
+from sqlalchemy.dialects.sqlite import insert
 
-from domain.dtos.statement_raw_dto import StatementRawDTO
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import Uow
+from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from infrastructure.utils.list_flatenner import ListFlattener
 from infrastructure.models.statements_raw_model import StatementRawModel
 from infrastructure.repositories.repository_base import RepositoryBase
-from application.ports.uow_port import Uow
+from infrastructure.utils.list_flatenner import ListFlattener
 
 
 class StatementRawRepository(
@@ -121,4 +121,8 @@ class StatementRawRepository(
             rows = q.all()
             return [m.to_dto() for m in rows]
         except Exception as e:
-            pass
+            self.logger.log(
+                "get_company_year_view failed",
+                extra={"company_name": company_name, "year": year},
+            )
+            raise
