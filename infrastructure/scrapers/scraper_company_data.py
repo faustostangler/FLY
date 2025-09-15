@@ -21,6 +21,9 @@ from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
+# from domain.ports.scraper_base_port import SaveCallback
+from infrastructure.utils.save_strategy import SaveStrategy
+from infrastructure.utils.byte_formatter import ByteFormatter
 
 # from infrastructure.scrapers.company_data_processors import (
 #     CompanyDataDetailProcessor,
@@ -28,8 +31,6 @@ from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 #     DetailFetcher,
 #     EntryCleaner,
 # )
-from infrastructure.utils.byte_formatter import ByteFormatter
-from infrastructure.utils.save_strategy import SaveStrategy
 
 # Generic type variable for list/payload helpers
 T = TypeVar("T")
@@ -144,17 +145,13 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
 
         # No-op callback used when only building the initial list
-        def noop(_buffer: List[Dict]) -> None:
+        def _adapter(_items: List[Dict], *, uow=None) -> None:
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
         companies_entries: List[Dict[str, Any]] = self._fetch_companies_list(
-            save_callback=noop
+            save_callback=_adapter
         )
-        # with open("temp/companies_entries.json", "w", encoding="utf-8") as f:
-        #     json.dump(companies_entries, f, ensure_ascii=False, indent=2)
-        # with open("temp/companies_entries.json", "r", encoding="utf-8") as f:
-        #     companies_entries = json.load(f)
 
         # 2) Fetch and parse detailed data for each company
         companies: List[CompanyDataDTO] = self._fetch_companies_details(
@@ -185,9 +182,15 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # time counter
         start_time = time.perf_counter()
 
+        # adapta callback do porto (items) para a estratégia (items, *, uow)
+        def _adapter(items: List[Dict], *, uow=None) -> None:
+            if save_callback is not None:
+                save_callback(items)
+
+
         # Build a save strategy to flush items while iterating pages
         strategy: SaveStrategy[Dict] = SaveStrategy.from_config(
-            save_callback,
+            _adapter if save_callback else None,
             self.threshold,
             config=self.config,
             uow_factory=self.uow_factory,
@@ -312,9 +315,15 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             CompanyDataRawDTO) assumed to be provided by the surrounding codebase.
             No behavior is changed here; comments clarify intent only.
         """
+
+        # adapter para a estratégia
+        def _adapter(items: List[CompanyDataDTO], *, uow=None) -> None:
+            if save_callback is not None:
+                save_callback(items)
+
         # Build a save strategy that buffers detail DTOs and flushes on threshold
         strategy: SaveStrategy[CompanyDataDTO] = SaveStrategy.from_config(
-            save_callback,
+            _adapter if save_callback else None,
             self.threshold,
             config=self.config,
             uow_factory=self.uow_factory,

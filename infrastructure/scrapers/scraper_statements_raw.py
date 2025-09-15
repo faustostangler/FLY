@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Mapping, Optional
 from urllib.parse import quote_plus
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
 from application.ports.config_port import ConfigPort
-
-# from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from domain.dtos.nsd_dto import NsdDTO
@@ -28,48 +26,39 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         *,
         config: ConfigPort,
         logger: LoggerPort,
-
         http_client: AffinityHttpClientPort,
     ) -> None:
         self.config = config
         self.logger = logger
         self.http = http_client
-        # endpoints esperados em config:
-        # - exchange.nsd_endpoint (página principal do NSD que contém o hash)
-        # - statements.url_df (páginas de DFs)
-        # - statements.url_capital (página de “Dados da Empresa”)
-        # - statements.statement_items (lista de dicts com "grupo", "quadro" e extras)
-        # - statements.nsd_type_map (mapeia nsd_type → (NomeTipoDocumento, CodTipoDocumento))
 
-    # API pública
-    def fetch(self, nsd: NsdDTO) -> Iterable[StatementRawDTO]:
-        # 1) baixa página do NSD e extrai hash
+    # API pública: cumpre o porto
+    def fetch(self, task: WorkerTaskDTO) -> Mapping[str, Any]:
+        nsd: NsdDTO = task.data
+
         nsd_url = self.config.exchange.nsd_endpoint.format(nsd=nsd.nsd)
         with self.http.borrow_session() as session:
             html = self._get(url=nsd_url, session=session)
             hdn_hash = self._extract_hash(html)
 
-            # 2) monta a lista de URLs por grupo/quadro
-            items = self.config.statements.statement_items
-            urls = self._build_urls(nsd, items, hdn_hash)
+            items_cfg = list(self.config.statements.statement_items)
+            urls = self._build_urls(nsd, items_cfg, hdn_hash)
 
-            # 3) para cada URL, baixa e parseia linhas
             out: List[StatementRawDTO] = []
             for item in urls:
                 page_html = self._get(url=item["url"], session=session)
-                rows = self._parse_statement_page(BeautifulSoup(page_html, "html.parser"), item["grupo"])
+                rows = self._parse_statement_page(
+                    BeautifulSoup(page_html, "html.parser"), item["grupo"]
+                )
 
-                # 4) converte linhas para DTOs idempotentes
-                # quarter como data completa (string ISO ou pt-BR; escolha UMA e padronize)
-                quarter_str = nsd.quarter.strftime("%Y-%m-%d")  # ou "%d/%m/%Y"
-                
+                # trimestre: já normalizado como datetime (fim de trimestre)
                 for r in rows:
                     out.append(
                         StatementRawDTO(
                             nsd=str(nsd.nsd),
                             company_name=nsd.company_name,
-                            quarter=quarter_str,           # data completa
-                            version=str(nsd.version),      # StatementRawDTO espera str
+                            quarter=nsd.quarter,            # datetime direto
+                            version=str(nsd.version),
                             grupo=item["grupo"],
                             quadro=item["quadro"],
                             account=r["account"],
@@ -77,16 +66,18 @@ class ScraperStatementRaw(ScraperStatementRawPort):
                             value=float(r["value"]),
                         )
                     )
-        return out
+        return {"items": out}
 
-    # ---------- helpers legado-essência ----------
+    # ---------- helpers ----------
 
     def _get(self, url: str, session: requests.Session | None = None) -> str:
         if session is None:
             with self.http.borrow_session() as s:
-                body = self.http.fetch_with(s, url, headers=s.headers)
+                hdrs = {str(k): str(v) for k, v in s.headers.items()}
+                body = self.http.fetch_with(s, url, headers=hdrs)
                 return body.decode("utf-8")
-        body = self.http.fetch_with(session, url, headers=session.headers)
+        hdrs = {str(k): str(v) for k, v in session.headers.items()}
+        body = self.http.fetch_with(session, url, headers=hdrs)
         return body.decode("utf-8")
 
     def _extract_hash(self, html: str) -> str:
@@ -101,20 +92,28 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             raise ValueError("Valor inválido para 'value'")
         return v
 
-    def _build_urls(self, row: NsdDTO, items: list, hash_value: str) -> list[dict[str, str]]:
+    def _build_urls(
+        self, row: NsdDTO, items: Iterable[Dict[str, Any]], hash_value: str
+    ) -> list[dict[str, str]]:
         name, code = self.config.statements.nsd_type_map.get(
             row.nsd_type or "INFORMACOES TRIMESTRAIS", ("ITR", 3)
         )
 
         result: list[dict[str, str]] = []
         for it in items:
-            base = self.config.statements.url_df if it["grupo"].startswith("DFs") else self.config.statements.url_capital
+            base = (
+                self.config.statements.url_df
+                if it["grupo"].startswith("DFs")
+                else self.config.statements.url_capital
+            )
             params = {
                 "Grupo": it["grupo"],
                 "Quadro": it["quadro"],
                 "NomeTipoDocumento": name,
                 "Empresa": row.company_name,
-                "DataReferencia": row.quarter.strftime("%Y-%m-%d") if row.quarter else "",
+                "DataReferencia": row.quarter.strftime("%Y-%m-%d")
+                if row.quarter
+                else "",
                 "Versao": row.version,
                 "CodTipoDocumento": str(code),
                 "NumeroSequencialDocumento": str(row.nsd),
@@ -125,11 +124,17 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             for k in ("informacao", "demonstracao", "periodo"):
                 if it.get(k) is not None:
                     params[k.capitalize()] = str(it[k])
-            query = "&".join(f"{k}={quote_plus(str(v))}" for k, v in params.items())
-            result.append({"grupo": it["grupo"], "quadro": it["quadro"], "url": f"{base}?{query}"})
+            query = "&".join(
+                f"{k}={quote_plus(str(v))}" for k, v in params.items()
+            )
+            result.append(
+                {"grupo": it["grupo"], "quadro": it["quadro"], "url": f"{base}?{query}"}
+            )
         return result
 
-    def _parse_statement_page(self, soup: BeautifulSoup, group: str) -> List[Dict[str, Any]]:
+    def _parse_statement_page(
+        self, soup: BeautifulSoup, group: str
+    ) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []
 
         if group == "Dados da Empresa":
@@ -185,10 +190,15 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         return rows
 
     def _clean_number(self, s: str) -> Optional[float]:
-        # limpeza simples: remove separadores PT-BR e converte
         if s is None:
             return None
-        txt = s.replace(".", "").replace("\xa0", "").replace(" ", "").replace("R$", "").replace("%", "")
+        txt = (
+            s.replace(".", "")
+            .replace("\xa0", "")
+            .replace(" ", "")
+            .replace("R$", "")
+            .replace("%", "")
+        )
         txt = txt.replace(",", ".")
         try:
             return float(txt)
@@ -196,7 +206,7 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             return None
 
     def _infer_year_quarter(self, nsd: NsdDTO) -> tuple[int, int]:
-        # supõe que policy já normalizou quarter como fim de trimestre: 31/03, 30/06, 30/09, 31/12
+        # quarter já normalizado para datas 31/03, 30/06, 30/09, 31/12
         y = int(getattr(nsd.quarter, "year", getattr(nsd, "year", 0)))
         m = int(getattr(nsd.quarter, "month", getattr(nsd, "month", 3)))
         q = {3: 1, 6: 2, 9: 3, 12: 4}.get(m, 1)

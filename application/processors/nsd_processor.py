@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import time
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional, Sequence, cast
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.polices.nsd_policy import NsdPolicyPort
@@ -98,10 +100,7 @@ class NsdProcessor:
 
     # compat com pools que chamam .run(task) ou chamam o objeto
     def __call__(self, task: WorkerTaskDTO) -> NsdDTO:
-        try:
-            return self.run(task)
-        except Exception as e:
-            pass
+        return self.run(task)
 
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
@@ -163,7 +162,16 @@ class NsdProcessor:
                 is_december=quarter_police.is_december, is_recent=recency.is_recent,
             )
 
-            raw_lines = list(self.scraper_statements_raw.fetch(nsd))
+            # raw_lines = list(self.scraper_statements_raw.fetch(nsd))
+            raw_result  = self.scraper_statements_raw.fetch(
+                WorkerTaskDTO(
+                    index=task.index,
+                    data=nsd,
+                    worker_id=task.worker_id,
+                    total_size=task.total_size,
+                )
+            )
+            raw_lines = list(raw_result["items"])
 
             nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
             extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
@@ -224,9 +232,11 @@ class NsdProcessor:
                     uow=uow,
                 )
             )
-            deduped = self.policy.version_deduplicate(tuple(year_view) + tuple(raw_lines))
+            combined: List[StatementRawDTO] = list(year_view) + list(raw_lines)
+            deduped = self.policy.version_deduplicate(combined)
             standardized = self.financial_normalizer.standardize(deduped)
-            ratios = self.ratios_calculator.calculate(standardized)
+            # ratios = self.ratios_calculator.calculate(standardized)
+            ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
             fetched = list(standardized) + list(ratios)
 
             nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")

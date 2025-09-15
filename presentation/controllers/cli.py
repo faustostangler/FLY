@@ -87,10 +87,10 @@ class Cli:
         self.logger.log("Start FLY", level="info")
 
         # Kick off the company data pipeline
-        company_results: SyncResultsDTO = self._company_service()
-        self.logger.log(
-            f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
-        )
+        # company_results: SyncResultsDTO = self._company_service()
+        # self.logger.log(
+        #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
+        # )
 
         self._statements_service()
 

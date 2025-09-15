@@ -32,10 +32,22 @@ class FinancialNormalizer(FinancialNormalizerPort):
         self._intel_module_path = intel_module_path
 
     def standardize(self, raws: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]:
+        # 1) matemática de quarter por conta no conjunto anual já deduplicado
         quarterized = list(self._apply_quarter_math(raws))
-        fetched = self._classify_with_intel(quarterized)
-        return fetched
 
+        # 2) agrupa por (company, quarter) e padroniza cada trimestre separadamente
+        groups: Dict[tuple[str | None, datetime], List[StatementRawDTO]] = {}
+        for r in quarterized:
+            key = (getattr(r, "company_name", None), getattr(r, "quarter"))
+            groups.setdefault(key, []).append(r)
+
+        # 3) para cada quarter, aplica o 'intel' e concatena
+        out: List[StatementFetchedDTO] = []
+        for (_, _qdate), rows in sorted(groups.items(), key=lambda kv: ((kv[0][0] or ''), kv[0][1])):
+            fetched_q = self._classify_with_intel(rows)
+            out.extend(fetched_q)
+
+        return out
     # ---------- 1) Matemática de quarter sobre RAW do ano deduplicado ----------
     # Caminho ATUAL: usa DATA do quarter; identifica pelo mês (03, 06, 09, 12) e converte acumulados conforme regras.
     def _apply_quarter_math(self, raws: Sequence[StatementRawDTO]) -> Iterable[StatementRawDTO]:

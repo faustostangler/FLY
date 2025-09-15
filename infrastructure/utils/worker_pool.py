@@ -68,10 +68,7 @@ class WorkerPool(WorkerPoolPort):
         *,
         total_size: Optional[int] = None,
     ) -> List[R]:
-        try:
-            return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers, total_size=total_size)
-        except Exception as e:
-            pass
+        return self.run(tasks=tasks, processor=processor, logger=logger, on_result=on_result, post_callback=post_callback, max_workers=max_workers, total_size=total_size)
 
     def run(
         self,

@@ -72,21 +72,26 @@ class SyncCompanyDataUseCase:
 
     def _save_batch(
         self,
-        buffer: list[CompanyDataDTO],
+        items: list[CompanyDataDTO],
         *,
-        uow: Uow | None = None,  # <- aceitar uow
+        uow: Uow | None = None,
     ) -> None:
         """Transform and persist a batch of company data.
 
         Args:
             buffer (List[CompanyDataDTO]): Raw or nested DTOs retrieved by the scraper.
         """
-        with self.uow_factory() as uow:
-            # Flatten potential nested lists from scraper output
-            flat_items = ListFlattener.flatten(buffer)
+        # type narrowing
+        if uow is None:
+            raise RuntimeError("SaveCallback chamado sem UoW")
 
-            # Convert raw scraper DTOs into domain-level DTOs
-            dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
+        # with self.uow_factory() as uow:
+        # Flatten potential nested lists from scraper output
+        flat_items = ListFlattener.flatten(items)
 
-            # Persist the transformed DTOs in bulk
-            self.repository.save_all(dtos, uow=uow)
+        # Convert raw scraper DTOs into domain-level DTOs
+        dtos = [CompanyDataDTO.from_raw(item) for item in flat_items]
+
+
+        # Persist the transformed DTOs in bulk
+        self.repository.save_all(dtos, uow=uow)

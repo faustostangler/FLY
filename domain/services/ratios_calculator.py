@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any, Dict, Protocol, Sequence, Tuple, runtime_checkable
+from typing import Any, Dict, Optional, Protocol, Sequence, Tuple, runtime_checkable
 from datetime import datetime
 import numpy as np
 
@@ -12,7 +12,9 @@ from domain.dtos.statement_raw_dto import StatementRawDTO
 
 @runtime_checkable
 class RatiosCalculatorPort(Protocol):
-    def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]: ...
+    # def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]: 
+    def calculate(self, standards: Sequence[StatementFetchedDTO]) -> Sequence[StatementFetchedDTO]:
+        ...
 
 
 def _norm_acc(a: str | None) -> str:
@@ -29,7 +31,7 @@ class _ColumnarFrame:
     """
     __slots__ = ("_index", "_cols")
 
-    def __init__(self, rows: Sequence[StatementRawDTO]) -> None:
+    def __init__(self, rows: Sequence[StatementFetchedDTO]) -> None:
         buckets: Dict[Tuple[str, str | None, datetime], Dict[str, float]] = {}
         
         for r in rows:
@@ -90,7 +92,8 @@ class RatiosCalculator(RatiosCalculatorPort):
                     indicators.extend(value)
         self._indicators: list[dict] = indicators
 
-    def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]:
+    # def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]:
+    def calculate(self, standards: Sequence[StatementFetchedDTO]) -> Sequence[StatementFetchedDTO]:
         if not standards:
             return []
 

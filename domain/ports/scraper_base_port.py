@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from typing import (
-    Callable,
-    Generic,
-    List,
-    Optional,
-    Protocol,
-    TypeVar,
-    runtime_checkable,
-)
+from typing import Callable, Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+from application.ports.uow_port import Uow
 
 # Type variable representing the entity type being scraped
 T = TypeVar("T")
 
+
+class SaveCallback(Protocol, Generic[T]):
+    def __call__(self, items: List[T], *, uow: Uow) -> None: ...
+    
 
 @runtime_checkable
 class ScraperBasePort(Protocol, Generic[T]):
