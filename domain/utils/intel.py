@@ -55,8 +55,8 @@ class Subtraction(Formula):
                 else df[self.minuend]
             )
             # Subtract each subtrahend
-            for acc in self.subtrahends:
-                sub_val = acc(df) if isinstance(acc, Formula) else df[acc]
+            for account in self.subtrahends:
+                sub_val = account(df) if isinstance(account, Formula) else df[account]
                 result -= sub_val
             return result * self.multiplier
         except KeyError as e:
@@ -154,40 +154,41 @@ class Average(Formula):
 
 # statements standardization
 
-# 00.01.01 - Ações ON Ordinárias
-# 00.01.02 - Ações PN Preferenciais
-# 00.02.01 - Em Tesouraria Ações ON Ordinárias
-# 00.02.02 - Em Tesouraria Ações PN Preferenciais
+# 00.01.01 - Ações ON Circulação
+# 00.01.02 - Ações PN Circulação
+# 00.02.01 - Ações ON Tesouraria
+# 00.02.02 - Ações PN Tesouraria
 section_0_criteria = [
     {
-        "target_line": "00.01.01 - Ações ON Ordinárias",
+        "column": "00.01.01 - Ações ON Circulação",
         "criteria": [
+            # [column, condition, needle],
             ["account", "equals", "00.01.01"],
-            ["description", "equals", "Ações ON Ordinárias"],
+            ["description", "equals", "Ações ON Circulação"],
         ],
         "sub_criteria": [],  # No sub-criteria for this example
     },
     {
-        "target_line": "00.01.02 - Ações PN Preferenciais",
+        "column": "00.01.02 - Ações PN Circulação",
         "criteria": [
             ["account", "equals", "00.01.02"],
-            ["description", "equals", "Ações PN Preferenciais"],
+            ["description", "equals", "Ações PN Circulação"],
         ],
         "sub_criteria": [],  # No sub-criteria for this example
     },
     {
-        "target_line": "00.02.01 - Em Tesouraria Ações ON Ordinárias",
+        "column": "00.02.01 - Ações ON Tesouraria",
         "criteria": [
             ["account", "equals", "00.02.01"],
-            ["description", "equals", "Em Tesouraria Ações ON Ordinárias"],
+            ["description", "equals", "Ações ON Tesouraria"],
         ],
         "sub_criteria": [],  # No sub-criteria for this example
     },
     {
-        "target_line": "00.02.02 - Em Tesouraria Ações PN Preferenciais",
+        "column": "00.02.02 - Ações PN Tesouraria",
         "criteria": [
             ["account", "equals", "00.02.02"],
-            ["description", "equals", "Em Tesouraria Ações PN Preferenciais"],
+            ["description", "equals", "Ações PN Tesouraria"],
         ],
         "sub_criteria": [],  # No sub-criteria for this example
     },
@@ -244,11 +245,11 @@ section_0_criteria = [
 # 01.02.04.02.02 - Mais Valia
 section_1_criteria = [
     {
-        "target_line": "01 - Ativo Total",
+        "column": "01 - Ativo Total",
         "criteria": [["account", "level", 1], ["account", "startswith", "1"]],
         "sub_criteria": [
             {
-                "target_line": "01.01 - Ativo Circulante de Curto Prazo",
+                "column": "01.01 - Ativo Circulante de Curto Prazo",
                 "criteria": [
                     ["account", "level", 2],
                     ["account", "startswith", "1.01"],
@@ -257,7 +258,7 @@ section_1_criteria = [
                 ],
                 "sub_criteria": [
                     {
-                        "target_line": "01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo",
+                        "column": "01.01.01 - Caixa e Equivalentes de Caixa de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -265,7 +266,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.01.01.01 - Caixa e Bancos de Curto Prazo",
+                                "column": "01.01.01.01 - Caixa e Bancos de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.01"],
@@ -274,7 +275,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.01.01.02 - Aplicações Líquidas de Curto Prazo",
+                                "column": "01.01.01.02 - Aplicações Líquidas de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.01"],
@@ -285,7 +286,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.01.02 - Aplicações Financeiras de Curto Prazo",
+                        "column": "01.01.02 - Aplicações Financeiras de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -293,7 +294,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.01.02.01 - Aplicações a Valor Justo de Curto Prazo",
+                                "column": "01.01.02.01 - Aplicações a Valor Justo de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.02"],
@@ -302,7 +303,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo",
+                                "column": "01.01.02.02 - Aplicações ao Custo Amortizado de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.02"],
@@ -313,7 +314,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.01.03 - Contas a Receber de Curto Prazo",
+                        "column": "01.01.03 - Contas a Receber de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -321,7 +322,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.01.03.01 - Contas de Clientes de Curto Prazo",
+                                "column": "01.01.03.01 - Contas de Clientes de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.03"],
@@ -329,7 +330,7 @@ section_1_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "01.01.03.01.01 - Clientes",
+                                        "column": "01.01.03.01.01 - Clientes",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.01.03.01"],
@@ -338,7 +339,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.01.03.01.02 - Créditos de Liquidação Duvidosa",
+                                        "column": "01.01.03.01.02 - Créditos de Liquidação Duvidosa",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.01.03.01"],
@@ -347,7 +348,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.01.03.01.03 - Outros",
+                                        "column": "01.01.03.01.03 - Outros",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.01.03.01"],
@@ -362,7 +363,7 @@ section_1_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "01.01.03.02 - Outras Contas de Curto Prazo",
+                                "column": "01.01.03.02 - Outras Contas de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.03"],
@@ -373,7 +374,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.01.04 - Estoques de Curto Prazo",
+                        "column": "01.01.04 - Estoques de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -381,7 +382,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.01.04.01 - Estoques de Material de Consumo de Curto Prazo",
+                                "column": "01.01.04.01 - Estoques de Material de Consumo de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.04"],
@@ -390,7 +391,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.01.04.02 - Estoques de Material para Revenda de Curto Prazo",
+                                "column": "01.01.04.02 - Estoques de Material para Revenda de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.04"],
@@ -399,7 +400,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.01.04.03 - Estoques de Outros Itens de Curto Prazo",
+                                "column": "01.01.04.03 - Estoques de Outros Itens de Curto Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.01.04"],
@@ -414,7 +415,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.01.05 - Ativos Biológicos de Curto Prazo",
+                        "column": "01.01.05 - Ativos Biológicos de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -423,7 +424,7 @@ section_1_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "01.01.06 - Tributos a Recuperar de Curto Prazo",
+                        "column": "01.01.06 - Tributos a Recuperar de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -432,7 +433,7 @@ section_1_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "01.01.07 - Despesas Antecipadas de Curto Prazo",
+                        "column": "01.01.07 - Despesas Antecipadas de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -441,7 +442,7 @@ section_1_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "01.01.09 - Outros Ativos Circulantes de Curto Prazo",
+                        "column": "01.01.09 - Outros Ativos Circulantes de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.01"],
@@ -452,7 +453,7 @@ section_1_criteria = [
                 ],
             },
             {
-                "target_line": "01.02 - Ativo Não Circulante de Longo Prazo",
+                "column": "01.02 - Ativo Não Circulante de Longo Prazo",
                 "criteria": [
                     ["account", "level", 2],
                     ["account", "startswith", "1.02"],
@@ -460,7 +461,7 @@ section_1_criteria = [
                 ],
                 "sub_criteria": [
                     {
-                        "target_line": "01.02.01 - Ativo Realizável a Longo Prazo",
+                        "column": "01.02.01 - Ativo Realizável a Longo Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.02"],
@@ -468,7 +469,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.02.01.02 - Aplicações a Valor Justo de Longo Prazo",
+                                "column": "01.02.01.02 - Aplicações a Valor Justo de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -477,7 +478,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.03 - Contas a Receber de Longo Prazo",
+                                "column": "01.02.01.03 - Contas a Receber de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -486,7 +487,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.04 - Estoques de Longo Prazo",
+                                "column": "01.02.01.04 - Estoques de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -495,7 +496,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.05 - Ativos Biológicos de Longo Prazo",
+                                "column": "01.02.01.05 - Ativos Biológicos de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -504,7 +505,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.06 - Tributos a Recuperar de Longo Prazo",
+                                "column": "01.02.01.06 - Tributos a Recuperar de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -513,7 +514,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.07 - Despesas Antecipadas de Longo Prazo",
+                                "column": "01.02.01.07 - Despesas Antecipadas de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -522,7 +523,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo",
+                                "column": "01.02.01.08 - Créditos com Partes Relacionadas de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -531,7 +532,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.01.09 - Outros Ativos Circulantes de Longo Prazo",
+                                "column": "01.02.01.09 - Outros Ativos Circulantes de Longo Prazo",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.01"],
@@ -543,7 +544,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.02.02 - Investimentos",
+                        "column": "01.02.02 - Investimentos",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.02"],
@@ -551,7 +552,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.02.02.01 - Participações Societárias",
+                                "column": "01.02.02.01 - Participações Societárias",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.02"],
@@ -559,7 +560,7 @@ section_1_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "01.02.02.01.01 - Participações em Coligadas",
+                                        "column": "01.02.02.01.01 - Participações em Coligadas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.02.01"],
@@ -568,7 +569,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.02.02.01.02 - Participações em Controladas",
+                                        "column": "01.02.02.01.02 - Participações em Controladas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.02.01"],
@@ -577,7 +578,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.02.02.01.03 - Outras",
+                                        "column": "01.02.02.01.03 - Outras",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.02.01"],
@@ -592,7 +593,7 @@ section_1_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "01.02.02.02 - Propriedades para Investimento",
+                                "column": "01.02.02.02 - Propriedades para Investimento",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.02"],
@@ -603,7 +604,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.02.03 - Imobilizado",
+                        "column": "01.02.03 - Imobilizado",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.02"],
@@ -611,7 +612,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.02.03.01 - Imobilizado em Operação",
+                                "column": "01.02.03.01 - Imobilizado em Operação",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.03"],
@@ -620,7 +621,7 @@ section_1_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "01.02.03.02 - Direito de Uso em Arrendamento",
+                                "column": "01.02.03.02 - Direito de Uso em Arrendamento",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.03"],
@@ -631,7 +632,7 @@ section_1_criteria = [
                         ],
                     },
                     {
-                        "target_line": "01.02.04 - Intangível",
+                        "column": "01.02.04 - Intangível",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "1.02"],
@@ -639,7 +640,7 @@ section_1_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "01.02.04.01 - Intangíveis",
+                                "column": "01.02.04.01 - Intangíveis",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.04"],
@@ -647,7 +648,7 @@ section_1_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "01.02.04.01.01 - Carteira de Clientes",
+                                        "column": "01.02.04.01.01 - Carteira de Clientes",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.04.01"],
@@ -656,7 +657,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.02.04.01.02 - Softwares",
+                                        "column": "01.02.04.01.02 - Softwares",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.04.01"],
@@ -669,7 +670,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.02.04.01.03 - Marcas e Patentes",
+                                        "column": "01.02.04.01.03 - Marcas e Patentes",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.04.01"],
@@ -684,7 +685,7 @@ section_1_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "01.02.04.02 - Goodwill",
+                                "column": "01.02.04.02 - Goodwill",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "1.02.04"],
@@ -692,7 +693,7 @@ section_1_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "01.02.04.02.01 - Goodwill",
+                                        "column": "01.02.04.02.01 - Goodwill",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.04.02"],
@@ -705,7 +706,7 @@ section_1_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "01.02.04.02.02 - Mais Valia",
+                                        "column": "01.02.04.02.02 - Mais Valia",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "1.02.04.02"],
@@ -817,11 +818,11 @@ section_1_criteria = [
 # 02.03.09 - Participação dos Acionistas Não Controladores
 section_2_criteria = [
     {
-        "target_line": "02 - Passivo Total",
+        "column": "02 - Passivo Total",
         "criteria": [["account", "level", 1], ["account", "startswith", "2"]],
         "sub_criteria": [
             {
-                "target_line": "02.01 - Passivo Circulante de Curto Prazo",
+                "column": "02.01 - Passivo Circulante de Curto Prazo",
                 "criteria": [
                     ["account", "level", 2],
                     ["account", "startswith", "2.01"],
@@ -830,7 +831,7 @@ section_2_criteria = [
                 ],
                 "sub_criteria": [
                     {
-                        "target_line": "02.01.01 - Obrigações Sociais e Trabalhistas de Curto Prazo",
+                        "column": "02.01.01 - Obrigações Sociais e Trabalhistas de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -838,7 +839,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.01.01 - Obrigações Sociais",
+                                "column": "02.01.01.01 - Obrigações Sociais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.01"],
@@ -847,7 +848,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.01.01.02 - Obrigações Trabalhistas",
+                                "column": "02.01.01.02 - Obrigações Trabalhistas",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.01"],
@@ -858,7 +859,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.01.02 - Fornecedores de Curto Prazo",
+                        "column": "02.01.02 - Fornecedores de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -866,7 +867,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.02.01 - Fornecedores Nacionais",
+                                "column": "02.01.02.01 - Fornecedores Nacionais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.02"],
@@ -875,7 +876,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.01.02.02 - Fornecedores Estrangeiros",
+                                "column": "02.01.02.02 - Fornecedores Estrangeiros",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.02"],
@@ -886,7 +887,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.01.03 - Obrigações Fiscais de Curto Prazo",
+                        "column": "02.01.03 - Obrigações Fiscais de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -894,7 +895,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.03.01 - Obrigações Fiscais Federais",
+                                "column": "02.01.03.01 - Obrigações Fiscais Federais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.03"],
@@ -902,7 +903,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.01.03.01.01 - Imposto de Renda e Contribuição Social a Pagar",
+                                        "column": "02.01.03.01.01 - Imposto de Renda e Contribuição Social a Pagar",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.03.01"],
@@ -911,7 +912,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.03.01.02 - Outras Obrigações Fiscais Federais",
+                                        "column": "02.01.03.01.02 - Outras Obrigações Fiscais Federais",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.03.01"],
@@ -920,7 +921,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.03.01.03 - Tributos Parcelados",
+                                        "column": "02.01.03.01.03 - Tributos Parcelados",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.03.01"],
@@ -935,7 +936,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.01.03.02 - Obrigações Fiscais Estaduais",
+                                "column": "02.01.03.02 - Obrigações Fiscais Estaduais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.03"],
@@ -944,7 +945,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.01.03.03 - Obrigações Fiscais Municipais",
+                                "column": "02.01.03.03 - Obrigações Fiscais Municipais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.03"],
@@ -955,7 +956,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.01.04 - Empréstimos e Financiamentos de Curto Prazo",
+                        "column": "02.01.04 - Empréstimos e Financiamentos de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -967,7 +968,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.04.01 - Empréstimos e Financiamentos",
+                                "column": "02.01.04.01 - Empréstimos e Financiamentos",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.04"],
@@ -979,7 +980,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.01.04.01.01 - Em Moeda Nacional",
+                                        "column": "02.01.04.01.01 - Em Moeda Nacional",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.04.01"],
@@ -988,7 +989,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.04.01.02 - Em Moeda Estrangeira",
+                                        "column": "02.01.04.01.02 - Em Moeda Estrangeira",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.04.01"],
@@ -999,7 +1000,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.01.04.02 - Debêntures",
+                                "column": "02.01.04.02 - Debêntures",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.04"],
@@ -1012,7 +1013,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.01.04.03 - Financiamento por Arrendamento Financeiro",
+                                "column": "02.01.04.03 - Financiamento por Arrendamento Financeiro",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.04"],
@@ -1023,7 +1024,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.01.05 - Outras Obrigações de Curto Prazo",
+                        "column": "02.01.05 - Outras Obrigações de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -1032,7 +1033,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.05.01 - Passivos com Partes Relacionadas",
+                                "column": "02.01.05.01 - Passivos com Partes Relacionadas",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.05"],
@@ -1040,7 +1041,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.01.05.01.01 - Débitos com Coligadas",
+                                        "column": "02.01.05.01.01 - Débitos com Coligadas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.01"],
@@ -1049,7 +1050,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.05.01.03 - Débitos com Controladores",
+                                        "column": "02.01.05.01.03 - Débitos com Controladores",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.01"],
@@ -1058,7 +1059,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.05.01.04 - Débitos com Outras Partes Relacionadas",
+                                        "column": "02.01.05.01.04 - Débitos com Outras Partes Relacionadas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.01"],
@@ -1073,7 +1074,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.01.05.02 - Outros",
+                                "column": "02.01.05.02 - Outros",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.05"],
@@ -1082,7 +1083,7 @@ section_2_criteria = [
                                 "sub_criteria": [
                                     # Group 1: Dividendos e Ações
                                     {
-                                        "target_line": "02.01.05.02.01 - Dividendos e Ações",
+                                        "column": "02.01.05.02.01 - Dividendos e Ações",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.02"],
@@ -1096,7 +1097,7 @@ section_2_criteria = [
                                     },
                                     # Group 2: Obrigações Tributárias e Autorizações
                                     {
-                                        "target_line": "02.01.05.02.02 - Obrigações Tributárias e Autorizações",
+                                        "column": "02.01.05.02.02 - Obrigações Tributárias e Autorizações",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.02"],
@@ -1110,7 +1111,7 @@ section_2_criteria = [
                                     },
                                     # Group 3: Telecomunicações e Consignações
                                     {
-                                        "target_line": "02.01.05.02.03 - Telecomunicações e Consignações",
+                                        "column": "02.01.05.02.03 - Telecomunicações e Consignações",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.02"],
@@ -1128,7 +1129,7 @@ section_2_criteria = [
                                     },
                                     # Group 4: Derivativos e Participações
                                     {
-                                        "target_line": "02.01.05.02.04 - Derivativos e Participações",
+                                        "column": "02.01.05.02.04 - Derivativos e Participações",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.02"],
@@ -1142,7 +1143,7 @@ section_2_criteria = [
                                     },
                                     # 02.01.05.02.09 - Outros
                                     {
-                                        "target_line": "02.01.05.02.09 - Outros",
+                                        "column": "02.01.05.02.09 - Outros",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.05.02"],
@@ -1169,7 +1170,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.01.06 - Provisões de Curto Prazo",
+                        "column": "02.01.06 - Provisões de Curto Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.01"],
@@ -1177,7 +1178,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.01.06.01 - Provisões Judiciais",
+                                "column": "02.01.06.01 - Provisões Judiciais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.06"],
@@ -1185,7 +1186,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.01.06.01.01 - Provisões Fiscais",
+                                        "column": "02.01.06.01.01 - Provisões Fiscais",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.01"],
@@ -1194,7 +1195,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.06.01.02 - Provisões Previdenciárias e Trabalhistas",
+                                        "column": "02.01.06.01.02 - Provisões Previdenciárias e Trabalhistas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.01"],
@@ -1207,7 +1208,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.06.01.03 - Provisões para Benefícios a Empregados",
+                                        "column": "02.01.06.01.03 - Provisões para Benefícios a Empregados",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.01"],
@@ -1216,7 +1217,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.06.01.04 - Provisões Cíveis",
+                                        "column": "02.01.06.01.04 - Provisões Cíveis",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.01"],
@@ -1227,7 +1228,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.01.06.02 - Outras Provisões",
+                                "column": "02.01.06.02 - Outras Provisões",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.01.06"],
@@ -1235,7 +1236,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.01.06.02.01 - Provisões para Garantias",
+                                        "column": "02.01.06.02.01 - Provisões para Garantias",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.02"],
@@ -1244,7 +1245,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.06.02.02 - Provisões para Reestruturação",
+                                        "column": "02.01.06.02.02 - Provisões para Reestruturação",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.02"],
@@ -1253,7 +1254,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.01.06.02.03 - Provisões para Passivos Ambientais e de Desativação",
+                                        "column": "02.01.06.02.03 - Provisões para Passivos Ambientais e de Desativação",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.01.06.02"],
@@ -1268,7 +1269,7 @@ section_2_criteria = [
                 ],
             },
             {
-                "target_line": "02.02 - Passivo Não Circulante de Longo Prazo",
+                "column": "02.02 - Passivo Não Circulante de Longo Prazo",
                 "criteria": [
                     ["account", "level", 2],
                     ["account", "startswith", "2.02"],
@@ -1276,7 +1277,7 @@ section_2_criteria = [
                 ],
                 "sub_criteria": [
                     {
-                        "target_line": "02.02.01 - Empréstimos e Financiamentos de Longo Prazo",
+                        "column": "02.02.01 - Empréstimos e Financiamentos de Longo Prazo",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.02"],
@@ -1288,7 +1289,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.02.01.01 - Empréstimos e Financiamentos",
+                                "column": "02.02.01.01 - Empréstimos e Financiamentos",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.01"],
@@ -1300,7 +1301,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.02.01.01.01 - Em Moeda Nacional",
+                                        "column": "02.02.01.01.01 - Em Moeda Nacional",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.01.01"],
@@ -1309,7 +1310,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.01.01.02 - Em Moeda Estrangeira",
+                                        "column": "02.02.01.01.02 - Em Moeda Estrangeira",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.01.01"],
@@ -1320,7 +1321,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.02.01.02 - Debêntures",
+                                "column": "02.02.01.02 - Debêntures",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.01"],
@@ -1333,7 +1334,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.02.01.03 - Financiamento por Arrendamento Financeiro",
+                                "column": "02.02.01.03 - Financiamento por Arrendamento Financeiro",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.01"],
@@ -1344,7 +1345,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.02.02 - Passivos com Partes Relacionadas de Longo Prazo",
+                        "column": "02.02.02 - Passivos com Partes Relacionadas de Longo Prazo",
                         "criteria": [
                             ["account", "level", 4],
                             ["account", "startswith", "2.02.02"],
@@ -1352,7 +1353,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.02.02.01 - Débitos com Partes Relacionadas",
+                                "column": "02.02.02.01 - Débitos com Partes Relacionadas",
                                 "criteria": [
                                     ["account", "level", 5],
                                     ["account", "startswith", "2.02.02"],
@@ -1360,7 +1361,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.02.02.01.01 - Débitos com Coligadas",
+                                        "column": "02.02.02.01.01 - Débitos com Coligadas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.02"],
@@ -1369,7 +1370,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.02.01.03 - Débitos com Controladores",
+                                        "column": "02.02.02.01.03 - Débitos com Controladores",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.02"],
@@ -1378,7 +1379,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.02.01.04 - Débitos com Outras Partes Relacionadas",
+                                        "column": "02.02.02.01.04 - Débitos com Outras Partes Relacionadas",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.02"],
@@ -1389,7 +1390,7 @@ section_2_criteria = [
                                 ],
                             },
                             {
-                                "target_line": "02.02.02.02 - Obrigações por Pagamentos Baseados em Ações",
+                                "column": "02.02.02.02 - Obrigações por Pagamentos Baseados em Ações",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.02"],
@@ -1398,7 +1399,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.02.02.03 - Adiantamento para Futuro Aumento de Capital",
+                                "column": "02.02.02.03 - Adiantamento para Futuro Aumento de Capital",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.02"],
@@ -1407,7 +1408,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.02.02.04 - Tributos Parcelados",
+                                "column": "02.02.02.04 - Tributos Parcelados",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.02"],
@@ -1418,7 +1419,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.02.03 - Imposto de Renda e Contribuição Social Diferidos",
+                        "column": "02.02.03 - Imposto de Renda e Contribuição Social Diferidos",
                         "criteria": [
                             ["account", "level", 4],
                             ["account", "startswith", "2.02.03"],
@@ -1427,7 +1428,7 @@ section_2_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "02.02.04 - Provisões de Longo Prazo",
+                        "column": "02.02.04 - Provisões de Longo Prazo",
                         "criteria": [
                             ["account", "level", 4],
                             ["account", "startswith", "2.02.04"],
@@ -1447,7 +1448,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.02.04.01 - Provisões Fiscais Previdenciárias Trabalhistas e Cíveis",
+                                "column": "02.02.04.01 - Provisões Fiscais Previdenciárias Trabalhistas e Cíveis",
                                 "criteria": [
                                     ["account", "level", 5],
                                     ["account", "startswith", "2.02.04.01"],
@@ -1460,7 +1461,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.02.04.02 - Outras Provisões",
+                                "column": "02.02.04.02 - Outras Provisões",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.02.04"],
@@ -1472,7 +1473,7 @@ section_2_criteria = [
                                 ],
                                 "sub_criteria": [
                                     {
-                                        "target_line": "02.02.04.02.01 - Provisões para Garantias",
+                                        "column": "02.02.04.02.01 - Provisões para Garantias",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.04"],
@@ -1481,7 +1482,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.04.02.02 - Provisões para Reestruturação",
+                                        "column": "02.02.04.02.02 - Provisões para Reestruturação",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.04"],
@@ -1494,7 +1495,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.04.02.03 - Provisões para Passivos Ambientais e de Desativação",
+                                        "column": "02.02.04.02.03 - Provisões para Passivos Ambientais e de Desativação",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.04"],
@@ -1503,7 +1504,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.04.02.04 - Fornecedores de Equipamentos",
+                                        "column": "02.02.04.02.04 - Fornecedores de Equipamentos",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.04"],
@@ -1512,7 +1513,7 @@ section_2_criteria = [
                                         "sub_criteria": [],
                                     },
                                     {
-                                        "target_line": "02.02.04.02.09 - Outras Obrigações",
+                                        "column": "02.02.04.02.09 - Outras Obrigações",
                                         "criteria": [
                                             ["account", "level", 5],
                                             ["account", "startswith", "2.02.06"],
@@ -1536,7 +1537,7 @@ section_2_criteria = [
                 ],
             },
             {
-                "target_line": "02.03 - Patrimônio Líquido",
+                "column": "02.03 - Patrimônio Líquido",
                 "criteria": [
                     ["account", "level", 2],
                     ["account", "startswith", "2.03"],
@@ -1544,7 +1545,7 @@ section_2_criteria = [
                 ],
                 "sub_criteria": [
                     {
-                        "target_line": "02.03.01 - Capital Social Realizado",
+                        "column": "02.03.01 - Capital Social Realizado",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1552,7 +1553,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.03.01.01 - Capital Social",
+                                "column": "02.03.01.01 - Capital Social",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.01"],
@@ -1561,7 +1562,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.03.01.02 - Gastos na emissão de ações",
+                                "column": "02.03.01.02 - Gastos na emissão de ações",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.01"],
@@ -1572,7 +1573,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.03.02 - Reservas de Capital",
+                        "column": "02.03.02 - Reservas de Capital",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03.02"],
@@ -1580,7 +1581,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.03.02.01 - Ágio e Reserva Especial",
+                                "column": "02.03.02.01 - Ágio e Reserva Especial",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.02"],
@@ -1593,7 +1594,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.03.02.02 - Ações, Remuneração e Opções",
+                                "column": "02.03.02.02 - Ações, Remuneração e Opções",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.02"],
@@ -1611,7 +1612,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.03.02.09 - Outros",
+                                "column": "02.03.02.09 - Outros",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.02"],
@@ -1635,7 +1636,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.03.03 - Reservas de Reavaliação",
+                        "column": "02.03.03 - Reservas de Reavaliação",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1644,7 +1645,7 @@ section_2_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "02.03.04 - Reservas de Lucros",
+                        "column": "02.03.04 - Reservas de Lucros",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1653,7 +1654,7 @@ section_2_criteria = [
                         "sub_criteria": [
                             # Group 1: Legal and Statutory Reserves
                             {
-                                "target_line": "02.03.04.01 - Reservas Legais e Estatutárias",
+                                "column": "02.03.04.01 - Reservas Legais e Estatutárias",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.04"],
@@ -1667,7 +1668,7 @@ section_2_criteria = [
                             },
                             # Group 2: Retenção e Incentivos Fiscais
                             {
-                                "target_line": "02.03.04.02 - Retenção de Lucros e Incentivos Fiscais",
+                                "column": "02.03.04.02 - Retenção de Lucros e Incentivos Fiscais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.04"],
@@ -1686,7 +1687,7 @@ section_2_criteria = [
                             },
                             # Group 3: Dividendos e Ações em Tesouraria
                             {
-                                "target_line": "02.03.04.03 - Dividendos e Ações em Tesouraria",
+                                "column": "02.03.04.03 - Dividendos e Ações em Tesouraria",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.04"],
@@ -1700,7 +1701,7 @@ section_2_criteria = [
                             },
                             # Group 4: Outros
                             {
-                                "target_line": "02.03.04.09 - Outros",
+                                "column": "02.03.04.09 - Outros",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.04"],
@@ -1725,7 +1726,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.03.05 - Lucros/Prejuízos Acumulados",
+                        "column": "02.03.05 - Lucros/Prejuízos Acumulados",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1735,7 +1736,7 @@ section_2_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "02.03.06 - Ajustes de Avaliação Patrimonial",
+                        "column": "02.03.06 - Ajustes de Avaliação Patrimonial",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1743,7 +1744,7 @@ section_2_criteria = [
                         ],
                         "sub_criteria": [
                             {
-                                "target_line": "02.03.06.01 - Ajustes Patrimoniais",
+                                "column": "02.03.06.01 - Ajustes Patrimoniais",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.06"],
@@ -1756,7 +1757,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.03.06.02 - Perdas e Aquisições com Não Controladores",
+                                "column": "02.03.06.02 - Perdas e Aquisições com Não Controladores",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.06"],
@@ -1769,7 +1770,7 @@ section_2_criteria = [
                                 "sub_criteria": [],
                             },
                             {
-                                "target_line": "02.03.06.09 - Outros",
+                                "column": "02.03.06.09 - Outros",
                                 "criteria": [
                                     ["account", "level", 4],
                                     ["account", "startswith", "2.03.06"],
@@ -1790,7 +1791,7 @@ section_2_criteria = [
                         ],
                     },
                     {
-                        "target_line": "02.03.07 - Ajustes Acumulados de Conversão",
+                        "column": "02.03.07 - Ajustes Acumulados de Conversão",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1799,7 +1800,7 @@ section_2_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "02.03.08 - Outros Resultados Abrangentes",
+                        "column": "02.03.08 - Outros Resultados Abrangentes",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1808,7 +1809,7 @@ section_2_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "02.03.09 - Participação dos Acionistas Não Controladores",
+                        "column": "02.03.09 - Participação dos Acionistas Não Controladores",
                         "criteria": [
                             ["account", "level", 3],
                             ["account", "startswith", "2.03"],
@@ -1840,7 +1841,7 @@ section_2_criteria = [
 # 03.11.02 - Atribuído a Sócios Não Controladores
 section_3_criteria = [
     {
-        "target_line": "03.01 - Receita de Venda de Bens e/ou Serviços",
+        "column": "03.01 - Receita de Venda de Bens e/ou Serviços",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.01"],
@@ -1849,7 +1850,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.02 - Custo dos Bens e/ou Serviços Vendidos",
+        "column": "03.02 - Custo dos Bens e/ou Serviços Vendidos",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.02"],
@@ -1858,7 +1859,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.03 - Resultado Bruto",
+        "column": "03.03 - Resultado Bruto",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.03"],
@@ -1867,11 +1868,11 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.04 - Despesas/Receitas Operacionais",
+        "column": "03.04 - Despesas/Receitas Operacionais",
         "criteria": [["account", "level", 2], ["account", "startswith", "3.04"]],
         "sub_criteria": [
             {
-                "target_line": "03.04.01 - Despesas com Vendas",
+                "column": "03.04.01 - Despesas com Vendas",
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04.01"],
@@ -1880,7 +1881,7 @@ section_3_criteria = [
                 "sub_criteria": [],
             },
             {
-                "target_line": "03.04.02 - Despesas Gerais e Administrativas",
+                "column": "03.04.02 - Despesas Gerais e Administrativas",
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04.02"],
@@ -1889,7 +1890,7 @@ section_3_criteria = [
                 "sub_criteria": [],
             },
             {
-                "target_line": "03.04.03 - Outras Despesas",
+                "column": "03.04.03 - Outras Despesas",
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04"],
@@ -1900,7 +1901,7 @@ section_3_criteria = [
         ],
     },
     {
-        "target_line": "03.05 - Resultado Antes do Resultado Financeiro e dos Tributos",
+        "column": "03.05 - Resultado Antes do Resultado Financeiro e dos Tributos",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.05"],
@@ -1909,7 +1910,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.06 - Resultado Financeiro",
+        "column": "03.06 - Resultado Financeiro",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.06"],
@@ -1919,7 +1920,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.07 - Resultado Antes dos Tributos sobre o Lucro",
+        "column": "03.07 - Resultado Antes dos Tributos sobre o Lucro",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.07"],
@@ -1929,7 +1930,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.08 - Imposto de Renda e Contribuição Social sobre o Lucro",
+        "column": "03.08 - Imposto de Renda e Contribuição Social sobre o Lucro",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.08"],
@@ -1938,7 +1939,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.09 - Resultado Líquido das Operações Continuadas",
+        "column": "03.09 - Resultado Líquido das Operações Continuadas",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.09"],
@@ -1948,7 +1949,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.10 - Resultado Líquido das Operações Descontinuadas",
+        "column": "03.10 - Resultado Líquido das Operações Descontinuadas",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.10"],
@@ -1958,7 +1959,7 @@ section_3_criteria = [
         "sub_criteria": [],
     },
     {
-        "target_line": "03.11 - Lucro do Período",
+        "column": "03.11 - Lucro do Período",
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.11"],
@@ -1966,7 +1967,7 @@ section_3_criteria = [
         ],
         "sub_criteria": [
             {
-                "target_line": "03.11.01 - Atribuído a Sócios da Empresa Controladora",
+                "column": "03.11.01 - Atribuído a Sócios da Empresa Controladora",
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.11.01"],
@@ -1976,7 +1977,7 @@ section_3_criteria = [
                 "sub_criteria": [],
             },
             {
-                "target_line": "03.11.02 - Atribuído a Sócios Não Controladores",
+                "column": "03.11.02 - Atribuído a Sócios Não Controladores",
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.11.02"],
@@ -1993,15 +1994,15 @@ section_3_criteria = [
 # 06.03 - Caixa de Financiamento
 section_6_criteria = [
     {
-        "target_line": "06.01 - Caixa de Operações (Operacional)",
+        "column": "06.01 - Caixa de Operações (Operacional)",
         "criteria": [["account", "equals", "6.01"]],
     },
     {
-        "target_line": "06.02 - Caixa de Investimento",
+        "column": "06.02 - Caixa de Investimento",
         "criteria": [["account", "equals", "6.02"]],
     },
     {
-        "target_line": "06.03 - Caixa de Financiamento",
+        "column": "06.03 - Caixa de Financiamento",
         "criteria": [["account", "equals", "6.03"]],
     },
 ]
@@ -2055,103 +2056,103 @@ section_6_criteria = [
 # 07.08.05.09 - Outros
 section_7_criteria = [
     {
-        "target_line": "07.01 - Receitas",
+        "column": "07.01 - Receitas",
         "criteria": [["account", "equals", "7.01"]],
         "sub_criteria": [
             {
-                "target_line": "07.01.01 - Vendas de Mercadorias, Produtos e Serviços",
+                "column": "07.01.01 - Vendas de Mercadorias, Produtos e Serviços",
                 "criteria": [["account", "equals", "7.01.01"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.01.02 - Outras Receitas",
+                "column": "07.01.02 - Outras Receitas",
                 "criteria": [["account", "equals", "7.01.02"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.01.03 - Receitas refs. à Construção de Ativos Próprios",
+                "column": "07.01.03 - Receitas refs. à Construção de Ativos Próprios",
                 "criteria": [["account", "equals", "7.01.03"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.01.04 - Provisão/Reversão de Créds. Liquidação Duvidosa",
+                "column": "07.01.04 - Provisão/Reversão de Créds. Liquidação Duvidosa",
                 "criteria": [["account", "equals", "7.01.04"]],
                 "sub_criteria": [],
             },
         ],
     },
     {
-        "target_line": "07.02 - Insumos Adquiridos de Terceiros",
+        "column": "07.02 - Insumos Adquiridos de Terceiros",
         "criteria": [["account", "equals", "7.02"]],
         "sub_criteria": [
             {
-                "target_line": "07.02.01 - Custos Prods., Mercs. e Servs. Vendidos",
+                "column": "07.02.01 - Custos Prods., Mercs. e Servs. Vendidos",
                 "criteria": [["account", "equals", "7.02.01"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.02.02 - Materiais, Energia, Servs. de Terceiros e Outros",
+                "column": "07.02.02 - Materiais, Energia, Servs. de Terceiros e Outros",
                 "criteria": [["account", "equals", "7.02.02"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.02.03 - Perda/Recuperação de Valores Ativos",
+                "column": "07.02.03 - Perda/Recuperação de Valores Ativos",
                 "criteria": [["account", "equals", "7.02.03"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.02.04 - Outros",
+                "column": "07.02.04 - Outros",
                 "criteria": [["account", "equals", "7.02.04"]],
                 "sub_criteria": [],
             },
         ],
     },
     {
-        "target_line": "07.03 - Valor Adicionado Bruto",
+        "column": "07.03 - Valor Adicionado Bruto",
         "criteria": [["account", "equals", "7.03"]],
         "sub_criteria": [],
     },
     {
-        "target_line": "07.04 - Retenções",
+        "column": "07.04 - Retenções",
         "criteria": [["account", "equals", "7.04"]],
         "sub_criteria": [
             {
-                "target_line": "07.04.01 - Depreciação, Amortização e Exaustão",
+                "column": "07.04.01 - Depreciação, Amortização e Exaustão",
                 "criteria": [["account", "equals", "7.04.01"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.04.02 - Outras",
+                "column": "07.04.02 - Outras",
                 "criteria": [["account", "equals", "7.04.02"]],
                 "sub_criteria": [],
             },
         ],
     },
     {
-        "target_line": "07.05 - Valor Adicionado Líquido Produzido",
+        "column": "07.05 - Valor Adicionado Líquido Produzido",
         "criteria": [["account", "equals", "7.05"]],
         "sub_criteria": [],
     },
     {
-        "target_line": "07.06 - Vlr Adicionado Recebido em Transferência",
+        "column": "07.06 - Vlr Adicionado Recebido em Transferência",
         "criteria": [["account", "equals", "7.06"]],
         "sub_criteria": [
             {
-                "target_line": "07.06.01 - Resultado de Equivalência Patrimonial",
+                "column": "07.06.01 - Resultado de Equivalência Patrimonial",
                 "criteria": [["account", "equals", "7.06.01"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.06.02 - Receitas Financeiras",
+                "column": "07.06.02 - Receitas Financeiras",
                 "criteria": [["account", "equals", "7.06.02"]],
                 "sub_criteria": [],
             },
             {
-                "target_line": "07.06.03 - Outros",
+                "column": "07.06.03 - Outros",
                 "criteria": [["account", "equals", "7.06.03"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.06.03.01 - Dividendos",
+                        "column": "07.06.03.01 - Dividendos",
                         "criteria": [
                             ["account", "startswith", "7.06.03"],
                             ["description", "contains_all", ["dividend"]],
@@ -2159,7 +2160,7 @@ section_7_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.06.03.02 - Aluguéis",
+                        "column": "07.06.03.02 - Aluguéis",
                         "criteria": [
                             ["account", "startswith", "7.06.03"],
                             ["description", "contains_all", ["alugue"]],
@@ -2171,114 +2172,114 @@ section_7_criteria = [
         ],
     },
     {
-        "target_line": "07.07 - Valor Adicionado Total a Distribuir",
+        "column": "07.07 - Valor Adicionado Total a Distribuir",
         "criteria": [["account", "equals", "7.07"]],
         "sub_criteria": [],
     },
     {
-        "target_line": "07.08 - Distribuição do Valor Adicionado",
+        "column": "07.08 - Distribuição do Valor Adicionado",
         "criteria": [["account", "equals", "7.08"]],
         "sub_criteria": [
             {
-                "target_line": "07.08.01 - Pessoal",
+                "column": "07.08.01 - Pessoal",
                 "criteria": [["account", "equals", "7.08.01"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.08.01.01 - Remuneração Direta",
+                        "column": "07.08.01.01 - Remuneração Direta",
                         "criteria": [["account", "equals", "7.08.01.01"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.01.02 - Benefícios",
+                        "column": "07.08.01.02 - Benefícios",
                         "criteria": [["account", "equals", "7.08.01.02"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.01.03 - F.G.T.S.",
+                        "column": "07.08.01.03 - F.G.T.S.",
                         "criteria": [["account", "equals", "7.08.01.03"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.01.04 - Outros",
+                        "column": "07.08.01.04 - Outros",
                         "criteria": [["account", "equals", "7.08.01.04"]],
                         "sub_criteria": [],
                     },
                 ],
             },
             {
-                "target_line": "07.08.02 - Impostos, Taxas e Contribuições",
+                "column": "07.08.02 - Impostos, Taxas e Contribuições",
                 "criteria": [["account", "equals", "7.08.02"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.08.02.01 - Federais",
+                        "column": "07.08.02.01 - Federais",
                         "criteria": [["account", "equals", "7.08.02.01"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.02.02 - Estaduais",
+                        "column": "07.08.02.02 - Estaduais",
                         "criteria": [["account", "equals", "7.08.02.02"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.02.03 - Municipais",
+                        "column": "07.08.02.03 - Municipais",
                         "criteria": [["account", "equals", "7.08.02.03"]],
                         "sub_criteria": [],
                     },
                 ],
             },
             {
-                "target_line": "07.08.03 - Remuneração de Capitais de Terceiros",
+                "column": "07.08.03 - Remuneração de Capitais de Terceiros",
                 "criteria": [["account", "equals", "7.08.03"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.08.03.01 - Juros",
+                        "column": "07.08.03.01 - Juros",
                         "criteria": [["account", "equals", "7.08.03.01"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.03.02 - Aluguéis",
+                        "column": "07.08.03.02 - Aluguéis",
                         "criteria": [["account", "equals", "7.08.03.02"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.03.03 - Outras",
+                        "column": "07.08.03.03 - Outras",
                         "criteria": [["account", "equals", "7.08.03.03"]],
                         "sub_criteria": [],
                     },
                 ],
             },
             {
-                "target_line": "07.08.04 - Remuneração de Capitais Próprios",
+                "column": "07.08.04 - Remuneração de Capitais Próprios",
                 "criteria": [["account", "equals", "7.08.04"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.08.04.01 - Juros sobre o Capital Próprio",
+                        "column": "07.08.04.01 - Juros sobre o Capital Próprio",
                         "criteria": [["account", "equals", "7.08.04.01"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.04.02 - Dividendos",
+                        "column": "07.08.04.02 - Dividendos",
                         "criteria": [["account", "equals", "7.08.04.02"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.04.03 - Lucros Retidos / Prejuízo do Período",
+                        "column": "07.08.04.03 - Lucros Retidos / Prejuízo do Período",
                         "criteria": [["account", "equals", "7.08.04.03"]],
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.04.04 - Part. Não Controladores nos Lucros Retidos",
+                        "column": "07.08.04.04 - Part. Não Controladores nos Lucros Retidos",
                         "criteria": [["account", "equals", "7.08.04.04"]],
                         "sub_criteria": [],
                     },
                 ],
             },
             {
-                "target_line": "07.08.05 - Outros",
+                "column": "07.08.05 - Outros",
                 "criteria": [["account", "equals", "7.08.05"]],
                 "sub_criteria": [
                     {
-                        "target_line": "07.08.05.01 - Provisões trabalhistas e cíveis, líquidas",
+                        "column": "07.08.05.01 - Provisões trabalhistas e cíveis, líquidas",
                         "criteria": [
                             ["account", "startswith", "7.08.05"],
                             ["description", "contains_all", ["trabalhist"]],
@@ -2286,7 +2287,7 @@ section_7_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.05.02 - Investimento Social",
+                        "column": "07.08.05.02 - Investimento Social",
                         "criteria": [
                             ["account", "startswith", "7.08.05"],
                             ["description", "contains_all", ["social"]],
@@ -2294,7 +2295,7 @@ section_7_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.05.03 - Lucros Retidos",
+                        "column": "07.08.05.03 - Lucros Retidos",
                         "criteria": [
                             ["account", "startswith", "7.08.05"],
                             ["description", "contains_all", ["lucr"]],
@@ -2302,7 +2303,7 @@ section_7_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.05.04 - Participação Minoritária",
+                        "column": "07.08.05.04 - Participação Minoritária",
                         "criteria": [
                             ["account", "startswith", "7.08.05"],
                             ["description", "contains_all", ["minorit"]],
@@ -2310,7 +2311,7 @@ section_7_criteria = [
                         "sub_criteria": [],
                     },
                     {
-                        "target_line": "07.08.05.09 - Outros",
+                        "column": "07.08.05.09 - Outros",
                         "criteria": [
                             ["account", "startswith", "7.08.05"],
                             [

@@ -1,9 +1,34 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator, String
 
 from .base_model import BaseModel
+
+
+class _YMDDate(TypeDecorator):
+    """Persist as 'YYYY-MM-DD' (TEXT) e expõe como datetime no Python."""
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        # se vier string, corta no dia e confia no formato já limpo
+        return str(value)[:10]
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        # garante parse sempre do Y-M-D
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d")
+
+
 
 
 class BaseStatementModel(BaseModel):
@@ -13,7 +38,7 @@ class BaseStatementModel(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[str] = mapped_column()
-    quarter: Mapped[str | None] = mapped_column()
+    quarter: Mapped[datetime | None] = mapped_column(_YMDDate)
     version: Mapped[str | None] = mapped_column()
     grupo: Mapped[str] = mapped_column()
     quadro: Mapped[str] = mapped_column()

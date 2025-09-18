@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from importlib import import_module
+from collections import defaultdict
+
 from typing import Any, Dict, Optional, Protocol, Sequence, Tuple, runtime_checkable
 from datetime import datetime
 import numpy as np
@@ -97,39 +99,69 @@ class RatiosCalculator(RatiosCalculatorPort):
         if not standards:
             return []
 
-        frame = _ColumnarFrame(standards)
+        head_list = ["00"]
         out: list[StatementFetchedDTO] = []
 
-        for ind in self._indicators:
-            # cada item deve ter 'account', 'description' e 'formula' no intel.py
-            acc_code: str = ind["account"]
-            desc: str = ind.get("description", "")
-            formula = ind["formula"]
+        # 1) particiona
+        commons: dict[tuple[str, str | None, datetime, str], list[StatementFetchedDTO]] = defaultdict(list)
+        uniques: dict[tuple[str, str | None, datetime, str], list[StatementFetchedDTO]] = defaultdict(list)
 
-            try:
-                values = formula(frame)  # esperado: np.ndarray com len(frame)
-            except KeyError:
-                values = np.full(len(frame), np.nan)
+        for row in standards:
+            if row.quadro == "Indicadores":
+                continue
+            head = str(getattr(row, "account", "")).split(".")[0]
+            key = (row.nsd, row.company_name, row.quarter, row.grupo)
+            (commons if head in head_list else uniques)[key].append(row)
 
-            if not isinstance(values, np.ndarray):
-                values = np.array(values, dtype=float)
+        # 2) calcula por grupo com overlay dos "00.*" de todo o trimestre
+        for (nsd, company, quarter, grupo), rows in uniques.items():
+            base: list[StatementFetchedDTO] = []
+            for (nsd2, company2, quarter2, _g2), rows_c in commons.items():
+                if nsd2 == nsd and company2 == company and quarter2 == quarter:
+                    base.extend(rows_c)
 
-            for (nsd, company_name, quarter), val in zip(frame.index, values):
-                v = float(val) if np.isfinite(val) else 0.0
-                out.append(
-                    StatementFetchedDTO(
-                        id=None,
-                        nsd=str(nsd),
-                        company_name=company_name,
-                        quarter=quarter,
-                        version=None,
-                        grupo="Indicadores",
-                        quadro="Intel",
-                        account=acc_code,
-                        description=desc,
-                        value=v,
-                        processing_hash="",
+            # dedup dos comuns por (account, description) para não inflar o frame
+            seen: set[tuple[str, str]] = set()
+            base_dedup: list[StatementFetchedDTO] = []
+            for r in base:
+                k = (str(getattr(r, "account", "")), str(getattr(r, "description", "")))
+                if k in seen:
+                    continue
+                seen.add(k)
+                base_dedup.append(r)
+
+            combined = base_dedup + rows
+            frame = _ColumnarFrame(combined)
+
+            for indicador in self._indicators:
+                account: str = indicador["account"]
+                description: str = indicador.get("description", "")
+                formula = indicador["formula"]
+
+                try:
+                    values = formula(frame)
+                except KeyError:
+                    values = np.full(len(frame), np.nan)
+
+                if not isinstance(values, np.ndarray):
+                    values = np.array(values, dtype=float)
+
+                for (nsd_i, company_i, quarter_i), value in zip(frame.index, values):
+                    v = float(value) if np.isfinite(value) else 0.0
+                    out.append(
+                        StatementFetchedDTO(
+                            id=None,
+                            nsd=str(nsd_i),
+                            company_name=company_i,
+                            quarter=quarter_i,
+                            version=None,
+                            quadro="Indicadores",
+                            grupo=str(grupo),             # separa DF Individuais vs DFs Consolidadas
+                            account=account,
+                            description=description,
+                            value=v,
+                            processing_hash="",
+                        )
                     )
-                )
 
         return out

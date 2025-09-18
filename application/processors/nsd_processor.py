@@ -222,39 +222,53 @@ class NsdProcessor:
                 agg.flush(uow=uow)
                 uow.commit()
                 return nsd
-
-            # PROCESS
-            # company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
-            year_view = list(
-                self.statements_raw_repository.get_company_year_view(
-                    company_name=nsd.company_name,
-                    year=quarter_police.year,
-                    uow=uow,
+            try:
+                # PROCESS
+                # company_id = self.company_repository.get_cvm_by_name(nsd.company_name, uow=uow)
+                year_view = list(
+                    self.statements_raw_repository.get_company_year_view(
+                        company_name=nsd.company_name,
+                        year=quarter_police.year,
+                        uow=uow,
+                    )
                 )
-            )
-            combined: List[StatementRawDTO] = list(year_view) + list(raw_lines)
-            deduped = self.policy.version_deduplicate(combined)
-            standardized = self.financial_normalizer.standardize(deduped)
-            # ratios = self.ratios_calculator.calculate(standardized)
-            ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
-            fetched = list(standardized) + list(ratios)
 
-            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
-            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
-            self.logger.log(
-                f"FTD {nsd.nsd}",
-                level="info",
-                progress={**progress, "extra_info": extra_info},
-                worker_id=task.worker_id,
-            )
+                import infrastructure.utils.file as fileutils
 
-            agg.add_raw_many(raw_lines)
-            agg.add_fetched_many(list(fetched))
-            agg.set_nsd(nsd)
-            agg.flush(uow=uow)
-            uow.commit()
+                fileutils.save_rows_typed(list(year_view), "01_year_view.csv")
+                fileutils.save_rows_typed(list(raw_lines), "02_raw_lines.csv")
+                combined: List[StatementRawDTO] = list(year_view) + list(raw_lines)
+                fileutils.save_rows_typed(combined, "03_combined.csv")
+                deduped = self.policy.version_deduplicate(combined)
+                fileutils.save_rows_typed(deduped, "04_deduped.csv")
+                quarterized = self.financial_normalizer.quarterize(deduped)
+                fileutils.save_rows_typed(quarterized, "05_quarterized.csv")
+                standardized = self.financial_normalizer.standardize(quarterized)
+                fileutils.save_rows_typed(standardized, "06_standardized.csv")
+                # ratios = self.ratios_calculator.calculate(standardized)
+                ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
+                fileutils.save_rows_typed(ratios, "07_ratios.csv")
+                fetched = list(standardized) + list(ratios)
+                fileutils.save_rows_typed(fetched, "08_fetched.csv")
 
-            return nsd
+                nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
+                extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+                self.logger.log(
+                    f"FTD {nsd.nsd}",
+                    level="info",
+                    progress={**progress, "extra_info": extra_info},
+                    worker_id=task.worker_id,
+                )
+
+                agg.add_raw_many(raw_lines)
+                agg.add_fetched_many(list(fetched))
+                agg.set_nsd(nsd)
+                agg.flush(uow=uow)
+                uow.commit()
+
+                return nsd
+            except Exception as e:
+                self.logger.log(f"{e}")
 
     def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:
         if not company_name:
