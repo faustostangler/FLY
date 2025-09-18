@@ -90,20 +90,12 @@ class Multiplication(Formula):
 
 class Division(Formula):
     def __init__(self, numerator, denominator, multiplier=1):
-        """Initializes the Division operation.
-
-        Parameters:
-        - numerator (str or Formula): The account name or Formula instance for the numerator.
-        - denominator (str or Formula): The account name or Formula instance for the denominator.
-        - multiplier (float): A constant to multiply the result by. Defaults to 1.
-        """
         self.numerator = numerator
         self.denominator = denominator
         self.multiplier = multiplier
 
     def __call__(self, df):
         try:
-            # Compute numerator and denominator values
             numerator_val = (
                 self.numerator(df)
                 if isinstance(self.numerator, Formula)
@@ -114,12 +106,12 @@ class Division(Formula):
                 if isinstance(self.denominator, Formula)
                 else df[self.denominator]
             )
-            # Handle division by zero
-            result = np.where(
-                denominator_val != 0,
-                (numerator_val / denominator_val) * self.multiplier,
-                np.nan,
-            )
+            with np.errstate(divide="ignore", invalid="ignore"):
+                result = np.where(
+                    denominator_val != 0,
+                    (numerator_val / denominator_val) * self.multiplier,
+                    np.nan,
+                )
             return result
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")

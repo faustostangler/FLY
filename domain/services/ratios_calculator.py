@@ -107,7 +107,7 @@ class RatiosCalculator(RatiosCalculatorPort):
         uniques: dict[tuple[str, str | None, datetime, str], list[StatementFetchedDTO]] = defaultdict(list)
 
         for row in standards:
-            if row.quadro == "Indicadores":
+            if str(getattr(row, "quadro", "")).startswith("Indicadores"):
                 continue
             head = str(getattr(row, "account", "")).split(".")[0]
             key = (row.nsd, row.company_name, row.quarter, row.grupo)
@@ -116,7 +116,7 @@ class RatiosCalculator(RatiosCalculatorPort):
         # 2) calcula por grupo com overlay dos "00.*" de todo o trimestre
         for (nsd, company, quarter, grupo), rows in uniques.items():
             base: list[StatementFetchedDTO] = []
-            for (nsd2, company2, quarter2, _g2), rows_c in commons.items():
+            for (nsd2, company2, quarter2, grupo2), rows_c in commons.items():
                 if nsd2 == nsd and company2 == company and quarter2 == quarter:
                     base.extend(rows_c)
 
@@ -148,6 +148,8 @@ class RatiosCalculator(RatiosCalculatorPort):
 
                 for (nsd_i, company_i, quarter_i), value in zip(frame.index, values):
                     v = float(value) if np.isfinite(value) else 0.0
+                    head_i = str(account).split(".")[0]           # "06.01" -> "06"
+
                     out.append(
                         StatementFetchedDTO(
                             id=None,
@@ -155,8 +157,8 @@ class RatiosCalculator(RatiosCalculatorPort):
                             company_name=company_i,
                             quarter=quarter_i,
                             version=None,
-                            quadro="Indicadores",
-                            grupo=str(grupo),             # separa DF Individuais vs DFs Consolidadas
+                            grupo=grupo,
+                            quadro=f"Indicadores {head_i}",
                             account=account,
                             description=description,
                             value=v,

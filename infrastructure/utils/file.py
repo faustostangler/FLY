@@ -104,26 +104,20 @@ def _from_cell(cell: str, typ: Any) -> Any:
     return cell  # fallback
 
 # ---------- salvar ----------
-def save_rows_typed(data: Sequence[Any], filepath: str) -> None:
-    """
-    Salva uma lista de itens.
-    - Se item for dataclass: 1ª coluna = caminho do tipo "pkg.mod.Classe"; demais = valores.
-    - Se item for tupla/list: escreve os elementos como colunas.
-    - Caso contrário: uma coluna com o valor.
-    Sem cabeçalho. Uma linha por item.
-    """
-    with Path(filepath).open("w", newline="", encoding="utf-8") as f:
+def save_rows_typed(rows: Sequence[Any], path: str) -> None:
+    if not rows:
+        return
+    # descobre o tipo do primeiro DTO e fixa a ordem das colunas
+    dto_type: Type[Any] = type(rows[0])
+    cols = [f.name for f in fields(dto_type)]  # ordem exata do dataclass
+
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        for item in data:
-            if is_dataclass(item):
-                cls = type(item)
-                type_tag = f"{cls.__module__}.{cls.__name__}"
-                row = [type_tag] + [_to_cell(v) for v in asdict(item).values()]
-                w.writerow(row)
-            elif isinstance(item, (list, tuple)):
-                w.writerow([_to_cell(v) for v in item])
-            else:
-                w.writerow([_to_cell(item)])
+        w.writerow(cols)  # header correto
+        for r in rows:
+            # garante mesmo tipo e mesmo layout
+            d = asdict(r)
+            w.writerow([d.get(c, "") for c in cols])
 
 # ---------- carregar: modo “sei o tipo” ----------
 def load_as(filepath: str, cls: Type[T]) -> List[T]:

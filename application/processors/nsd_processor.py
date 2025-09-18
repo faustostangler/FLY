@@ -233,23 +233,12 @@ class NsdProcessor:
                     )
                 )
 
-                import infrastructure.utils.file as fileutils
-
-                fileutils.save_rows_typed(list(year_view), "01_year_view.csv")
-                fileutils.save_rows_typed(list(raw_lines), "02_raw_lines.csv")
                 combined: List[StatementRawDTO] = list(year_view) + list(raw_lines)
-                fileutils.save_rows_typed(combined, "03_combined.csv")
                 deduped = self.policy.version_deduplicate(combined)
-                fileutils.save_rows_typed(deduped, "04_deduped.csv")
                 quarterized = self.financial_normalizer.quarterize(deduped)
-                fileutils.save_rows_typed(quarterized, "05_quarterized.csv")
                 standardized = self.financial_normalizer.standardize(quarterized)
-                fileutils.save_rows_typed(standardized, "06_standardized.csv")
-                # ratios = self.ratios_calculator.calculate(standardized)
                 ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
-                fileutils.save_rows_typed(ratios, "07_ratios.csv")
                 fetched = list(standardized) + list(ratios)
-                fileutils.save_rows_typed(fetched, "08_fetched.csv")
 
                 nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
                 extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]

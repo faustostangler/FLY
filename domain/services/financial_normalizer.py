@@ -127,6 +127,8 @@ class FinancialNormalizer(FinancialNormalizerPort):
             version=raw.version,
             grupo=raw.grupo,
             quadro=raw.quadro,
+            # quadro=raw.grupo,      # consolidação
+            # grupo=raw.quadro,      # subquadro
             account=account,
             description=description,
             value=raw.value,
