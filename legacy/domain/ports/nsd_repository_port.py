@@ -7,10 +7,10 @@ from typing import List, Set
 
 from domain.dto.nsd_dto import NsdDTO
 
-from .repository_base_port import RepositoryBasePort
+from .base_repository_port import RepositoryBasePort
 
 
-class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int]):
+class NSDRepositoryPort(RepositoryBasePort[NsdDTO, int]):
     """Port for NSD persistence operations."""
 
     @abstractmethod

@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from infrastructure.models import BaseModel
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers.requests_raw_statement_scraper import (
-    RequestsStatementsRawcraper,
+    RequestsRawStatementScraper,
 )
 
 
@@ -68,7 +68,7 @@ def test_cache_serves_304_response():
     second = FakeResponse(status_code=304, headers={}, content=b"")
 
     pool = DummyPool([first, second])
-    scraper = RequestsStatementsRawcraper(
+    scraper = RequestsRawStatementScraper(
         pool=pool, cache=repo, logger=logger, metrics=metrics
     )
 

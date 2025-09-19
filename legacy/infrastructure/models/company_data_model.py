@@ -83,9 +83,9 @@ class CompanyDataModel(BaseModel):
                 return None
             if isinstance(value, str):
                 try:
-                    fetched = json.loads(value)
-                    if isinstance(fetched, list):
-                        return ",".join(fetched) if fetched else None
+                    parsed = json.loads(value)
+                    if isinstance(parsed, list):
+                        return ",".join(parsed) if parsed else None
                 except json.JSONDecodeError:
                     return value
                 return value

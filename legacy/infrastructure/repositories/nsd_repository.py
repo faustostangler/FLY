@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List, Sequence, Set, Tuple
+from typing import List, Set, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from application.ports.uow_port import Uow
+from domain import dto
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import ConfigPort, LoggerPort, RepositoryNsdPort
+from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
@@ -16,7 +16,7 @@ from infrastructure.repositories.sqlalchemy_repository_base import (
 )
 
 
-class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryNsdPort):
+class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], NSDRepositoryPort):
     """Concrete repository for NsdDTO using SQLite via SQLAlchemy."""
 
     def __init__(
@@ -27,7 +27,7 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryN
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: Sequence[NsdDTO]) -> None:
+    def save_all(self, items: List[NsdDTO]) -> None:
         """Persist ``NsdDTO`` objects using SQLite upserts."""
         session = self.Session()
         try:
@@ -68,16 +68,14 @@ class SqlAlchemyNsdRepository(SqlAlchemyRepositoryBase[NsdDTO, int], RepositoryN
         company_names: Set[str],
         valid_types: Set[str],
         exclude_nsd: Set[str],
-        *,
-        uow: Uow,
-    ) -> Sequence[NsdDTO]:
+    ) -> List[NsdDTO]:
         """Retorna todos os NSDs que ainda não foram processados, filtrando por
         empresa, tipo e NSD.
 
         Args:
             company_names (Set[str]): Conjunto de nomes de empresas válidas.
             valid_types (Set[str]): Tipos de NSDs aceitos (ex: DFP, ITR...).
-            exclude_nsd (Set[str]): Lista de códigos NSD já processados (raw ou fetched).
+            exclude_nsd (Set[str]): Lista de códigos NSD já processados (raw ou parsed).
 
         Returns:
             List[NsdDTO]: Lista de NSDs pendentes.

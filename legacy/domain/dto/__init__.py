@@ -5,22 +5,22 @@ from .execution_result_dto import ExecutionResultDTO
 from .metrics_dto import MetricsDTO
 from .nsd_dto import NsdDTO
 from .page_result_dto import PageResultDTO
-from .statement_fetched_dto import StatementFetchedDTO
+from .parsed_statement_dto import ParsedStatementDTO
 from .raw_company_data_dto import (
     CodeDTO,
     CompanyDataDetailDTO,
     CompanyDataListingDTO,
     CompanyDataRawDTO,
 )
-from .statement_raw_dto import StatementRawDTO
+from .raw_statement_dto import RawStatementDTO
 from .sync_companies_result_dto import SyncCompanyDataResultDTO
 from .worker_class_dto import WorkerTaskDTO
 
 __all__ = [
     "CompanyDataDTO",
     "NsdDTO",
-    "StatementFetchedDTO",
-    "StatementRawDTO",
+    "ParsedStatementDTO",
+    "RawStatementDTO",
     "CompanyDataRawDTO",
     "CompanyDataListingDTO",
     "CompanyDataDetailDTO",

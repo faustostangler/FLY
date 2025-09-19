@@ -135,7 +135,7 @@ class CompanyDataDetailDTO:
 
 @dataclass(frozen=True)
 class CompanyDataRawDTO:
-    """Raw fetched data returned by the scraper before mapping to the domain."""
+    """Raw parsed data returned by the scraper before mapping to the domain."""
 
     cvm_code: Optional[str]
     issuing_company: Optional[str]

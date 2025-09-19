@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
-from domain.ports import RepositoryStatementFetchedPort
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.ports import ParsedStatementRepositoryPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_transform_processes_groups(monkeypatch):
-    fetched_repo = MagicMock(spec=RepositoryStatementFetchedPort)
+    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",
@@ -31,21 +31,21 @@ def test_transform_processes_groups(monkeypatch):
     processor = TransformStatementsProcessor(
         logger=DummyLogger(),
         config=DummyConfig(),
-        fetched_repo=fetched_repo,
+        parsed_repo=parsed_repo,
     )
 
-    groups = [[MagicMock(spec=StatementFetchedDTO)]]
-    usecase_inst.execute.return_value = [MagicMock(spec=StatementFetchedDTO)]
+    groups = [[MagicMock(spec=ParsedStatementDTO)]]
+    usecase_inst.execute.return_value = [MagicMock(spec=ParsedStatementDTO)]
 
     result = processor.run(groups)
 
     usecase_inst.execute.assert_called_once_with(groups[0])
-    fetched_repo.save_all.assert_called_once_with(usecase_inst.execute.return_value)
+    parsed_repo.save_all.assert_called_once_with(usecase_inst.execute.return_value)
     assert result == [usecase_inst.execute.return_value]
 
 
 def test_transform_returns_empty_when_no_groups(monkeypatch):
-    fetched_repo = MagicMock(spec=RepositoryStatementFetchedPort)
+    parsed_repo = MagicMock(spec=ParsedStatementRepositoryPort)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",
@@ -59,9 +59,9 @@ def test_transform_returns_empty_when_no_groups(monkeypatch):
     processor = TransformStatementsProcessor(
         logger=DummyLogger(),
         config=DummyConfig(),
-        fetched_repo=fetched_repo,
+        parsed_repo=parsed_repo,
     )
 
     result = processor.run([])
     assert result == []
-    fetched_repo.save_all.assert_not_called()
+    parsed_repo.save_all.assert_not_called()

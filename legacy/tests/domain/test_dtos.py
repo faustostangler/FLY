@@ -2,7 +2,7 @@ import pytest
 
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 
 
 def test_company_dto_from_dict():
@@ -35,7 +35,7 @@ def test_statement_rows_dto_from_dict():
         "quarter": "2020-12-31",
         "version": "V1",
     }
-    dto = StatementRawDTO.from_dict(raw)
+    dto = RawStatementDTO.from_dict(raw)
     assert dto.account == "00.01.01"
     assert dto.nsd == "102395"
     assert dto.id is None

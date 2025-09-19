@@ -3,8 +3,8 @@
 from application.usecases.sync_companies import SyncCompanyDataUseCase
 from domain.dto import SyncCompanyDataResultDTO
 from domain.ports import (
-    RepositoryCompanyDataPort,
-    ScraperCompanyDataPort,
+    CompanyDataRepositoryPort,
+    CompanyDataScraperPort,
     ConfigPort,
     LoggerPort,
 )
@@ -17,8 +17,8 @@ class CompanyDataService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryCompanyDataPort,
-        scraper: ScraperCompanyDataPort,
+        repository: CompanyDataRepositoryPort,
+        scraper: CompanyDataScraperPort,
     ):
         """Initialize dependencies for company synchronization."""
         self.logger = logger

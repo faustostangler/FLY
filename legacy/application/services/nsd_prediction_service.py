@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import List
 
-from domain.ports import RepositoryNsdPort
+from domain.ports import NSDRepositoryPort
 
 
 def _find_next_probable_nsd(
-    repository: RepositoryNsdPort,
+    repository: NSDRepositoryPort,
     window_days: int = 30,
     safety_factor: float = 1.5,
 ) -> List[int]:

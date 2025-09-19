@@ -1,10 +1,10 @@
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.utils.statement_hash import compute_hash
 
 
 def test_compute_hash_consistent_order():
     rows = [
-        StatementRawDTO.from_dict(
+        RawStatementDTO.from_dict(
             {
                 "nsd": 1,
                 "company_name": "A",
@@ -17,7 +17,7 @@ def test_compute_hash_consistent_order():
                 "value": 1,
             }
         ),
-        StatementRawDTO.from_dict(
+        RawStatementDTO.from_dict(
             {
                 "nsd": 2,
                 "company_name": "A",

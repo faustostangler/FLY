@@ -1,35 +1,35 @@
 """Exports for domain port interfaces."""
 
+from .base_repository_port import RepositoryBasePort
+from .base_scraper_port import BaseScraperPort
+from .company_data_scraper_port import CompanyDataScraperPort
+from .company_repository_port import CompanyDataRepositoryPort
 from .config_port import ConfigPort
-from .datacleaner_port import DataCleanerPort
+from .data_cleaner_port import DataCleanerPort
 from .logger_port import LoggerPort
 from .metrics_collector_port import MetricsCollectorPort
-from .repository_base_port import RepositoryBasePort
-from .repository_company_data_port import RepositoryCompanyDataPort
-from .repository_nsd_port import RepositoryNsdPort
-from .repository_statements_raw_port import RepositoryStatementRawPort
-from .repository_statements_fetched_port import RepositoryStatementFetchedPort
+from .nsd_repository_port import NSDRepositoryPort
+from .nsd_source_port import NSDSourcePort
+from .parsed_statement_repository_port import ParsedStatementRepositoryPort
+from .raw_statement_repository_port import RawStatementRepositoryPort
+from .raw_statement_scraper_port import RawStatementScraperPort
 from .statement_transformer_port import StatementTransformerPort
 from .worker_pool_port import WorkerPoolPort
-from .scraper_base_port import ScraperBasePort
-from .scraper_company_data_port import ScraperCompanyDataPort
-from .scraper_nsd_port import ScraperNsdPort
-from .scraper_statements_raw_port import StatementsRawcraperPort
 
 __all__ = [
     "WorkerPoolPort",
     "LoggerPort",
     "DataCleanerPort",
     "RepositoryBasePort",
-    "ScraperBasePort",
-    "RepositoryCompanyDataPort",
-    "ScraperCompanyDataPort",
+    "BaseScraperPort",
+    "CompanyDataRepositoryPort",
+    "CompanyDataScraperPort",
     "MetricsCollectorPort",
-    "RepositoryNsdPort",
-    "ScraperNsdPort",
-    "StatementsRawcraperPort",
-    "StatementRawRepositoryPort",
-    "RepositoryStatementFetchedPort",
+    "NSDRepositoryPort",
+    "NSDSourcePort",
+    "RawStatementScraperPort",
+    "RawStatementRepositoryPort",
+    "ParsedStatementRepositoryPort",
     "ConfigPort",
     "StatementTransformerPort",
 ]

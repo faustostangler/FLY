@@ -18,12 +18,12 @@ from requests import Response
 # Domain deps
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
-from domain.ports.scraper_ports import StatementsRawcraperPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 
 # Infra helpers
-from infrastructure.helpers.datacleaner import DataCleaner
+from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.helpers.worker_pool import WorkerPool
@@ -33,7 +33,7 @@ from infrastructure.repositories.http_cache_repository import HttpCacheRepositor
 from infrastructure.utils.id_generator import IdGenerator
 
 
-class RequestsStatementsRawcraper:
+class RequestsRawStatementScraper:
     """Infra HTTP client with connection reuse and conditional GET.
     Exposes a public API that supports session affinity for a batch of fetches.
     """
@@ -137,14 +137,14 @@ class _SessionLease(contextlib.AbstractContextManager[requests.Session]):
             self._session = None
 
 
-class StatementsRawcraper(StatementsRawcraperPort):
+class RawStatementScraper(RawStatementScraperPort):
     """Domain-level scraper that coordinates NSD + 13 pages using an AffinityHttpClient."""
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        datacleaner: DataCleaner,
+        data_cleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         http_client: AffinityHttpClient,  # public API only
         worker_pool_executor: WorkerPool,
@@ -152,7 +152,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
         self._config = config
         self.logger = logger
         self.http_client = http_client
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
         self._metrics_collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
         self.time_utils = TimeUtils(config)
@@ -229,7 +229,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 element = soup.find(id=elem_id)
                 if element is None:
                     return 0.0
-                value = self.datacleaner.clean_number(element.get_text())
+                value = self.data_cleaner.clean_number(element.get_text())
                 result = thousand * value
                 return result if result is not None else 0.0
 
@@ -257,7 +257,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 if not cols[0] or not cols[0][0].isdigit():
                     continue
                 account, account_description, account_value = cols[0], cols[1], cols[2]
-                rows.append({"account": account, "description": account_description, "value": (self.datacleaner.clean_number(account_value) or 0.0) * thousand})
+                rows.append({"account": account, "description": account_description, "value": (self.data_cleaner.clean_number(account_value) or 0.0) * thousand})
         return rows
 
     # ---------- Use case entrypoint ----------
@@ -267,7 +267,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
         row: NsdDTO = task.data
         nsd_url = self.endpoint.format(nsd=row.nsd)
 
-        statements_rows_dto: list[StatementRawDTO] = []
+        statements_rows_dto: list[RawStatementDTO] = []
         with self.http_client.borrow_session() as session:
             nsd_bytes = self.http_client.fetch_with(session, nsd_url)
             html = nsd_bytes.decode("utf-8", errors="ignore")
@@ -294,7 +294,7 @@ class StatementsRawcraper(StatementsRawcraperPort):
                 rows = self._parse_statement_page(soup, item["grupo"])  # list[dict]
                 quarter = row.quarter.strftime("%Y-%m-%d") if row.quarter else None
                 for r in rows:
-                    statements_rows_dto.append(StatementRawDTO(
+                    statements_rows_dto.append(RawStatementDTO(
                         nsd=str(row.nsd),
                         company_name=row.company_name,
                         quarter=quarter,

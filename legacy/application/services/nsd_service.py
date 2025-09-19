@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from application.usecases.sync_nsd import SyncNSDUseCase
 from domain.ports import (
-    RepositoryCompanyDataPort,
+    CompanyDataRepositoryPort,
     ConfigPort,
     LoggerPort,
-    RepositoryNsdPort,
-    ScraperNsdPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
 )
 
 
@@ -17,9 +17,9 @@ class NsdService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryNsdPort,
-        company_repo: RepositoryCompanyDataPort,
-        scraper: ScraperNsdPort,
+        repository: NSDRepositoryPort,
+        company_repo: CompanyDataRepositoryPort,
+        scraper: NSDSourcePort,
     ) -> None:
         """Instantiate the service with its required dependencies."""
         self.logger = logger

@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO
-from domain.ports import RepositoryStatementFetchedPort, StatementRawRepositoryPort
-from domain.ports.scraper_ports import StatementsRawcraperPort
+from domain.ports import ParsedStatementRepositoryPort, RawStatementRepositoryPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
@@ -24,9 +24,9 @@ def _make_nsd(nsd: int) -> NsdDTO:
 
 
 def test_fetch_statement_rows_skips_existing(monkeypatch):
-    source = MagicMock(spec=StatementsRawcraperPort)
-    rows_repo = MagicMock(spec=RepositoryStatementFetchedPort)
-    stmt_repo = MagicMock(spec=StatementRawRepositoryPort)
+    source = MagicMock(spec=RawStatementScraperPort)
+    rows_repo = MagicMock(spec=ParsedStatementRepositoryPort)
+    stmt_repo = MagicMock(spec=RawStatementRepositoryPort)
     stmt_repo.get_all_primary_keys = MagicMock(return_value={1})
 
     collector = MagicMock()
@@ -35,7 +35,7 @@ def test_fetch_statement_rows_skips_existing(monkeypatch):
     usecase = FetchStatementsUseCase(
         logger=DummyLogger(),
         source=source,
-        fetched_statements_repo=rows_repo,
+        parsed_statements_repo=rows_repo,
         raw_statement_repository=stmt_repo,
         metrics_collector=collector,
         worker_pool_executor=worker_pool,

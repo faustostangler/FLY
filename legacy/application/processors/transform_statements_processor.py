@@ -1,12 +1,12 @@
-"""Processor to batch-transform fetched statements into metrics."""
+"""Processor to batch-transform parsed statements into metrics."""
 
 from __future__ import annotations
 
 from typing import List
 
 from application.usecases.transform_statements import TransformStatementsUseCase
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
-from domain.ports import ConfigPort, LoggerPort, RepositoryStatementFetchedPort
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.ports import ConfigPort, LoggerPort, ParsedStatementRepositoryPort
 from domain.services import StatementClassificationService
 from infrastructure.transformers import (
     IntelStatementTransformerAdapter,
@@ -17,17 +17,17 @@ from .base_processor import BaseProcessor
 
 
 class TransformStatementsProcessor(BaseProcessor):
-    """Transform fetched statement rows and persist the results."""
+    """Transform parsed statement rows and persist the results."""
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        fetched_repo: RepositoryStatementFetchedPort,
+        parsed_repo: ParsedStatementRepositoryPort,
     ) -> None:
         """Create processor with repository and configuration."""
         self.logger = logger
-        self.fetched_repo = fetched_repo
+        self.parsed_repo = parsed_repo
 
         math_transformer = MathStatementTransformerAdapter(config)
         classification_service = StatementClassificationService()
@@ -42,16 +42,16 @@ class TransformStatementsProcessor(BaseProcessor):
         )
 
     def load(
-        self, fetched_groups: List[List[StatementFetchedDTO]]
-    ) -> List[List[StatementFetchedDTO]]:
-        """Forward fetched groups to the transformation stage."""
-        return fetched_groups
+        self, parsed_groups: List[List[ParsedStatementDTO]]
+    ) -> List[List[ParsedStatementDTO]]:
+        """Forward parsed groups to the transformation stage."""
+        return parsed_groups
 
     def transform(
-        self, data: List[List[StatementFetchedDTO]]
-    ) -> List[List[StatementFetchedDTO]]:
+        self, data: List[List[ParsedStatementDTO]]
+    ) -> List[List[ParsedStatementDTO]]:
         """Apply the transformation use case to each group."""
-        processed: List[List[StatementFetchedDTO]] = []
+        processed: List[List[ParsedStatementDTO]] = []
         for group in data:
             try:
                 processed.append(self.transform_usecase.execute(group))
@@ -61,15 +61,15 @@ class TransformStatementsProcessor(BaseProcessor):
         return processed
 
     def persist(
-        self, data: List[List[StatementFetchedDTO]]
-    ) -> List[List[StatementFetchedDTO]]:
+        self, data: List[List[ParsedStatementDTO]]
+    ) -> List[List[ParsedStatementDTO]]:
         """Persist transformed statements to the repository."""
         for group in data:
-            self.fetched_repo.save_all(group)
+            self.parsed_repo.save_all(group)
         return data
 
     def run(
-        self, data: List[List[StatementFetchedDTO]]
-    ) -> List[List[StatementFetchedDTO]]:
+        self, data: List[List[ParsedStatementDTO]]
+    ) -> List[List[ParsedStatementDTO]]:
         """Run the transformation pipeline."""
         return super().run(data)

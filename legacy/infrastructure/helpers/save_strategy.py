@@ -30,7 +30,7 @@ class SaveStrategy(Generic[T]):
         self.config = config
         self.save_callback = save_callback or (lambda buffer: None)
         self.threshold = threshold or (
-            config.repository.persistence_threshold if config else 50
+            config.global_settings.threshold if config else 50
         )
         self.buffer: List[T] = []
 
@@ -49,7 +49,7 @@ class SaveStrategy(Generic[T]):
             return
 
         if remaining is None and self.config:
-            remaining = self.config.repository.persistence_threshold
+            remaining = self.config.global_settings.threshold
 
         self.buffer.append(item)  # type: ignore
 

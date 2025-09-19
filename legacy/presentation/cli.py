@@ -15,27 +15,27 @@ from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerScr
 from infrastructure.http.rate_limiter import RateLimitedScraper, TokenBucket
 from infrastructure.http.session_pool import SessionPool
 from infrastructure.repositories import (
-    SqlAlchemyRepositoryCompanyData,
+    SqlAlchemyCompanyDataRepository,
     SqlAlchemyNsdRepository,
-    SqlAlchemyStatementFetchedRepository,
-    SqlAlchemyStatementRawRepository,
+    SqlAlchemyParsedStatementRepository,
+    SqlAlchemyRawStatementRepository,
 )
 from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers import (
     CompanyDataScraper,
     NsdScraper,
-    StatementsRawcraper,  # scraper de alto nível (port da aplicação)
-    RequestsStatementsRawcraper,  # cliente HTTP de baixo nível
+    RawStatementScraper,  # scraper de alto nível (port da aplicação)
+    RequestsRawStatementScraper,  # cliente HTTP de baixo nível
 )
 
 
 class CLIAdapter:
     """Orchestrate FLY application flows via the command line."""
 
-    def __init__(self, config: ConfigPort, logger: LoggerPort, datacleaner) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort, data_cleaner) -> None:
         self.config = config
         self.logger = logger
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
 
         self.collector = MetricsCollector()
         self.worker_pool_executor = WorkerPool(
@@ -43,7 +43,7 @@ class CLIAdapter:
             metrics_collector=self.collector,
             max_workers=self.config.global_settings.max_workers or 1,
         )
-        self.company_repo = SqlAlchemyRepositoryCompanyData(
+        self.company_repo = SqlAlchemyCompanyDataRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -52,7 +52,7 @@ class CLIAdapter:
             self.config, self.logger, size=self.config.http.session_pool_size
         )
         self.http_cache = HttpCacheRepository(self.company_repo.session_factory)
-        base_scraper = RequestsStatementsRawcraper(
+        base_scraper = RequestsRawStatementScraper(
             config=self.config,
             logger=self.logger,
             metrics=self.collector,
@@ -85,12 +85,12 @@ class CLIAdapter:
 
     def _company_service(self) -> None:
         """Build and execute the company data synchronization flow."""
-        mapper = CompanyDataMapper(self.datacleaner)
+        mapper = CompanyDataMapper(self.data_cleaner)
         company_repo = self.company_repo
-        scraper_company_data = CompanyDataScraper(
+        company_scraper = CompanyDataScraper(
             config=self.config,
             logger=self.logger,
-            datacleaner=self.datacleaner,
+            data_cleaner=self.data_cleaner,
             mapper=mapper,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
@@ -100,7 +100,7 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
             repository=company_repo,
-            scraper=scraper_company_data,
+            scraper=company_scraper,
         )
         company_service.sync_companies()
 
@@ -112,10 +112,10 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        scraper_nsd = NsdScraper(
+        nsd_scraper = NsdScraper(
             config=self.config,
             logger=self.logger,
-            datacleaner=self.datacleaner,
+            data_cleaner=self.data_cleaner,
             worker_pool_executor=self.worker_pool_executor,
             metrics_collector=self.collector,
             repository=nsd_repo,
@@ -126,7 +126,7 @@ class CLIAdapter:
             logger=self.logger,
             repository=nsd_repo,
             company_repo=company_repo,
-            scraper=scraper_nsd,
+            scraper=nsd_scraper,
         )
 
         nsd_service.sync_nsd()
@@ -139,21 +139,21 @@ class CLIAdapter:
             config=self.config,
             logger=self.logger,
         )
-        raw_statement_repo = SqlAlchemyStatementRawRepository(
+        raw_statement_repo = SqlAlchemyRawStatementRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
-        fetched_statement_repo = SqlAlchemyStatementFetchedRepository(
+        parsed_statement_repo = SqlAlchemyParsedStatementRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
         )
 
-        raw_statements_scraper = StatementsRawcraper(
+        raw_statements_scraper = RawStatementScraper(
             config=self.config,
             logger=self.logger,
-            datacleaner=self.datacleaner,
+            data_cleaner=self.data_cleaner,
             metrics_collector=self.collector,
             http_client=self.http_client,
             worker_pool_executor=self.worker_pool_executor,
@@ -166,7 +166,7 @@ class CLIAdapter:
             company_repo=company_repo,
             nsd_repo=nsd_repo,
             raw_statement_repo=raw_statement_repo,
-            fetched_statements_repo=fetched_statement_repo,
+            parsed_statements_repo=parsed_statement_repo,
             metrics_collector=self.collector,
             worker_pool_executor=self.worker_pool_executor,
         )
@@ -180,7 +180,7 @@ class CLIAdapter:
 
         parse_processor = ParseStatementsProcessor(
             logger=self.logger,
-            repository=fetched_statement_repo,
+            repository=parsed_statement_repo,
             config=self.config,
             worker_pool_executor=parse_pool,
             metrics_collector=self.collector,
@@ -188,22 +188,22 @@ class CLIAdapter:
         )
 
         raw_rows = self._load_transformed()  # mock
-        fetched_groups = parse_processor.run(raw_rows)
+        parsed_groups = parse_processor.run(raw_rows)
 
         transform_processor = TransformStatementsProcessor(
             config=self.config,
             logger=self.logger,
-            fetched_repo=fetched_statement_repo,
+            parsed_repo=parsed_statement_repo,
         )
-        transform_processor.run(fetched_groups)
+        transform_processor.run(parsed_groups)
 
     def _load_transformed(self):
         from typing import  Dict, List, Tuple
         from collections import defaultdict
         from domain.dto import NsdDTO
-        from domain.dto.statement_raw_dto import StatementRawDTO
+        from domain.dto.raw_statement_dto import RawStatementDTO
 
-        raw_statement_repo = SqlAlchemyStatementRawRepository(
+        raw_statement_repo = SqlAlchemyRawStatementRepository(
             connection_string=self.config.database.connection_string,
             config=self.config,
             logger=self.logger,
@@ -220,7 +220,7 @@ class CLIAdapter:
         raw_statements = raw_statement_repo.get_by_company_name(company_name=company_name)
 
         # 2) agrupa por nsd (normalizando para int) e reforça o filtro por companhia
-        buckets: Dict[int, List[StatementRawDTO]] = defaultdict(list)
+        buckets: Dict[int, List[RawStatementDTO]] = defaultdict(list)
         for row in raw_statements:
             if getattr(row, "company_name", None) != company_name:
                 continue
@@ -239,7 +239,7 @@ class CLIAdapter:
         nsd_index = {n.nsd: n for n in nsd_repo.get_by_column_values('company_name', values)}
         
         # 4) monta os pares apenas quando existir NsdDTO correspondente
-        pairs: List[Tuple[NsdDTO, List[StatementRawDTO]]] = [
+        pairs: List[Tuple[NsdDTO, List[RawStatementDTO]]] = [
             (nsd_index[nsd_id], rows)
             for nsd_id, rows in buckets.items()
             if nsd_id in nsd_index

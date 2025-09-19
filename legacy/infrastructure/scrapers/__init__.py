@@ -5,10 +5,10 @@ from .company_data_processors import (
     DetailFetcher,
     EntryCleaner,
 )
-from .scraper_nsd import NsdScraper
+from .nsd_scraper import NsdScraper
 from .requests_raw_statement_scraper import (
-    StatementsRawcraper,
-    RequestsStatementsRawcraper,
+    RawStatementScraper,
+    RequestsRawStatementScraper,
 )
 
 __all__ = [
@@ -18,6 +18,6 @@ __all__ = [
     "DetailFetcher",
     "CompanyDataMerger",
     "CompanyDataDetailProcessor",
-    "RequestsStatementsRawcraper",
-    "StatementsRawcraper",
+    "RequestsRawStatementScraper",
+    "RawStatementScraper",
 ]

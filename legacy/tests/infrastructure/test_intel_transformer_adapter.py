@@ -1,4 +1,4 @@
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.services import StatementClassificationService
 from infrastructure.config import Config
 from infrastructure.transformers import IntelStatementTransformerAdapter
@@ -6,7 +6,7 @@ from infrastructure.transformers import IntelStatementTransformerAdapter
 
 def test_intel_adapter_full_flow():
     rows = [
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2024-03-31",
@@ -17,7 +17,7 @@ def test_intel_adapter_full_flow():
             description="Ações ON Ordinárias",
             value=10.0,
         ),
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2024-03-31",
@@ -28,7 +28,7 @@ def test_intel_adapter_full_flow():
             description="Ações ON Ordinárias",
             value=11.0,
         ),
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2024-06-30",
@@ -39,7 +39,7 @@ def test_intel_adapter_full_flow():
             description="Cumulative",
             value=30.0,
         ),
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2024-09-30",
@@ -50,7 +50,7 @@ def test_intel_adapter_full_flow():
             description="Cumulative",
             value=60.0,
         ),
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2024-12-31",

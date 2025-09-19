@@ -4,12 +4,12 @@ from application.processors.fetch_statements_processor import FetchStatementsPro
 from application.usecases.fetch_statements import FetchStatementsUseCase
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
-    RepositoryCompanyDataPort,
-    RepositoryNsdPort,
-    RepositoryStatementFetchedPort,
-    StatementRawRepositoryPort,
+    CompanyDataRepositoryPort,
+    NSDRepositoryPort,
+    ParsedStatementRepositoryPort,
+    RawStatementRepositoryPort,
 )
-from domain.ports.scraper_ports import StatementsRawcraperPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from tests.conftest import DummyConfig, DummyLogger
 
 
@@ -24,18 +24,18 @@ def test_fetch_statements_calls_usecase(monkeypatch):
         mock_usecase_cls,
     )
 
-    company_repo = MagicMock(spec=RepositoryCompanyDataPort)
-    nsd_repo = MagicMock(spec=RepositoryNsdPort)
-    stmt_repo = MagicMock(spec=StatementRawRepositoryPort)
-    rows_repo = MagicMock(spec=RepositoryStatementFetchedPort)
-    source = MagicMock(spec=StatementsRawcraperPort)
+    company_repo = MagicMock(spec=CompanyDataRepositoryPort)
+    nsd_repo = MagicMock(spec=NSDRepositoryPort)
+    stmt_repo = MagicMock(spec=RawStatementRepositoryPort)
+    rows_repo = MagicMock(spec=ParsedStatementRepositoryPort)
+    source = MagicMock(spec=RawStatementScraperPort)
     collector = MagicMock()
     worker_pool = MagicMock()
 
     processor = FetchStatementsProcessor(
         logger=DummyLogger(),
         source=source,
-        fetched_statements_repo=rows_repo,
+        parsed_statements_repo=rows_repo,
         company_repo=company_repo,
         nsd_repo=nsd_repo,
         raw_statement_repo=stmt_repo,
@@ -48,7 +48,7 @@ def test_fetch_statements_calls_usecase(monkeypatch):
     mock_usecase_cls.assert_called_once_with(
         logger=processor.logger,
         source=source,
-        fetched_statements_repo=rows_repo,
+        parsed_statements_repo=rows_repo,
         raw_statement_repository=stmt_repo,
         metrics_collector=collector,
         worker_pool_executor=worker_pool,

@@ -14,26 +14,26 @@ from domain.ports import (
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
-    RepositoryNsdPort,
-    ScraperNsdPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
     WorkerPoolPort,
 )
 from infrastructure.helpers import ByteFormatter, SaveStrategy
-from infrastructure.helpers.datacleaner import DataCleaner
+from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 
 
-class NsdScraper(ScraperNsdPort):
+class NsdScraper(NSDSourcePort):
     """Scraper adapter responsible for fetching raw NSD documents."""
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        datacleaner: DataCleaner,
+        data_cleaner: DataCleaner,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
-        repository: RepositoryNsdPort,
+        repository: NSDRepositoryPort,
         http_client: AffinityHttpClient,
     ):
         """Set up configuration, logger, and helper utilities for the
@@ -41,7 +41,7 @@ class NsdScraper(ScraperNsdPort):
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
         self.repository = repository
@@ -59,7 +59,7 @@ class NsdScraper(ScraperNsdPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        skip_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
         start: int = 1,
         max_nsd: Optional[int] = None,
@@ -73,9 +73,9 @@ class NsdScraper(ScraperNsdPort):
         # )
         byte_formatter = ByteFormatter()
 
-        self.existing_codes = {int(code) for code in existing_codes} if existing_codes else set()
+        self.skip_codes = {int(code) for code in skip_codes} if skip_codes else set()
 
-        start = max(start, max(self.existing_codes, default=0) + 1)
+        start = max(start, max(self.skip_codes, default=0) + 1)
 
         max_nsd_existing = max_nsd or self._find_last_existing_nsd(start=start) or 50
         max_nsd_probable = max_nsd or self._find_next_probable_nsd(start=start) or 50
@@ -83,13 +83,13 @@ class NsdScraper(ScraperNsdPort):
 
         nsd_diff = max_nsd - start
 
-        threshold = threshold or self.config.repository.persistence_threshold or 50
+        threshold = threshold or self.config.global_settings.threshold or 50
 
         self.logger.log("Fetch NSD list", level="info")
 
-        if len(self.existing_codes) > nsd_diff:
+        if len(self.skip_codes) > nsd_diff:
             codes = list(range(start, max_nsd + 1)) + list(range(1, start - 1))
-            codes = [c for c in codes if c not in self.existing_codes]
+            codes = [c for c in codes if c not in self.skip_codes]
         else:
             codes = list(range(start, max_nsd + 1))
 
@@ -114,9 +114,9 @@ class NsdScraper(ScraperNsdPort):
                 "start_time": start_time,
             }
 
-            if nsd in self.existing_codes:
+            if nsd in self.skip_codes:
                 self.logger.log(
-                    f"{nsd}", level="info", progress=progress, worker_id=worker_id
+                    f"{nsd}", level="info", progress=progress, worker_id=task.worker_id
                 )
                 return None
 
@@ -125,7 +125,7 @@ class NsdScraper(ScraperNsdPort):
             try:
                 with self.http_client.borrow_session() as session:
                     body = self.http_client.fetch_with(session, url, headers=session.headers)
-                fetched = self._parse_html(nsd, body.decode("utf-8"))
+                parsed = self._parse_html(nsd, body.decode("utf-8"))
                 # we now persist by company_name, no CVM lookup needed
             # ————————————————————————————————————————————————————————————————
 
@@ -138,20 +138,20 @@ class NsdScraper(ScraperNsdPort):
                     f"Failed to fetch NSD {nsd}: {e}",
                     level="warning",
                     progress=progress,
-                    worker_id=worker_id,
+                    worker_id=task.worker_id,
                 )
                 return None
 
-            if fetched:
+            if parsed:
                 download_bytes = len(body)
                 extra_info = [
-                    fetched["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
-                    if fetched.get("sent_date") is not None
+                    parsed["sent_date"].strftime("%Y-%m-%d %H:%M:%S")
+                    if parsed.get("sent_date") is not None
                     else "",
-                    fetched.get("nsd_type", ""),
-                    fetched.get("company_name", ""),
-                    fetched["quarter"].strftime("%Y-%m-%d")
-                    if fetched.get("quarter") is not None
+                    parsed.get("nsd_type", ""),
+                    parsed.get("company_name", ""),
+                    parsed["quarter"].strftime("%Y-%m-%d")
+                    if parsed.get("quarter") is not None
                     else "",
                     f"{byte_formatter.format_bytes(download_bytes)} {byte_formatter.format_bytes(self.metrics_collector.network_bytes)}",
                 ]
@@ -162,7 +162,7 @@ class NsdScraper(ScraperNsdPort):
                 f"{nsd}",
                 level="info",
                 progress={**progress, "extra_info": extra_info},
-                worker_id=worker_id,
+                worker_id=task.worker_id,
             )
 
             # self.logger.log(
@@ -170,7 +170,7 @@ class NsdScraper(ScraperNsdPort):
             #     level="info",
             # )
 
-            return NsdDTO.from_dict(fetched)
+            return NsdDTO.from_dict(parsed)
 
         def handle_batch(item: Optional[NsdDTO]) -> None:
             if item is not None:
@@ -224,30 +224,30 @@ class NsdScraper(ScraperNsdPort):
         # from DTO
         data: Dict[str, str | int | datetime | None] = {
             "nsd": nsd,
-            "company_name": self.datacleaner.clean_text(text_of("#lblNomeCompanhia")),
+            "company_name": self.data_cleaner.clean_text(text_of("#lblNomeCompanhia")),
             # quarter e sent_date serão preenchidos depois
             "quarter": None,
             "version": None,
             "nsd_type": None,
             "dri": None,
             "auditor": None,
-            "responsible_auditor": self.datacleaner.clean_text(
+            "responsible_auditor": self.data_cleaner.clean_text(
                 text_of("#lblResponsavelTecnico")
             ),
             "protocol": text_of("#lblProtocolo"),
             "sent_date": None,
-            "reason": self.datacleaner.clean_text(
+            "reason": self.data_cleaner.clean_text(
                 text_of("#lblMotivoCancelamentoReapresentacao")
             ),
         }
 
         # Limpeza do padrão FCA
-        dri = self.datacleaner.clean_text(text_of("#lblNomeDRI")) or ""
+        dri = self.data_cleaner.clean_text(text_of("#lblNomeDRI")) or ""
         dri_pattern = r"\s+FCA(?:\s+V\d+)?\b"
         data["dri"] = re.sub(dri_pattern, "", dri)
         data["dri"] = re.sub(r"\s{2,}", " ", data["dri"]).strip()
 
-        auditor = self.datacleaner.clean_text(text_of("#lblAuditor")) or ""
+        auditor = self.data_cleaner.clean_text(text_of("#lblAuditor")) or ""
         auditor_pattern = r"\s+FCA\s+\d{4}(?:\s+V\d+)?\b"
         data["auditor"] = re.sub(auditor_pattern, "", auditor)
         data["auditor"] = re.sub(r"\s{2,}", " ", data["auditor"]).strip()
@@ -255,21 +255,21 @@ class NsdScraper(ScraperNsdPort):
         quarter = text_of("#lblDataDocumento")
         if quarter and quarter.strip().isdigit() and len(quarter.strip()) == 4:
             quarter = f"31/12/{quarter.strip()}"
-        data["quarter"] = self.datacleaner.cleandate(quarter) if quarter else None
+        data["quarter"] = self.data_cleaner.clean_date(quarter) if quarter else None
 
         nsd_type_version = text_of("#lblDescricaoCategoria")
         if nsd_type_version:
             parts = [p.strip() for p in nsd_type_version.split(" - ")]
             if len(parts) >= 2:
                 data["version"] = (
-                    self.datacleaner.clean_text(parts[-1]) if parts[-1] else None
+                    self.data_cleaner.clean_text(parts[-1]) if parts[-1] else None
                 )
                 data["nsd_type"] = (
-                    self.datacleaner.clean_text(parts[0]) if parts[0] else None
+                    self.data_cleaner.clean_text(parts[0]) if parts[0] else None
                 )
 
         data["sent_date"] = (
-            self.datacleaner.cleandate(sent_date) if sent_date else None
+            self.data_cleaner.clean_date(sent_date) if sent_date else None
         )
 
         return data
@@ -290,14 +290,14 @@ class NsdScraper(ScraperNsdPort):
         nsd = start - 1
         last_valid = None
 
-        max_linear_holes = self.config.scraping.linear_holes or 2000
+        max_linear_holes = self.config.global_settings.max_linear_holes or 2000
         hole_count = 0
 
         # Phase 1: linear search to find the first valid NSD
         while nsd <= max_limit and hole_count < max_linear_holes:
             # Try sequential NSDs until one is valid or the hole limit is reached
-            fetched = self._try_nsd(nsd)
-            if fetched:
+            parsed = self._try_nsd(nsd)
+            if parsed:
                 last_valid = nsd
                 break
             nsd += 1
@@ -306,8 +306,8 @@ class NsdScraper(ScraperNsdPort):
         # Phase 2: exponential search to locate an invalid boundary
         multiplier = 1
         while nsd <= max_limit and hole_count < max_linear_holes:
-            fetched = self._try_nsd(nsd)
-            if fetched:
+            parsed = self._try_nsd(nsd)
+            if parsed:
                 last_valid = nsd
                 multiplier += 1
                 nsd = nsd * multiplier
@@ -327,9 +327,9 @@ class NsdScraper(ScraperNsdPort):
                 nsd_low + nsd_high + 1
             ) // 2  # arredonda para cima para evitar loop infinito
             # nsd_diff = nsd_high - nsd_low
-            fetched = self._try_nsd(nsd_mid)
+            parsed = self._try_nsd(nsd_mid)
 
-            if fetched:
+            if parsed:
                 nsd_low = nsd_mid  # é válido, sobe o piso
             else:
                 nsd_high = nsd_mid - 1  # é inválido, desce o teto
@@ -342,10 +342,10 @@ class NsdScraper(ScraperNsdPort):
             # Request the NSD page and parse its HTML
             url = self.nsd_endpoint.format(nsd=nsd)
             body = self.http_client.fetch(url)
-            fetched = self._parse_html(nsd, body.decode("utf-8"))
+            parsed = self._parse_html(nsd, body.decode("utf-8"))
 
             # Only return results if the page contains a "sent_date" field
-            return fetched if fetched.get("sent_date") else None
+            return parsed if parsed.get("sent_date") else None
         except Exception:
             # Ignore any network or parsing errors
             return None
@@ -373,7 +373,7 @@ class NsdScraper(ScraperNsdPort):
             after the last stored record.
         """
         # Get all nsd with valid sent_date
-        if not self.existing_codes:
+        if not self.skip_codes:
             return start
 
         dates = [d for (d,) in self.repository.iter_existing_by_columns("sent_date")]
@@ -385,7 +385,7 @@ class NsdScraper(ScraperNsdPort):
         total_span_days = (last_date - first_date).days or 1  # type: ignore[assignment]
 
         # Daily nsd per day Average
-        daily_avg = len(self.existing_codes) / total_span_days
+        daily_avg = len(self.skip_codes) / total_span_days
 
         # days elapsed since last_date
         days_elapsed = max((datetime.now() - last_date).days, 0)  # type: ignore[assignment]
@@ -394,7 +394,7 @@ class NsdScraper(ScraperNsdPort):
         last_estimated_nsd = (
             start
             + int(daily_avg * days_elapsed * safety_factor)
-            + self.config.scraping.linear_holes
+            + self.config.global_settings.max_linear_holes
         )
 
         return last_estimated_nsd

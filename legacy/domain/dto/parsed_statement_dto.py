@@ -7,7 +7,7 @@ from typing import Optional
 
 
 @dataclass(frozen=True, kw_only=True)
-class StatementFetchedDTO:
+class ParsedStatementDTO:
     """Immutable representation of a cleaned statement row."""
 
     id: Optional[int] = None
@@ -23,14 +23,14 @@ class StatementFetchedDTO:
     processing_hash: str = ""
 
     @staticmethod
-    def from_dict(raw: dict) -> "StatementFetchedDTO":
-        """Create ``StatementFetchedDTO`` from a raw dictionary."""
+    def from_dict(raw: dict) -> "ParsedStatementDTO":
+        """Create ``ParsedStatementDTO`` from a raw dictionary."""
         nsd_raw = raw.get("nsd", "")
         if nsd_raw is None or not str(nsd_raw).isdigit():
             raise ValueError("Invalid NSD value")
         nsd_value = str(nsd_raw)
 
-        return StatementFetchedDTO(
+        return ParsedStatementDTO(
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name"),

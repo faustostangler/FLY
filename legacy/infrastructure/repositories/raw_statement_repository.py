@@ -6,20 +6,20 @@ from typing import List, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
-from domain.dto.statement_raw_dto import StatementRawDTO
-from domain.ports import ConfigPort, LoggerPort, StatementRawRepositoryPort
+from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.ports import ConfigPort, LoggerPort, RawStatementRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
-from infrastructure.models.raw_statement_model import StatementRawModel
+from infrastructure.models.raw_statement_model import RawStatementModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
 )
 
 
-class SqlAlchemyStatementRawRepository(
-    SqlAlchemyRepositoryBase[StatementRawDTO, int],
-    StatementRawRepositoryPort,
+class SqlAlchemyRawStatementRepository(
+    SqlAlchemyRepositoryBase[RawStatementDTO, int],
+    RawStatementRepositoryPort,
 ):
-    """SQLite-backed repository for ``StatementRawDTO`` objects."""
+    """SQLite-backed repository for ``RawStatementDTO`` objects."""
 
     def __init__(
         self, connection_string: str, config: ConfigPort, logger: LoggerPort
@@ -29,7 +29,7 @@ class SqlAlchemyStatementRawRepository(
         self.config = config
         self.logger = logger
 
-    def save_all(self, items: List[StatementRawDTO]) -> None:
+    def save_all(self, items: List[RawStatementDTO]) -> None:
         """Persist raw statements using SQLite upserts."""
         session = self.Session()
         try:
@@ -71,14 +71,14 @@ class SqlAlchemyStatementRawRepository(
         Returns:
             type: The model class associated with this repository.
         """
-        return StatementRawModel, (StatementRawModel.id,)
+        return RawStatementModel, (RawStatementModel.id,)
 
-    def get_by_company_name(self, company_name: str) -> list[StatementRawDTO]:
+    def get_by_company_name(self, company_name: str) -> list[RawStatementDTO]:
         """Return raw statement rows for the given company."""
         with self.Session() as session:
             results = (
-                session.query(StatementRawModel)
-                .filter(StatementRawModel.company_name == company_name)
+                session.query(RawStatementModel)
+                .filter(RawStatementModel.company_name == company_name)
                 .all()
             )
             return [r.to_dto() for r in results]

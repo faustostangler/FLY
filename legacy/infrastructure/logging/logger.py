@@ -1,7 +1,7 @@
 import logging
 from typing import Any, MutableMapping, Optional
 
-from application.ports.logger_port import LoggerPort
+from domain.ports.logger_port import LoggerPort
 from infrastructure.config import ConfigAdapter
 from infrastructure.logging.context_tracker import ContextTracker
 from infrastructure.logging.progress_formatter import ProgressFormatter

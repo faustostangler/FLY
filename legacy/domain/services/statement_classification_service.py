@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Protocol, Tuple
 
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.utils.criteria_node import CriteriaNode
 
 
@@ -34,9 +34,9 @@ class StatementClassificationService:
 
     def classify(
         self, rows: List[_RowLike], roots: List[CriteriaNode]
-    ) -> List[StatementFetchedDTO]:
+    ) -> List[ParsedStatementDTO]:
         """Classify ``rows`` using ``roots`` criteria tree."""
-        result: List[StatementFetchedDTO] = []
+        result: List[ParsedStatementDTO] = []
         for node in roots:
             # print(f"Processing node: {node.target_line}")
             result.extend(self._process_node(rows, node))
@@ -44,13 +44,13 @@ class StatementClassificationService:
 
     def _process_node(
         self, rows: List[_RowLike], node: CriteriaNode
-    ) -> List[StatementFetchedDTO]:
+    ) -> List[ParsedStatementDTO]:
         hits = [r for r in rows if self._matches(r, node.criteria)]
-        fetched = [self._to_fetched(r, node.target_line) for r in hits]
+        parsed = [self._to_parsed(r, node.target_line) for r in hits]
 
-        parents = {self._normalize_account(dto.account) for dto in fetched}
+        parents = {self._normalize_account(dto.account) for dto in parsed}
         if not parents:
-            return fetched
+            return parsed
 
         children_rows = [
             r
@@ -58,16 +58,16 @@ class StatementClassificationService:
             if any(self._normalize_account(r.account).startswith(p) for p in parents)
         ]
         for child_node in node.children:
-            fetched.extend(self._process_node(children_rows, child_node))
-        return fetched
+            parsed.extend(self._process_node(children_rows, child_node))
+        return parsed
 
-    def _to_fetched(self, row: _RowLike, target_line: str) -> StatementFetchedDTO:
+    def _to_parsed(self, row: _RowLike, target_line: str) -> ParsedStatementDTO:
         parts = target_line.split(" - ", 1)
         account = parts[0].strip()
         # raw_account = parts[0].strip()
         # account = ".".join(seg.zfill(2) for seg in raw_account.split("."))
         description = parts[1].strip() if len(parts) > 1 else row.description
-        return StatementFetchedDTO(
+        return ParsedStatementDTO(
             nsd=row.nsd,
             company_name=row.company_name,
             quarter=row.quarter,

@@ -3,14 +3,14 @@ from sqlalchemy import text
 from domain.dto.company_data_dto import CompanyDataDTO
 from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.company_repository import (
-    SqlAlchemyRepositoryCompanyData,
+    SqlAlchemyCompanyDataRepository,
 )
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_save_all(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyRepositoryCompanyData(
+    repo = SqlAlchemyCompanyDataRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -33,7 +33,7 @@ def test_save_all(SessionLocal, engine):
 
 def test_save_all_json_string(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyRepositoryCompanyData(
+    repo = SqlAlchemyCompanyDataRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -64,7 +64,7 @@ def test_save_all_json_string(SessionLocal, engine):
 
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyRepositoryCompanyData(
+    repo = SqlAlchemyCompanyDataRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),

@@ -1,5 +1,5 @@
 
-# Protocol for HTTP clients that support session affinity (used by StatementsRawcraper).
+# Protocol for HTTP clients that support session affinity (used by RawStatementScraper).
 from __future__ import annotations
 from typing import Protocol, Any, ContextManager
 

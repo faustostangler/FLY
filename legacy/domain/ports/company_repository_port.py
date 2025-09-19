@@ -6,10 +6,10 @@ from abc import abstractmethod
 
 from domain.dto.company_data_dto import CompanyDataDTO
 
-from .repository_base_port import RepositoryBasePort
+from .base_repository_port import RepositoryBasePort
 
 
-class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int]):
+class CompanyDataRepositoryPort(RepositoryBasePort[CompanyDataDTO, int]):
     """Interface (port) for persistence operations related to CompanyData
     entities.
 

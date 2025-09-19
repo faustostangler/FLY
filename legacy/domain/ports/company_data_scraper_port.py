@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from domain.dto.raw_company_data_dto import CompanyDataRawDTO
 
-from .scraper_base_port import ScraperBasePort
+from .base_scraper_port import BaseScraperPort
 
 
-class ScraperCompanyDataPort(ScraperBasePort[CompanyDataRawDTO]):
+class CompanyDataScraperPort(BaseScraperPort[CompanyDataRawDTO]):
     """Port for external company data providers."""

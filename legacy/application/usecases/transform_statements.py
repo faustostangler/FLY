@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import ConfigPort, LoggerPort, StatementTransformerPort
 from domain.utils.validation_utils import validate_quarter_completeness
 from domain.utils.version_utils import filter_latest_versions
@@ -26,10 +26,10 @@ class TransformStatementsUseCase:
         self.logger = logger
 
     def execute(
-        self, fetched_dtos: List[StatementFetchedDTO]
-    ) -> List[StatementFetchedDTO]:
-        """Run transformation pipeline for ``fetched_dtos``."""
-        stage1 = filter_latest_versions(fetched_dtos)
+        self, parsed_dtos: List[ParsedStatementDTO]
+    ) -> List[ParsedStatementDTO]:
+        """Run transformation pipeline for ``parsed_dtos``."""
+        stage1 = filter_latest_versions(parsed_dtos)
 
         from infrastructure.utils.csv_utils import save_dtos_to_csv
 

@@ -3,12 +3,12 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 
-from .abstract_statement_model import BaseStatementModel
+from .abstract_statement_model import AbstractStatementModel
 
 
-class StatementRawModel(BaseStatementModel):
+class RawStatementModel(AbstractStatementModel):
     """ORM model for raw statement rows."""
 
     __tablename__ = "tbl_raw_statements"
@@ -31,18 +31,18 @@ class StatementRawModel(BaseStatementModel):
             "grupo",
             "quadro",
             "account",
-            name="uq_statements_raw_fullkey",
+            name="uq_raw_statements_fullkey",
         ),
-        Index("ix_statements_raw_company_name", "company_name"),
-        Index("ix_statements_raw_quarter", "quarter"),
-        Index("ix_statements_raw_account", "account"),
-        Index("ix_statements_raw_nsd", "nsd"),
-        Index("ix_statements_raw_company_name_quarter", "company_name", "quarter"),
+        Index("ix_raw_statements_company_name", "company_name"),
+        Index("ix_raw_statements_quarter", "quarter"),
+        Index("ix_raw_statements_account", "account"),
+        Index("ix_raw_statements_nsd", "nsd"),
+        Index("ix_raw_statements_company_name_quarter", "company_name", "quarter"),
     )
 
     @staticmethod
-    def from_dto(dto: StatementRawDTO) -> "StatementRawModel":
-        return StatementRawModel(**StatementRawModel._kwargs_from_dto(dto))
+    def from_dto(dto: RawStatementDTO) -> "RawStatementModel":
+        return RawStatementModel(**RawStatementModel._kwargs_from_dto(dto))
 
-    def to_dto(self) -> StatementRawDTO:
-        return StatementRawDTO(**self._dto_kwargs())
+    def to_dto(self) -> RawStatementDTO:
+        return RawStatementDTO(**self._dto_kwargs())

@@ -7,8 +7,8 @@ from domain.dto import SyncCompanyDataResultDTO
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.raw_company_data_dto import CompanyDataRawDTO
 from domain.ports import (
-    RepositoryCompanyDataPort,
-    ScraperCompanyDataPort,
+    CompanyDataRepositoryPort,
+    CompanyDataScraperPort,
     LoggerPort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
@@ -20,8 +20,8 @@ class SyncCompanyDataUseCase:
     def __init__(
         self,
         logger: LoggerPort,
-        repository: RepositoryCompanyDataPort,
-        scraper: ScraperCompanyDataPort,
+        repository: CompanyDataRepositoryPort,
+        scraper: CompanyDataScraperPort,
         max_workers: int = 1,
     ):
         """Store dependencies and configure use case execution."""
@@ -46,14 +46,14 @@ class SyncCompanyDataUseCase:
         start = time.perf_counter()
 
         # busca todos os company_name que já estão na tabela
-        existing_codes = [
+        skip_codes = [
             code for (code,) in self.repository.iter_existing_by_columns("company_name")
         ]
 
         # self.logger.log("Call Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
         # Fetch all companies from the scraper and persist them batch-wise.
         results = self.scraper.fetch_all(
-            existing_codes=existing_codes,
+            skip_codes=skip_codes,
             save_callback=self._save_batch,
         )
         # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
@@ -66,7 +66,7 @@ class SyncCompanyDataUseCase:
 
         return SyncCompanyDataResultDTO(
             processed_count=len(results.items),
-            skipped_count=len(existing_codes),
+            skipped_count=len(skip_codes),
             bytes_downloaded=bytes_downloaded,
             elapsed_time=elapsed,
         )

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from domain.dto.nsd_dto import NsdDTO
 from domain.ports import (
-    RepositoryCompanyDataPort,
+    CompanyDataRepositoryPort,
     ConfigPort,
     LoggerPort,
-    RepositoryNsdPort,
-    ScraperNsdPort,
+    NSDRepositoryPort,
+    NSDSourcePort,
 )
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.utils.id_generator import IdGenerator
@@ -19,9 +19,9 @@ class SyncNSDUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryNsdPort,
-        company_repo: RepositoryCompanyDataPort,
-        scraper: ScraperNsdPort,
+        repository: NSDRepositoryPort,
+        company_repo: CompanyDataRepositoryPort,
+        scraper: NSDSourcePort,
     ) -> None:
         """Store dependencies required for synchronization."""
         self.config = config
@@ -46,7 +46,7 @@ class SyncNSDUseCase:
         # Fetch all documents from the scraper, persisting them in batches.
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")
         self.scraper.fetch_all(
-            existing_codes=existing_nsd,
+            skip_codes=existing_nsd,
             save_callback=self._save_batch,
         )
         # self.logger.log("Call Method controller.run()._nsd_service().run().sync_nsd_usecase.run().fetch_all()", level="info")

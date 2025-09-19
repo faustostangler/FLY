@@ -1,7 +1,7 @@
 """Command-line entry point for the FLY application."""
 
 from infrastructure.config import Config
-from infrastructure.factories import create_datacleaner
+from infrastructure.factories import create_data_cleaner
 from infrastructure.logging import Logger
 from presentation import CLIAdapter
 
@@ -27,12 +27,12 @@ def main() -> None:
             level="info",
         )
 
-        # Load datacleaner
-        datacleaner = create_datacleaner(config, logger)
+        # Load data_cleaner
+        data_cleaner = create_data_cleaner(config, logger)
 
         # Entry point for the FLY CLI application.
         # logger.log("Instantiate controller", level="info")
-        controller = CLIAdapter(config=config, logger=logger, datacleaner=datacleaner)
+        controller = CLIAdapter(config=config, logger=logger, data_cleaner=data_cleaner)
 
         # Run Controller
         # logger.log("Call Method controller.start()", level="info")

@@ -52,7 +52,7 @@ class SqlAlchemyRepositoryBase(
         # Must be implemented by subclass to define the ORM mapping
         raise NotImplementedError
 
-    def save_all(self, items: Sequence[T]) -> None:
+    def save_all(self, items: List[T]) -> None:
         """Persist a list of DTOs in bulk.
 
         Args:

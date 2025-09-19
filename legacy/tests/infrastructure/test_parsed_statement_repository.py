@@ -2,17 +2,17 @@ from dataclasses import replace
 
 from sqlalchemy import text
 
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
 from infrastructure.models.base_model import BaseModel
-from infrastructure.repositories.fetched_statement_repository import (
-    SqlAlchemyStatementFetchedRepository,
+from infrastructure.repositories.parsed_statement_repository import (
+    SqlAlchemyParsedStatementRepository,
 )
 from tests.conftest import DummyConfig, DummyLogger
 
 
 def test_replace_and_exists(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyStatementFetchedRepository(
+    repo = SqlAlchemyParsedStatementRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -21,7 +21,7 @@ def test_replace_and_exists(SessionLocal, engine):
     repo.Session = SessionLocal
     BaseModel.metadata.create_all(engine)
 
-    dto = StatementFetchedDTO(
+    dto = ParsedStatementDTO(
         nsd="1",
         company_name="ACME",
         quarter="2020-03-31",
@@ -35,7 +35,7 @@ def test_replace_and_exists(SessionLocal, engine):
     )
     repo.save_all([dto])
 
-    new_dto = StatementFetchedDTO(
+    new_dto = ParsedStatementDTO(
         nsd="2",
         company_name="ACME",
         quarter="2020-06-30",
@@ -54,10 +54,10 @@ def test_replace_and_exists(SessionLocal, engine):
 
     with engine.connect() as conn:
         count = conn.execute(
-            text("SELECT COUNT(*) FROM tbl_statements_fetched")
+            text("SELECT COUNT(*) FROM tbl_parsed_statements")
         ).scalar()
         phash = conn.execute(
-            text("SELECT processing_hash FROM tbl_statements_fetched")
+            text("SELECT processing_hash FROM tbl_parsed_statements")
         ).scalar()
 
     assert count == 1
@@ -66,7 +66,7 @@ def test_replace_and_exists(SessionLocal, engine):
 
 def test_save_all_upserts(SessionLocal, engine):
     cfg = DummyConfig()
-    repo = SqlAlchemyStatementFetchedRepository(
+    repo = SqlAlchemyParsedStatementRepository(
         connection_string=cfg.database.connection_string,
         config=cfg,
         logger=DummyLogger(),
@@ -76,7 +76,7 @@ def test_save_all_upserts(SessionLocal, engine):
     BaseModel.metadata.drop_all(engine)
     BaseModel.metadata.create_all(engine)
 
-    base = StatementFetchedDTO(
+    base = ParsedStatementDTO(
         nsd="1",
         company_name="ACME",
         quarter="2020-03-31",
@@ -94,12 +94,12 @@ def test_save_all_upserts(SessionLocal, engine):
 
     with engine.connect() as conn:
         count = conn.execute(
-            text("SELECT COUNT(*) FROM tbl_statements_fetched")
+            text("SELECT COUNT(*) FROM tbl_parsed_statements")
         ).scalar()
         value = conn.execute(
             text(
                 """
-                SELECT value FROM tbl_statements_fetched
+                SELECT value FROM tbl_parsed_statements
                 WHERE nsd='1' AND account='01'
                 """
             )

@@ -15,7 +15,7 @@ from domain.dto import (
     WorkerTaskDTO,
 )
 from domain.ports import (
-    ScraperCompanyDataPort,
+    CompanyDataScraperPort,
     ConfigPort,
     LoggerPort,
     MetricsCollectorPort,
@@ -23,7 +23,7 @@ from domain.ports import (
 )
 from infrastructure.helpers import SaveStrategy
 from infrastructure.helpers.byte_formatter import ByteFormatter
-from infrastructure.helpers.datacleaner import DataCleaner
+from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.http.affinity_port import AffinityHttpClient
 from infrastructure.scrapers.company_data_processors import (
     CompanyDataDetailProcessor,
@@ -33,7 +33,7 @@ from infrastructure.scrapers.company_data_processors import (
 )
 
 
-class CompanyDataScraper(ScraperCompanyDataPort):
+class CompanyDataScraper(CompanyDataScraperPort):
     """Scraper adapter responsible for fetching raw company data.
 
     In a real implementation, this could use requests, BeautifulSoup, or
@@ -44,7 +44,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        datacleaner: DataCleaner,
+        data_cleaner: DataCleaner,
         mapper: CompanyDataMapper,
         worker_pool_executor: WorkerPoolPort,
         metrics_collector: MetricsCollectorPort,
@@ -75,7 +75,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Store configuration and logger for use throughout the scraper
         self.config = config
         self.logger = logger
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
         self.mapper = mapper
         self.worker_pool_executor = worker_pool_executor
         self._metrics_collector = metrics_collector
@@ -94,7 +94,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Initialize a counter for total processed items
         self.processed_count = 0
 
-        self.entry_cleaner = EntryCleaner(self.datacleaner)
+        self.entry_cleaner = EntryCleaner(self.data_cleaner)
         self.detail_fetcher = DetailFetcher(
             http_client=self.http_client,
             endpoint_detail=self.endpoint_detail,
@@ -113,7 +113,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        skip_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[CompanyDataRawDTO]], None]] = None,
         **kwargs,
     ) -> ExecutionResultDTO[CompanyDataRawDTO]:
@@ -121,7 +121,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         Args:
             threshold: Number of companies to buffer before saving.
-            existing_codes: CVM codes to ignore.
+            skip_codes: CVM codes to ignore.
             save_callback: Optional callback to persist partial results.
             max_workers: Optional thread count for future parallelism.
 
@@ -130,10 +130,10 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         """
         # self.logger.log("Run  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
 
-        # Ensure existing_codes is a set (to avoid None and allow fast lookup)
-        self.existing_codes = existing_codes or set()
+        # Ensure skip_codes is a set (to avoid None and allow fast lookup)
+        self.skip_codes = skip_codes or set()
         # Determine the save threshold (number of companies before saving buffer)
-        self.threshold = threshold or self.config.repository.persistence_threshold or 50
+        self.threshold = threshold or self.config.global_settings.threshold or 50
         # Determine the number of simultaneous process
 
         def noop(_buffer: List[Dict]) -> None:
@@ -161,7 +161,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         # self.logger.log("End  Method sync_companies_usecase.run().fetch_all(save_callback, max_workers)", level="info")
 
-        # Return the complete list of fetched company details
+        # Return the complete list of parsed company details
         return companies
 
     def _fetch_companies_list(
@@ -244,7 +244,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                         "start_time": start_time,
                     },
                     extra=extra_info,
-                    worker_id=worker_id,
+                    worker_id=task.worker_id,
                 )
 
                 # self.logger.log("End  Method CompanyDataScraper._fetch_companies_list().processor()", level="info")
@@ -280,14 +280,14 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         Fetches and parses detailed information for a list of companies, with optional skipping and periodic saving.
         Args:
             companies_list (List[Dict]): List of company dictionaries, each containing at least a "codeCVM" key.
-            existing_codes (Optional[Set[str]], optional): Set of CVM codes to skip during processing. Defaults to None.
+            skip_codes (Optional[Set[str]], optional): Set of CVM codes to skip during processing. Defaults to None.
             save_callback (Optional[Callable[[List[CompanyDataRawDTO]], None]], optional):
                 Callback function to save buffered company details periodically.
                 Defaults to None.
             threshold (Optional[int], optional): Number of companies to process before triggering the save_callback. If not provided, uses configuration or defaults to 50.
             max_workers (int | None, optional): Reserved for future parallel fetching.
         Returns:
-            ExecutionResultDTO[CompanyDataRawDTO]: Fetched company detail DTOs and
+            ExecutionResultDTO[CompanyDataRawDTO]: Parsed company detail DTOs and
             execution metrics.
         Logs:
             - Progress and status information at each step.
@@ -314,8 +314,8 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             entry = task.data
             worker_id = task.worker_id
 
-            company_name = self.datacleaner.clean_text(entry.get("companyName"))
-            if company_name in self.existing_codes:
+            company_name = self.data_cleaner.clean_text(entry.get("companyName"))
+            if company_name in self.skip_codes:
                 # download_bytes_pre = self._metrics_collector.network_bytes
                 # download_bytes_pos = self._metrics_collector.network_bytes - download_bytes_pre
 
@@ -377,7 +377,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             return result
 
         def handle_batch(item: Optional[CompanyDataRawDTO]) -> None:
-            # Buffer each fetched company and flush when threshold is hit
+            # Buffer each parsed company and flush when threshold is hit
             # self.logger.log("Call Method strategy.handle()", level="info")
             if item is not None:
                 strategy.handle([item])

@@ -12,14 +12,14 @@ from .metrics_collector_port import MetricsCollectorPort
 T = TypeVar("T")
 
 
-class ScraperBasePort(ABC, Generic[T]):
+class BaseScraperPort(ABC, Generic[T]):
     """Generic port for external data providers."""
 
     @abstractmethod
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        skip_codes: Optional[List[str]] = None,
         save_callback: Optional[Callable[[List[T]], None]] = None,
         **kwargs,
     ) -> ExecutionResultDTO[T]:

@@ -10,8 +10,8 @@ from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
 from domain.dto import NsdDTO
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from tests.conftest import DummyLogger
 
 
@@ -41,7 +41,7 @@ def test_full_statement_pipeline(monkeypatch):
     company_repo = MagicMock()
     nsd_repo = MagicMock()
     raw_repo = MagicMock()
-    fetched_repo = MagicMock()
+    parsed_repo = MagicMock()
     source = MagicMock()
     collector = MagicMock()
     worker_pool = MagicMock()
@@ -53,7 +53,7 @@ def test_full_statement_pipeline(monkeypatch):
         company_repo=company_repo,
         nsd_repo=nsd_repo,
         raw_statement_repo=raw_repo,
-        fetched_statements_repo=fetched_repo,
+        parsed_statements_repo=parsed_repo,
         metrics_collector=collector,
         worker_pool_executor=worker_pool,
     )
@@ -71,7 +71,7 @@ def test_full_statement_pipeline(monkeypatch):
         sent_date=None,
         reason=None,
     )
-    raw_row = StatementRawDTO(
+    raw_row = RawStatementDTO(
         nsd="1",
         company_name="Comp",
         quarter=None,
@@ -91,12 +91,12 @@ def test_full_statement_pipeline(monkeypatch):
 
     parse_processor = ParseStatementsProcessor(
         logger=logger,
-        repository=fetched_repo,
+        repository=parsed_repo,
         config=config,
         worker_pool_executor=worker_pool,
         metrics_collector=collector,
     )
-    fetched_dto = StatementFetchedDTO(
+    parsed_dto = ParsedStatementDTO(
         nsd="1",
         company_name="Comp",
         quarter=None,
@@ -109,12 +109,12 @@ def test_full_statement_pipeline(monkeypatch):
         processing_hash="hash",
     )
     parse_processor.parse_usecase.parse_and_store_row = MagicMock(
-        return_value=fetched_dto
+        return_value=parsed_dto
     )
-    worker_pool.run = MagicMock(return_value=MagicMock(items=[[fetched_dto]]))
+    worker_pool.run = MagicMock(return_value=MagicMock(items=[[parsed_dto]]))
     monkeypatch.setattr(parse_processor.parse_usecase, "finalize", lambda: None)
 
-    fetched_groups = parse_processor.run(raw_rows)
+    parsed_groups = parse_processor.run(raw_rows)
 
     monkeypatch.setattr(
         "application.processors.transform_statements_processor.MathStatementTransformerAdapter",
@@ -125,9 +125,9 @@ def test_full_statement_pipeline(monkeypatch):
         MagicMock(return_value=MagicMock()),
     )
     transform_processor = TransformStatementsProcessor(
-        config=config, logger=logger, fetched_repo=fetched_repo
+        config=config, logger=logger, parsed_repo=parsed_repo
     )
     transform_processor.transform_usecase.execute = MagicMock(side_effect=lambda g: g)
-    result = transform_processor.run(fetched_groups)
+    result = transform_processor.run(parsed_groups)
 
-    assert result == [[fetched_dto]]
+    assert result == [[parsed_dto]]

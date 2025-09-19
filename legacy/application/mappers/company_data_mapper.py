@@ -9,11 +9,11 @@ from domain.ports import DataCleanerPort
 
 
 class CompanyDataMapper:
-    """Merge base and detail company data into a fetched DTO."""
+    """Merge base and detail company data into a parsed DTO."""
 
-    def __init__(self, datacleaner: DataCleanerPort) -> None:
+    def __init__(self, data_cleaner: DataCleanerPort) -> None:
         """Create a new mapper using the provided data cleaner utility."""
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
 
     def merge_company_data_dtos(
         self,
@@ -28,13 +28,13 @@ class CompanyDataMapper:
         industry_classification = detail.industry_classification or ""
         parts = [p.strip() for p in industry_classification.split("/")]
         industry_sector = (
-            self.datacleaner.clean_text(parts[0]) if len(parts) > 0 else None
+            self.data_cleaner.clean_text(parts[0]) if len(parts) > 0 else None
         )
         industry_subsector = (
-            self.datacleaner.clean_text(parts[1]) if len(parts) > 1 else None
+            self.data_cleaner.clean_text(parts[1]) if len(parts) > 1 else None
         )
         industry_segment = (
-            self.datacleaner.clean_text(parts[2]) if len(parts) > 2 else None
+            self.data_cleaner.clean_text(parts[2]) if len(parts) > 2 else None
         )
 
         # Build the raw company DTO with all collected information.

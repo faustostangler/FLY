@@ -1,10 +1,10 @@
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.services import StatementClassificationService
 from domain.utils.criteria_node import CriteriaNode
 
 
-def build_row(account: str) -> StatementRawDTO:
-    return StatementRawDTO(
+def build_row(account: str) -> RawStatementDTO:
+    return RawStatementDTO(
         nsd="1",
         company_name="ACME",
         quarter="2024-03-31",

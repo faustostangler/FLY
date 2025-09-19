@@ -12,25 +12,25 @@ from bs4 import BeautifulSoup, Tag
 
 from domain.dto import WorkerTaskDTO
 from domain.dto.nsd_dto import NsdDTO
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
-from domain.ports.scraper_ports import StatementsRawcraperPort
+from domain.ports.scraper_ports import RawStatementScraperPort
 from infrastructure.adapters.sqlalchemy_engine_mixin import SqlAlchemyEngineMixin
 from infrastructure.helpers import WorkerPool
-from infrastructure.helpers.datacleaner import DataCleaner
+from infrastructure.helpers.data_cleaner import DataCleaner
 from infrastructure.helpers.fetch_utils import FetchUtils
 from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.utils.id_generator import IdGenerator
 
 
-class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
+class RawStatementScraper(SqlAlchemyEngineMixin, RawStatementScraperPort):
     """Fetch statement HTML using ``requests``."""
 
     def __init__(
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        datacleaner: DataCleaner,
+        data_cleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         worker_pool_executor: WorkerPool,
     ) -> None:
@@ -38,7 +38,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
         self._config: ConfigPort = config
 
         # Adapter-specific dependencies
-        self.datacleaner = datacleaner
+        self.data_cleaner = data_cleaner
         self._metrics_collector = metrics_collector
         self.worker_pool_executor = worker_pool_executor
 
@@ -67,7 +67,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
     def _parse_statement_page(
         self, soup: BeautifulSoup, group: str
     ) -> List[Dict[str, Any]]:
-        """Return fetched rows from a statement ``soup``."""
+        """Return parsed rows from a statement ``soup``."""
         rows: List[Dict[str, Any]] = []
 
         # Default parsing for Capital Composition page
@@ -83,7 +83,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                 element = soup.find(id=elem_id)
                 if element is None:
                     return 0.0
-                value = self.datacleaner.clean_number(element.get_text())
+                value = self.data_cleaner.clean_number(element.get_text())
                 result = thousand * value
                 return result if result is not None else 0.0
 
@@ -123,7 +123,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                     {
                         "account": account,
                         "description": account_description,
-                        "value": (self.datacleaner.clean_number(account_value) or 0.0)
+                        "value": (self.data_cleaner.clean_number(account_value) or 0.0)
                         * thousand,
                     }
                 )
@@ -206,7 +206,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
         return result
 
     def fetch(self, task: WorkerTaskDTO) -> dict[str, Any]:
-        """Fetch statement pages for the given NSD and return fetched rows."""
+        """Fetch statement pages for the given NSD and return parsed rows."""
         # self.logger.log("Run  Method controller.run()._statement_service().statements_fetch_service.run().fetch_usecase.run().fetch_all().processor().source.fetch()", level="info")
         row = task.data
 
@@ -222,11 +222,11 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
 
         hash_value = self._extract_hash(response.text)
 
-        statement_items = self.config.domain.statement_items
+        statement_items = self.config.statements.statement_items
         statements_urls = self._build_urls(row, statement_items, hash_value)
 
         # Parse all statement pages
-        statements_rows_dto: List[StatementRawDTO] = []
+        statements_rows_dto: List[RawStatementDTO] = []
 
         # for i, item in enumerate(statements_urls):
         for i in range(len(statements_urls)):
@@ -242,7 +242,7 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                     self.session,
                     url=item["url"],
                     cache_bypass=True,
-                    worker_id=worker_id,
+                    worker_id=task.worker_id,
                 )
                 # 2) registra bytes baixados
                 download = len(response.content)
@@ -302,10 +302,10 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
             result: dict[str, Any] = {"nsd": row, "statements": []}
 
             rows = self._parse_statement_page(soup, item["grupo"])
-            fetched_rows = []
+            parsed_rows = []
 
             for r in rows:
-                dto = StatementRawDTO(
+                dto = RawStatementDTO(
                     nsd=row.nsd,
                     company_name=row.company_name,
                     quarter=quarter,
@@ -316,9 +316,9 @@ class StatementsRawcraper(SqlAlchemyEngineMixin, StatementsRawcraperPort):
                     description=r["description"],
                     value=r["value"],
                 )
-                fetched_rows.append(dto)
+                parsed_rows.append(dto)
 
-            statements_rows_dto.extend(fetched_rows)
+            statements_rows_dto.extend(parsed_rows)
 
         _elapsed = time.perf_counter() - start
         quarter = row.quarter.strftime("%Y-%m-%d") if row.quarter else None

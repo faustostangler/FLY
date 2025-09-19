@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from domain.dto.statement_raw_dto import StatementRawDTO
+from domain.dto.raw_statement_dto import RawStatementDTO
 from domain.utils.validation_utils import validate_quarter_completeness
 
 
 def test_validate_quarter_completeness_detects_missing():
     rows = [
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="1",
             company_name="ACME",
             quarter="2020-03-31",
@@ -17,7 +17,7 @@ def test_validate_quarter_completeness_detects_missing():
             description="",
             value=1.0,
         ),
-        StatementRawDTO(
+        RawStatementDTO(
             nsd="2",
             company_name="ACME",
             quarter="2020-12-31",

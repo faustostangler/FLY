@@ -3,15 +3,15 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.statement_fetched_dto import StatementFetchedDTO
+from domain.dto.parsed_statement_dto import ParsedStatementDTO
 
-from .abstract_statement_model import BaseStatementModel
+from .abstract_statement_model import AbstractStatementModel
 
 
-class StatementFetchedModel(BaseStatementModel):
-    """ORM model for fetched statement rows."""
+class ParsedStatementModel(AbstractStatementModel):
+    """ORM model for parsed statement rows."""
 
-    __tablename__ = "tbl_statements_fetched"
+    __tablename__ = "tbl_parsed_statements"
 
     nsd: Mapped[str] = mapped_column(
         String,
@@ -31,22 +31,22 @@ class StatementFetchedModel(BaseStatementModel):
             "grupo",
             "quadro",
             "account",
-            name="uq_statements_fetched_fullkey",
+            name="uq_parsed_statements_fullkey",
         ),
-        Index("ix_statements_fetched_company_name", "company_name"),
-        Index("ix_statements_fetched_quarter", "quarter"),
-        Index("ix_statements_fetched_account", "account"),
-        Index("ix_statements_fetched_nsd", "nsd"),
-        Index("ix_statements_fetched_company_name_quarter", "company_name", "quarter"),
+        Index("ix_parsed_statements_company_name", "company_name"),
+        Index("ix_parsed_statements_quarter", "quarter"),
+        Index("ix_parsed_statements_account", "account"),
+        Index("ix_parsed_statements_nsd", "nsd"),
+        Index("ix_parsed_statements_company_name_quarter", "company_name", "quarter"),
     )
 
     processing_hash: Mapped[str | None] = mapped_column(String, index=True)
 
-    _FIELDS = BaseStatementModel._FIELDS + ("processing_hash",)
+    _FIELDS = AbstractStatementModel._FIELDS + ("processing_hash",)
 
     @staticmethod
-    def from_dto(dto: StatementFetchedDTO) -> "StatementFetchedModel":
-        return StatementFetchedModel(**StatementFetchedModel._kwargs_from_dto(dto))
+    def from_dto(dto: ParsedStatementDTO) -> "ParsedStatementModel":
+        return ParsedStatementModel(**ParsedStatementModel._kwargs_from_dto(dto))
 
-    def to_dto(self) -> StatementFetchedDTO:
-        return StatementFetchedDTO(**self._dto_kwargs())
+    def to_dto(self) -> ParsedStatementDTO:
+        return ParsedStatementDTO(**self._dto_kwargs())
