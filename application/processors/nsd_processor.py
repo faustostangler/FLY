@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import time
 from datetime import date, datetime
-from typing import Dict, List, Optional, Sequence, Set, cast
+from collections import defaultdict
+from typing import Dict, List, Optional, Sequence, Set, cast, DefaultDict
 
 from application.ports.market_data_port import MarketDataPort
 from application.ports.config_port import ConfigPort

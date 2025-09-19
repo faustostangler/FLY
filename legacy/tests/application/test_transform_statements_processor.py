@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from application.processors.transform_statements_processor import (
     TransformStatementsProcessor,
 )
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dtos.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import ParsedStatementRepositoryPort
 from tests.conftest import DummyConfig, DummyLogger
 

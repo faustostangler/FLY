@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 from application.usecases.fetch_statements import FetchStatementsUseCase
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports import ParsedStatementRepositoryPort, RawStatementRepositoryPort
 from domain.ports.scraper_ports import RawStatementScraperPort
 from tests.conftest import DummyConfig, DummyLogger

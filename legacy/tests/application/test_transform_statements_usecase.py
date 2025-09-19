@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from application.usecases.transform_statements import TransformStatementsUseCase
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 from tests.conftest import DummyConfig
 
 

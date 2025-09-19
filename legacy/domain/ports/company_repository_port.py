@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
-from domain.dto.company_data_dto import CompanyDataDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
 
 from .base_repository_port import RepositoryBasePort
 

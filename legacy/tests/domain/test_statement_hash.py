@@ -1,4 +1,4 @@
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 from domain.utils.statement_hash import compute_hash
 
 

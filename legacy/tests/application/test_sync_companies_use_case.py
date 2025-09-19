@@ -2,10 +2,10 @@ import types
 from unittest.mock import MagicMock
 
 from application.usecases.sync_companies import SyncCompanyDataUseCase
-from domain.dto.company_data_dto import CompanyDataDTO
-from domain.dto.execution_result_dto import ExecutionResultDTO
-from domain.dto.metrics_dto import MetricsDTO
-from domain.dto.sync_companies_result_dto import SyncCompanyDataResultDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.execution_result_dto import ExecutionResultDTO
+from domain.dtos.metrics_dto import MetricsDTO
+from domain.dtos.sync_companies_result_dto import SyncCompanyDataResultDTO
 from domain.ports import CompanyDataRepositoryPort, CompanyDataScraperPort
 from tests.conftest import DummyLogger
 

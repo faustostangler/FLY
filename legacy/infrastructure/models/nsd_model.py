@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 
 from .base_model import BaseModel
 

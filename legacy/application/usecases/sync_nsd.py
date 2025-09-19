@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports import (
     CompanyDataRepositoryPort,
     ConfigPort,
@@ -79,7 +79,7 @@ class SyncNSDUseCase:
         }
         missing = names - existing_companies
         if missing:
-            from domain.dto.company_data_dto import CompanyDataDTO
+            from domain.dtos.company_data_dto import CompanyDataDTO
 
             to_create = [
                 CompanyDataDTO(

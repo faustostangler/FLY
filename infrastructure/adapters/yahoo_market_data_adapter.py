@@ -9,7 +9,7 @@ from typing import Callable, Sequence
 import yfinance as yf
 
 from application.ports.market_data_port import MarketDataPort
-from domain.dto.market_quote_dto import MarketQuoteDTO
+from domain.dtos.market_quote_dto import MarketQuoteDTO
 
 
 class YahooMarketDataAdapter(MarketDataPort):

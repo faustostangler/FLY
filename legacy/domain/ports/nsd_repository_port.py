@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import List, Set
 
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 
 from .base_repository_port import RepositoryBasePort
 

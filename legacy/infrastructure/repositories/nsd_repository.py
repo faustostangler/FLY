@@ -7,7 +7,7 @@ from typing import List, Set, Tuple
 from sqlalchemy.dialects.sqlite import insert
 
 from domain import dto
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports import ConfigPort, LoggerPort, NSDRepositoryPort
 from infrastructure.helpers.list_flattener import ListFlattener
 from infrastructure.models.nsd_model import NSDModel

@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 
 from .abstract_statement_model import AbstractStatementModel
 

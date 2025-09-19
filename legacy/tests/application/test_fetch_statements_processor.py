@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from application.processors.fetch_statements_processor import FetchStatementsProcessor
 from application.usecases.fetch_statements import FetchStatementsUseCase
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports import (
     CompanyDataRepositoryPort,
     NSDRepositoryPort,

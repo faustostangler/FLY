@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from typing import List
 
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 
 from .base_repository_port import RepositoryBasePort
 

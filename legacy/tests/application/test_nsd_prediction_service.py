@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 from application.services.nsd_prediction_service import _find_next_probable_nsd
-from domain.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports import NSDRepositoryPort
 
 

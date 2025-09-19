@@ -4,8 +4,8 @@ import time
 from typing import List
 
 from domain.dto import SyncCompanyDataResultDTO
-from domain.dto.company_data_dto import CompanyDataDTO
-from domain.dto.raw_company_data_dto import CompanyDataRawDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.raw_company_data_dto import CompanyDataRawDTO
 from domain.ports import (
     CompanyDataRepositoryPort,
     CompanyDataScraperPort,

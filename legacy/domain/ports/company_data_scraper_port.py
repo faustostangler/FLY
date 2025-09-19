@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from domain.dto.raw_company_data_dto import CompanyDataRawDTO
+from domain.dtos.raw_company_data_dto import CompanyDataRawDTO
 
 from .base_scraper_port import BaseScraperPort
 

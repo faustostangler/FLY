@@ -6,7 +6,7 @@ import hashlib
 from dataclasses import asdict
 from typing import List
 
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 
 from .math_utils import parse_quarter
 

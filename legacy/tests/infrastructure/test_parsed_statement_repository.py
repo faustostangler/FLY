@@ -2,7 +2,7 @@ from dataclasses import replace
 
 from sqlalchemy import text
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dtos.parsed_statement_dto import ParsedStatementDTO
 from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.parsed_statement_repository import (
     SqlAlchemyParsedStatementRepository,

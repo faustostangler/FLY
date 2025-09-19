@@ -17,8 +17,8 @@ from requests import Response
 
 # Domain deps
 from domain.dto import WorkerTaskDTO
-from domain.dto.nsd_dto import NsdDTO
-from domain.dto.raw_statement_dto import RawStatementDTO
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.raw_statement_dto import RawStatementDTO
 from domain.ports import ConfigPort, LoggerPort, MetricsCollectorPort
 from domain.ports.scraper_ports import RawStatementScraperPort
 

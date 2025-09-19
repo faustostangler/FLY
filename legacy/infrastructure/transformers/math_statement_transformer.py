@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, List, Sequence, Tuple
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dtos.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import ConfigPort, StatementTransformerPort
 
 

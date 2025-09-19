@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Sequence, Tuple
 
-from domain.dto.parsed_statement_dto import ParsedStatementDTO
+from domain.dtos.parsed_statement_dto import ParsedStatementDTO
 from domain.ports import ConfigPort, StatementTransformerPort
 from domain.services import StatementClassificationService
 from infrastructure.config.intel_criteria import load_intel_criteria_nodes

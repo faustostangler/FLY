@@ -3,7 +3,7 @@
 from typing import Sequence, Protocol
 from datetime import date
 
-from domain.dto.market_quote_dto import MarketQuoteDTO
+from domain.dtos.market_quote_dto import MarketQuoteDTO
 
 
 class MarketDataPort(Protocol):

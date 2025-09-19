@@ -201,7 +201,7 @@ class CLIAdapter:
         from typing import  Dict, List, Tuple
         from collections import defaultdict
         from domain.dto import NsdDTO
-        from domain.dto.raw_statement_dto import RawStatementDTO
+        from domain.dtos.raw_statement_dto import RawStatementDTO
 
         raw_statement_repo = SqlAlchemyRawStatementRepository(
             connection_string=self.config.database.connection_string,
