@@ -14,6 +14,7 @@ from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.dtos.market_symbol_dto import MarketSymbolsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
@@ -32,7 +33,14 @@ from infrastructure.utils.id_generator import IdGenerator
 
 class _NsdTxnAggregator:
     """Mantém NSD, RAW e FETCHED juntos para flush atômico."""
-    def __init__(self, *, nsd_repository, statements_raw_repository, statements_fetched_repository):
+
+    def __init__(
+        self,
+        *,
+        nsd_repository,
+        statements_raw_repository,
+        statements_fetched_repository,
+    ):
         self.nsd_repository = nsd_repository
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
@@ -70,15 +78,12 @@ class NsdProcessor:
         *,
         config: ConfigPort,
         logger: LoggerPort,
-
         nsd_repository: RepositoryNsdPort,
         company_repository: RepositoryCompanyDataPort,
         statements_raw_repository: RepositoryStatementsRawPort,
         statements_fetched_repository: RepositoryStatementFetchedPort,
-
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
-
         policy: NsdPolicyPort,
         market_data_port: MarketDataPort,
         financial_normalizer: FinancialNormalizerPort,
@@ -110,7 +115,7 @@ class NsdProcessor:
 
     def run(self, task: WorkerTaskDTO) -> NsdDTO:
         data = task.data
-        # data = 82408  
+        # data = 82408
         # nsd = NsdDTO(id=None, nsd=10012, company_name='IND MAQS AGRICOLAS FUCHS SA', quarter=datetime.datetime(2011, 3, 31, 0, 0), version=2, nsd_type='INFORMACOES TRIMESTRAIS', dri='JALMAR JOSE MARTEL', auditor='MULTICON AUDITORIA E ASSESSORIA CONTABIL SS', responsible_auditor='MARCO ANTONIO PALERMO', protocol='007064ITR310320110200010012-79', sent_date=datetime.datetime(2011, 7, 7, 11, 7, 36), reason='AS INFORMACOES NO RELATORIO DA REVISAO ESPECIAL NAO SE REFEREM AO TRIMESTRE EM QUESTAO E SIM SOBRE O MESMO PERIODO POREM DO EXERCICIO ANTERIOR E QUE AGORA ESTAMOS TRANSCREVENDO O CONTEUDO CORRETO')
 
         start_time = time.perf_counter()
@@ -122,7 +127,7 @@ class NsdProcessor:
         }
 
         if nsd is None:
-            extra_info = [ f""]
+            extra_info = [f""]
             self.logger.log(
                 f"NSD {data}",
                 level="info",
@@ -141,8 +146,14 @@ class NsdProcessor:
                 statements_fetched_repository=self.statements_fetched_repository,
             )
 
-            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
-            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+            nsd_quarter = (
+                nsd.quarter.strftime("%Y-%m-%d")
+                if isinstance(nsd.quarter, datetime)
+                else (nsd.quarter or "")
+            )
+            extra_info = [
+                f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"
+            ]
             self.logger.log(
                 f"NSD {nsd.nsd}",
                 level="info",
@@ -164,12 +175,15 @@ class NsdProcessor:
             when = sd or date(quarter_police.year, quarter_police.month, 1)
             recency = self.policy.compute_recency_window(when)
             action = self.policy.decide_action(
-                year=quarter_police.year, quarter=quarter_police.month, version=nsd.version,
-                is_december=quarter_police.is_december, is_recent=recency.is_recent,
+                year=quarter_police.year,
+                quarter=quarter_police.month,
+                version=nsd.version,
+                is_december=quarter_police.is_december,
+                is_recent=recency.is_recent,
             )
 
             # raw_lines = list(self.scraper_statements_raw.fetch(nsd))
-            raw_result  = self.scraper_statements_raw.fetch(
+            raw_result = self.scraper_statements_raw.fetch(
                 WorkerTaskDTO(
                     index=task.index,
                     data=nsd,
@@ -179,8 +193,14 @@ class NsdProcessor:
             )
             raw_lines = list(raw_result["items"])
 
-            nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
-            extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+            nsd_quarter = (
+                nsd.quarter.strftime("%Y-%m-%d")
+                if isinstance(nsd.quarter, datetime)
+                else (nsd.quarter or "")
+            )
+            extra_info = [
+                f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"
+            ]
             self.logger.log(
                 f"RAW {nsd.nsd}",
                 level="info",
@@ -220,7 +240,6 @@ class NsdProcessor:
             #             value=float(row["value"]),
             #         )
             #     )
-            
 
             if action.is_raw():
                 agg.add_raw_many(raw_lines)
@@ -268,9 +287,11 @@ class NsdProcessor:
                             continue
                     by_company[(s.nsd, company)].add(q_end)
 
-                symbol_cache: Dict[tuple[str, str], Optional[str]] = {}
+                symbol_cache: Dict[tuple[str, str], Optional[MarketSymbolsDTO]] = {}
 
-                def resolve_symbol(nsd_code: str, company: str) -> Optional[str]:
+                def resolve_symbol(
+                    nsd_code: str, company: str
+                ) -> Optional[MarketSymbolsDTO]:
                     key = (nsd_code, company)
                     if key not in symbol_cache:
                         symbol_cache[key] = self.company_repository.get_market_symbol(
@@ -281,14 +302,16 @@ class NsdProcessor:
                     return symbol_cache[key]
 
                 for (nsd_code, company), quarter_ends in by_company.items():
-                    symbol = resolve_symbol(nsd_code, company)
-                    if not symbol:
+                    symbols = resolve_symbol(nsd_code, company)
+                    if not symbols or not symbols.primary:
                         continue
-                    market_service.ensure_series_for_quarters(symbol, quarter_ends)
+                    market_service.ensure_series_for_quarters(
+                        symbols.primary, quarter_ends
+                    )
 
                 def price_lookup(nsd_code: str, company: str, quarter_end: date):
-                    symbol = resolve_symbol(nsd_code, company)
-                    if not symbol:
+                    symbols = resolve_symbol(nsd_code, company)
+                    if not symbols or not symbols.primary:
                         return None
                     when = quarter_end
                     if isinstance(when, datetime):
@@ -298,19 +321,26 @@ class NsdProcessor:
                             when = date.fromisoformat(str(when).split(" ")[0])
                         except Exception:
                             return None
-                    return market_service.price_at_quarter_end(symbol, when)
+                    return market_service.price_at_quarter_end(symbols.primary, when)
 
                 ratios = self.ratios_calculator.calculate(
                     cast(Sequence[StatementFetchedDTO], standardized),
                     price_lookup=price_lookup,
                 )
 
-
-                ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
+                ratios = self.ratios_calculator.calculate(
+                    cast(Sequence[StatementFetchedDTO], standardized)
+                )
                 fetched = list(standardized) + list(ratios)
 
-                nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
-                extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
+                nsd_quarter = (
+                    nsd.quarter.strftime("%Y-%m-%d")
+                    if isinstance(nsd.quarter, datetime)
+                    else (nsd.quarter or "")
+                )
+                extra_info = [
+                    f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"
+                ]
                 self.logger.log(
                     f"FTD {nsd.nsd}",
                     level="info",
@@ -328,7 +358,9 @@ class NsdProcessor:
             except Exception as e:
                 self.logger.log(f"{e}")
 
-    def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:
+    def _ensure_company_exists(
+        self, company_name: Optional[str], *, uow: Uow
+    ) -> Optional[str]:
         if not company_name:
             return None
         cvm = self.company_repository.get_cvm_by_name(company_name, uow=uow)

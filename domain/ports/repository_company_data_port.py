@@ -4,6 +4,7 @@ from typing import Optional, Protocol, runtime_checkable
 
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.market_symbol_dto import MarketSymbolsDTO
 from domain.ports.repository_base_port import RepositoryBasePort
 
 
@@ -21,7 +22,7 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
     """
 
     def get_cvm_by_name(self, company_name: str, *, uow: Uow) -> str | None:
-            """Retrieve the CVM code for a company by its name.
+        """Retrieve the CVM code for a company by its name.
 
         Args:
             company_name (str): The official company name.
@@ -32,11 +33,10 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
 
     def get_market_symbol(
         self, nsd: str | int, company_name: str, *, uow: Uow
-    ) -> Optional[str]:
-        """Resolve the canonical trading symbol for the given company."""
+    ) -> Optional[MarketSymbolsDTO]:
+        """Resolve the canonical trading symbol(s) for the given company."""
 
     # # utilitário para “garantir companhia” em lote
     # def iter_existing_by_names(self, names: set[str], *, uow: Uow) -> Iterator[str]: ...
 
     # # já herdado de RepositoryBasePort: save_all(..., uow)
-

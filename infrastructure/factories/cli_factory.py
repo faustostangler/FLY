@@ -14,6 +14,10 @@ from infrastructure.adapters.symbol_mapping import b3_to_yahoo
 from infrastructure.adapters.yahoo_market_data_adapter import (
     YahooMarketDataAdapter,
 )
+from infrastructure.adapters.b3_cotahist_adapter import B3CotahistAdapter
+from infrastructure.adapters.composite_market_data_adapter import (
+    CompositeMarketDataAdapter,
+)
 
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
 from infrastructure.http.builders import build_http_client
@@ -116,7 +120,12 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         intel_module_path=(getattr(config.domain, "intel_module_path", None))
     )
 
-    market_data_adapter = YahooMarketDataAdapter(symbol_mapper=b3_to_yahoo)
+    market_data_adapter = CompositeMarketDataAdapter(
+        [
+            B3CotahistAdapter(),
+            YahooMarketDataAdapter(symbol_mapper=b3_to_yahoo),
+        ]
+    )
 
     # Return the CLI controller with its dependencies injected
     cli = Cli(

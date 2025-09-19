@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+import json
+import re
+from typing import List, Optional, Sequence, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
@@ -8,6 +10,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.market_symbol_dto import MarketSymbolsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.repository_base import RepositoryBase
@@ -16,8 +19,8 @@ from infrastructure.repositories.repository_base import RepositoryBase
 
 
 class RepositoryCompanyData(
-    RepositoryBase[CompanyDataDTO, int],
-    RepositoryCompanyDataPort):
+    RepositoryBase[CompanyDataDTO, int], RepositoryCompanyDataPort
+):
     """SQLite/SQLAlchemy repository for company data.
 
     Implements the `RepositoryCompanyDataPort` using a local SQLite database
@@ -35,9 +38,7 @@ class RepositoryCompanyData(
 
     """
 
-    def __init__(
-        self, config: ConfigPort, logger: LoggerPort
-    ) -> None:
+    def __init__(self, config: ConfigPort, logger: LoggerPort) -> None:
         """Initialize the repository with configuration and logger.
 
         Args:
@@ -86,7 +87,7 @@ class RepositoryCompanyData(
         model, pk_columns = self.get_model_class()
 
         # Normalize potentially nested inputs into a flat list
-        flat_items = items # ListFlattener.flatten(items)
+        flat_items = items  # ListFlattener.flatten(items)
 
         # Filter out `None` values to avoid mapping errors
         valid_items = [i for i in flat_items if i is not None]
@@ -147,9 +148,92 @@ class RepositoryCompanyData(
 
         return row[0] if row else None
 
+    @staticmethod
+    def _normalize_symbol(value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).upper().strip()
+        if not cleaned:
+            return None
+        cleaned = re.sub(r"[^A-Z0-9]", "", cleaned)
+        if cleaned.endswith("F") and any(ch.isdigit() for ch in cleaned[:-1]):
+            cleaned = cleaned[:-1]
+        return cleaned or None
+
+    @classmethod
+    def _split_codes(cls, raw: Optional[str]) -> List[str]:
+        if raw is None:
+            return []
+        raw = str(raw).strip()
+        if raw == "":
+            return []
+
+        items: List[str] = []
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            tokens = re.split(r"[,;/\s]+", raw)
+            items.extend(token for token in tokens if token)
+        else:
+            if isinstance(parsed, list):
+                items.extend(str(item) for item in parsed if item)
+            elif isinstance(parsed, str):
+                items.append(parsed)
+            elif parsed is not None:
+                items.append(str(parsed))
+
+        normalized: List[str] = []
+        seen = set()
+        for item in items:
+            symbol = cls._normalize_symbol(item)
+            if not symbol or symbol in seen:
+                continue
+            seen.add(symbol)
+            normalized.append(symbol)
+        return normalized
+
+    @staticmethod
+    def _score_symbol(symbol: str, index: int) -> tuple[int, int, int, str]:
+        digits = "".join(ch for ch in symbol if ch.isdigit())
+        suffix_two = digits[-2:] if len(digits) >= 2 else ""
+        suffix_one = digits[-1] if digits else ""
+
+        rank = 5
+        if suffix_one == "3":
+            rank = 0
+        elif suffix_one == "4":
+            rank = 1
+        elif suffix_two == "11":
+            rank = 2
+        elif suffix_one == "5":
+            rank = 3
+        elif suffix_one == "6":
+            rank = 4
+
+        penalty = 1 if suffix_one and symbol.endswith("F") else 0
+        return rank, penalty, index, symbol
+
+    @classmethod
+    def _ordered_candidates(cls, candidates: Sequence[str]) -> List[str]:
+        scored = [
+            cls._score_symbol(symbol, idx) for idx, symbol in enumerate(candidates)
+        ]
+        scored.sort()
+        return [item[-1] for item in scored]
+
+    @classmethod
+    def _extract_root(cls, value: Optional[str]) -> Optional[str]:
+        normalized = cls._normalize_symbol(value)
+        if not normalized:
+            return None
+        for idx, char in enumerate(normalized):
+            if char.isdigit():
+                return normalized[:idx] or None
+        return normalized
+
     def get_market_symbol(
         self, nsd: str | int, company_name: str, *, uow: Uow
-    ) -> Optional[str]:
+    ) -> Optional[MarketSymbolsDTO]:
         session = uow.session
         _ = nsd  # mantido para compatibilidade futura com códigos distintos
         row = (
@@ -166,22 +250,27 @@ class RepositoryCompanyData(
 
         code, tickers, issuing = row
 
-        def first_symbol(raw: Optional[str]) -> Optional[str]:
-            if not raw:
-                return None
-            for part in str(raw).split(","):
-                candidate = part.strip()
-                if candidate:
-                    return candidate.upper()
-            return None
+        primary_candidates = self._split_codes(tickers)
 
-        ticker_candidate = first_symbol(tickers)
-        if ticker_candidate:
-            return ticker_candidate
+        fallback_codes: List[str] = []
+        fallback_codes.extend(self._split_codes(code))
+        fallback_codes.extend(self._split_codes(issuing))
+        for candidate in fallback_codes:
+            if candidate not in primary_candidates:
+                primary_candidates.append(candidate)
 
-        for candidate in (code, issuing):
-            symbol = first_symbol(candidate)
-            if symbol:
-                return symbol
+        ordered = (
+            self._ordered_candidates(primary_candidates) if primary_candidates else []
+        )
+        primary = ordered[0] if ordered else None
 
-        return None
+        root_candidates = list(self._split_codes(issuing)) + list(
+            self._split_codes(code)
+        )
+        root = None
+        for candidate in ordered + root_candidates:
+            root = self._extract_root(candidate)
+            if root:
+                break
+
+        return MarketSymbolsDTO(primary=primary, tickers=tuple(ordered), b3_root=root)

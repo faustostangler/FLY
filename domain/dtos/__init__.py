@@ -11,6 +11,17 @@ from .statement_fetched_dto import StatementFetchedDTO
 from .statement_raw_dto import StatementRawDTO
 from .worker_task_dto import WorkerTaskDTO
 from .market_quote_dto import MarketQuoteDTO
+from .market_symbol_dto import MarketSymbolsDTO
 
-__all__ = ["CodeDTO", "CompanyDataDetailDTO", "CompanyDataDTO", "CompanyDataListingDTO",
-           "NsdDTO", "StatementRawDTO", "StatementFetchedDTO", "WorkerTaskDTO", "MarketQuoteDTO"]
+__all__ = [
+    "CodeDTO",
+    "CompanyDataDetailDTO",
+    "CompanyDataDTO",
+    "CompanyDataListingDTO",
+    "NsdDTO",
+    "StatementRawDTO",
+    "StatementFetchedDTO",
+    "WorkerTaskDTO",
+    "MarketQuoteDTO",
+    "MarketSymbolsDTO",
+]
