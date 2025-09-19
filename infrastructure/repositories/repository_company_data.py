@@ -146,3 +146,42 @@ class RepositoryCompanyData(
         )
 
         return row[0] if row else None
+
+    def get_market_symbol(
+        self, nsd: str | int, company_name: str, *, uow: Uow
+    ) -> Optional[str]:
+        session = uow.session
+        _ = nsd  # mantido para compatibilidade futura com códigos distintos
+        row = (
+            session.query(
+                CompanyDataModel.code,
+                CompanyDataModel.ticker_codes,
+                CompanyDataModel.issuing_company,
+            )
+            .filter(CompanyDataModel.company_name == company_name)
+            .one_or_none()
+        )
+        if not row:
+            return None
+
+        code, tickers, issuing = row
+
+        def first_symbol(raw: Optional[str]) -> Optional[str]:
+            if not raw:
+                return None
+            for part in str(raw).split(","):
+                candidate = part.strip()
+                if candidate:
+                    return candidate.upper()
+            return None
+
+        ticker_candidate = first_symbol(tickers)
+        if ticker_candidate:
+            return ticker_candidate
+
+        for candidate in (code, issuing):
+            symbol = first_symbol(candidate)
+            if symbol:
+                return symbol
+
+        return None

@@ -10,6 +10,10 @@ from domain.services.ratios_calculator import RatiosCalculator
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
+from infrastructure.adapters.symbol_mapping import b3_to_yahoo
+from infrastructure.adapters.yahoo_market_data_adapter import (
+    YahooMarketDataAdapter,
+)
 
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
 from infrastructure.http.builders import build_http_client
@@ -112,6 +116,8 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         intel_module_path=(getattr(config.domain, "intel_module_path", None))
     )
 
+    market_data_adapter = YahooMarketDataAdapter(symbol_mapper=b3_to_yahoo)
+
     # Return the CLI controller with its dependencies injected
     cli = Cli(
         config=config,
@@ -124,6 +130,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
         worker_pool=worker_pool,
+        market_data_port=market_data_adapter,
         policy=policy,
         uow_factory=uow_factory,
         financial_normalizer=financial_normalizer,

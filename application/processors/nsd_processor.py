@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import time
 from datetime import date, datetime
-from typing import List, Optional, Sequence, cast
+from typing import Dict, List, Optional, Sequence, Set, cast
 
+from application.ports.market_data_port import MarketDataPort
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
@@ -23,6 +24,8 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from application.services.market_data_service import MarketDataService
+from infrastructure.repositories.market_quote_repository import MarketQuoteRepository
 from infrastructure.utils.id_generator import IdGenerator
 
 
@@ -76,6 +79,7 @@ class NsdProcessor:
         scraper_statements_raw: ScraperStatementRawPort,
 
         policy: NsdPolicyPort,
+        market_data_port: MarketDataPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
         uow_factory: UowFactoryPort,
@@ -93,6 +97,7 @@ class NsdProcessor:
 
         self.uow_factory = uow_factory
         self.policy = policy
+        self.market_data_port = market_data_port
         self.financial_normalizer = financial_normalizer
         self.ratios_calculator = ratios_calculator
 
@@ -237,6 +242,69 @@ class NsdProcessor:
                 deduped = self.policy.version_deduplicate(combined)
                 quarterized = self.financial_normalizer.quarterize(deduped)
                 standardized = self.financial_normalizer.standardize(quarterized)
+
+                # market data
+                market_repo = MarketQuoteRepository(uow.session)
+                market_service = MarketDataService(self.market_data_port, market_repo)
+
+                by_company: Dict[tuple[str, str], Set[date]] = defaultdict(set)
+
+                for s in standardized:
+                    company = s.company_name
+                    if not company:
+                        continue
+                    quarter = s.quarter
+                    if quarter is None:
+                        continue
+                    if isinstance(quarter, datetime):
+                        q_end = quarter.date()
+                    elif isinstance(quarter, date):
+                        q_end = quarter
+                    else:
+                        try:
+                            q_end = date.fromisoformat(str(quarter).split(" ")[0])
+                        except Exception:
+                            continue
+                    by_company[(s.nsd, company)].add(q_end)
+
+                symbol_cache: Dict[tuple[str, str], Optional[str]] = {}
+
+                def resolve_symbol(nsd_code: str, company: str) -> Optional[str]:
+                    key = (nsd_code, company)
+                    if key not in symbol_cache:
+                        symbol_cache[key] = self.company_repository.get_market_symbol(
+                            nsd_code,
+                            company,
+                            uow=uow,
+                        )
+                    return symbol_cache[key]
+
+                for (nsd_code, company), quarter_ends in by_company.items():
+                    symbol = resolve_symbol(nsd_code, company)
+                    if not symbol:
+                        continue
+                    market_service.ensure_series_for_quarters(symbol, quarter_ends)
+
+                def price_lookup(nsd_code: str, company: str, quarter_end: date):
+                    symbol = resolve_symbol(nsd_code, company)
+                    if not symbol:
+                        return None
+                    when = quarter_end
+                    if isinstance(when, datetime):
+                        when = when.date()
+                    elif not isinstance(when, date):
+                        try:
+                            when = date.fromisoformat(str(when).split(" ")[0])
+                        except Exception:
+                            return None
+                    return market_service.price_at_quarter_end(symbol, when)
+
+                ratios = self.ratios_calculator.calculate(
+                    cast(Sequence[StatementFetchedDTO], standardized),
+                    price_lookup=price_lookup,
+                )
+
+
                 ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
                 fetched = list(standardized) + list(ratios)
 

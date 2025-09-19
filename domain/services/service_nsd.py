@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
+from application.ports.market_data_port import MarketDataPort
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
@@ -49,6 +50,7 @@ class NsdService:
         worker_pool: WorkerPoolPort,
 
         policy: NsdPolicyPort,
+        market_data_port: MarketDataPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
         uow_factory: UowFactoryPort,
@@ -69,6 +71,7 @@ class NsdService:
         self.worker_pool = worker_pool
 
         self.policy = policy
+        self.market_data_port = market_data_port
         self.financial_normalizer = financial_normalizer
         self.ratios_calculator = ratios_calculator
         self.uow_factory = uow_factory
@@ -96,6 +99,7 @@ class NsdService:
             scraper_statements_raw=scraper_statements_raw,
 
             policy=policy,
+            market_data_port=market_data_port,
             financial_normalizer=financial_normalizer,
             ratios_calculator=ratios_calculator,
             uow_factory=uow_factory,

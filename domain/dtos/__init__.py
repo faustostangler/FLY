@@ -10,6 +10,7 @@ from .nsd_dto import NsdDTO
 from .statement_fetched_dto import StatementFetchedDTO
 from .statement_raw_dto import StatementRawDTO
 from .worker_task_dto import WorkerTaskDTO
+from .market_quote_dto import MarketQuoteDTO
 
 __all__ = ["CodeDTO", "CompanyDataDetailDTO", "CompanyDataDTO", "CompanyDataListingDTO",
-           "NsdDTO", "StatementRawDTO", "StatementFetchedDTO", "WorkerTaskDTO"]
+           "NsdDTO", "StatementRawDTO", "StatementFetchedDTO", "WorkerTaskDTO", "MarketQuoteDTO"]

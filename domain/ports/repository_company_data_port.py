@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
@@ -29,6 +29,11 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
         Returns:
             str: The CVM code associated with the given company.
         """
+
+    def get_market_symbol(
+        self, nsd: str | int, company_name: str, *, uow: Uow
+    ) -> Optional[str]:
+        """Resolve the canonical trading symbol for the given company."""
 
     # # utilitário para “garantir companhia” em lote
     # def iter_existing_by_names(self, names: set[str], *, uow: Uow) -> Iterator[str]: ...

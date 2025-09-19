@@ -2,6 +2,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
+from application.ports.market_data_port import MarketDataPort
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
@@ -47,6 +48,7 @@ class Cli:
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
         worker_pool: WorkerPoolPort,
+        market_data_port: MarketDataPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         financial_normalizer: FinancialNormalizerPort,
@@ -67,6 +69,7 @@ class Cli:
         self.scraper_statements_raw = scraper_statements_raw
 
         self.worker_pool = worker_pool
+        self.market_data_port = market_data_port
 
         self.policy = policy
         self.uow_factory = uow_factory
@@ -128,6 +131,7 @@ class Cli:
             scraper_nsd=self.scraper_nsd,
             scraper_statements_raw=self.scraper_statements_raw,
             worker_pool=self.worker_pool,
+            market_data_port=self.market_data_port,
             policy=self.policy,  # porta para política composta
             financial_normalizer=self.financial_normalizer,  # serviço de domínio puro
             ratios_calculator=self.ratios_calculator,  # serviço de domínio puro

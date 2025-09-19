@@ -4,8 +4,8 @@ from __future__ import annotations
 from importlib import import_module
 from collections import defaultdict
 
-from typing import Any, Dict, Optional, Protocol, Sequence, Tuple, runtime_checkable
-from datetime import datetime
+from typing import Any, Callable, Dict, Optional, Protocol, Sequence, Tuple, runtime_checkable
+from datetime import date, datetime
 import numpy as np
 
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
@@ -15,7 +15,11 @@ from domain.dtos.statement_raw_dto import StatementRawDTO
 @runtime_checkable
 class RatiosCalculatorPort(Protocol):
     # def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]: 
-    def calculate(self, standards: Sequence[StatementFetchedDTO]) -> Sequence[StatementFetchedDTO]:
+    def calculate(
+        self,
+        standards: Sequence[StatementFetchedDTO],
+        price_lookup: Callable[[str, str, date], Optional[float]],
+    ) -> Sequence[StatementFetchedDTO]:
         ...
 
 
@@ -95,9 +99,16 @@ class RatiosCalculator(RatiosCalculatorPort):
         self._indicators: list[dict] = indicators
 
     # def calculate(self, standards: Sequence[StatementRawDTO]) -> Sequence[StatementFetchedDTO]:
-    def calculate(self, standards: Sequence[StatementFetchedDTO]) -> Sequence[StatementFetchedDTO]:
+    def calculate(
+        self,
+        standards: Sequence[StatementFetchedDTO],
+        price_lookup: Callable[[str, str, date], Optional[float]],
+    ) -> Sequence[StatementFetchedDTO]:
         if not standards:
             return []
+
+        # Mantém o contrato puro: evita dependência direta de infra.
+        _ = price_lookup
 
         head_list = ["00"]
         out: list[StatementFetchedDTO] = []
