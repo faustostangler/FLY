@@ -25,6 +25,7 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from domain.ports.scraper_base_port import SaveCallback
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -57,8 +58,12 @@ class _NsdTxnAggregator:
 
     def flush(self, *, uow: Uow) -> None:
         if self._nsd_data is not None:
+# <<<<<<< codex/add-save_batch-method-to-nsd_processor-7rtim2
             nsd = self._nsd_data
             self._save_callback([nsd], uow=uow)
+# =======
+#             self._save_callback([self._nsd_data], uow=uow)
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         if self._raw_data:
             self.statements_raw_repository.save_all(self._raw_data, uow=uow)
         if self._fetched_data:
@@ -441,6 +446,7 @@ class NsdProcessor:
 
     def _save_batch(
         self,
+# <<<<<<< codex/add-save_batch-method-to-nsd_processor-7rtim2
         items: list[NsdDTO],
         *,
         uow: Uow,
@@ -448,6 +454,18 @@ class NsdProcessor:
         """Persist a batch of NSD DTOs within the provided unit of work."""
 
         flat_items = cast(list[NsdDTO | None], ListFlattener.flatten(items))
+# =======
+#         items: list[NsdDTO | None],
+#         *,
+#         uow: Uow | None = None,
+#     ) -> None:
+#         """Persist a batch of NSD DTOs within the provided unit of work."""
+
+#         if uow is None:
+#             raise RuntimeError("SaveCallback chamado sem UoW")
+
+#         flat_items = ListFlattener.flatten(items)
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         if not flat_items:
             return
 
