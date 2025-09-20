@@ -22,6 +22,11 @@ from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
+# <<<<<<< codex/fix-uow-propagation-in-companydatascraper-3sz01n
+# =======
+# # from domain.ports.scraper_base_port import SaveCallback
+# from infrastructure.utils.save_strategy import SaveCallback, SaveStrategy
+# >>>>>>> 2025-09-09-Fetch-Adjustments
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
@@ -146,6 +151,9 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         # No-op callback used when only building the initial list
         def _adapter(items: List[Dict[str, Any]], *, uow: Uow) -> None:
+# =======
+#         def _adapter(_items: List[Dict[str, Any]], *, uow: Uow) -> None:
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)

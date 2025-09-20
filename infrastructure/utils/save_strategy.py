@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+# <<<<<<< codex/fix-uow-propagation-in-companydatascraper-3sz01n
 from typing import Generic, Iterable, List, Optional, TypeVar
+# =======
+# from typing import Generic, Iterable, List, Optional, TypeVar, Protocol
+# >>>>>>> 2025-09-09-Fetch-Adjustments
 
 from application.ports.config_port import ConfigPort
 from application.ports.uow_port import Uow, UowFactoryPort
@@ -9,6 +13,12 @@ from domain.ports.scraper_base_port import SaveCallback
 
 T = TypeVar("T")
 
+# <<<<<<< codex/fix-uow-propagation-in-companydatascraper-3sz01n
+# =======
+# class SaveCallback(Protocol, Generic[T]):
+#     def __call__(self, items: List[T], *, uow: Uow) -> None: ...
+
+# >>>>>>> 2025-09-09-Fetch-Adjustments
 
 @dataclass
 class SaveStrategy(Generic[T]):
