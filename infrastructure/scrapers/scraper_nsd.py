@@ -236,7 +236,7 @@ class NsdScraper(ScraperNsdPort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
-        multiplier = 1.5
+        multiplier = 2
         count = 0
         nsd += 1
         while nsd <= max_limit and hole_count < max_linear_holes:
@@ -245,7 +245,7 @@ class NsdScraper(ScraperNsdPort):
                 last_valid = nsd
                 # multiplier += 1
                 count += 1
-                nsd = int(nsd * multiplier)
+                nsd = nsd + int(count * multiplier)
             else:
                 break
 
