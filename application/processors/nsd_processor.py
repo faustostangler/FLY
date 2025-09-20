@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from datetime import date, datetime
 from typing import Any, Iterable, Mapping, Optional, Sequence, cast
@@ -65,6 +66,44 @@ class _NsdTxnAggregator:
         self._fetched_data.clear()
 
 
+class _StageTimeline:
+    """Helper to measure time spent in each stage of the NSD pipeline."""
+
+    def __init__(self, *, started_at: float | None = None) -> None:
+        self._started_at = (
+            started_at if started_at is not None else time.perf_counter()
+        )
+        self._last_mark = self._started_at
+        self._durations: dict[str, float] = {}
+
+    def mark(self, stage: str) -> str:
+        """Record the elapsed time since the previous stage and return a summary."""
+
+        now = time.perf_counter()
+        self._durations[stage] = now - self._last_mark
+        self._last_mark = now
+        return self.summary()
+
+    def summary(self) -> str:
+        if not self._durations:
+            return ""
+
+        parts = [
+            f"{name.lower()}={self._format_duration(seconds)}"
+            for name, seconds in self._durations.items()
+        ]
+        return "pipeline: " + " ".join(parts)
+
+    @staticmethod
+    def _format_duration(seconds: float) -> str:
+        if seconds < 1:
+            return f"{seconds * 1000:.0f}ms"
+
+        h, rem = divmod(int(seconds), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}h{m:02}m{s:02}s"
+
+
 class NsdProcessor:
     """Processa 1 NSD por vez. Cada tarefa abre sua própria UoW."""
 
@@ -102,6 +141,10 @@ class NsdProcessor:
 
         self.id_generator = IdGenerator(config=config)
 
+        # Progress tracking helpers -------------------------------------------------
+        self._progress_lock = threading.Lock()
+        self._progress_started_at: float | None = None
+
     # compat com pools que chamam .run(task) ou chamam o objeto
     def __call__(self, task: WorkerTaskDTO) -> Any:
         return self.run(task)
@@ -109,15 +152,22 @@ class NsdProcessor:
     def run(self, task: WorkerTaskDTO) -> Any:
         nsd_id = task.data
         start_time = time.perf_counter()
+        progress_start = self._resolve_progress_start_time(
+            start_time, reset=task.index == 0
+        )
+        timeline = _StageTimeline(started_at=start_time)
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
-        progress = self._build_progress_payload(task=task, start_time=start_time)
+        progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
+            summary = timeline.mark("NSD")
+            missing_progress = dict(progress)
+            missing_progress["stage"] = "NSD"
             self._log_message(
                 f"NSD {nsd_id}",
-                progress=progress,
+                progress=missing_progress,
                 worker_id=task.worker_id,
-                extra_info=[""],
+                extra_info=[summary] if summary else None,
             )
             return task.data
 
@@ -126,7 +176,13 @@ class NsdProcessor:
             nsd_type = self.policy.identify_type(nsd)
 
             aggregator = self._create_aggregator()
-            self._log_stage("NSD", nsd, progress=progress, worker_id=task.worker_id)
+            self._log_stage(
+                "NSD",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
+            )
 
             if not nsd_type.is_statement:
                 self._finalize_nsd(nsd=nsd, aggregator=aggregator, uow=uow)
@@ -138,6 +194,7 @@ class NsdProcessor:
                 progress=progress,
                 aggregator=aggregator,
                 uow=uow,
+                timeline=timeline,
             )
 
     def _process_statement_nsd(
@@ -148,6 +205,7 @@ class NsdProcessor:
         progress: dict[str, Any],
         aggregator: _NsdTxnAggregator,
         uow: Uow,
+        timeline: _StageTimeline,
     ) -> Any:
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
@@ -164,7 +222,13 @@ class NsdProcessor:
         )
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
-        self._log_stage("RAW", nsd, progress=progress, worker_id=task.worker_id)
+        self._log_stage(
+            "RAW",
+            nsd,
+            progress=progress,
+            worker_id=task.worker_id,
+            timeline=timeline,
+        )
 
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
@@ -190,7 +254,13 @@ class NsdProcessor:
             )
             fetched_rows: list[StatementFetchedDTO] = [*standardized_rows, *ratios]
 
-            self._log_stage("FTD", nsd, progress=progress, worker_id=task.worker_id)
+            self._log_stage(
+                "FTD",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
+            )
 
             aggregator.add_raw_many(raw_lines)
             aggregator.add_fetched_many(self._filter_new_fetched(fetched_rows, uow=uow))
@@ -231,10 +301,38 @@ class NsdProcessor:
             statements_fetched_repository=self.statements_fetched_repository,
         )
 
+    def _resolve_progress_start_time(
+        self, candidate: float, *, reset: bool = False
+    ) -> float:
+        """Return a shared start time for progress calculations.
+
+        The first task processed defines the baseline `start_time`. Subsequent
+        tasks reuse this timestamp so that elapsed time reflects the entire
+        batch execution instead of the duration of a single NSD pipeline.
+
+        Args:
+            candidate: Monotonic timestamp captured for the current task.
+            reset: When True, force the shared start time to this candidate.
+        """
+
+        with self._progress_lock:
+            if reset or self._progress_started_at is None:
+                self._progress_started_at = candidate
+            return self._progress_started_at
+
     def _build_progress_payload(self, *, task: WorkerTaskDTO, start_time: float) -> dict[str, Any]:
+        raw_total = task.total_size or (task.index + 1)
+        try:
+            total_size = int(raw_total)
+        except (TypeError, ValueError):  # pragma: no cover - defensive fallback
+            total_size = task.index + 1
+
+        if total_size <= 0:
+            total_size = 1
+
         return {
             "index": task.index,
-            "size": task.total_size,
+            "size": total_size,
             "start_time": start_time,
         }
 
@@ -245,12 +343,22 @@ class NsdProcessor:
         *,
         progress: dict[str, Any],
         worker_id: str,
+        timeline: _StageTimeline | None = None,
     ) -> None:
+        extra_tokens = [self._format_extra_info_line(nsd)]
+        if timeline is not None:
+            summary = timeline.mark(stage)
+            if summary:
+                extra_tokens.append(summary)
+
+        stage_progress = dict(progress)
+        stage_progress["stage"] = stage
+
         self._log_message(
             f"{stage} {nsd.nsd}",
-            progress=progress,
+            progress=stage_progress,
             worker_id=worker_id,
-            extra_info=[self._format_extra_info_line(nsd)],
+            extra_info=extra_tokens,
         )
 
     def _log_message(
