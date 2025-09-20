@@ -87,16 +87,11 @@ class _StageTimeline:
     def summary(self) -> str:
         if not self._durations:
             return ""
-
-        return "pipeline: " + " ".join(
+        parts = [
             f"{name.lower()}={self._format_duration(seconds)}"
             for name, seconds in self._durations.items()
-# <<<<<<< HEAD
         ]
         return ""  # "pipeline: " + " ".join(parts)
-# =======
-#         )
-# >>>>>>> 1861a832312fbfe9d8c58525590d12ae9f82f0f3
 
     @staticmethod
     def _format_duration(seconds: float) -> str:

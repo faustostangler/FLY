@@ -1,12 +1,12 @@
 # application/usecases/sync_nsd.py
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Callable, Iterable, Iterator, List, Optional, cast
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import Uow, UowFactoryPort
+from application.ports.uow_port import UowFactoryPort
 from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
