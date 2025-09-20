@@ -39,9 +39,7 @@ class StatementFetchedModel(BaseStatementModel):
         Index("ix_statements_fetched_company_name_quarter", "company_name", "quarter"),
     )
 
-    processing_hash: Mapped[str | None] = mapped_column(String, index=True)
-
-    _FIELDS = BaseStatementModel._FIELDS + ("processing_hash",)
+    _FIELDS = BaseStatementModel._FIELDS
 
     @staticmethod
     def from_dto(dto: StatementFetchedDTO) -> "StatementFetchedModel":

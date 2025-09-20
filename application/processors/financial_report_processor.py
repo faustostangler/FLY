@@ -17,8 +17,7 @@ class FinancialReportProcessor:
       2) Busca e persiste sempre os RAW (trilha de auditoria).
       3) Avalia política de parsing.
       4) Transforma RAW -> FETCHED.
-      5) Garante idempotência por hash de conteúdo.
-      6) Upsert dos FETCHED e atualização de estado do NSD.
+      5) Upsert dos FETCHED e atualização de estado do NSD.
 
     A implementação concreta depende das portas injetadas.
     """
@@ -60,7 +59,7 @@ class FinancialReportProcessor:
         #
         # fetched = self.transformer.transform(raw_dto)
         #
-        # if self.fetched_repo.is_duplicate(fetched.processing_hash):
+        # if self.fetched_repo.is_duplicate(fetched):
         #     self.logger.log("Duplicate fetched content. Skipping persist.", level="info")
         #     return
         #

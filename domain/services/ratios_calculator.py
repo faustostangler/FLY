@@ -162,7 +162,6 @@ class RatiosCalculator(RatiosCalculatorPort):
                             account=account,
                             description=description,
                             value=v,
-                            processing_hash="",
                         )
                     )
 
