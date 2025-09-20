@@ -265,37 +265,32 @@ class NsdProcessor:
         *,
         uow: Uow,
     ) -> list[StatementFetchedDTO]:
-        """Remove fetched statements already persisted for the same company/hash."""
+        """Remove duplicates within the current batch using natural keys."""
+
+        _ = uow  # retained for signature compatibility
 
         if not rows:
             return []
 
-        deduped: list[StatementFetchedDTO] = []
-        seen_hashes: set[tuple[Optional[str], str]] = set()
+        unique_rows: list[StatementFetchedDTO] = []
+        seen_keys: set[tuple] = set()
 
         for row in rows:
-            hash_ = getattr(row, "processing_hash", "") or ""
-
-            if not hash_:
-                deduped.append(row)
+            key = (
+                row.nsd,
+                row.company_name,
+                row.quarter,
+                row.version,
+                row.grupo,
+                row.quadro,
+                row.account,
+            )
+            if key in seen_keys:
                 continue
+            seen_keys.add(key)
+            unique_rows.append(row)
 
-            key = (row.company_name, hash_)
-            if key in seen_hashes:
-                continue
-
-            seen_hashes.add(key)
-
-            if self.statements_fetched_repository.exists_with_hash(
-                company_name=row.company_name,
-                hash_=hash_,
-                uow=uow,
-            ):
-                continue
-
-            deduped.append(row)
-
-        return deduped
+        return unique_rows
 
     def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:
         if not company_name:
@@ -310,16 +305,3 @@ class NsdProcessor:
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
 
-    def _hash_run(self, *parts) -> str:
-        import hashlib
-        import json
-
-        def to_prim(obj):
-            if isinstance(obj, (list, tuple)):
-                return [to_prim(x) for x in obj]
-            if hasattr(obj, "__dict__"):
-                return {k: to_prim(v) for k, v in obj.__dict__.items()}
-            return obj
-
-        blob = json.dumps([to_prim(p) for p in parts], sort_keys=True, default=str)
-        return hashlib.sha256(blob.encode("utf-8")).hexdigest()

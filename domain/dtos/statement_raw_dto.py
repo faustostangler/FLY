@@ -100,5 +100,4 @@ class StatementRawDTO:
             account=account,
             description=description,
             value=self.value,
-            processing_hash="",
         )

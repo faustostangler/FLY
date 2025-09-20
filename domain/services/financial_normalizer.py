@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from dataclasses import is_dataclass, replace
 from datetime import datetime
-import hashlib
-import json
 # from decimal import Decimal
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Optional, Sequence
 
@@ -107,18 +105,6 @@ class FinancialNormalizer(FinancialNormalizerPort):
         # quarter como texto YYYY-MM (mês do quarter)
         account, sep, description = (column or "").partition(" - ")
 
-        payload = {
-            "nsd": raw.nsd,
-            "company": raw.company_name,
-            "quarter": raw.quarter.date().isoformat() if isinstance(raw.quarter, datetime) else str(raw.quarter).split(" ")[0],
-            "version": raw.version,
-            "quadro": raw.quadro,
-            "grupo": raw.grupo,
-            "valor": raw.value,
-        }
-
-        processing_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
-
         return StatementFetchedDTO(
             id=None,
             nsd=raw.nsd,
@@ -132,7 +118,6 @@ class FinancialNormalizer(FinancialNormalizerPort):
             account=account,
             description=description,
             value=raw.value,
-            processing_hash=processing_hash,
         )
 
     # def _diff_quarters(self, qmap: Dict[int, StatementRawDTO]) -> Iterable[StatementRawDTO]:
@@ -428,5 +413,4 @@ class FinancialNormalizer(FinancialNormalizerPort):
     #         account=str(getattr(raw, "account", getattr(raw, "account_code", ""))),
     #         description=str(getattr(raw, "description", "")),
     #         value=float(value),
-    #         processing_hash="",
     #     )

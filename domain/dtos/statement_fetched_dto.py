@@ -20,7 +20,6 @@ class StatementFetchedDTO:
         account (str): Account identifier.
         description (str): Human-readable description of the account.
         value (float): Numeric value of the account entry.
-        processing_hash (str): Optional hash used for deduplication and integrity checks.
     """
 
     id: Optional[int] = None
@@ -33,7 +32,6 @@ class StatementFetchedDTO:
     account: str
     description: str
     value: float
-    processing_hash: str = ""
 
     @staticmethod
     def from_dict(raw: dict[str, Any], *, cleandate: Callable[[object], datetime]) -> "StatementFetchedDTO":
@@ -72,5 +70,4 @@ class StatementFetchedDTO:
             account=str(raw.get("account", "")),
             description=str(raw.get("description", "")),
             value=float(raw.get("value", 0.0)),
-            processing_hash=str(raw.get("processing_hash", "")),
         )

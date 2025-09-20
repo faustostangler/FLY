@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.ports.datacleaner_port import DataCleanerPort
@@ -11,8 +9,7 @@ class StatementTransformer:
     """Transforms raw financial statements into fetched statements.
 
     This class uses a data cleaner to sanitize raw statements
-    and generates a fetched DTO that includes a content hash
-    for uniqueness and traceability.
+    and generates a fetched DTO ready for persistence.
 
     Attributes:
         cleaner (DataCleanerPort): Component responsible for cleaning
@@ -26,15 +23,11 @@ class StatementTransformer:
     def transform(self, raw: StatementRawDTO) -> StatementFetchedDTO:
         """Convert a raw statement into a fetched statement.
 
-        Applies data cleaning and computes a unique hash based on
-        the normalized content.
-
         Args:
             raw (StatementRawDTO): Raw financial statement input.
 
         Returns:
-            StatementFetchedDTO: Structured and cleaned statement
-            enriched with a deterministic hash.
+            StatementFetchedDTO: Structured and cleaned statement.
         """
         # normaliza textos
         company = self.cleaner.clean_text(raw.company_name or "") if hasattr(self.cleaner, "clean_text") else (raw.company_name or "")
@@ -58,24 +51,6 @@ class StatementTransformer:
             account=account or "",
             description=description or "",
             value=float(raw.value),
-            processing_hash="",  # preenche após calcular
         )
 
-        # hash determinístico com campos canônicos
-        payload = "|".join([
-            fetched.nsd,
-            fetched.company_name or "",
-            fetched.quarter.strftime("%Y-%m-%d") if fetched.quarter else "",
-            fetched.version or "",
-            fetched.grupo,
-            fetched.quadro,
-            fetched.account,
-            fetched.description,
-            f"{fetched.value:.6f}",
-        ]).encode("utf-8")
-        digest = hashlib.sha256(payload).hexdigest()
-
-        # reconstroi DTO imutável com o hash
-        return StatementFetchedDTO(
-            **{**fetched.__dict__, "processing_hash": digest}
-        )
+        return fetched
