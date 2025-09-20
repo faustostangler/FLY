@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import date, datetime
-from typing import Any, Iterable, Mapping, Optional, Sequence, cast
+from typing import Any, Iterable, Iterator, Mapping, Optional, Sequence, TypeVar, cast
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -20,11 +20,23 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from infrastructure.utils.id_generator import IdGenerator
+from infrastructure.utils.list_flatenner import ListFlattener
+
+_T = TypeVar("_T")
+
+
+def _chunked(items: Sequence[_T], chunk_size: int) -> Iterator[list[_T]]:
+    """Yield ``items`` slices limited by ``chunk_size`` (defaults to 1 when invalid)."""
+
+    size = max(1, int(chunk_size or 0))
+    for start in range(0, len(items), size):
+        yield list(items[start : start + size])
 
 
 class _NsdTxnAggregator:
@@ -33,19 +45,21 @@ class _NsdTxnAggregator:
     def __init__(
         self,
         *,
-        nsd_repository: RepositoryNsdPort,
+        save_callback: SaveCallback[NsdDTO],
         statements_raw_repository: RepositoryStatementsRawPort,
         statements_fetched_repository: RepositoryStatementFetchedPort,
+        chunk_size: int,
     ) -> None:
-        self.nsd_repository = nsd_repository
+        self._save_callback = save_callback
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
-        self._nsd_data: NsdDTO | None = None
+        self._chunk_size = chunk_size if chunk_size > 0 else 1
+        self._nsd_buffer: list[NsdDTO] = []
         self._raw_data: list[StatementRawDTO] = []
         self._fetched_data: list[StatementFetchedDTO] = []
 
     def set_nsd(self, nsd: NsdDTO) -> None:
-        self._nsd_data = nsd
+        self._nsd_buffer.append(nsd)
 
     def add_raw_many(self, items: Iterable[StatementRawDTO]) -> None:
         self._raw_data.extend(items)
@@ -54,14 +68,17 @@ class _NsdTxnAggregator:
         self._fetched_data.extend(items)
 
     def flush(self, *, uow: Uow) -> None:
-        if self._nsd_data is not None:
-            self.nsd_repository.save_all([self._nsd_data], uow=uow)
+        if self._nsd_buffer:
+            for chunk in _chunked(self._nsd_buffer, self._chunk_size):
+                self._save_callback(chunk, uow=uow)
         if self._raw_data:
-            self.statements_raw_repository.save_all(self._raw_data, uow=uow)
+            for chunk in _chunked(self._raw_data, self._chunk_size):
+                self.statements_raw_repository.save_all(chunk, uow=uow)
         if self._fetched_data:
-            self.statements_fetched_repository.save_all(self._fetched_data, uow=uow)
+            for chunk in _chunked(self._fetched_data, self._chunk_size):
+                self.statements_fetched_repository.save_all(chunk, uow=uow)
 
-        self._nsd_data = None
+        self._nsd_buffer.clear()
         self._raw_data.clear()
         self._fetched_data.clear()
 
@@ -295,10 +312,22 @@ class NsdProcessor:
 
     def _create_aggregator(self) -> _NsdTxnAggregator:
         return _NsdTxnAggregator(
-            nsd_repository=self.nsd_repository,
+            save_callback=self._save_batch,
             statements_raw_repository=self.statements_raw_repository,
             statements_fetched_repository=self.statements_fetched_repository,
+            chunk_size=self._resolve_persistence_threshold(),
         )
+
+    def _resolve_persistence_threshold(self) -> int:
+        raw_threshold = getattr(self.config.repository, "persistence_threshold", None)
+        try:
+            threshold = int(raw_threshold) if raw_threshold is not None else 0
+        except (TypeError, ValueError):
+            threshold = 0
+
+        if threshold <= 0:
+            return 50
+        return threshold
 
     def _resolve_progress_start_time(
         self, candidate: float, *, reset: bool = False
@@ -435,3 +464,52 @@ class NsdProcessor:
         )
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
+
+    def _save_batch(
+        self,
+        items: list[NsdDTO],
+        *,
+        uow: Uow,
+    ) -> None:
+        """Persist a batch of NSD DTOs within the provided unit of work."""
+
+        flat_items = cast(list[NsdDTO | None], ListFlattener.flatten(items))
+        if not flat_items:
+            return
+
+        dtos: list[NsdDTO] = []
+        for item in flat_items:
+            if item is None:
+                continue
+            if isinstance(item, NsdDTO):
+                dtos.append(NsdDTO.from_raw(item))
+            else:  # pragma: no cover - defensive path for compatible objects
+                dtos.append(NsdDTO.from_raw(cast(NsdDTO, item)))
+
+        if not dtos:
+            return
+
+        company_names = {dto.company_name for dto in dtos if dto.company_name}
+        threshold = self._resolve_persistence_threshold()
+
+        if company_names:
+            existing = {
+                name
+                for (name,) in self.company_repository.iter_existing_by_columns(
+                    "company_name", uow=uow
+                )
+            }
+            missing = company_names - existing
+            if missing:
+                to_create = [
+                    CompanyDataDTO(
+                        cvm_code=self.id_generator.create_id(size=6),
+                        company_name=name,
+                    )
+                    for name in missing
+                ]
+                for chunk in _chunked(to_create, threshold):
+                    self.company_repository.save_all(chunk, uow=uow)
+
+        for chunk in _chunked(dtos, threshold):
+            self.nsd_repository.save_all(chunk, uow=uow)
