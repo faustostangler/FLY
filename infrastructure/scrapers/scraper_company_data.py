@@ -139,7 +139,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             List[CompanyDataDTO]: Fully fetched company detail DTOs.
         """
         # Normalize list of codes to a set for O(1) membership checks
-        self.existing_codes = existing_codes or set()
+        self.existing_codes = set(existing_codes or [])
 
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
@@ -185,7 +185,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # adapta callback do porto (items) para a estratégia (items, *, uow)
         def _adapter(items: List[Dict], *, uow=None) -> None:
             if save_callback is not None:
-                save_callback(items)
+                save_callback(items, uow=uow)
 
 
         # Build a save strategy to flush items while iterating pages
@@ -319,7 +319,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # adapter para a estratégia
         def _adapter(items: List[CompanyDataDTO], *, uow=None) -> None:
             if save_callback is not None:
-                save_callback(items)
+                save_callback(items, uow=uow)
 
         # Build a save strategy that buffers detail DTOs and flushes on threshold
         strategy: SaveStrategy[CompanyDataDTO] = SaveStrategy.from_config(

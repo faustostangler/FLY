@@ -44,10 +44,7 @@ class SyncCompanyDataUseCase:
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
-        try:
-            return self.run()
-        except Exception as e:
-            pass
+        return self.run()
 
     def run(self) -> SyncResultsDTO:
         """Run the full company synchronization pipeline.
