@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
@@ -78,3 +78,26 @@ class StatementFetchedRepository(
                 .all()
             )
             return [r.to_dto() for r in results]
+
+    def exists_with_hash(
+        self,
+        *,
+        company_name: Optional[str],
+        hash_: str,
+        uow: Uow,
+    ) -> bool:
+        """Return True when ``company_name`` has ``hash_`` persisted."""
+
+        if not hash_:
+            return False
+
+        session = uow.session
+        model, _ = self.get_model_class()
+
+        query = session.query(model.id).filter(model.processing_hash == hash_)
+        if company_name is None:
+            query = query.filter(model.company_name.is_(None))
+        else:
+            query = query.filter(model.company_name == company_name)
+
+        return query.first() is not None

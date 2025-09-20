@@ -238,7 +238,7 @@ class NsdProcessor:
                 quarterized = self.financial_normalizer.quarterize(deduped)
                 standardized = self.financial_normalizer.standardize(quarterized)
                 ratios = self.ratios_calculator.calculate(cast(Sequence[StatementFetchedDTO], standardized))
-                fetched = list(standardized) + list(ratios)
+                fetched_rows = list(standardized) + list(ratios)
 
                 nsd_quarter = nsd.quarter.strftime("%Y-%m-%d") if isinstance(nsd.quarter, datetime) else (nsd.quarter or "")
                 extra_info = [ f"{nsd.nsd} {nsd_quarter} | {nsd.sent_date} v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"]
@@ -250,7 +250,7 @@ class NsdProcessor:
                 )
 
                 agg.add_raw_many(raw_lines)
-                agg.add_fetched_many(list(fetched))
+                agg.add_fetched_many(self._filter_new_fetched(fetched_rows, uow=uow))
                 agg.set_nsd(nsd)
                 agg.flush(uow=uow)
                 uow.commit()
@@ -258,6 +258,44 @@ class NsdProcessor:
                 return nsd
             except Exception as e:
                 self.logger.log(f"{e}")
+
+    def _filter_new_fetched(
+        self,
+        rows: Sequence[StatementFetchedDTO],
+        *,
+        uow: Uow,
+    ) -> list[StatementFetchedDTO]:
+        """Remove fetched statements already persisted for the same company/hash."""
+
+        if not rows:
+            return []
+
+        deduped: list[StatementFetchedDTO] = []
+        seen_hashes: set[tuple[Optional[str], str]] = set()
+
+        for row in rows:
+            hash_ = getattr(row, "processing_hash", "") or ""
+
+            if not hash_:
+                deduped.append(row)
+                continue
+
+            key = (row.company_name, hash_)
+            if key in seen_hashes:
+                continue
+
+            seen_hashes.add(key)
+
+            if self.statements_fetched_repository.exists_with_hash(
+                company_name=row.company_name,
+                hash_=hash_,
+                uow=uow,
+            ):
+                continue
+
+            deduped.append(row)
+
+        return deduped
 
     def _ensure_company_exists(self, company_name: Optional[str], *, uow: Uow) -> Optional[str]:
         if not company_name:

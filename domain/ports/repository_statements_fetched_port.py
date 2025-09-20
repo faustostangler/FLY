@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
+from application.ports.uow_port import Uow
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
 from .repository_base_port import RepositoryBasePort
@@ -15,18 +16,15 @@ class RepositoryStatementFetchedPort(RepositoryBasePort[StatementFetchedDTO, int
     financial statements associated with companies.
     """
 
-    # def exists_with_hash(self, company_name: str, hash_: str) -> bool:
-    #     """Check if a fetched statement already exists for a company and hash.
-
-    #     Args:
-    #         company_name (str): Name of the company to check.
-    #         hash_ (str): Unique hash identifying the fetched statement.
-
-    #     Returns:
-    #         bool: True if a fetched statement with the given hash already exists
-    #         for the company, False otherwise.
-    #     """
-    #     ...
+    def exists_with_hash(
+        self,
+        *,
+        company_name: Optional[str],
+        hash_: str,
+        uow: Uow,
+    ) -> bool:
+        """Return True when ``company_name`` has ``hash_`` persisted."""
+        ...
 
     # def replace_all_for_company(
     #     self,
