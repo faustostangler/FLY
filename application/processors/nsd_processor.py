@@ -66,6 +66,44 @@ class _NsdTxnAggregator:
         self._fetched_data.clear()
 
 
+class _StageTimeline:
+    """Helper to measure time spent in each stage of the NSD pipeline."""
+
+    def __init__(self, *, started_at: float | None = None) -> None:
+        self._started_at = (
+            started_at if started_at is not None else time.perf_counter()
+        )
+        self._last_mark = self._started_at
+        self._durations: dict[str, float] = {}
+
+    def mark(self, stage: str) -> str:
+        """Record the elapsed time since the previous stage and return a summary."""
+
+        now = time.perf_counter()
+        self._durations[stage] = now - self._last_mark
+        self._last_mark = now
+        return self.summary()
+
+    def summary(self) -> str:
+        if not self._durations:
+            return ""
+
+        parts = [
+            f"{name.lower()}={self._format_duration(seconds)}"
+            for name, seconds in self._durations.items()
+        ]
+        return "pipeline: " + " ".join(parts)
+
+    @staticmethod
+    def _format_duration(seconds: float) -> str:
+        if seconds < 1:
+            return f"{seconds * 1000:.0f}ms"
+
+        h, rem = divmod(int(seconds), 3600)
+        m, s = divmod(rem, 60)
+        return f"{h}h{m:02}m{s:02}s"
+
+
 class NsdProcessor:
     """Processa 1 NSD por vez. Cada tarefa abre sua própria UoW."""
 
@@ -117,16 +155,28 @@ class NsdProcessor:
         progress_start = self._resolve_progress_start_time(
             start_time, reset=task.index == 0
         )
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#         timeline = _StageTimeline(started_at=start_time)
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#             summary = timeline.mark("NSD")
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             missing_progress = dict(progress)
             missing_progress["stage"] = "NSD"
             self._log_message(
                 f"NSD {nsd_id}",
                 progress=missing_progress,
                 worker_id=task.worker_id,
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#                 extra_info=[summary] if summary else None,
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             )
             return task.data
 
@@ -135,7 +185,13 @@ class NsdProcessor:
             nsd_type = self.policy.identify_type(nsd)
 
             aggregator = self._create_aggregator()
-            self._log_stage("NSD", nsd, progress=progress, worker_id=task.worker_id)
+            self._log_stage(
+                "NSD",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
+            )
 
             if not nsd_type.is_statement:
                 self._finalize_nsd(nsd=nsd, aggregator=aggregator, uow=uow)
@@ -147,6 +203,7 @@ class NsdProcessor:
                 progress=progress,
                 aggregator=aggregator,
                 uow=uow,
+                timeline=timeline,
             )
 
     def _process_statement_nsd(
@@ -157,6 +214,7 @@ class NsdProcessor:
         progress: dict[str, Any],
         aggregator: _NsdTxnAggregator,
         uow: Uow,
+        timeline: _StageTimeline,
     ) -> Any:
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
@@ -173,7 +231,13 @@ class NsdProcessor:
         )
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
-        self._log_stage("RAW", nsd, progress=progress, worker_id=task.worker_id)
+        self._log_stage(
+            "RAW",
+            nsd,
+            progress=progress,
+            worker_id=task.worker_id,
+            timeline=timeline,
+        )
 
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
@@ -199,7 +263,13 @@ class NsdProcessor:
             )
             fetched_rows: list[StatementFetchedDTO] = [*standardized_rows, *ratios]
 
-            self._log_stage("FTD", nsd, progress=progress, worker_id=task.worker_id)
+            self._log_stage(
+                "FTD",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
+            )
 
             aggregator.add_raw_many(raw_lines)
             aggregator.add_fetched_many(self._filter_new_fetched(fetched_rows, uow=uow))
@@ -282,8 +352,17 @@ class NsdProcessor:
         *,
         progress: dict[str, Any],
         worker_id: str,
+        timeline: _StageTimeline | None = None,
     ) -> None:
         extra_tokens = [self._format_extra_info_line(nsd)]
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#         if timeline is not None:
+#             summary = timeline.mark(stage)
+#             if summary:
+#                 extra_tokens.append(summary)
+
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         stage_progress = dict(progress)
         stage_progress["stage"] = stage
 
@@ -315,8 +394,9 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         return (
-            f"{nsd.nsd} {quarter_display} | {nsd.sent_date} "
-            f"v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"
+            f"{quarter_display} v{nsd.version} | "
+            f"{nsd.sent_date} | "
+            f"{nsd.nsd_type} {nsd.company_name}"
         )
 
     def _filter_new_fetched(
