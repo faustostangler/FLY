@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Type, Union
+from datetime import datetime
+from typing import Dict, List, Optional, Type, Union, cast
 
 from domain.dtos.company_data_dto import (
     CompanyDataDetailDTO,
@@ -69,4 +70,24 @@ class EntryCleaner:
         )
 
         # Construct and return the typed DTO from the cleaned mapping
-        return dto_class.from_dict(cleaned)
+        if issubclass(dto_class, CompanyDataListingDTO):
+            listing_class = cast(Type[CompanyDataListingDTO], dto_class)
+
+            def _normalize_date(value: object) -> Optional[datetime]:
+                if value is None:
+                    return self.datacleaner.cleandate(None)
+                if isinstance(value, datetime):
+                    return value
+                if isinstance(value, str):
+                    return self.datacleaner.cleandate(value)
+                return self.datacleaner.cleandate(str(value))
+
+            return listing_class.from_dict(cleaned, cleandate=_normalize_date)
+
+        if issubclass(dto_class, CompanyDataDetailDTO):
+            detail_class = cast(Type[CompanyDataDetailDTO], dto_class)
+            return detail_class.from_dict(cleaned)
+
+        raise TypeError(
+            "Unsupported DTO class provided to EntryCleaner.clean_entry"
+        )

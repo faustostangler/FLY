@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Iterable, Iterator, List, Optional, Protocol, runtime_checkable
+from typing import Callable, Iterable, Iterator, List, Optional, cast
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -12,10 +12,6 @@ from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 
-
-@runtime_checkable
-class _ScraperProbe(Protocol):
-    def find_last_existing_nsd(self, start: int = 1, max_limit: int = 10**10) -> int: ...
 
 class SyncNSDUseCase:
     def __init__(
@@ -46,7 +42,7 @@ class SyncNSDUseCase:
 
     def build_code_list(self, *, start: int = 0, max_nsd: Optional[int] = None) -> List[int]:
         """Lista de NSDs a processar:
-        missing = [start..last_nsd] \ skip_codes
+        missing = [start..last_nsd] \\ skip_codes
         tail    = [last_nsd+1..end], onde end = max(max_nsd_existing, max_nsd_probable, cap_param)
         """
         start = max(1, int(start))
@@ -64,8 +60,11 @@ class SyncNSDUseCase:
             )
 
         # limites base
-        probe = getattr(self.scraper, "_find_last_existing_nsd", None)
-        if callable(probe):
+        probe_attr = getattr(self.scraper, "_find_last_existing_nsd", None)
+        probe: Optional[Callable[..., int]] = (
+            cast(Callable[..., int], probe_attr) if callable(probe_attr) else None
+        )
+        if probe is not None:
             try:
                 max_nsd_existing = int(probe(start=last_nsd, max_limit=10**10))
             except Exception:
