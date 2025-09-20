@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.mappers.company_data_merger import CompanyDataMerger
@@ -11,7 +11,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
-from application.ports.uow_port import UowFactoryPort
+from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.processors.company_detail_processor import CompanyDataDetailProcessor
 from application.processors.entry_cleaner import EntryCleaner
@@ -22,7 +22,7 @@ from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 # from domain.ports.scraper_base_port import SaveCallback
-from infrastructure.utils.save_strategy import SaveStrategy
+from infrastructure.utils.save_strategy import SaveCallback, SaveStrategy
 from infrastructure.utils.byte_formatter import ByteFormatter
 
 # from infrastructure.scrapers.company_data_processors import (
@@ -118,7 +118,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self,
         threshold: Optional[int] = None,
         existing_codes: Optional[List[str]] = None,
-        save_callback: Optional[Callable[[List[CompanyDataDTO]], None]] = None,
+        save_callback: SaveCallback[CompanyDataDTO] | None = None,
         **kwargs,
     ) -> List[CompanyDataDTO]:
         """Fetch the full set of companies and their details, optionally saving in batches.
@@ -131,7 +131,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             threshold (Optional[int]): Number of companies to buffer before flushing.
                 Falls back to repository configuration or 50 if not provided.
             existing_codes (Optional[List[str]]): Collection of company identifiers to skip.
-            save_callback (Optional[Callable[[List[CompanyDataDTO]], None]]):
+            save_callback (Optional[SaveCallback[CompanyDataDTO]]):
                 Callback to persist buffered DTOs when the threshold is reached.
             **kwargs: Reserved for future extensions.
 
@@ -145,7 +145,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
 
         # No-op callback used when only building the initial list
-        def _adapter(_items: List[Dict], *, uow=None) -> None:
+        def _adapter(_items: List[Dict[str, Any]], *, uow: Uow) -> None:
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
@@ -164,7 +164,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
     def _fetch_companies_list(
         self,
-        save_callback: Optional[Callable[[List[Dict]], None]] = None,
+        save_callback: SaveCallback[Dict[str, Any]] | None = None,
     ) -> List[Dict[str, Any]]:
         """Fetch the initial set of companies available on the exchange.
 
@@ -172,7 +172,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         metrics reporting, and optional parallel page fetching.
 
         Args:
-            save_callback (Optional[Callable[[List[Dict]], None]]): Optional sink to
+            save_callback (Optional[SaveCallback[Dict[str, Any]]]): Optional sink to
                 persist items while streaming through pages.
 
         Returns:
@@ -183,7 +183,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         start_time = time.perf_counter()
 
         # adapta callback do porto (items) para a estratégia (items, *, uow)
-        def _adapter(items: List[Dict], *, uow=None) -> None:
+        def _adapter(items: List[Dict[str, Any]], *, uow: Uow) -> None:
             if save_callback is not None:
                 save_callback(items, uow=uow)
 
@@ -291,7 +291,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     def _fetch_companies_details(
         self,
         companies_list: List[Dict],
-        save_callback: Optional[Callable[[List[CompanyDataDTO]], None]] = None,
+        save_callback: SaveCallback[CompanyDataDTO] | None = None,
     ) -> List[CompanyDataDTO]:
         """Fetch and parse detailed info for a list of companies.
 
@@ -301,7 +301,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
         Args:
             companies_list (List[Dict]): Raw company entries with at least ``codeCVM``.
-            save_callback (Optional[Callable[[List[CompanyDataDTO]], None]]):
+            save_callback (Optional[SaveCallback[CompanyDataDTO]]):
                 Sink to persist buffered detail DTOs.
 
         Returns:
@@ -317,7 +317,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         """
 
         # adapter para a estratégia
-        def _adapter(items: List[CompanyDataDTO], *, uow=None) -> None:
+        def _adapter(items: List[CompanyDataDTO], *, uow: Uow) -> None:
             if save_callback is not None:
                 save_callback(items, uow=uow)
 

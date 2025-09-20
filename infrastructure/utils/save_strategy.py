@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar, Protocol
+from typing import Generic, Iterable, List, Optional, TypeVar, Protocol
 
 from application.ports.config_port import ConfigPort
 from application.ports.uow_port import Uow, UowFactoryPort
@@ -9,7 +9,7 @@ from application.ports.uow_port import Uow, UowFactoryPort
 T = TypeVar("T")
 
 class SaveCallback(Protocol, Generic[T]):
-    def __call__(self, items: List[T], *, uow: Optional[Uow] = None) -> None: ...
+    def __call__(self, items: List[T], *, uow: Uow) -> None: ...
 
 
 @dataclass
@@ -24,7 +24,7 @@ class SaveStrategy(Generic[T]):
         T: The item type to be buffered and persisted.
 
     Attributes:
-        save_callback (Callable[[List[T]], None]): Function invoked when the
+        save_callback (SaveCallback[T]): Function invoked when the
             buffer is flushed; receives the current buffered items.
         threshold (int): Maximum number of items to buffer before triggering
             a flush.
@@ -71,7 +71,7 @@ class SaveStrategy(Generic[T]):
             SaveStrategy[T]: A strategy instance ready to buffer and flush items.
         """
         # Choose a callback or fall back to a no-op implementation
-        cb: SaveCallback[T] = save_callback or (lambda items, *, uow=None: None)
+        cb: SaveCallback[T] = save_callback or (lambda items, *, uow: None)
 
         # Choose a threshold from explicit arg, config, or a conservative default
         th = threshold or (config.repository.persistence_threshold if config else 50)
