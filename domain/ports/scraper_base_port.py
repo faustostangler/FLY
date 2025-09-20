@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable, Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+from typing import Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+
 from application.ports.uow_port import Uow
 
 # Type variable representing the entity type being scraped
@@ -9,7 +10,7 @@ T = TypeVar("T")
 
 class SaveCallback(Protocol, Generic[T]):
     def __call__(self, items: List[T], *, uow: Uow) -> None: ...
-    
+
 
 @runtime_checkable
 class ScraperBasePort(Protocol, Generic[T]):
@@ -24,7 +25,7 @@ class ScraperBasePort(Protocol, Generic[T]):
         self,
         threshold: Optional[int] = None,
         existing_codes: Optional[List[str]] = None,
-        save_callback: Optional[Callable[[List[T]], None]] = None,
+        save_callback: Optional[SaveCallback[T]] = None,
         **kwargs,
     ) -> List[T]:
         """Fetch a collection of items from an external source.
@@ -34,9 +35,10 @@ class ScraperBasePort(Protocol, Generic[T]):
                 If None, no limit is applied.
             existing_codes (Optional[List[str]]): Identifiers to exclude
                 from the scraping process.
-            save_callback (Optional[Callable[[List[T]], None]]): Optional
-                callback function executed after fetching, typically for
-                persisting results.
+            save_callback (Optional[SaveCallback[T]]): Optional callback
+                function executed after fetching, typically for persisting
+                results. The callback receives the buffered items and the
+                active unit of work used for persistence.
             **kwargs: Additional keyword arguments passed to the
                 implementation.
 

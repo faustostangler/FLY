@@ -19,11 +19,16 @@ from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.datacleaner_port import DataCleanerPort
+from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
-# from domain.ports.scraper_base_port import SaveCallback
-from infrastructure.utils.save_strategy import SaveCallback, SaveStrategy
+# <<<<<<< codex/fix-uow-propagation-in-companydatascraper-3sz01n
+# =======
+# # from domain.ports.scraper_base_port import SaveCallback
+# from infrastructure.utils.save_strategy import SaveCallback, SaveStrategy
+# >>>>>>> 2025-09-09-Fetch-Adjustments
 from infrastructure.utils.byte_formatter import ByteFormatter
+from infrastructure.utils.save_strategy import SaveStrategy
 
 # from infrastructure.scrapers.company_data_processors import (
 #     CompanyDataDetailProcessor,
@@ -145,7 +150,10 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
 
         # No-op callback used when only building the initial list
-        def _adapter(_items: List[Dict[str, Any]], *, uow: Uow) -> None:
+        def _adapter(items: List[Dict[str, Any]], *, uow: Uow) -> None:
+# =======
+#         def _adapter(_items: List[Dict[str, Any]], *, uow: Uow) -> None:
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             return None
 
         # 1) Fetch the initial list of companies (optionally flushing to storage)
@@ -189,7 +197,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
 
 
         # Build a save strategy to flush items while iterating pages
-        strategy: SaveStrategy[Dict] = SaveStrategy.from_config(
+        strategy: SaveStrategy[Dict[str, Any]] = SaveStrategy.from_config(
             _adapter if save_callback else None,
             self.threshold,
             config=self.config,
