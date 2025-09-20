@@ -245,7 +245,7 @@ class NsdScraper(ScraperNsdPort):
                 last_valid = nsd
                 # multiplier += 1
                 count += 1
-                nsd = nsd + int(count * multiplier)
+                nsd = last_valid + int(multiplier ** count)
             else:
                 break
 
@@ -258,6 +258,7 @@ class NsdScraper(ScraperNsdPort):
         nsd_high = nsd - 1
 
         while nsd_low < nsd_high:
+            count += 1
             nsd_mid = (
                 nsd_low + nsd_high + 1
             ) // 2  # arredonda para cima para evitar loop infinito

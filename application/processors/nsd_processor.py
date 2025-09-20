@@ -92,7 +92,7 @@ class _StageTimeline:
             f"{name.lower()}={self._format_duration(seconds)}"
             for name, seconds in self._durations.items()
         ]
-        return "pipeline: " + " ".join(parts)
+        return ""  # "pipeline: " + " ".join(parts)
 
     @staticmethod
     def _format_duration(seconds: float) -> str:
@@ -382,8 +382,8 @@ class NsdProcessor:
         quarter_display = quarter or ""
         sent_date = nsd.sent_date or ""
         return (
-            f"{nsd.nsd} {quarter_display} | "
-            f"{sent_date} v{nsd.version} | "
+            f"{quarter_display} v{nsd.version} | "
+            f"{sent_date} | "
             f"{nsd.nsd_type} {nsd.company_name}"
         )
 

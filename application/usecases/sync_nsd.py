@@ -66,7 +66,7 @@ class SyncNSDUseCase:
         )
         if probe is not None:
             try:
-                max_nsd_existing = int(probe(start=last_nsd, max_limit=10**10))
+                max_nsd_existing = int(probe(start=max_nsd_probable, max_limit=10**10))
             except Exception:
                 max_nsd_existing = 1
         else:
