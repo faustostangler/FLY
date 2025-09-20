@@ -155,28 +155,19 @@ class NsdProcessor:
         progress_start = self._resolve_progress_start_time(
             start_time, reset=task.index == 0
         )
-# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-# =======
-#         timeline = _StageTimeline(started_at=start_time)
-# >>>>>>> 2025-09-09-Fetch-Adjustments
+        timeline = _StageTimeline(started_at=start_time)
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
-# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-# =======
-#             summary = timeline.mark("NSD")
-# >>>>>>> 2025-09-09-Fetch-Adjustments
+            summary = timeline.mark("NSD")
             missing_progress = dict(progress)
             missing_progress["stage"] = "NSD"
             self._log_message(
                 f"NSD {nsd_id}",
                 progress=missing_progress,
                 worker_id=task.worker_id,
-# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-# =======
-#                 extra_info=[summary] if summary else None,
-# >>>>>>> 2025-09-09-Fetch-Adjustments
+                extra_info=[summary] if summary else None,
             )
             return task.data
 
@@ -355,14 +346,10 @@ class NsdProcessor:
         timeline: _StageTimeline | None = None,
     ) -> None:
         extra_tokens = [self._format_extra_info_line(nsd)]
-# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-# =======
-#         if timeline is not None:
-#             summary = timeline.mark(stage)
-#             if summary:
-#                 extra_tokens.append(summary)
-
-# >>>>>>> 2025-09-09-Fetch-Adjustments
+        if timeline is not None:
+            summary = timeline.mark(stage)
+            if summary:
+                extra_tokens.append(summary)
         stage_progress = dict(progress)
         stage_progress["stage"] = stage
 
@@ -393,9 +380,10 @@ class NsdProcessor:
             else nsd.quarter
         )
         quarter_display = quarter or ""
+        sent_date = nsd.sent_date or ""
         return (
-            f"{quarter_display} v{nsd.version} | "
-            f"{nsd.sent_date} | "
+            f"{nsd.nsd} {quarter_display} | "
+            f"{sent_date} v{nsd.version} | "
             f"{nsd.nsd_type} {nsd.company_name}"
         )
 
