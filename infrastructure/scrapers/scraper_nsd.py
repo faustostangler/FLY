@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import re
-import time
 from datetime import datetime
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -13,13 +12,13 @@ from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.uow_port import Uow
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
-from infrastructure.utils.byte_formatter import ByteFormatter
 
 
 class NsdScraper(ScraperNsdPort):
@@ -65,7 +64,7 @@ class NsdScraper(ScraperNsdPort):
         self,
         threshold: Optional[int] = None,
         existing_codes: Optional[List[str]] = None,
-        save_callback: Optional[Callable[[List[NsdDTO]], None]] = None,
+        save_callback: Optional[SaveCallback[NsdDTO]] = None,
         **kwargs,
     ) -> List[NsdDTO]:
         start = int(kwargs.get("start", 1))
@@ -73,7 +72,10 @@ class NsdScraper(ScraperNsdPort):
         int_codes: Optional[List[int]] = [int(c) for c in existing_codes] if existing_codes else None
         items = list(self.iter_nsd(start=start, threshold=threshold, existing_codes=int_codes, max_nsd=max_nsd))
         if save_callback:
-            save_callback(items)
+            uow: Uow | None = kwargs.get("uow")
+            if uow is None:
+                raise RuntimeError("SaveCallback requires 'uow' keyword argument")
+            save_callback(items, uow=uow)
         return items
 
     def fetch_one(self, nsd: int) -> NsdDTO | None:
