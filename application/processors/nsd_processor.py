@@ -27,6 +27,7 @@ from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
+
 # <<<<<<< codex/add-save_batch-method-to-nsd_processor-nbtb3g
 
 _T = TypeVar("_T")
