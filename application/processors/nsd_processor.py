@@ -25,7 +25,6 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
-from domain.ports.scraper_base_port import SaveCallback
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -254,12 +253,13 @@ class NsdProcessor:
             deduped = self.policy.version_deduplicate(combined)
             quarterized = self.financial_normalizer.quarterize(deduped)
             standardized_rows = list(self.financial_normalizer.standardize(quarterized))
-            ratios = list(
-                self.ratios_calculator.calculate(
-                    cast(Sequence[StatementFetchedDTO], standardized_rows)
-                )
-            )
-            fetched_rows: list[StatementFetchedDTO] = [*standardized_rows, *ratios]
+            fetched_rows: list[StatementFetchedDTO] = [*standardized_rows]
+            # ratios = list(
+            #     self.ratios_calculator.calculate(
+            #         cast(Sequence[StatementFetchedDTO], standardized_rows)
+            #     )
+            # )
+            # fetched_rows: list[StatementFetchedDTO] = [*standardized_rows, *ratios]
 
             self._log_stage(
                 "FTD",
