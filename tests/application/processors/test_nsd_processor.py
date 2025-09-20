@@ -13,7 +13,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 # <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-from application.processors.nsd_processor import NsdProcessor
+from application.processors.nsd_processor import NsdProcessor, _NsdTxnAggregator
 # =======
 # import application.processors.nsd_processor as nsd_module
 # from application.processors.nsd_processor import NsdProcessor, _StageTimeline
@@ -21,6 +21,8 @@ from application.processors.nsd_processor import NsdProcessor
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 
 
@@ -95,6 +97,50 @@ def _build_processor() -> tuple[NsdProcessor, MagicMock]:
     return processor, logger_mock
 
 
+def _make_nsd() -> NsdDTO:
+    return NsdDTO(
+        nsd=123,
+        company_name="Example SA",
+        quarter=datetime(2020, 3, 31),
+        version=1,
+        nsd_type="FORM",
+        dri=None,
+        auditor=None,
+        responsible_auditor=None,
+        protocol=None,
+        sent_date=datetime(2020, 4, 20, 10, 30),
+        reason=None,
+    )
+
+
+def _make_raw() -> StatementRawDTO:
+    return StatementRawDTO(
+        nsd="123",
+        company_name="Example SA",
+        quarter=datetime(2020, 3, 31),
+        version="1",
+        grupo="G",
+        quadro="Q",
+        account="ACC",
+        description="Description",
+        value=10.0,
+    )
+
+
+def _make_fetched() -> StatementFetchedDTO:
+    return StatementFetchedDTO(
+        nsd="123",
+        company_name="Example SA",
+        quarter=datetime(2020, 3, 31),
+        version="1",
+        grupo="G",
+        quadro="Q",
+        account="ACC",
+        description="Description",
+        value=10.0,
+    )
+
+
 def test_resolve_progress_start_time_reuses_first_value() -> None:
     processor, _ = _build_processor()
 
@@ -166,3 +212,82 @@ def test_log_stage_uses_existing_progress_formatter_payload() -> None:
 #     assert first == "pipeline: nsd=500ms"
 #     assert second == "pipeline: nsd=500ms raw=0h00m02s"
 # >>>>>>> 2025-09-09-Fetch-Adjustments
+
+
+def test_aggregator_flush_without_nsd_skips_all_persistence() -> None:
+    save_callback = MagicMock()
+    raw_repo = MagicMock()
+    fetched_repo = MagicMock()
+    aggregator = _NsdTxnAggregator(
+        save_callback=save_callback,
+        statements_raw_repository=raw_repo,
+        statements_fetched_repository=fetched_repo,
+        chunk_size=10,
+    )
+
+    aggregator.add_raw_many([_make_raw()])
+    aggregator.add_fetched_many([_make_fetched()])
+
+    aggregator.flush(uow=MagicMock(), include_raw=True, include_fetched=True)
+
+    save_callback.assert_not_called()
+    raw_repo.save_all.assert_not_called()
+    fetched_repo.save_all.assert_not_called()
+
+
+def test_finalize_nsd_only_persists_nsd_when_not_statement() -> None:
+    processor, _ = _build_processor()
+    processor.company_repository.iter_existing_by_columns.return_value = []
+    aggregator = processor._create_aggregator()
+    aggregator.add_raw_many([_make_raw()])
+    aggregator.add_fetched_many([_make_fetched()])
+    uow = MagicMock()
+
+    processor._finalize_nsd(nsd=_make_nsd(), aggregator=aggregator, uow=uow)
+
+    processor.nsd_repository.save_all.assert_called_once()
+    processor.statements_raw_repository.save_all.assert_not_called()
+    processor.statements_fetched_repository.save_all.assert_not_called()
+    uow.commit.assert_called_once()
+
+
+def test_finalize_nsd_persists_raw_level_when_requested() -> None:
+    processor, _ = _build_processor()
+    processor.company_repository.iter_existing_by_columns.return_value = []
+    aggregator = processor._create_aggregator()
+    aggregator.add_raw_many([_make_raw()])
+    uow = MagicMock()
+
+    processor._finalize_nsd(
+        nsd=_make_nsd(),
+        aggregator=aggregator,
+        uow=uow,
+        include_raw=True,
+    )
+
+    processor.nsd_repository.save_all.assert_called_once()
+    processor.statements_raw_repository.save_all.assert_called_once()
+    processor.statements_fetched_repository.save_all.assert_not_called()
+    uow.commit.assert_called_once()
+
+
+def test_finalize_nsd_persists_processed_level_when_requested() -> None:
+    processor, _ = _build_processor()
+    processor.company_repository.iter_existing_by_columns.return_value = []
+    aggregator = processor._create_aggregator()
+    aggregator.add_raw_many([_make_raw()])
+    aggregator.add_fetched_many([_make_fetched()])
+    uow = MagicMock()
+
+    processor._finalize_nsd(
+        nsd=_make_nsd(),
+        aggregator=aggregator,
+        uow=uow,
+        include_raw=True,
+        include_fetched=True,
+    )
+
+    processor.nsd_repository.save_all.assert_called_once()
+    processor.statements_raw_repository.save_all.assert_called_once()
+    processor.statements_fetched_repository.save_all.assert_called_once()
+    uow.commit.assert_called_once()

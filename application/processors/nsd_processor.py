@@ -71,30 +71,34 @@ class _NsdTxnAggregator:
     def add_fetched_many(self, items: Iterable[StatementFetchedDTO]) -> None:
         self._fetched_data.extend(items)
 
-    def flush(self, *, uow: Uow) -> None:
-# <<<<<<< codex/add-save_batch-method-to-nsd_processor-nbtb3g
-        if self._nsd_buffer:
+    def flush(
+        self,
+        *,
+        uow: Uow,
+        include_raw: bool = False,
+        include_fetched: bool = False,
+    ) -> None:
+        """Persist buffered data according to the requested persistence level."""
+
+        has_nsd = bool(self._nsd_buffer)
+        try:
+            if not has_nsd:
+                return
+
             for chunk in _chunked(self._nsd_buffer, self._chunk_size):
                 self._save_callback(chunk, uow=uow)
-# =======
-#         if self._nsd_data is not None:
-# # <<<<<<< codex/add-save_batch-method-to-nsd_processor-7rtim2
-#             nsd = self._nsd_data
-#             self._save_callback([nsd], uow=uow)
-# # =======
-# #             self._save_callback([self._nsd_data], uow=uow)
-# # >>>>>>> 2025-09-09-Fetch-Adjustments
-# >>>>>>> 2025-09-09-Fetch-Adjustments
-        if self._raw_data:
-            for chunk in _chunked(self._raw_data, self._chunk_size):
-                self.statements_raw_repository.save_all(chunk, uow=uow)
-        if self._fetched_data:
-            for chunk in _chunked(self._fetched_data, self._chunk_size):
-                self.statements_fetched_repository.save_all(chunk, uow=uow)
 
-        self._nsd_buffer.clear()
-        self._raw_data.clear()
-        self._fetched_data.clear()
+            if include_raw and self._raw_data:
+                for chunk in _chunked(self._raw_data, self._chunk_size):
+                    self.statements_raw_repository.save_all(chunk, uow=uow)
+
+            if include_fetched and self._fetched_data:
+                for chunk in _chunked(self._fetched_data, self._chunk_size):
+                    self.statements_fetched_repository.save_all(chunk, uow=uow)
+        finally:
+            self._nsd_buffer.clear()
+            self._raw_data.clear()
+            self._fetched_data.clear()
 
 
 class _StageTimeline:
@@ -215,7 +219,11 @@ class NsdProcessor:
             )
 
             if not nsd_type.is_statement:
-                self._finalize_nsd(nsd=nsd, aggregator=aggregator, uow=uow)
+                self._finalize_nsd(
+                    nsd=nsd,
+                    aggregator=aggregator,
+                    uow=uow,
+                )
                 return nsd
 
             return self._process_statement_nsd(
@@ -262,7 +270,12 @@ class NsdProcessor:
 
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
-            self._finalize_nsd(nsd=nsd, aggregator=aggregator, uow=uow)
+            self._finalize_nsd(
+                nsd=nsd,
+                aggregator=aggregator,
+                uow=uow,
+                include_raw=True,
+            )
             return nsd
 
         try:
@@ -294,8 +307,16 @@ class NsdProcessor:
             )
 
             aggregator.add_raw_many(raw_lines)
-            aggregator.add_fetched_many(self._filter_new_fetched(fetched_rows, uow=uow))
-            self._finalize_nsd(nsd=nsd, aggregator=aggregator, uow=uow)
+            aggregator.add_fetched_many(
+                self._filter_new_fetched(fetched_rows, uow=uow)
+            )
+            self._finalize_nsd(
+                nsd=nsd,
+                aggregator=aggregator,
+                uow=uow,
+                include_raw=True,
+                include_fetched=True,
+            )
 
             return nsd
         except Exception as exc:
@@ -320,9 +341,15 @@ class NsdProcessor:
         nsd: NsdDTO,
         aggregator: _NsdTxnAggregator,
         uow: Uow,
+        include_raw: bool = False,
+        include_fetched: bool = False,
     ) -> None:
         aggregator.set_nsd(nsd)
-        aggregator.flush(uow=uow)
+        aggregator.flush(
+            uow=uow,
+            include_raw=include_raw,
+            include_fetched=include_fetched,
+        )
         uow.commit()
 
     def _create_aggregator(self) -> _NsdTxnAggregator:
