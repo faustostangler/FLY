@@ -88,11 +88,10 @@ class _StageTimeline:
         if not self._durations:
             return ""
 
-        parts = [
+        return "pipeline: " + " ".join(
             f"{name.lower()}={self._format_duration(seconds)}"
             for name, seconds in self._durations.items()
-        ]
-        return "pipeline: " + " ".join(parts)
+        )
 
     @staticmethod
     def _format_duration(seconds: float) -> str:
