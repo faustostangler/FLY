@@ -10,8 +10,12 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-import application.processors.nsd_processor as nsd_module
-from application.processors.nsd_processor import NsdProcessor, _StageTimeline
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+from application.processors.nsd_processor import NsdProcessor
+# =======
+# import application.processors.nsd_processor as nsd_module
+# from application.processors.nsd_processor import NsdProcessor, _StageTimeline
+# >>>>>>> 2025-09-09-Fetch-Adjustments
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 
 
@@ -63,13 +67,40 @@ def test_build_progress_payload_defaults_total_size_when_missing() -> None:
     assert payload["start_time"] == 123.456
 
 
-def test_stage_timeline_summary_tracks_elapsed(monkeypatch) -> None:
-    timeline = _StageTimeline(started_at=0.0)
-    perf_counter_values = iter([0.5, 2.5])
-    monkeypatch.setattr(nsd_module.time, "perf_counter", lambda: next(perf_counter_values))
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+def test_log_stage_uses_existing_progress_formatter_payload() -> None:
+    processor = _build_processor()
+    processor.logger.reset_mock()
 
-    first = timeline.mark("NSD")
-    second = timeline.mark("RAW")
+    nsd = SimpleNamespace(
+        nsd="123",
+        quarter="2010-12-31",
+        sent_date="2010-04-20 09:35:15",
+        version=1,
+        nsd_type="FORM",
+        company_name="Example SA",
+    )
 
-    assert first == "pipeline: nsd=500ms"
-    assert second == "pipeline: nsd=500ms raw=0h00m02s"
+    progress = {"index": 0, "size": 10, "start_time": 42.0}
+
+    processor._log_stage("NSD", nsd, progress=progress, worker_id="worker")
+
+    processor.logger.log.assert_called_once()
+    _, kwargs = processor.logger.log.call_args
+
+    assert kwargs["progress"]["stage"] == "NSD"
+    assert kwargs["progress"]["extra_info"] == [
+        "123 2010-12-31 | 2010-04-20 09:35:15 v1 | FORM Example SA"
+    ]
+# =======
+# def test_stage_timeline_summary_tracks_elapsed(monkeypatch) -> None:
+#     timeline = _StageTimeline(started_at=0.0)
+#     perf_counter_values = iter([0.5, 2.5])
+#     monkeypatch.setattr(nsd_module.time, "perf_counter", lambda: next(perf_counter_values))
+
+#     first = timeline.mark("NSD")
+#     second = timeline.mark("RAW")
+
+#     assert first == "pipeline: nsd=500ms"
+#     assert second == "pipeline: nsd=500ms raw=0h00m02s"
+# >>>>>>> 2025-09-09-Fetch-Adjustments

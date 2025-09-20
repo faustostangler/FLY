@@ -155,19 +155,28 @@ class NsdProcessor:
         progress_start = self._resolve_progress_start_time(
             start_time, reset=task.index == 0
         )
-        timeline = _StageTimeline(started_at=start_time)
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#         timeline = _StageTimeline(started_at=start_time)
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
-            summary = timeline.mark("NSD")
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#             summary = timeline.mark("NSD")
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             missing_progress = dict(progress)
             missing_progress["stage"] = "NSD"
             self._log_message(
                 f"NSD {nsd_id}",
                 progress=missing_progress,
                 worker_id=task.worker_id,
-                extra_info=[summary] if summary else None,
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#                 extra_info=[summary] if summary else None,
+# >>>>>>> 2025-09-09-Fetch-Adjustments
             )
             return task.data
 
@@ -346,11 +355,14 @@ class NsdProcessor:
         timeline: _StageTimeline | None = None,
     ) -> None:
         extra_tokens = [self._format_extra_info_line(nsd)]
-        if timeline is not None:
-            summary = timeline.mark(stage)
-            if summary:
-                extra_tokens.append(summary)
+# <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
+# =======
+#         if timeline is not None:
+#             summary = timeline.mark(stage)
+#             if summary:
+#                 extra_tokens.append(summary)
 
+# >>>>>>> 2025-09-09-Fetch-Adjustments
         stage_progress = dict(progress)
         stage_progress["stage"] = stage
 
