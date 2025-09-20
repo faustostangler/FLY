@@ -24,7 +24,9 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from domain.ports.scraper_base_port import SaveCallback
 from infrastructure.utils.id_generator import IdGenerator
+from infrastructure.utils.list_flatenner import ListFlattener
 
 
 class _NsdTxnAggregator:
@@ -33,11 +35,11 @@ class _NsdTxnAggregator:
     def __init__(
         self,
         *,
-        nsd_repository: RepositoryNsdPort,
+        save_callback: SaveCallback[NsdDTO],
         statements_raw_repository: RepositoryStatementsRawPort,
         statements_fetched_repository: RepositoryStatementFetchedPort,
     ) -> None:
-        self.nsd_repository = nsd_repository
+        self._save_callback = save_callback
         self.statements_raw_repository = statements_raw_repository
         self.statements_fetched_repository = statements_fetched_repository
         self._nsd_data: NsdDTO | None = None
@@ -55,7 +57,7 @@ class _NsdTxnAggregator:
 
     def flush(self, *, uow: Uow) -> None:
         if self._nsd_data is not None:
-            self.nsd_repository.save_all([self._nsd_data], uow=uow)
+            self._save_callback([self._nsd_data], uow=uow)
         if self._raw_data:
             self.statements_raw_repository.save_all(self._raw_data, uow=uow)
         if self._fetched_data:
@@ -295,7 +297,7 @@ class NsdProcessor:
 
     def _create_aggregator(self) -> _NsdTxnAggregator:
         return _NsdTxnAggregator(
-            nsd_repository=self.nsd_repository,
+            save_callback=self._save_batch,
             statements_raw_repository=self.statements_raw_repository,
             statements_fetched_repository=self.statements_fetched_repository,
         )
@@ -435,3 +437,51 @@ class NsdProcessor:
         )
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
+
+    def _save_batch(
+        self,
+        items: list[NsdDTO | None],
+        *,
+        uow: Uow | None = None,
+    ) -> None:
+        """Persist a batch of NSD DTOs within the provided unit of work."""
+
+        if uow is None:
+            raise RuntimeError("SaveCallback chamado sem UoW")
+
+        flat_items = ListFlattener.flatten(items)
+        if not flat_items:
+            return
+
+        dtos: list[NsdDTO] = []
+        for item in flat_items:
+            if item is None:
+                continue
+            if isinstance(item, NsdDTO):
+                dtos.append(NsdDTO.from_raw(item))
+            else:  # pragma: no cover - defensive path for compatible objects
+                dtos.append(NsdDTO.from_raw(cast(NsdDTO, item)))
+
+        if not dtos:
+            return
+
+        company_names = {dto.company_name for dto in dtos if dto.company_name}
+        if company_names:
+            existing = {
+                name
+                for (name,) in self.company_repository.iter_existing_by_columns(
+                    "company_name", uow=uow
+                )
+            }
+            missing = company_names - existing
+            if missing:
+                to_create = [
+                    CompanyDataDTO(
+                        cvm_code=self.id_generator.create_id(size=6),
+                        company_name=name,
+                    )
+                    for name in missing
+                ]
+                self.company_repository.save_all(to_create, uow=uow)
+
+        self.nsd_repository.save_all(dtos, uow=uow)
