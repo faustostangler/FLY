@@ -12,7 +12,7 @@ from infrastructure.http.rate_limiter import RateLimitedClient, TokenBucket
 
 
 def build_http_client(config: ConfigPort, logger: LoggerPort) -> AffinityHttpClientPort:
-    # base com sessão compartilhável, headers sorteados, pool e cache condicional
+    # base com sessão compartilhável, headers sorteados, pool e retries
     base = CloudscraperAffinityHttpClient(config.database.connection_string, logger)
     # rate limit global simples: 5 req/s com burst 10
     limited = RateLimitedClient(base, TokenBucket(rate_per_sec=5.0, burst=10), logger)

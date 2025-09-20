@@ -20,7 +20,6 @@ from infrastructure.repositories import (
     SqlAlchemyStatementFetchedRepository,
     SqlAlchemyStatementRawRepository,
 )
-from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.scrapers import (
     CompanyDataScraper,
     NsdScraper,
@@ -49,10 +48,8 @@ class CLIAdapter:
         self.session_pool = SessionPool(
             self.config, self.logger, size=self.config.http.session_pool_size
         )
-        self.http_cache = HttpCacheRepository(self.company_repo.session_factory)
         base_scraper = RequestsStatementsRawcraper(
             pool=self.session_pool,
-            cache=self.http_cache,
             timeout=(
                 self.config.http.timeout_connect,
                 self.config.http.timeout_read,

@@ -1,4 +1,4 @@
-"""Scrapers: low-level HTTP fetcher with caching, and domain-level statements scraper.
+"""Scrapers: low-level HTTP fetcher and domain-level statements scraper.
 This file keeps hexagonal boundaries intact: the domain scraper depends only on the
 public HTTP client API (AffinityHttpClient), never on private attributes.
 """
@@ -29,26 +29,23 @@ from infrastructure.helpers.time_utils import TimeUtils
 from infrastructure.helpers.worker_pool import WorkerPool
 from infrastructure.http.affinity_port import AffinityHttpClient
 from infrastructure.http.session_pool import SessionPool
-from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 from infrastructure.utils.id_generator import IdGenerator
 
 
 class RequestsStatementsRawcraper:
-    """Infra HTTP client with connection reuse and conditional GET.
+    """Infra HTTP client with connection reuse.
     Exposes a public API that supports session affinity for a batch of fetches.
     """
 
     def __init__(
         self,
         pool: SessionPool,
-        cache: HttpCacheRepository,
         config: ConfigPort | None = None,
         logger: LoggerPort | None = None,
         metrics: MetricsCollectorPort | None = None,
         timeout: tuple[float, float] = (5.0, 20.0),
     ) -> None:
         self._pool = pool
-        self._cache = cache
         self._timeout = timeout
         self._logger = logger
         self._config = config
@@ -57,24 +54,14 @@ class RequestsStatementsRawcraper:
     # ---------- Public API ----------
 
     def fetch(self, url: str, headers: dict[str, str] | None = None) -> bytes:
-        """Simple GET using pooled sessions with conditional headers."""
-        cached = self._cache.get(url)
+        """Simple GET using pooled sessions."""
         hdrs = dict(headers or {})
-        if cached and cached.etag:
-            hdrs["If-None-Match"] = cached.etag
-        if cached and cached.last_modified:
-            hdrs["If-Modified-Since"] = cached.last_modified
 
         s = self._pool.acquire()
         try:
             r: Response = s.get(url, headers=hdrs, timeout=self._timeout, allow_redirects=True)
         finally:
             self._pool.release(s)
-
-        if r.status_code == 304 and cached and cached.body is not None:
-            if self._logger:
-                self._logger.log("http 304 served from cache", level="info")
-            return cached.body
 
         if r.status_code in (429, 403):
             ex = Exception("rate limited")
@@ -84,7 +71,6 @@ class RequestsStatementsRawcraper:
         r.raise_for_status()
 
         body = r.content or b""
-        self._cache.upsert(url, etag=r.headers.get("ETag"), last_modified=r.headers.get("Last-Modified"), body=body)
         if self._metrics:
             self._metrics.record_network_bytes(len(body))
         return body
@@ -94,30 +80,15 @@ class RequestsStatementsRawcraper:
         return _SessionLease(self._pool)
 
     def fetch_with(self, session: requests.Session, url: str, headers: dict[str, str] | None = None) -> bytes:
-        """GET using a provided session (affinity). Applies conditional headers & cache update."""
-        cached = None
+        """GET using a provided session (affinity)."""
         hdrs = dict(headers or {})
-        # cached = self._cache.get(url)
-        # if cached and cached.etag:
-        #     hdrs["If-None-Match"] = cached.etag
-        # if cached and cached.last_modified:
-        #     hdrs["If-Modified-Since"] = cached.last_modified
-        # if cached and not cached.last_modified:
-        #     self._logger.log(f"etag failed: url {cached.url} last fetched at {cached.fetched_at}", level="info")
         r: Response = session.get(url, headers=hdrs, timeout=self._timeout, allow_redirects=True)
 
-        if r.status_code == 304 and cached and cached.body is not None:
-            if self._logger:
-                self._logger.log("http 304 served from cache", level="info")
-            return cached.body
         if r.status_code in (429, 403):
             ex = Exception("rate limited"); setattr(ex, "status_code", r.status_code); raise ex
         r.raise_for_status()
 
         body = r.content or b""
-
-        # self._cache.upsert(url, etag=r.headers.get("ETag"), last_modified=r.headers.get("Last-Modified"), body=body)
-
         if self._metrics:
             self._metrics.record_network_bytes(len(body))
         return body

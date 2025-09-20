@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator
+from typing import Any, Iterator
 
 import requests
 
@@ -20,17 +20,15 @@ from infrastructure.adapters.engine_setup import EngineSetup
 from infrastructure.config.scraping import load_scraping_config
 from infrastructure.http.backoff import sleep_expo_jitter
 from infrastructure.http.headers_pool import HeadersPool
-from infrastructure.repositories.http_cache_repository import HttpCacheRepository
 
 
 class CloudscraperAffinityHttpClient(AffinityHttpClientPort, EngineSetup):
-    """Cliente HTTP com Cloudscraper, randomização de headers, pool, retries, backoff e cache condicional."""
+    """Cliente HTTP com Cloudscraper, randomização de headers, pool, retries e backoff."""
 
     def __init__(self, connection_string: str, logger: LoggerPort) -> None:
         EngineSetup.__init__(self, connection_string, logger)
         self._cfg = load_scraping_config()
         self._pool = HeadersPool.from_config()
-        self._cache = HttpCacheRepository(self.Session)
 
     # ---------- sessão com pool + retries ----------
     def _make_adapter(self) -> HTTPAdapter:
@@ -59,27 +57,6 @@ class CloudscraperAffinityHttpClient(AffinityHttpClientPort, EngineSetup):
         s.headers.update(self._pool.sample())
         return s
 
-    # ---------- condicional ETag/Last-Modified ----------
-    def _apply_conditional_headers(self, url: str, headers: Dict[str, str]) -> Dict[str, str]:
-        row = self._cache.get(url)
-        if row is None:
-            return headers
-        h = dict(headers)
-        if row.etag:
-            h["If-None-Match"] = row.etag
-        if row.last_modified:
-            h["If-Modified-Since"] = row.last_modified
-        return h
-
-    def _persist_cache(self, url: str, r: requests.Response) -> None:
-        pass  # as hash always change, cache is ineffective now
-        # self._cache.upsert(
-        #     url=url,
-        #     etag=r.headers.get("ETag"),
-        #     last_modified=r.headers.get("Last-Modified"),
-        #     body=r.content,
-        # )
-
     # ---------- API do port ----------
     def fetch(self, url: str, headers: dict[str, str] | None = None) -> bytes:
         with self.borrow_session() as s:
@@ -94,15 +71,9 @@ class CloudscraperAffinityHttpClient(AffinityHttpClientPort, EngineSetup):
             req_headers = self._pool.sample()
             if headers:
                 req_headers.update(headers)
-            req_headers = self._apply_conditional_headers(url, req_headers)
             try:
                 r = session.get(url, headers=req_headers, timeout=self._cfg.timeout, allow_redirects=True)
-                if r.status_code == 304:
-                    row = self._cache.get(url)
-                    if row and row.body is not None:
-                        return row.body
                 r.raise_for_status()
-                # self._persist_cache(url, r)  # as hash always change, cache is ineffective now
 
                 return r.content
             except requests.RequestException as e:  # noqa: PERF203
