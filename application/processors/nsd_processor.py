@@ -274,8 +274,9 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         return (
-            f"{nsd.nsd} {quarter_display} | {nsd.sent_date} "
-            f"v{nsd.version} | {nsd.nsd_type} {nsd.company_name}"
+            f"{nsd.nsd} {nsd.sent_date} | "
+            f"{quarter_display} v{nsd.version} "
+            f"{nsd.nsd_type} | {nsd.company_name}"
         )
 
     def _filter_new_fetched(
