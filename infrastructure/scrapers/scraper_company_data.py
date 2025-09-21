@@ -374,9 +374,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
                 return None
 
             # Process one entry through fetch + clean + merge
-            result = self.detail_processor.process_entry(
-                entry, metrics_collector=self._metrics_collector
-            )
+            result = self.detail_processor.process_entry(entry)
 
             # Prepare diagnostic metadata for logs
             issuingCompany = (
