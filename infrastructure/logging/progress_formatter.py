@@ -77,7 +77,12 @@ class ProgressFormatter:
             if isinstance(extra_info, list):
                 # Join non-empty tokens with spaces
                 extra_str = " ".join(str(e) for e in extra_info if e)
-                return f"{base} | {extra_str}" if extra_str else base
+                if extra_str:
+                    # Sanitize pipes to avoid introducing extra " | " delimiters
+                    sanitized = extra_str.replace("|", "/").strip()
+                    if sanitized:
+                        return f"{base} ({sanitized})"
+                return base
 
             # Return base string when extra_info is not a list
             return base
