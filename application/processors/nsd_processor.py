@@ -282,6 +282,7 @@ class NsdProcessor:
             summary = timeline.mark("NSD")
             missing_progress = dict(progress)
             missing_progress["stage"] = "NSD"
+            # empty
             self._log_message(
                 f"NSD {nsd_id}",
                 progress=missing_progress,
@@ -337,14 +338,6 @@ class NsdProcessor:
         download_cycle: _DownloadCycle,
         download_extra: Mapping[str, str] | None,
     ) -> Any:
-        self._log_stage(
-            "NSD",
-            nsd,
-            progress=progress,
-            worker_id=task.worker_id,
-            timeline=timeline,
-            extra=download_extra,
-        )
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
         if hasattr(sent_date, "date"):
