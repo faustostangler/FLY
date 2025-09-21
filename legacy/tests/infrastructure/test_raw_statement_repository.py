@@ -37,11 +37,11 @@ def test_save_all_upserts(SessionLocal, engine):
     repo.save_all([StatementRawDTO.from_dict(updated)])
 
     with engine.connect() as conn:
-        count = conn.execute(text("SELECT COUNT(*) FROM tbl_raw_statements")).scalar()
+        count = conn.execute(text("SELECT COUNT(*) FROM tbl_statements_raw")).scalar()
         value = conn.execute(
             text(
                 """
-                SELECT value FROM tbl_raw_statements
+                SELECT value FROM tbl_statements_raw
                 WHERE nsd=1 AND account='01'
                 """
             )

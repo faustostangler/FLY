@@ -13,7 +13,7 @@ DB_FILENAME = "fly.db"
 TABLES = {
     "company": "tbl_company",
     "nsd": "tbl_nsd",
-    "raw_statements": "tbl_raw_statements",
+    "raw_statements": "tbl_statements_raw",
     "fetched_statements": "tbl_statements_fetched",
 }
 

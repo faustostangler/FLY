@@ -11,7 +11,7 @@ from .abstract_statement_model import BaseStatementModel
 class StatementRawModel(BaseStatementModel):
     """ORM model for raw statement rows."""
 
-    __tablename__ = "tbl_raw_statements"
+    __tablename__ = "tbl_statements_raw"
 
     nsd: Mapped[str] = mapped_column(
         String,
