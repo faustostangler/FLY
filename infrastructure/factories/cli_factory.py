@@ -91,6 +91,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     scraper_statements_raw = ScraperStatementRaw(
         config=config,
         logger=logger,
+        metrics_collector=metrics_collector,
         # statements_raw_repository=raw_statements_repository,
         # datacleaner=datacleaner,
         # metrics_collector=metrics_collector,

@@ -29,85 +29,6 @@ from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
-
-class _DownloadCycle:
-    """Track download deltas for all scrapers participating in a pipeline run."""
-
-    def __init__(self, *, byte_formatter: ByteFormatter) -> None:
-        self._byte_formatter = byte_formatter
-        self._collectors: dict[int, Any] = {}
-        self._baselines: dict[int, int] = {}
-
-    def register(self, subject: Any) -> None:
-        """Register a scraper-like object so its metrics can be tracked."""
-
-        collector = getattr(subject, "metrics_collector", None)
-        if collector is None:
-            return
-
-        try:
-            baseline = int(getattr(collector, "network_bytes", 0))
-        except (TypeError, ValueError):  # pragma: no cover - defensive fallback
-            baseline = 0
-
-        key = id(collector)
-        self._collectors[key] = collector
-        self._baselines[key] = baseline
-
-    def total_bytes(self, *, fallback: int | None = None) -> int:
-        """Return the accumulated download delta for the registered collectors."""
-
-        total = 0
-        has_any = False
-        for key, collector in self._collectors.items():
-            current = getattr(collector, "network_bytes", None)
-            if not isinstance(current, int):
-                continue
-            has_any = True
-            baseline = self._baselines.get(key, 0)
-            delta = current - baseline
-            if delta > 0:
-                total += delta
-
-        if total <= 0:
-            fallback_value = fallback or 0
-            if not has_any:
-                return fallback_value
-            return max(total, fallback_value)
-
-        if fallback and fallback > total:
-            return fallback
-
-        return total
-
-    def build_extra(self, *, collector: Any | None) -> Mapping[str, str] | None:
-        """Create the log payload for the given collector using the tracked totals."""
-
-        if collector is None:
-            total = self.total_bytes()
-            if total <= 0:
-                return None
-            return {"Total download": self._byte_formatter.format_bytes(total)}
-
-        download_bytes = getattr(collector, "download_bytes", None)
-        stage_download = (
-            int(download_bytes)
-            if isinstance(download_bytes, int)
-            else None
-        )
-
-        extra: dict[str, str] = {}
-        if stage_download and stage_download > 0:
-            extra["Download"] = self._byte_formatter.format_bytes(stage_download)
-
-        total_bytes = self.total_bytes(fallback=stage_download)
-        if total_bytes > 0:
-            extra["Total download"] = self._byte_formatter.format_bytes(total_bytes)
-        elif stage_download is not None and stage_download >= 0:
-            extra["Total download"] = self._byte_formatter.format_bytes(stage_download)
-
-        return extra or None
-
 # <<<<<<< codex/add-save_batch-method-to-nsd_processor-nbtb3g
 
 _T = TypeVar("_T")
@@ -271,11 +192,8 @@ class NsdProcessor:
             start_time, reset=task.index == 0
         )
         timeline = _StageTimeline(started_at=start_time)
-        download_cycle = self._start_download_cycle()
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
-        download_extra = self._build_download_extra(
-            scraper=self.scraper_nsd, cycle=download_cycle
-        )
+        download_extra = self._build_download_extra(scraper=self.scraper_nsd)
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
@@ -322,7 +240,6 @@ class NsdProcessor:
             aggregator=aggregator,
             uow=uow,
             timeline=timeline,
-            download_cycle=download_cycle,
             download_extra=download_extra,
         )
 
@@ -335,7 +252,6 @@ class NsdProcessor:
         aggregator: _NsdTxnAggregator,
         uow: Uow,
         timeline: _StageTimeline,
-        download_cycle: _DownloadCycle,
         download_extra: Mapping[str, str] | None,
     ) -> Any:
         quarter_police = self.policy.normalize_quarter(nsd)
@@ -354,7 +270,7 @@ class NsdProcessor:
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
         raw_download_extra = self._build_download_extra(
-            scraper=self.scraper_statements_raw, cycle=download_cycle
+            scraper=self.scraper_statements_raw
         )
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
@@ -491,12 +407,6 @@ class NsdProcessor:
                 self._progress_started_at = candidate
             return self._progress_started_at
 
-    def _start_download_cycle(self) -> _DownloadCycle:
-        cycle = _DownloadCycle(byte_formatter=self.byte_formatter)
-        cycle.register(self.scraper_nsd)
-        cycle.register(self.scraper_statements_raw)
-        return cycle
-
     def _build_progress_payload(self, *, task: WorkerTaskDTO, start_time: float) -> dict[str, Any]:
         raw_total = task.total_size or (task.index + 1)
         try:
@@ -627,13 +537,9 @@ class NsdProcessor:
         self,
         *,
         scraper: Any | None = None,
-        cycle: _DownloadCycle | None = None,
     ) -> Mapping[str, str] | None:
         subject = scraper if scraper is not None else self.scraper_nsd
         collector = getattr(subject, "metrics_collector", None)
-
-        if cycle is not None:
-            return cycle.build_extra(collector=collector)
 
         if collector is None:
             return None
@@ -642,9 +548,9 @@ class NsdProcessor:
         total_bytes = getattr(collector, "network_bytes", None)
 
         extra: dict[str, str] = {}
-        if isinstance(download_bytes, int):
+        if isinstance(download_bytes, int) and download_bytes > 0:
             extra["Download"] = self.byte_formatter.format_bytes(download_bytes)
-        if isinstance(total_bytes, int):
+        if isinstance(total_bytes, int) and total_bytes > 0:
             extra["Total download"] = self.byte_formatter.format_bytes(total_bytes)
 
         return extra or None
