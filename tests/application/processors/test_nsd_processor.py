@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Mapping, Sequence, cast
 from unittest.mock import MagicMock
 
 import sys
@@ -168,6 +168,36 @@ def test_build_progress_payload_defaults_total_size_when_missing() -> None:
     assert payload["size"] == 5
     assert payload["index"] == 4
     assert payload["start_time"] == 123.456
+
+
+def test_run_logs_missing_nsd_with_cycle_totals() -> None:
+    processor, logger = _build_processor()
+    logger.reset_mock()
+
+    nsd_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
+    processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+        download_bytes=0,
+        network_bytes=0,
+    )
+
+    def _fetch_one(_: int) -> None:
+        nsd_collector.download_bytes = 512
+        nsd_collector.network_bytes = 512
+        return None
+
+    processor.scraper_nsd.fetch_one.side_effect = _fetch_one
+
+    task = WorkerTaskDTO(index=0, data="123", worker_id="worker", total_size=1)
+
+    processor.run(task)
+
+    logger.log.assert_called_once()
+    _, kwargs = logger.log.call_args
+    assert kwargs["extra"] == {
+        "Download": "512.00B",
+        "Total download": "512.00B",
+    }
 
 
 # <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
@@ -344,6 +374,37 @@ def test_build_download_extra_accepts_custom_scraper() -> None:
     }
 
 
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+def test_build_download_extra_uses_cycle_totals() -> None:
+    processor, _ = _build_processor()
+    processor.scraper_nsd.metrics_collector = SimpleNamespace(
+        download_bytes=0,
+        network_bytes=0,
+    )
+    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+        download_bytes=0,
+        network_bytes=0,
+    )
+
+    cycle = processor._start_download_cycle()
+
+    processor.scraper_nsd.metrics_collector.download_bytes = 1024
+    processor.scraper_nsd.metrics_collector.network_bytes = 1024
+    processor.scraper_statements_raw.metrics_collector.download_bytes = 2048
+    processor.scraper_statements_raw.metrics_collector.network_bytes = 2048
+
+    extra = processor._build_download_extra(
+        scraper=processor.scraper_statements_raw, cycle=cycle
+    )
+
+    assert extra == {
+        "Download": "2.00KB",
+        "Total download": "3.00KB",
+    }
+
+
+# =======
+# >>>>>>> 2025-09-20-Stock-Value
 class _DummyAction:
     def __init__(self, raw: bool) -> None:
         self._raw = raw
@@ -356,10 +417,29 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
     processor, logger = _build_processor()
     logger.reset_mock()
 
-    processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
-    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
-        download_bytes=2048,
-        network_bytes=4096,
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+    nsd_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
+    raw_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
+    processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_statements_raw.metrics_collector = raw_collector
+    cycle = processor._start_download_cycle()
+
+    def _fetch_raw(task: WorkerTaskDTO) -> Mapping[str, Sequence[StatementRawDTO]]:
+        raw_collector.download_bytes = 2048
+        raw_collector.network_bytes = 2048
+        return {"items": [_make_raw()]}
+
+    processor.scraper_statements_raw.fetch.side_effect = _fetch_raw
+    nsd_collector.download_bytes = 1024
+    nsd_collector.network_bytes = 1024
+    download_extra = processor._build_download_extra(
+        scraper=processor.scraper_nsd, cycle=cycle
+# =======
+#     processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
+#     processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+#         download_bytes=2048,
+#         network_bytes=4096,
+# >>>>>>> 2025-09-20-Stock-Value
     )
     processor.policy.normalize_quarter.return_value = SimpleNamespace(
         year=2020, month=3, is_december=False
@@ -381,7 +461,12 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
         aggregator=aggregator,
         uow=MagicMock(),
         timeline=None,
-        download_extra=None,
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+        download_cycle=cycle,
+        download_extra=download_extra,
+# =======
+#         download_extra=None,
+# >>>>>>> 2025-09-20-Stock-Value
     )
 
     raw_call = next(
@@ -392,7 +477,11 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
 
     assert raw_call["extra"] == {
         "Download": "2.00KB",
-        "Total download": "4.00KB",
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+        "Total download": "3.00KB",
+# =======
+#         "Total download": "4.00KB",
+# >>>>>>> 2025-09-20-Stock-Value
     }
 
 
@@ -400,10 +489,29 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
     processor, logger = _build_processor()
     logger.reset_mock()
 
-    processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
-    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
-        download_bytes=3072,
-        network_bytes=6144,
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+    nsd_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
+    raw_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
+    processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_statements_raw.metrics_collector = raw_collector
+    cycle = processor._start_download_cycle()
+
+    def _fetch_raw(task: WorkerTaskDTO) -> Mapping[str, Sequence[StatementRawDTO]]:
+        raw_collector.download_bytes = 3072
+        raw_collector.network_bytes = 3072
+        return {"items": [_make_raw()]}
+
+    processor.scraper_statements_raw.fetch.side_effect = _fetch_raw
+    nsd_collector.download_bytes = 2048
+    nsd_collector.network_bytes = 2048
+    download_extra = processor._build_download_extra(
+        scraper=processor.scraper_nsd, cycle=cycle
+# =======
+#     processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
+#     processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+#         download_bytes=3072,
+#         network_bytes=6144,
+# >>>>>>> 2025-09-20-Stock-Value
     )
     processor.policy.normalize_quarter.return_value = SimpleNamespace(
         year=2020, month=3, is_december=False
@@ -430,7 +538,12 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
         aggregator=aggregator,
         uow=MagicMock(),
         timeline=None,
-        download_extra=None,
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+        download_cycle=cycle,
+        download_extra=download_extra,
+# =======
+#         download_extra=None,
+# >>>>>>> 2025-09-20-Stock-Value
     )
 
     ftd_call = next(
@@ -441,5 +554,9 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
 
     assert ftd_call["extra"] == {
         "Download": "3.00KB",
-        "Total download": "6.00KB",
+# <<<<<<< codex/ensure-download_extra-is-always-applied-2vo1h9
+        "Total download": "5.00KB",
+# =======
+#         "Total download": "6.00KB",
+# >>>>>>> 2025-09-20-Stock-Value
     }
