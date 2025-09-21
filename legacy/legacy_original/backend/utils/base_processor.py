@@ -1020,7 +1020,7 @@ class BaseProcessor:
             value (str or int or float): Input value.
 
         Returns:
-            float: Fetched float value.
+            float: Parsed float value.
         """
         if isinstance(value, (int, float)):
             return float(value)
@@ -1850,7 +1850,7 @@ class BaseProcessor:
         result = []
         try:
             table_names = set()
-            fetched = sqlparse.parse(sql)
+            parsed = sqlparse.parse(sql)
 
             def extract_from_tokens(tokens):
                 try:
@@ -1887,7 +1887,7 @@ class BaseProcessor:
                 except Exception as e:
                     self.log_error(f"Erro interno ao percorrer tokens: {e}")
 
-            for statement in fetched:
+            for statement in parsed:
                 extract_from_tokens(statement.tokens)
 
             result = list(table_names)
