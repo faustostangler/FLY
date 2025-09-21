@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
@@ -26,11 +27,13 @@ class ScraperStatementRaw(ScraperStatementRawPort):
         *,
         config: ConfigPort,
         logger: LoggerPort,
+        metrics_collector: MetricsCollectorPort,
         http_client: AffinityHttpClientPort,
     ) -> None:
         self.config = config
         self.logger = logger
         self.http = http_client
+        self._metrics_collector = metrics_collector
 
     # API pública: cumpre o porto
     def fetch(self, task: WorkerTaskDTO) -> Mapping[str, Any]:
@@ -75,10 +78,16 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             with self.http.borrow_session() as s:
                 hdrs = {str(k): str(v) for k, v in s.headers.items()}
                 body = self.http.fetch_with(s, url, headers=hdrs)
+                self._metrics_collector.add_network_bytes(len(body))
                 return body.decode("utf-8")
         hdrs = {str(k): str(v) for k, v in session.headers.items()}
         body = self.http.fetch_with(session, url, headers=hdrs)
+        self._metrics_collector.add_network_bytes(len(body))
         return body.decode("utf-8")
+
+    @property
+    def metrics_collector(self) -> MetricsCollectorPort:
+        return self._metrics_collector
 
     def _extract_hash(self, html: str) -> str:
         soup = BeautifulSoup(html, "html.parser")
