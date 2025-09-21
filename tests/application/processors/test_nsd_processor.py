@@ -176,7 +176,9 @@ def test_run_logs_missing_nsd_with_collector_metrics() -> None:
 
     nsd_collector = SimpleNamespace(download_bytes=0, network_bytes=0)
     processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_nsd._metrics_collector = nsd_collector  # type: ignore[attr-defined]
     processor.scraper_statements_raw.metrics_collector = nsd_collector
+    processor.scraper_statements_raw._metrics_collector = nsd_collector  # type: ignore[attr-defined]
 
     def _fetch_one(_: int) -> None:
         nsd_collector.download_bytes = 512
@@ -192,8 +194,8 @@ def test_run_logs_missing_nsd_with_collector_metrics() -> None:
     logger.log.assert_called_once()
     _, kwargs = logger.log.call_args
     assert kwargs["extra"] == {
-        "Download": "512.00B",
-        "Total download": "512.00B",
+        "download_bytes": 512,
+        "network_bytes": 512,
     }
 
 
@@ -342,35 +344,6 @@ def test_finalize_nsd_persists_processed_level_when_requested() -> None:
     uow.commit.assert_called_once()
 
 
-def test_build_download_extra_formats_metrics() -> None:
-    processor, _ = _build_processor()
-    processor.scraper_nsd.metrics_collector = SimpleNamespace(
-        download_bytes=1024,
-        network_bytes=10_485_760,
-    )
-
-    extra = processor._build_download_extra()
-
-    assert extra == {
-        "Download": "1.00KB",
-        "Total download": "10.00MB",
-    }
-
-
-def test_build_download_extra_accepts_custom_scraper() -> None:
-    processor, _ = _build_processor()
-    scraper = SimpleNamespace(
-        metrics_collector=SimpleNamespace(download_bytes=512, network_bytes=2048)
-    )
-
-    extra = processor._build_download_extra(scraper=scraper)
-
-    assert extra == {
-        "Download": "512.00B",
-        "Total download": "2.00KB",
-    }
-
-
 class _DummyAction:
     def __init__(self, raw: bool) -> None:
         self._raw = raw
@@ -379,7 +352,7 @@ class _DummyAction:
         return self._raw
 
 
-def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
+def test_process_statement_nsd_logs_raw_stage_with_metrics() -> None:
     processor, logger = _build_processor()
     logger.reset_mock()
 
@@ -392,7 +365,9 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
     nsd_collector.add_network_bytes = add_bytes  # type: ignore[attr-defined]
 
     processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_nsd._metrics_collector = nsd_collector  # type: ignore[attr-defined]
     processor.scraper_statements_raw.metrics_collector = nsd_collector
+    processor.scraper_statements_raw._metrics_collector = nsd_collector  # type: ignore[attr-defined]
 
     def _fetch_raw(task: WorkerTaskDTO) -> Mapping[str, Sequence[StatementRawDTO]]:
         add_bytes(2048)
@@ -400,9 +375,6 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
 
     processor.scraper_statements_raw.fetch.side_effect = _fetch_raw
     add_bytes(1024)
-    download_extra = processor._build_download_extra(
-        scraper=processor.scraper_nsd,
-    )
     processor.policy.normalize_quarter.return_value = SimpleNamespace(
         year=2020, month=3, is_december=False
     )
@@ -423,7 +395,6 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
         aggregator=aggregator,
         uow=MagicMock(),
         timeline=None,
-        download_extra=download_extra,
     )
 
     raw_call = next(
@@ -433,12 +404,12 @@ def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
     )
 
     assert raw_call["extra"] == {
-        "Download": "2.00KB",
-        "Total download": "3.00KB",
+        "download_bytes": 2048,
+        "network_bytes": 3072,
     }
 
 
-def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
+def test_process_statement_nsd_logs_ftd_stage_with_raw_metrics() -> None:
     processor, logger = _build_processor()
     logger.reset_mock()
 
@@ -451,7 +422,9 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
     nsd_collector.add_network_bytes = add_bytes  # type: ignore[attr-defined]
 
     processor.scraper_nsd.metrics_collector = nsd_collector
+    processor.scraper_nsd._metrics_collector = nsd_collector  # type: ignore[attr-defined]
     processor.scraper_statements_raw.metrics_collector = nsd_collector
+    processor.scraper_statements_raw._metrics_collector = nsd_collector  # type: ignore[attr-defined]
 
     def _fetch_raw(task: WorkerTaskDTO) -> Mapping[str, Sequence[StatementRawDTO]]:
         add_bytes(3072)
@@ -459,9 +432,6 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
 
     processor.scraper_statements_raw.fetch.side_effect = _fetch_raw
     add_bytes(2048)
-    download_extra = processor._build_download_extra(
-        scraper=processor.scraper_nsd,
-    )
     processor.policy.normalize_quarter.return_value = SimpleNamespace(
         year=2020, month=3, is_december=False
     )
@@ -487,7 +457,6 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
         aggregator=aggregator,
         uow=MagicMock(),
         timeline=None,
-        download_extra=download_extra,
     )
 
     ftd_call = next(
@@ -497,6 +466,6 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
     )
 
     assert ftd_call["extra"] == {
-        "Download": "3.00KB",
-        "Total download": "5.00KB",
+        "download_bytes": 3072,
+        "network_bytes": 5120,
     }

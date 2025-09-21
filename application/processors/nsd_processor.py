@@ -25,7 +25,6 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
-from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -175,7 +174,6 @@ class NsdProcessor:
         self.ratios_calculator = ratios_calculator
 
         self.id_generator = IdGenerator(config=config)
-        self.byte_formatter = ByteFormatter()
 
         # Progress tracking helpers -------------------------------------------------
         self._progress_lock = threading.Lock()
@@ -193,7 +191,6 @@ class NsdProcessor:
         )
         timeline = _StageTimeline(started_at=start_time)
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
-        download_extra = self._build_download_extra(scraper=self.scraper_nsd)
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
@@ -206,7 +203,7 @@ class NsdProcessor:
                 progress=missing_progress,
                 worker_id=task.worker_id,
                 extra_info=[summary] if summary else None,
-                extra=download_extra,
+                scraper=self.scraper_nsd,
             )
             return task.data
 
@@ -228,7 +225,7 @@ class NsdProcessor:
                     progress=progress,
                     worker_id=task.worker_id,
                     timeline=timeline,
-                    extra=download_extra,
+                    scraper=self.scraper_nsd,
                 )
 
                 return nsd
@@ -240,7 +237,6 @@ class NsdProcessor:
             aggregator=aggregator,
             uow=uow,
             timeline=timeline,
-            download_extra=download_extra,
         )
 
     def _process_statement_nsd(
@@ -252,7 +248,6 @@ class NsdProcessor:
         aggregator: _NsdTxnAggregator,
         uow: Uow,
         timeline: _StageTimeline,
-        download_extra: Mapping[str, str] | None,
     ) -> Any:
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
@@ -269,9 +264,6 @@ class NsdProcessor:
         )
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
-        raw_download_extra = self._build_download_extra(
-            scraper=self.scraper_statements_raw
-        )
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
             self._finalize_nsd(
@@ -287,7 +279,7 @@ class NsdProcessor:
                 progress=progress,
                 worker_id=task.worker_id,
                 timeline=timeline,
-                extra=raw_download_extra,
+                scraper=self.scraper_statements_raw,
             )
 
             return nsd
@@ -332,7 +324,7 @@ class NsdProcessor:
                 progress=progress,
                 worker_id=task.worker_id,
                 timeline=timeline,
-                extra=raw_download_extra,
+                scraper=self.scraper_statements_raw,
             )
 
             return nsd
@@ -432,6 +424,7 @@ class NsdProcessor:
         worker_id: str,
         timeline: _StageTimeline | None = None,
         extra: Mapping[str, Any] | None = None,
+        scraper: Any | None = None,
     ) -> None:
         extra_tokens = [self._format_extra_info_line(nsd)]
         if timeline is not None:
@@ -447,6 +440,7 @@ class NsdProcessor:
             worker_id=worker_id,
             extra_info=extra_tokens,
             extra=extra,
+            scraper=scraper,
         )
 
     def _log_message(
@@ -457,16 +451,18 @@ class NsdProcessor:
         worker_id: str,
         extra_info: Sequence[str] | None = None,
         extra: Mapping[str, Any] | None = None,
+        scraper: Any | None = None,
     ) -> None:
         payload = dict(progress)
         if extra_info is not None:
             payload["extra_info"] = list(extra_info)
+        combined_extra = self._combine_extras(extra, scraper)
         self.logger.log(
             message,
             level="info",
             progress=payload,
             worker_id=worker_id,
-            extra=extra,
+            extra=combined_extra,
         )
 
     def _format_extra_info_line(self, nsd: NsdDTO) -> str:
@@ -533,27 +529,43 @@ class NsdProcessor:
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
 
-    def _build_download_extra(
+    def _combine_extras(
         self,
-        *,
-        scraper: Any | None = None,
-    ) -> Mapping[str, str] | None:
-        subject = scraper if scraper is not None else self.scraper_nsd
-        collector = getattr(subject, "metrics_collector", None)
+        extra: Mapping[str, Any] | None,
+        scraper: Any | None,
+    ) -> Mapping[str, Any] | None:
+        combined: dict[str, Any] = {}
+
+        if extra is not None:
+            combined.update(dict(extra))
+
+        metrics = self._collect_metrics(scraper)
+        if metrics is not None:
+            combined.update(metrics)
+
+        return combined or None
+
+    def _collect_metrics(self, scraper: Any | None) -> Mapping[str, int] | None:
+        if scraper is None:
+            return None
+
+        collector = getattr(scraper, "_metrics_collector", None)
+        if collector is None:
+            collector = getattr(scraper, "metrics_collector", None)
 
         if collector is None:
             return None
 
         download_bytes = getattr(collector, "download_bytes", None)
-        total_bytes = getattr(collector, "network_bytes", None)
+        network_bytes = getattr(collector, "network_bytes", None)
 
-        extra: dict[str, str] = {}
-        if isinstance(download_bytes, int) and download_bytes > 0:
-            extra["Download"] = self.byte_formatter.format_bytes(download_bytes)
-        if isinstance(total_bytes, int) and total_bytes > 0:
-            extra["Total download"] = self.byte_formatter.format_bytes(total_bytes)
+        metrics: dict[str, int] = {}
+        if isinstance(download_bytes, int) and download_bytes >= 0:
+            metrics["download_bytes"] = download_bytes
+        if isinstance(network_bytes, int) and network_bytes >= 0:
+            metrics["network_bytes"] = network_bytes
 
-        return extra or None
+        return metrics or None
 
     def _save_batch(
         self,
