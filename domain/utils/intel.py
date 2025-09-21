@@ -1908,7 +1908,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.06"],
-            ["description", "contains_não", "financeiro", "não", "nao"],
+            ["description", "contains_não", ["financeiro", "não", "nao"]],
             ["description", "contains_none", "antes"],
         ],
         "sub_criteria": [],
@@ -1928,7 +1928,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.08"],
-            ["description", "contains_any", "imposto", "ir"],
+            ["description", "contains_any", ["imposto", "ir"]],
         ],
         "sub_criteria": [],
     },
