@@ -61,10 +61,10 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     mapper = CompanyDataMapper(datacleaner)
     # Initialize metrics collection for operational observability
     metrics_collector = MetricsCollector()
+    # Instantiate the HTTP client with request affinity/session handling
+    http_client = build_http_client(config, logger, metrics_collector)
     # Provision a worker pool sized by configuration for concurrent tasks
     worker_pool = WorkerPool(config, metrics_collector, config.worker_pool.max_workers)
-    # Instantiate the HTTP client with request affinity/session handling
-    http_client = build_http_client(config, logger)
 
     # Assemble the scraper with all required cross-cutting dependencies
     scraper_company_data = CompanyDataScraper(

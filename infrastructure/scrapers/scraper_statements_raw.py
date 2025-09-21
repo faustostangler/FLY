@@ -78,11 +78,9 @@ class ScraperStatementRaw(ScraperStatementRawPort):
             with self.http.borrow_session() as s:
                 hdrs = {str(k): str(v) for k, v in s.headers.items()}
                 body = self.http.fetch_with(s, url, headers=hdrs)
-                self._metrics_collector.add_network_bytes(len(body))
                 return body.decode("utf-8")
         hdrs = {str(k): str(v) for k, v in session.headers.items()}
         body = self.http.fetch_with(session, url, headers=hdrs)
-        self._metrics_collector.add_network_bytes(len(body))
         return body.decode("utf-8")
 
     @property

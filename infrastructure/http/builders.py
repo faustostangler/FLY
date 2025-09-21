@@ -8,14 +8,16 @@ from infrastructure.http.circuit_breaker import BreakerPolicy, CircuitBreakerCli
 from infrastructure.http.cloudscraper_affinity_http_client import (
     CloudscraperAffinityHttpClient,
 )
+from infrastructure.http.metrics_http_client import MetricsHttpClient
 from infrastructure.http.rate_limiter import RateLimitedClient, TokenBucket
 
 
-def build_http_client(config: ConfigPort, logger: LoggerPort) -> AffinityHttpClientPort:
+def build_http_client(config: ConfigPort, logger: LoggerPort, metrics) -> AffinityHttpClientPort:
     # base com sessão compartilhável, headers sorteados, pool e retries
     base = CloudscraperAffinityHttpClient(config.database.connection_string, logger)
     # rate limit global simples: 5 req/s com burst 10
     limited = RateLimitedClient(base, TokenBucket(rate_per_sec=5.0, burst=10), logger)
     # circuit breaker para 429/403
     wrapped = CircuitBreakerClient(limited, logger, BreakerPolicy(failure_threshold=3, open_seconds=20.0))
-    return wrapped
+    metered = MetricsHttpClient(wrapped, metrics)  # única contagem centralizada
+    return metered

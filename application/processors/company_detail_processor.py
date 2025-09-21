@@ -47,7 +47,7 @@ class CompanyDataDetailProcessor:
         # Store the merger that composes the final DTO
         self.merger = merger
 
-    def process_entry(self, entry: Dict, metrics_collector) -> Optional[CompanyDataDTO]:
+    def process_entry(self, entry: Dict) -> Optional[CompanyDataDTO]:
         """Process a raw company entry end-to-end.
 
         Steps:
@@ -100,7 +100,7 @@ class CompanyDataDetailProcessor:
             # Borrow a shared HTTP session to perform the detail request efficiently
             with self.fetcher.http_client.borrow_session() as session:
                 # Fetch the detailed payload keyed by the company's CVM code
-                detail = self.fetcher.fetch_detail(session, str(listing.cvm_code), metrics_collector=metrics_collector)
+                detail = self.fetcher.fetch_detail(session, str(listing.cvm_code))
 
             # Define which text fields should be normalized for the detail DTO
             # Note: "market" appears twice and "institutionPreffered" seems misspelled.

@@ -139,10 +139,6 @@ class WorkerPool(WorkerPoolPort):
                 # Execute the task-specific processor
                 result = processor(task)
 
-                # Forward simple byte metrics when applicable
-                if isinstance(result, (bytes, str)):
-                    self.metrics_collector.add_network_bytes(len(result))
-
                 # Append result and emit optional per-result callback
                 try:
                     with lock:

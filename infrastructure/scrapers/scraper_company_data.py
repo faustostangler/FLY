@@ -22,6 +22,7 @@ from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
+
 # <<<<<<< codex/fix-uow-propagation-in-companydatascraper-3sz01n
 # =======
 # # from domain.ports.scraper_base_port import SaveCallback
@@ -477,9 +478,6 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         # Borrow a pooled session to issue the request
         with self.http_client.borrow_session() as session:
             body = self.http_client.fetch_with(session, url, headers=session.headers)
-
-        # Update network metrics with the size of the downloaded payload
-        self._metrics_collector.add_network_bytes(len(body))
 
         # Decode the JSON body to extract results and pagination info
         data = json.loads(body.decode("utf-8"))

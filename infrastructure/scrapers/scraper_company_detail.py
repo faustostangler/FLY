@@ -45,7 +45,7 @@ class DetailFetcher:
         # Persist the language so it can be embedded in each request payload
         self.language = language
 
-    def fetch_detail(self, session, cvm_code: str, metrics_collector: MetricsCollectorPort) -> Dict:
+    def fetch_detail(self, session, cvm_code: str) -> Dict:
         """Fetch the raw detail JSON for a given CVM code.
 
         Builds a base64-encoded JSON token with the required fields,
@@ -76,9 +76,6 @@ class DetailFetcher:
         # with self.http_client.borrow_session() as session:
         #     body = self.http_client.fetch_with(session, url)
         body = self.http_client.fetch_with(session, url, headers=session.headers)
-        
-        # Update network metrics with the size of the downloaded payload
-        self._metrics_collector.add_network_bytes(len(body))
 
         # Decode the response body and parse it as JSON
         raw = json.loads(body.decode("utf-8"))
