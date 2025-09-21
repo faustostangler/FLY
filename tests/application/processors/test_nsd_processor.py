@@ -200,6 +200,28 @@ def test_log_stage_uses_existing_progress_formatter_payload() -> None:
     assert kwargs["progress"]["extra_info"] == [
         "2010-12-31 v1 | 2010-04-20 09:35:15 | FORM Example SA"
     ]
+    assert kwargs["extra"] is None
+
+
+def test_log_stage_forwards_extra_payload() -> None:
+    processor, logger = _build_processor()
+    logger.reset_mock()
+
+    nsd = _make_nsd()
+    progress = {"index": 0, "size": 1, "start_time": 42.0}
+    extra_payload = {"Download": "1.00KB", "Total download": "2.00KB"}
+
+    processor._log_stage(
+        "NSD",
+        nsd,
+        progress=progress,
+        worker_id="worker",
+        extra=extra_payload,
+    )
+
+    logger.log.assert_called_once()
+    _, kwargs = logger.log.call_args
+    assert kwargs["extra"] == extra_payload
 # =======
 # def test_stage_timeline_summary_tracks_elapsed(monkeypatch) -> None:
 #     timeline = _StageTimeline(started_at=0.0)
@@ -291,3 +313,18 @@ def test_finalize_nsd_persists_processed_level_when_requested() -> None:
     processor.statements_raw_repository.save_all.assert_called_once()
     processor.statements_fetched_repository.save_all.assert_called_once()
     uow.commit.assert_called_once()
+
+
+def test_build_download_extra_formats_metrics() -> None:
+    processor, _ = _build_processor()
+    processor.scraper_nsd.metrics_collector = SimpleNamespace(
+        download_bytes=1024,
+        network_bytes=10_485_760,
+    )
+
+    extra = processor._build_download_extra()
+
+    assert extra == {
+        "Download": "1.00KB",
+        "Total download": "10.00MB",
+    }
