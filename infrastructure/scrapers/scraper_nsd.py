@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from math import ceil
 from typing import Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
@@ -238,16 +239,17 @@ class NsdScraper(ScraperNsdPort):
             hole_count += 1
 
         # Phase 2: exponential search to locate an invalid boundary
-        multiplier = 2
+        arity = 10
         count = 0
         nsd += 1
         while nsd <= max_limit and hole_count < max_linear_holes:
             fetched = self._try_nsd(nsd)
             if fetched:
                 last_valid = nsd
-                # multiplier += 1
+                #  += 1
                 count += 1
-                nsd = last_valid + int(multiplier ** count)
+                increment = int(arity ** count)
+                nsd = last_valid + increment
             else:
                 break
 
@@ -255,22 +257,52 @@ class NsdScraper(ScraperNsdPort):
         if last_valid is None:
             return start
 
-        # Phase 3: binary search between last valid and first invalid
+        # Phase 3: k-ary search entre último válido e primeiro inválido
         nsd_low = last_valid or 1
         nsd_high = nsd - 1
 
         while nsd_low < nsd_high:
             count += 1
-            nsd_mid = (
-                nsd_low + nsd_high + 1
-            ) // 2  # arredonda para cima para evitar loop infinito
-            # nsd_diff = nsd_high - nsd_low
-            fetched = self._try_nsd(nsd_mid)
+            gap = nsd_high - nsd_low
+            if gap == 0:
+                break
 
-            if fetched:
-                nsd_low = nsd_mid  # é válido, sobe o piso
+            # pontos internos: (arity-1) divisões do intervalo
+            # usamos ceil para garantir progresso e evitar duplicatas = nsd_low
+            candidates = []
+            for i in range(1, arity):
+                m = nsd_low + ceil(gap * i / arity)
+                if m >= nsd_high:
+                    m = nsd_high
+                if m > nsd_low and (not candidates or m != candidates[-1]):
+                    candidates.append(m)
+
+            if not candidates:
+                break
+
+            # varre na ordem crescente; para na 1ª inválida
+            last_ok = nsd_low
+            first_bad = None
+            for m in candidates:
+                fetched = self._try_nsd(m)
+                if fetched:
+                    last_ok = m
+                else:
+                    first_bad = m
+                    break
+
+            if first_bad is None:
+                # todos válidos: move piso para o maior testado
+                new_low = last_ok
+                if new_low == nsd_low:  # segurança contra loop
+                    new_low = min(nsd_high, nsd_low + 1)
+                nsd_low = new_low
             else:
-                nsd_high = nsd_mid - 1  # é inválido, desce o teto
+                # achou inválido: teto vai para anterior ao primeiro inválido
+                new_high = first_bad - 1
+                if new_high == nsd_high and new_high > nsd_low:
+                    new_high = nsd_high - 1
+                nsd_high = new_high
 
         return nsd_low
 
