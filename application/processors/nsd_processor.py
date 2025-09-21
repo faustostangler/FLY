@@ -193,13 +193,14 @@ class NsdProcessor:
         )
         timeline = _StageTimeline(started_at=start_time)
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
-        download_extra = self._build_download_extra(scraper=self.scraper_nsd)
+        download_extra = self._build_download_extra()
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
             summary = timeline.mark("NSD")
             missing_progress = dict(progress)
             missing_progress["stage"] = "NSD"
+            # empty
             self._log_message(
                 f"NSD {nsd_id}",
                 progress=missing_progress,
@@ -253,14 +254,6 @@ class NsdProcessor:
         timeline: _StageTimeline,
         download_extra: Mapping[str, str] | None,
     ) -> Any:
-        self._log_stage(
-            "NSD",
-            nsd,
-            progress=progress,
-            worker_id=task.worker_id,
-            timeline=timeline,
-            extra=download_extra,
-        )
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
         if hasattr(sent_date, "date"):
@@ -276,9 +269,6 @@ class NsdProcessor:
         )
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
-        raw_download_extra = self._build_download_extra(
-            scraper=self.scraper_statements_raw
-        )
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
             self._finalize_nsd(
@@ -294,7 +284,6 @@ class NsdProcessor:
                 progress=progress,
                 worker_id=task.worker_id,
                 timeline=timeline,
-                extra=raw_download_extra,
             )
 
             return nsd
@@ -339,7 +328,6 @@ class NsdProcessor:
                 progress=progress,
                 worker_id=task.worker_id,
                 timeline=timeline,
-                extra=raw_download_extra,
             )
 
             return nsd
@@ -540,11 +528,8 @@ class NsdProcessor:
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
 
-    def _build_download_extra(
-        self, *, scraper: Any | None = None
-    ) -> Mapping[str, str] | None:
-        subject = scraper if scraper is not None else self.scraper_nsd
-        collector = getattr(subject, "metrics_collector", None)
+    def _build_download_extra(self) -> Mapping[str, str] | None:
+        collector = getattr(self.scraper_nsd, "metrics_collector", None)
         if collector is None:
             return None
 
