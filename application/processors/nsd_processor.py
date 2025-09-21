@@ -25,6 +25,7 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -545,25 +546,24 @@ class NsdProcessor:
 
         return combined or None
 
-    def _collect_metrics(self, scraper: Any | None) -> Mapping[str, int] | None:
+    def _collect_metrics(self, scraper: Any | None) -> Mapping[str, str] | None:
         if scraper is None:
             return None
 
-        collector = getattr(scraper, "_metrics_collector", None)
-        if collector is None:
-            collector = getattr(scraper, "metrics_collector", None)
-
+        collector = getattr(scraper, "_metrics_collector", None) \
+                    or getattr(scraper, "metrics_collector", None)
         if collector is None:
             return None
 
         download_bytes = getattr(collector, "download_bytes", None)
         network_bytes = getattr(collector, "network_bytes", None)
 
-        metrics: dict[str, int] = {}
+        fmt = ByteFormatter()
+        metrics: dict[str, str] = {}
         if isinstance(download_bytes, int) and download_bytes >= 0:
-            metrics["download_bytes"] = download_bytes
+            metrics["Download"] = fmt.format_bytes(download_bytes)
         if isinstance(network_bytes, int) and network_bytes >= 0:
-            metrics["network_bytes"] = network_bytes
+            metrics["Total download"] = fmt.format_bytes(network_bytes)
 
         return metrics or None
 
