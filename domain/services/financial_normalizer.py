@@ -312,29 +312,31 @@ class FinancialNormalizer(FinancialNormalizerPort):
                     com um universo restrito às contas descendentes desses pais.
                 Retorna a lista de FETCHED criada neste nó e nos filhos.
                 """
-                # a) Filtra as linhas do universo que casam com os critérios deste nó
-                hits = [r for r in universe if matches(r, node["criteria"])]
+                try:
+                    # a) Filtra as linhas do universo que casam com os critérios deste nó
+                    hits = [r for r in universe if matches(r, node["criteria"])]
 
-                # b) Constrói FETCHED para cada hit usando o builder injetado
-                fetched: list[StatementFetchedDTO] = []
-                for row in hits:
-                    fetched.append(self._default_builder(row, node["column"]))
+                    # b) Constrói FETCHED para cada hit usando o builder injetado
+                    fetched: list[StatementFetchedDTO] = []
+                    for row in hits:
+                        fetched.append(self._default_builder(row, node["column"]))
 
-                parents = {normalize_account(getattr(fetched_row, "account", "")) for fetched_row in fetched}
-                if not parents:
+                    parents = {normalize_account(getattr(fetched_row, "account", "")) for fetched_row in fetched}
+                    if not parents:
+                        return fetched
+
+                    # Universo dos filhos: qualquer RAW cuja conta normalizada comece com algum pai
+                    children_rows = [
+                        r for r in universe
+                        if any(normalize_account(account_of_raw(r)).startswith(p) for p in parents)
+                    ]
+
+                    # Para cada filho, concatena resultados recursivos
+                    for child in node["children"]:
+                        fetched.extend(walk(child, children_rows))
                     return fetched
-
-                # Universo dos filhos: qualquer RAW cuja conta normalizada comece com algum pai
-                children_rows = [
-                    r for r in universe
-                    if any(normalize_account(account_of_raw(r)).startswith(p) for p in parents)
-                ]
-
-                # Para cada filho, concatena resultados recursivos
-                for child in node["children"]:
-                    fetched.extend(walk(child, children_rows))
-                return fetched
-
+                except Exception as e:
+                    print(f"Erro no walk do nó {node}: {e}")
             # 3) Executa a árvore inteira sobre as linhas do trimestre
             out: list[StatementFetchedDTO] = []
             for node in roots:
