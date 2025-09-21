@@ -210,20 +210,21 @@ class NsdProcessor:
             nsd_type = self.policy.identify_type(nsd)
 
             aggregator = self._create_aggregator()
-            self._log_stage(
-                "NSD",
-                nsd,
-                progress=progress,
-                worker_id=task.worker_id,
-                timeline=timeline,
-            )
-
             if not nsd_type.is_statement:
                 self._finalize_nsd(
                     nsd=nsd,
                     aggregator=aggregator,
                     uow=uow,
                 )
+
+                self._log_stage(
+                    "NSD",
+                    nsd,
+                    progress=progress,
+                    worker_id=task.worker_id,
+                    timeline=timeline,
+                )
+
                 return nsd
 
             return self._process_statement_nsd(
@@ -260,14 +261,6 @@ class NsdProcessor:
         )
 
         raw_lines = self._fetch_raw_lines(nsd=nsd, task=task)
-        self._log_stage(
-            "RAW",
-            nsd,
-            progress=progress,
-            worker_id=task.worker_id,
-            timeline=timeline,
-        )
-
         if action.is_raw():
             aggregator.add_raw_many(raw_lines)
             self._finalize_nsd(
@@ -276,6 +269,15 @@ class NsdProcessor:
                 uow=uow,
                 include_raw=True,
             )
+
+            self._log_stage(
+                "RAW",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
+            )
+
             return nsd
 
         try:
@@ -286,6 +288,8 @@ class NsdProcessor:
                     uow=uow,
                 )
             )
+            if quarter_police.year > 2010:
+                self.logger.log(f"SALVAR SQL DB {quarter_police.year}", level="info")
             combined: list[StatementRawDTO] = [*year_view, *raw_lines]
             deduped = self.policy.version_deduplicate(combined)
             quarterized = self.financial_normalizer.quarterize(deduped)
