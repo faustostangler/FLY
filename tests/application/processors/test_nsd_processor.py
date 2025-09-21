@@ -328,3 +328,118 @@ def test_build_download_extra_formats_metrics() -> None:
         "Download": "1.00KB",
         "Total download": "10.00MB",
     }
+
+
+def test_build_download_extra_accepts_custom_scraper() -> None:
+    processor, _ = _build_processor()
+    scraper = SimpleNamespace(
+        metrics_collector=SimpleNamespace(download_bytes=512, network_bytes=2048)
+    )
+
+    extra = processor._build_download_extra(scraper=scraper)
+
+    assert extra == {
+        "Download": "512.00B",
+        "Total download": "2.00KB",
+    }
+
+
+class _DummyAction:
+    def __init__(self, raw: bool) -> None:
+        self._raw = raw
+
+    def is_raw(self) -> bool:
+        return self._raw
+
+
+def test_process_statement_nsd_logs_raw_stage_with_download_extra() -> None:
+    processor, logger = _build_processor()
+    logger.reset_mock()
+
+    processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
+    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+        download_bytes=2048,
+        network_bytes=4096,
+    )
+    processor.policy.normalize_quarter.return_value = SimpleNamespace(
+        year=2020, month=3, is_december=False
+    )
+    processor.policy.compute_recency_window.return_value = SimpleNamespace(
+        is_recent=False
+    )
+    processor.policy.decide_action.return_value = _DummyAction(raw=True)
+
+    processor._finalize_nsd = MagicMock()
+    aggregator = MagicMock()
+    task = WorkerTaskDTO(index=0, data="payload", worker_id="worker", total_size=1)
+    progress = {"index": 0, "size": 1, "start_time": 0.0}
+
+    processor._process_statement_nsd(
+        nsd=_make_nsd(),
+        task=task,
+        progress=progress,
+        aggregator=aggregator,
+        uow=MagicMock(),
+        timeline=None,
+        download_extra=None,
+    )
+
+    raw_call = next(
+        kwargs
+        for args, kwargs in logger.log.call_args_list
+        if args and args[0] == "RAW 123"
+    )
+
+    assert raw_call["extra"] == {
+        "Download": "2.00KB",
+        "Total download": "4.00KB",
+    }
+
+
+def test_process_statement_nsd_logs_ftd_stage_with_raw_download_extra() -> None:
+    processor, logger = _build_processor()
+    logger.reset_mock()
+
+    processor.scraper_statements_raw.fetch.return_value = {"items": [_make_raw()]}
+    processor.scraper_statements_raw.metrics_collector = SimpleNamespace(
+        download_bytes=3072,
+        network_bytes=6144,
+    )
+    processor.policy.normalize_quarter.return_value = SimpleNamespace(
+        year=2020, month=3, is_december=False
+    )
+    processor.policy.compute_recency_window.return_value = SimpleNamespace(
+        is_recent=True
+    )
+    processor.policy.decide_action.return_value = _DummyAction(raw=False)
+    processor.statements_raw_repository.get_company_year_view.return_value = []
+    processor.policy.version_deduplicate.return_value = []
+    processor.financial_normalizer.quarterize.return_value = []
+    processor.financial_normalizer.standardize.return_value = []
+    processor._filter_new_fetched = MagicMock(return_value=[])
+
+    processor._finalize_nsd = MagicMock()
+    aggregator = MagicMock()
+    task = WorkerTaskDTO(index=0, data="payload", worker_id="worker", total_size=1)
+    progress = {"index": 0, "size": 1, "start_time": 0.0}
+
+    processor._process_statement_nsd(
+        nsd=_make_nsd(),
+        task=task,
+        progress=progress,
+        aggregator=aggregator,
+        uow=MagicMock(),
+        timeline=None,
+        download_extra=None,
+    )
+
+    ftd_call = next(
+        kwargs
+        for args, kwargs in logger.log.call_args_list
+        if args and args[0] == "FTD 123"
+    )
+
+    assert ftd_call["extra"] == {
+        "Download": "3.00KB",
+        "Total download": "6.00KB",
+    }
