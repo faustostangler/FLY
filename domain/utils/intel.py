@@ -1837,7 +1837,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.01"],
-            ["description", "contains_all", ["venda", "bens"]],
+            ["description", "contains_any", ["venda", "bens", "financ"]],
         ],
         "sub_criteria": [],
     },
@@ -1846,7 +1846,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.02"],
-            ["description", "contains_all", ["custo"]],
+            ["description", "contains_any", ["custo", "financ"]],
         ],
         "sub_criteria": [],
     },
@@ -1861,14 +1861,16 @@ section_3_criteria = [
     },
     {
         "column": "03.04 - Despesas/Receitas Operacionais",
-        "criteria": [["account", "level", 2], ["account", "startswith", "3.04"]],
+        "criteria": [
+            ["account", "level", 2], 
+            ["account", "startswith", "3.04"]],
         "sub_criteria": [
             {
                 "column": "03.04.01 - Despesas com Vendas",
                 "criteria": [
                     ["account", "level", 3],
-                    ["account", "startswith", "3.04.01"],
-                    ["description", "contains_all", "vend"],
+                    ["account", "startswith", "3.04"],
+                    ["description", "contains_any", "vend", "receit"],
                 ],
                 "sub_criteria": [],
             },
@@ -1876,8 +1878,8 @@ section_3_criteria = [
                 "column": "03.04.02 - Despesas Gerais e Administrativas",
                 "criteria": [
                     ["account", "level", 3],
-                    ["account", "startswith", "3.04.02"],
-                    ["description", "contains_all", "administrativ"],
+                    ["account", "startswith", "3.04"],
+                    ["description", "contains_any", "administrativ", "despes"],
                 ],
                 "sub_criteria": [],
             },
@@ -1886,7 +1888,7 @@ section_3_criteria = [
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04"],
-                    ["description", "contains_none", ["vend", "administrativ"]],
+                    ["description", "contains_none", ["vend", "receit", "administrativ", "despes"]],
                 ],
                 "sub_criteria": [],
             },
@@ -1897,7 +1899,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.05"],
-            ["description", "contains_all", ["resultado", "antes", "financeiro"]],
+            ["description", "contains_any", ["resultado", "antes", "financeiro"]],
         ],
         "sub_criteria": [],
     },
@@ -1906,7 +1908,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.06"],
-            ["description", "contains_all", "financeiro"],
+            ["description", "contains_não", "financeiro", "não", "nao"],
             ["description", "contains_none", "antes"],
         ],
         "sub_criteria": [],
@@ -1916,7 +1918,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.07"],
-            ["description", "contains_all", "tributos"],
+            ["description", "contains_any", "tribut"],
             ["description", "contains_none", "financeiro"],
         ],
         "sub_criteria": [],
@@ -1926,7 +1928,7 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.08"],
-            ["description", "contains_all", "imposto de renda"],
+            ["description", "contains_any", "imposto", "ir"],
         ],
         "sub_criteria": [],
     },
@@ -1935,8 +1937,8 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.09"],
-            ["description", "contains_all", ["resultado líquido", "Continuadas"]],
-            ["description", "contains_none", "Descontinuadas"],
+            ["description", "contains_all", ["resultado líquido", "continuadas"]],
+            ["description", "contains_none", "descontinuadas"],
         ],
         "sub_criteria": [],
     },
@@ -1945,8 +1947,8 @@ section_3_criteria = [
         "criteria": [
             ["account", "level", 2],
             ["account", "startswith", "3.10"],
-            ["description", "contains_all", ["resultado líquido", "Descontinuadas"]],
-            ["description", "contains_none", "Continuadas"],
+            ["description", "contains_all", ["resultado líquido", "descontinuadas"]],
+            ["description", "contains_none", "continuadas"],
         ],
         "sub_criteria": [],
     },
