@@ -1870,7 +1870,7 @@ section_3_criteria = [
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04"],
-                    ["description", "contains_any", "vend", "receit"],
+                    ["description", "contains_any", ["vend", "receit"]]
                 ],
                 "sub_criteria": [],
             },
@@ -1879,7 +1879,7 @@ section_3_criteria = [
                 "criteria": [
                     ["account", "level", 3],
                     ["account", "startswith", "3.04"],
-                    ["description", "contains_any", "administrativ", "despes"],
+                    ["description", "contains_any", ["administrativ", "despes"]],
                 ],
                 "sub_criteria": [],
             },
