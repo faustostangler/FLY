@@ -2,6 +2,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
+from application.services.stock_value import StockValueService
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
@@ -33,6 +34,10 @@ class Cli:
         logger (LoggerPort): Logging abstraction for structured events.
         company_repository (RepositoryCompanyDataPort): Persistence port for company data.
         scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
+        stock_value_service (StockValueService): Application service responsible for
+            synchronizing historical stock prices via external gateways and
+            repositories.
+        stock_value_start (date): Start date for stock-value ingestion.
     """
 
     def __init__(
@@ -51,6 +56,7 @@ class Cli:
         uow_factory: UowFactoryPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
+        stock_value_service: StockValueService,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -74,6 +80,7 @@ class Cli:
         self.ratios_calculator = ratios_calculator
 
         self.byte_formatter = ByteFormatter()
+        self._stock_value_app_service = stock_value_service
 
     def __call__(self) -> None:
         try:
@@ -92,7 +99,11 @@ class Cli:
         #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
         # )
 
-        self._statements_service()
+        # # Run the statements synchronization
+        # self._statements_service()
+
+        # Run the stock-value ingestion pipeline
+        self._stock_value_service()
 
         return None
 
@@ -136,3 +147,8 @@ class Cli:
 
         # Run the synchronization step
         return nsd_service()
+
+    def _stock_value_service(self) -> None:
+        """Trigger the stock-value synchronization pipeline."""
+
+        self._stock_value_app_service()

@@ -10,6 +10,7 @@ from domain.services.ratios_calculator import RatiosCalculator
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
+from infrastructure.factories.stock_value_factory import build_stock_value_service
 
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
 from infrastructure.http.builders import build_http_client
@@ -112,6 +113,11 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         intel_module_path=(getattr(config.domain, "intel_module_path", None))
     )
 
+    # Stock Value Service
+    stock_value_service, stock_value_start = build_stock_value_service(
+        config=config, logger=logger
+    )
+
     # Return the CLI controller with its dependencies injected
     cli = Cli(
         config=config,
@@ -128,6 +134,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         uow_factory=uow_factory,
         financial_normalizer=financial_normalizer,
         ratios_calculator=ratios_calculator,
+        stock_value_service=stock_value_service,
     )
 
     return cli
