@@ -474,10 +474,11 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         sent_date = nsd.sent_date or ""
+        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word)
         return (
             f"{quarter_display} v{nsd.version} | "
             f"{sent_date} | "
-            f"{nsd.nsd_type} {nsd.company_name}"
+            f"{form_initials} {nsd.company_name}"
         )
 
     def _filter_new_fetched(
