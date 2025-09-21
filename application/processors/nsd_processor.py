@@ -25,6 +25,7 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
+from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -174,6 +175,7 @@ class NsdProcessor:
         self.ratios_calculator = ratios_calculator
 
         self.id_generator = IdGenerator(config=config)
+        self.byte_formatter = ByteFormatter()
 
         # Progress tracking helpers -------------------------------------------------
         self._progress_lock = threading.Lock()
@@ -191,6 +193,7 @@ class NsdProcessor:
         )
         timeline = _StageTimeline(started_at=start_time)
         nsd = self.scraper_nsd.fetch_one(int(nsd_id))
+        download_extra = self._build_download_extra()
         progress = self._build_progress_payload(task=task, start_time=progress_start)
 
         if nsd is None:
@@ -202,6 +205,7 @@ class NsdProcessor:
                 progress=missing_progress,
                 worker_id=task.worker_id,
                 extra_info=[summary] if summary else None,
+                extra=download_extra,
             )
             return task.data
 
@@ -223,18 +227,20 @@ class NsdProcessor:
                     progress=progress,
                     worker_id=task.worker_id,
                     timeline=timeline,
+                    extra=download_extra,
                 )
 
                 return nsd
 
-            return self._process_statement_nsd(
+        return self._process_statement_nsd(
                 nsd=nsd,
                 task=task,
-                progress=progress,
-                aggregator=aggregator,
-                uow=uow,
-                timeline=timeline,
-            )
+            progress=progress,
+            aggregator=aggregator,
+            uow=uow,
+            timeline=timeline,
+            download_extra=download_extra,
+        )
 
     def _process_statement_nsd(
         self,
@@ -245,7 +251,16 @@ class NsdProcessor:
         aggregator: _NsdTxnAggregator,
         uow: Uow,
         timeline: _StageTimeline,
+        download_extra: Mapping[str, str] | None,
     ) -> Any:
+        self._log_stage(
+            "NSD",
+            nsd,
+            progress=progress,
+            worker_id=task.worker_id,
+            timeline=timeline,
+            extra=download_extra,
+        )
         quarter_police = self.policy.normalize_quarter(nsd)
         sent_date = getattr(nsd, "sent_date")
         if hasattr(sent_date, "date"):
@@ -418,6 +433,7 @@ class NsdProcessor:
         progress: dict[str, Any],
         worker_id: str,
         timeline: _StageTimeline | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> None:
         extra_tokens = [self._format_extra_info_line(nsd)]
         if timeline is not None:
@@ -432,6 +448,7 @@ class NsdProcessor:
             progress=stage_progress,
             worker_id=worker_id,
             extra_info=extra_tokens,
+            extra=extra,
         )
 
     def _log_message(
@@ -441,11 +458,18 @@ class NsdProcessor:
         progress: dict[str, Any],
         worker_id: str,
         extra_info: Sequence[str] | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> None:
         payload = dict(progress)
         if extra_info is not None:
             payload["extra_info"] = list(extra_info)
-        self.logger.log(message, level="info", progress=payload, worker_id=worker_id)
+        self.logger.log(
+            message,
+            level="info",
+            progress=payload,
+            worker_id=worker_id,
+            extra=extra,
+        )
 
     def _format_extra_info_line(self, nsd: NsdDTO) -> str:
         quarter = (
@@ -510,6 +534,22 @@ class NsdProcessor:
         )
         self.company_repository.save_all([dto], uow=uow)
         return dto.cvm_code
+
+    def _build_download_extra(self) -> Mapping[str, str] | None:
+        collector = getattr(self.scraper_nsd, "metrics_collector", None)
+        if collector is None:
+            return None
+
+        download_bytes = getattr(collector, "download_bytes", None)
+        total_bytes = getattr(collector, "network_bytes", None)
+
+        extra: dict[str, str] = {}
+        if isinstance(download_bytes, int):
+            extra["Download"] = self.byte_formatter.format_bytes(download_bytes)
+        if isinstance(total_bytes, int):
+            extra["Total download"] = self.byte_formatter.format_bytes(total_bytes)
+
+        return extra or None
 
     def _save_batch(
         self,

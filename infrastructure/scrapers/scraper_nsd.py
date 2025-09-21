@@ -83,6 +83,7 @@ class NsdScraper(ScraperNsdPort):
             url = self.nsd_endpoint.format(nsd=nsd)
             with self.http_client.borrow_session() as session:
                 body = self.http_client.fetch_with(session, url, headers=session.headers)
+                self._metrics_collector.add_network_bytes(len(body))
             parsed = self._parse_html(nsd, body.decode("utf-8"))
             return (
                 NsdDTO.from_dict(parsed, cleandate=self._cleandate_required)
@@ -121,6 +122,7 @@ class NsdScraper(ScraperNsdPort):
             try:
                 with self.http_client.borrow_session() as session:
                     body = self.http_client.fetch_with(session, url, headers=session.headers)
+                    self._metrics_collector.add_network_bytes(len(body))
                 parsed = self._parse_html(code, body.decode("utf-8"))
                 if not parsed:
                     self.logger.log(f"Processed NSD: {code} Empty", level="info")
