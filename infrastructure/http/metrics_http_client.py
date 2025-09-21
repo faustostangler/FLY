@@ -19,7 +19,8 @@ class MetricsHttpClient(AffinityHttpClientPort):
 
     def fetch_with(self, session: Any, url: str, headers: dict[str, str] | None = None) -> bytes:
         body = self._inner.fetch_with(session, url, headers=headers)
-        self._metrics.add_network_bytes(len(body))
+        download_size = len(body)
+        self._metrics.add_network_bytes(download_size)
         return body
 
     def borrow_session(self) -> ContextManager[Any]:
