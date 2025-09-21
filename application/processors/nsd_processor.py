@@ -302,14 +302,6 @@ class NsdProcessor:
             # )
             # fetched_rows: list[StatementFetchedDTO] = [*standardized_rows, *ratios]
 
-            self._log_stage(
-                "FTD",
-                nsd,
-                progress=progress,
-                worker_id=task.worker_id,
-                timeline=timeline,
-            )
-
             aggregator.add_raw_many(raw_lines)
             aggregator.add_fetched_many(
                 self._filter_new_fetched(fetched_rows, uow=uow)
@@ -320,6 +312,14 @@ class NsdProcessor:
                 uow=uow,
                 include_raw=True,
                 include_fetched=True,
+            )
+
+            self._log_stage(
+                "FTD",
+                nsd,
+                progress=progress,
+                worker_id=task.worker_id,
+                timeline=timeline,
             )
 
             return nsd
