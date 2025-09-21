@@ -474,11 +474,11 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         sent_date = nsd.sent_date or ""
-        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word)
+        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word and len(word) > 3)[:3].ljust(3)
         return (
             f"{quarter_display} v{nsd.version} | "
             f"{sent_date} | "
-            f"{form_initials} {nsd.company_name}"
+            f"{form_initials} {nsd.company_name[:16]}"
         )
 
     def _filter_new_fetched(
@@ -551,18 +551,18 @@ class NsdProcessor:
         if scraper is None:
             return None
 
-        collector = getattr(scraper, "_metrics_collector", None) \
-                    or getattr(scraper, "metrics_collector", None)
+        collector = getattr(scraper, "_metrics_collector", None) or getattr(scraper, "metrics_collector", None)
         if collector is None:
             return None
 
-        download_bytes = getattr(collector, "download_bytes", None)
-        network_bytes = getattr(collector, "network_bytes", None)
-
         fmt = ByteFormatter()
         metrics: dict[str, str] = {}
-        if isinstance(download_bytes, int) and download_bytes >= 0:
-            metrics["Download"] = fmt.format_bytes(download_bytes)
+
+        # download_bytes = getattr(collector, "download_bytes", None)
+        # if isinstance(download_bytes, int) and download_bytes >= 0:
+        #     metrics["Download"] = fmt.format_bytes(download_bytes)
+
+        network_bytes = getattr(collector, "network_bytes", None)
         if isinstance(network_bytes, int) and network_bytes >= 0:
             metrics["Total download"] = fmt.format_bytes(network_bytes)
 
