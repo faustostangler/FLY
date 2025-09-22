@@ -17,6 +17,7 @@ from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
+from domain.services.service_StockQuote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -76,10 +77,7 @@ class Cli:
         self.byte_formatter = ByteFormatter()
 
     def __call__(self) -> None:
-        try:
-            return self.run()
-        except Exception:
-            pass
+        return self.run()
 
     def run(self) -> None:
         """Execute the top-level application workflow."""
@@ -92,7 +90,11 @@ class Cli:
         #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
         # )
 
+        # Get NSD and stataments pipeline from B3
         self._statements_service()
+
+        # Get Stock Value for companies
+        self._StockQuote_service()
 
         return None
 
@@ -136,3 +138,10 @@ class Cli:
 
         # Run the synchronization step
         return nsd_service()
+
+    def _StockQuote_service(self) -> SyncResultsDTO:
+        """ """
+        StockQuote_service = StockQuoteService()
+
+        # run the service
+        return StockQuote_service()

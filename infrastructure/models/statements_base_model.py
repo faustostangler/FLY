@@ -4,31 +4,11 @@ from datetime import datetime
 
 from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.types import TypeDecorator, String
 
-from infrastructure.models.base_model import BaseModel
-
-
-class _YMDDate(TypeDecorator):
-    """Persist as 'YYYY-MM-DD' (TEXT) e expõe como datetime no Python."""
-    impl = String
-    cache_ok = True
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d")
-        # se vier string, corta no dia e confia no formato já limpo
-        return str(value)[:10]
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        # garante parse sempre do Y-M-D
-        return datetime.strptime(str(value)[:10], "%Y-%m-%d")
-
-
+from infrastructure.models.base_model import (
+    BaseModel,
+    _YMDDate,  # mesmo formato de data
+)
 
 
 class BaseStatementModel(BaseModel):
