@@ -293,7 +293,7 @@ class NsdProcessor:
                     uow=uow,
                 )
             )
-            if quarter_police.year > 2010:
+            if quarter_police.year > 2010 and quarter_police.is_december:
                 self.logger.log(f"SALVAR SQL DB {quarter_police.year}", level="info")
             combined: list[StatementRawDTO] = [*year_view, *raw_lines]
             deduped = self.policy.version_deduplicate(combined)
@@ -474,7 +474,7 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         sent_date = nsd.sent_date or ""
-        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word and len(word) > 3)[:3].ljust(3)
+        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word and len(word) > 3)[:2].ljust(2)
         return (
             f"{quarter_display} v{nsd.version} | "
             f"{sent_date} | "
