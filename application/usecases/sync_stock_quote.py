@@ -3,10 +3,10 @@ from typing import Any
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from domain.dtos.stock_value_dto import StockQuoteDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.ports.repository_stock_value_port import RepositoryStockQuotePort
-from domain.ports.scraper_stock_value_port import ScraperStockQuotePort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
 
 # from infrastructure.helpers.list_flattener import ListFlattener

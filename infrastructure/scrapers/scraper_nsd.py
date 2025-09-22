@@ -28,7 +28,7 @@ class NsdScraper(ScraperNsdPort):
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        nsd_repository: RepositoryNsdPort,
+        repository_nsd: RepositoryNsdPort,
         datacleaner: DataCleaner,
         metrics_collector: MetricsCollectorPort,
         worker_pool: WorkerPoolPort,
@@ -40,7 +40,7 @@ class NsdScraper(ScraperNsdPort):
         self.config = config
         self.logger = logger
 
-        self.nsd_repository = nsd_repository
+        self.repository_nsd = repository_nsd
 
         self.datacleaner = datacleaner
         self.worker_pool = worker_pool

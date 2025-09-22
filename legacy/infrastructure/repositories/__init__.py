@@ -1,7 +1,7 @@
 """Persistence layer repositories."""
 
-from .company_repository import SqlAlchemyRepositoryCompanyData
-from .nsd_repository import SqlAlchemyNsdRepository
+from .repository_company import SqlAlchemyRepositoryCompanyData
+from .repository_nsd import SqlAlchemyNsdRepository
 from .fetched_statement_repository import SqlAlchemyStatementFetchedRepository
 from .raw_statement_repository import SqlAlchemyStatementRawRepository
 

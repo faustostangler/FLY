@@ -82,10 +82,10 @@ def _build_processor() -> tuple[NsdProcessor, MagicMock]:
     processor = NsdProcessor(
         config=cast(ConfigPort, config),
         logger=cast(LoggerPort, logger_mock),
-        nsd_repository=MagicMock(),
-        company_repository=MagicMock(),
-        statements_raw_repository=MagicMock(),
-        statements_fetched_repository=MagicMock(),
+        repository_nsd=MagicMock(),
+        repository_company=MagicMock(),
+        repository_statements_raw=MagicMock(),
+        repository_statements_fetched=MagicMock(),
         scraper_nsd=MagicMock(),
         scraper_statements_raw=MagicMock(),
         policy=MagicMock(),
@@ -271,8 +271,8 @@ def test_aggregator_flush_without_nsd_skips_all_persistence() -> None:
     fetched_repo = MagicMock()
     aggregator = _NsdTxnAggregator(
         save_callback=save_callback,
-        statements_raw_repository=raw_repo,
-        statements_fetched_repository=fetched_repo,
+        repository_statements_raw=raw_repo,
+        repository_statements_fetched=fetched_repo,
         chunk_size=10,
     )
 
@@ -288,7 +288,7 @@ def test_aggregator_flush_without_nsd_skips_all_persistence() -> None:
 
 def test_finalize_nsd_only_persists_nsd_when_not_statement() -> None:
     processor, _ = _build_processor()
-    processor.company_repository.iter_existing_by_columns.return_value = []
+    processor.repository_company.iter_existing_by_columns.return_value = []
     aggregator = processor._create_aggregator()
     aggregator.add_raw_many([_make_raw()])
     aggregator.add_fetched_many([_make_fetched()])
@@ -296,15 +296,15 @@ def test_finalize_nsd_only_persists_nsd_when_not_statement() -> None:
 
     processor._finalize_nsd(nsd=_make_nsd(), aggregator=aggregator, uow=uow)
 
-    processor.nsd_repository.save_all.assert_called_once()
-    processor.statements_raw_repository.save_all.assert_not_called()
-    processor.statements_fetched_repository.save_all.assert_not_called()
+    processor.repository_nsd.save_all.assert_called_once()
+    processor.repository_statements_raw.save_all.assert_not_called()
+    processor.repository_statements_fetched.save_all.assert_not_called()
     uow.commit.assert_called_once()
 
 
 def test_finalize_nsd_persists_raw_level_when_requested() -> None:
     processor, _ = _build_processor()
-    processor.company_repository.iter_existing_by_columns.return_value = []
+    processor.repository_company.iter_existing_by_columns.return_value = []
     aggregator = processor._create_aggregator()
     aggregator.add_raw_many([_make_raw()])
     uow = MagicMock()
@@ -316,15 +316,15 @@ def test_finalize_nsd_persists_raw_level_when_requested() -> None:
         include_raw=True,
     )
 
-    processor.nsd_repository.save_all.assert_called_once()
-    processor.statements_raw_repository.save_all.assert_called_once()
-    processor.statements_fetched_repository.save_all.assert_not_called()
+    processor.repository_nsd.save_all.assert_called_once()
+    processor.repository_statements_raw.save_all.assert_called_once()
+    processor.repository_statements_fetched.save_all.assert_not_called()
     uow.commit.assert_called_once()
 
 
 def test_finalize_nsd_persists_processed_level_when_requested() -> None:
     processor, _ = _build_processor()
-    processor.company_repository.iter_existing_by_columns.return_value = []
+    processor.repository_company.iter_existing_by_columns.return_value = []
     aggregator = processor._create_aggregator()
     aggregator.add_raw_many([_make_raw()])
     aggregator.add_fetched_many([_make_fetched()])
@@ -338,9 +338,9 @@ def test_finalize_nsd_persists_processed_level_when_requested() -> None:
         include_fetched=True,
     )
 
-    processor.nsd_repository.save_all.assert_called_once()
-    processor.statements_raw_repository.save_all.assert_called_once()
-    processor.statements_fetched_repository.save_all.assert_called_once()
+    processor.repository_nsd.save_all.assert_called_once()
+    processor.repository_statements_raw.save_all.assert_called_once()
+    processor.repository_statements_fetched.save_all.assert_called_once()
     uow.commit.assert_called_once()
 
 
@@ -439,7 +439,7 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_metrics() -> None:
         is_recent=True
     )
     processor.policy.decide_action.return_value = _DummyAction(raw=False)
-    processor.statements_raw_repository.get_company_year_view.return_value = []
+    processor.repository_statements_raw.get_company_year_view.return_value = []
     processor.policy.version_deduplicate.return_value = []
     processor.financial_normalizer.quarterize.return_value = []
     processor.financial_normalizer.standardize.return_value = []

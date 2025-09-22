@@ -51,13 +51,13 @@ class _NsdTxnAggregator:
         self,
         *,
         save_callback: SaveCallback[NsdDTO],
-        statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementFetchedPort,
+        repository_statements_raw: RepositoryStatementsRawPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
         chunk_size: int,
     ) -> None:
         self._save_callback = save_callback
-        self.statements_raw_repository = statements_raw_repository
-        self.statements_fetched_repository = statements_fetched_repository
+        self.repository_statements_raw = repository_statements_raw
+        self.repository_statements_fetched = repository_statements_fetched
         self._chunk_size = chunk_size if chunk_size > 0 else 1
         self._nsd_buffer: list[NsdDTO] = []
         self._raw_data: list[StatementRawDTO] = []
@@ -91,11 +91,11 @@ class _NsdTxnAggregator:
 
             if include_raw and self._raw_data:
                 for chunk in _chunked(self._raw_data, self._chunk_size):
-                    self.statements_raw_repository.save_all(chunk, uow=uow)
+                    self.repository_statements_raw.save_all(chunk, uow=uow)
 
             if include_fetched and self._fetched_data:
                 for chunk in _chunked(self._fetched_data, self._chunk_size):
-                    self.statements_fetched_repository.save_all(chunk, uow=uow)
+                    self.repository_statements_fetched.save_all(chunk, uow=uow)
         finally:
             self._nsd_buffer.clear()
             self._raw_data.clear()
@@ -147,10 +147,10 @@ class NsdProcessor:
         *,
         config: ConfigPort,
         logger: LoggerPort,
-        nsd_repository: RepositoryNsdPort,
-        company_repository: RepositoryCompanyDataPort,
-        statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementFetchedPort,
+        repository_nsd: RepositoryNsdPort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_statements_raw: RepositoryStatementsRawPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
         policy: NsdPolicyPort,
@@ -161,10 +161,10 @@ class NsdProcessor:
         self.config = config
         self.logger = logger
 
-        self.company_repository = company_repository
-        self.nsd_repository = nsd_repository
-        self.statements_raw_repository = statements_raw_repository
-        self.statements_fetched_repository = statements_fetched_repository
+        self.repository_company = repository_company
+        self.repository_nsd = repository_nsd
+        self.repository_statements_raw = repository_statements_raw
+        self.repository_statements_fetched = repository_statements_fetched
         self.scraper_statements_raw = scraper_statements_raw
 
         self.scraper_nsd = scraper_nsd
@@ -287,7 +287,7 @@ class NsdProcessor:
 
         try:
             year_view = list(
-                self.statements_raw_repository.get_company_year_view(
+                self.repository_statements_raw.get_company_year_view(
                     company_name=nsd.company_name,
                     year=quarter_police.year,
                     uow=uow,
@@ -365,8 +365,8 @@ class NsdProcessor:
     def _create_aggregator(self) -> _NsdTxnAggregator:
         return _NsdTxnAggregator(
             save_callback=self._save_batch,
-            statements_raw_repository=self.statements_raw_repository,
-            statements_fetched_repository=self.statements_fetched_repository,
+            repository_statements_raw=self.repository_statements_raw,
+            repository_statements_fetched=self.repository_statements_fetched,
             chunk_size=self._resolve_persistence_threshold(),
         )
 
@@ -520,7 +520,7 @@ class NsdProcessor:
         if not company_name:
             return None
 
-        cvm = self.company_repository.get_cvm_by_name(company_name, uow=uow)
+        cvm = self.repository_company.get_cvm_by_name(company_name, uow=uow)
         if cvm:
             return cvm
 
@@ -528,7 +528,7 @@ class NsdProcessor:
             cvm_code=self.id_generator.create_id(size=6),
             company_name=company_name,
         )
-        self.company_repository.save_all([dto], uow=uow)
+        self.repository_company.save_all([dto], uow=uow)
         return dto.cvm_code
 
     def _combine_extras(
@@ -620,7 +620,7 @@ class NsdProcessor:
         if company_names:
             existing = {
                 name
-                for (name,) in self.company_repository.iter_existing_by_columns(
+                for (name,) in self.repository_company.iter_existing_by_columns(
                     "company_name", uow=uow
                 )
             }
@@ -635,12 +635,12 @@ class NsdProcessor:
                 ]
 # <<<<<<< codex/add-save_batch-method-to-nsd_processor-nbtb3g
                 for chunk in _chunked(to_create, threshold):
-                    self.company_repository.save_all(chunk, uow=uow)
+                    self.repository_company.save_all(chunk, uow=uow)
 
         for chunk in _chunked(dtos, threshold):
-            self.nsd_repository.save_all(chunk, uow=uow)
+            self.repository_nsd.save_all(chunk, uow=uow)
 # =======
-#                 self.company_repository.save_all(to_create, uow=uow)
+#                 self.repository_company.save_all(to_create, uow=uow)
 
-#         self.nsd_repository.save_all(dtos, uow=uow)
+#         self.repository_nsd.save_all(dtos, uow=uow)
 # >>>>>>> 2025-09-09-Fetch-Adjustments

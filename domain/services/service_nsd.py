@@ -37,10 +37,10 @@ class NsdService:
         config: ConfigPort,
         logger: LoggerPort,
 
-        company_repository: RepositoryCompanyDataPort,
-        nsd_repository: RepositoryNsdPort,
-        statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementFetchedPort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_nsd: RepositoryNsdPort,
+        repository_statements_raw: RepositoryStatementsRawPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
 
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
@@ -56,10 +56,10 @@ class NsdService:
         self.config = config
         self.logger = logger
 
-        self.nsd_repository = nsd_repository
-        self.company_repository = company_repository
-        self.statements_raw_repository = statements_raw_repository
-        self.statements_fetched_repository = statements_fetched_repository
+        self.repository_nsd = repository_nsd
+        self.repository_company = repository_company
+        self.repository_statements_raw = repository_statements_raw
+        self.repository_statements_fetched = repository_statements_fetched
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
@@ -77,8 +77,8 @@ class NsdService:
         self.sync_nsd_usecase = SyncNSDUseCase(
             config=config,
             logger=logger,
-            nsd_repository=nsd_repository,
-            company_repository=company_repository,
+            repository_nsd=repository_nsd,
+            repository_company=repository_company,
             scraper=scraper_nsd,
             uow_factory=uow_factory,
         )
@@ -87,10 +87,10 @@ class NsdService:
             config=config,
             logger=logger,
 
-            nsd_repository=nsd_repository,
-            company_repository=company_repository,
-            statements_raw_repository=statements_raw_repository,
-            statements_fetched_repository=statements_fetched_repository,
+            repository_nsd=repository_nsd,
+            repository_company=repository_company,
+            repository_statements_raw=repository_statements_raw,
+            repository_statements_fetched=repository_statements_fetched,
 
             scraper_nsd=scraper_nsd,
             scraper_statements_raw=scraper_statements_raw,

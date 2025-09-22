@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dtos.stock_value_dto import StockQuoteDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from infrastructure.models.base_model import (
     BaseModel,
     _YMDDate,
@@ -64,7 +64,6 @@ class StockQuoteModel(BaseModel):
         )
 
     def to_dto(self) -> StockQuoteDTO:
-        from domain.dtos.stock_quote_dto import StockQuoteDTO
         return StockQuoteDTO(
             id=self.id,
             company_name=self.company_name,

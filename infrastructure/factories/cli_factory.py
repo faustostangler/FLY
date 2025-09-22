@@ -45,15 +45,15 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     """
 
     # Build the repository backed by the configured persistence layer
-    company_repository = RepositoryCompanyData(config=config, logger=logger)
-    nsd_repository = RepositoryNsd(config=config, logger=logger)
+    repository_company = RepositoryCompanyData(config=config, logger=logger)
+    repository_nsd = RepositoryNsd(config=config, logger=logger)
     raw_statements_repository = StatementRawRepository(config=config, logger=logger)
     fetched_statements_repository = StatementFetchedRepository(
         config=config, logger=logger
     )
 
     # Unit of Work
-    uow_factory = UowFactory(session_factory=nsd_repository.Session)
+    uow_factory = UowFactory(session_factory=repository_nsd.Session)
 
     # Compose the data-cleaning pipeline used before mapping/persisting
     datacleaner = datacleaner_factory(config, logger)
@@ -81,7 +81,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     scraper_nsd = NsdScraper(
         config=config,
         logger=logger,
-        nsd_repository=nsd_repository,
+        repository_nsd=repository_nsd,
         datacleaner=datacleaner,
         metrics_collector=metrics_collector,
         worker_pool=worker_pool,
@@ -92,7 +92,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         config=config,
         logger=logger,
         metrics_collector=metrics_collector,
-        # statements_raw_repository=raw_statements_repository,
+        # repository_statements_raw=raw_statements_repository,
         # datacleaner=datacleaner,
         # metrics_collector=metrics_collector,
         # worker_pool=worker_pool,
@@ -117,10 +117,10 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     cli = Cli(
         config=config,
         logger=logger,
-        company_repository=company_repository,
-        nsd_repository=nsd_repository,
-        statements_raw_repository=raw_statements_repository,
-        statements_fetched_repository=fetched_statements_repository,
+        repository_company=repository_company,
+        repository_nsd=repository_nsd,
+        repository_statements_raw=raw_statements_repository,
+        repository_statements_fetched=fetched_statements_repository,
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,

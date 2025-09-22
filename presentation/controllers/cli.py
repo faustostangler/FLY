@@ -17,7 +17,9 @@ from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
-from domain.services.service_StockQuote import StockQuoteService
+from domain.services.service_stockquote import StockQuoteService
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -32,7 +34,7 @@ class Cli:
     Args:
         config (ConfigPort): Read-only application configuration.
         logger (LoggerPort): Logging abstraction for structured events.
-        company_repository (RepositoryCompanyDataPort): Persistence port for company data.
+        repository_company (RepositoryCompanyDataPort): Persistence port for company data.
         scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
     """
 
@@ -40,13 +42,15 @@ class Cli:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        company_repository: RepositoryCompanyDataPort,
-        nsd_repository: RepositoryNsdPort,
-        statements_raw_repository: RepositoryStatementsRawPort,
-        statements_fetched_repository: RepositoryStatementFetchedPort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_nsd: RepositoryNsdPort,
+        repository_statements_raw: RepositoryStatementsRawPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
+        repository_stock_quote: RepositoryStockQuotePort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
+        scraper_stock_quote: ScraperStockQuotePort,
         worker_pool: WorkerPoolPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
@@ -58,14 +62,16 @@ class Cli:
         self.config = config
         self.logger = logger
 
-        self.company_repository = company_repository
-        self.nsd_repository = nsd_repository
-        self.statements_raw_repository = statements_raw_repository
-        self.statements_fetched_repository = statements_fetched_repository
+        self.repository_company = repository_company
+        self.repository_nsd = repository_nsd
+        self.repository_statements_raw = repository_statements_raw
+        self.repository_statements_fetched = repository_statements_fetched
+        self.repository_stock_quote = repository_stock_quote
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
         self.scraper_statements_raw = scraper_statements_raw
+        self.scraper_stock_quote = scraper_stock_quote
 
         self.worker_pool = worker_pool
 
@@ -93,22 +99,22 @@ class Cli:
         # Get NSD and stataments pipeline from B3
         self._statements_service()
 
-        # Get Stock Value for companies
-        self._StockQuote_service()
+        # # Get Stock Value for companies
+        # self.stock_quote_service()
 
         return None
 
     def _company_service(self) -> SyncResultsDTO:
         """Build and execute the company data synchronization flow."""
         # Alias injected dependencies for readability
-        company_repository = self.company_repository
+        repository_company = self.repository_company
         scraper_company_data = self.scraper_company_data
 
         # Compose the service with explicit dependencies
         company_service = CompanyDataService(
             config=self.config,
             logger=self.logger,
-            repository=company_repository,
+            repository=repository_company,
             scraper=scraper_company_data,
             uow_factory=self.uow_factory,
         )
@@ -122,10 +128,10 @@ class Cli:
         nsd_service = NsdService(
             config=self.config,
             logger=self.logger,
-            company_repository=self.company_repository,
-            nsd_repository=self.nsd_repository,
-            statements_raw_repository=self.statements_raw_repository,
-            statements_fetched_repository=self.statements_fetched_repository,
+            repository_company=self.repository_company,
+            repository_nsd=self.repository_nsd,
+            repository_statements_raw=self.repository_statements_raw,
+            repository_statements_fetched=self.repository_statements_fetched,
             scraper_company_data=self.scraper_company_data,
             scraper_nsd=self.scraper_nsd,
             scraper_statements_raw=self.scraper_statements_raw,
@@ -139,9 +145,15 @@ class Cli:
         # Run the synchronization step
         return nsd_service()
 
-    def _StockQuote_service(self) -> SyncResultsDTO:
+    def stock_quote_service(self) -> SyncResultsDTO:
         """ """
-        StockQuote_service = StockQuoteService()
+        stock_quote_service = StockQuoteService(
+            config=self.config,
+            logger=self.logger,
+            repository=self.repository_stock_quote,
+            scraper=self.scraper_stock_quote,
+            uow_factory=self.uow_factory,  # fábrica de UoW (SQLAlchemy + SQLite)
+        )
 
         # run the service
-        return StockQuote_service()
+        return stock_quote_service()

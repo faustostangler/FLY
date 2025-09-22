@@ -2,7 +2,7 @@ from sqlalchemy import text
 
 from domain.dto.company_data_dto import CompanyDataDTO
 from infrastructure.models.base_model import BaseModel
-from infrastructure.repositories.company_repository import (
+from infrastructure.repositories.repository_company import (
     SqlAlchemyRepositoryCompanyData,
 )
 from tests.conftest import DummyConfig, DummyLogger

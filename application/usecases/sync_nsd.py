@@ -18,21 +18,21 @@ class SyncNSDUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        nsd_repository: RepositoryNsdPort,
-        company_repository: RepositoryCompanyDataPort,
+        repository_nsd: RepositoryNsdPort,
+        repository_company: RepositoryCompanyDataPort,
         scraper: ScraperNsdPort,
         uow_factory: UowFactoryPort,
     ) -> None:
         self.config = config
         self.logger = logger
-        self.nsd_repository = nsd_repository
-        self.company_repository = company_repository
+        self.repository_nsd = repository_nsd
+        self.repository_company = repository_company
         self.scraper = scraper
         self.uow_factory = uow_factory
 
     def stream_nsd(self, *, start: int = 1, max_nsd: Optional[int] = None) -> Iterator[NsdDTO]:
         with self.uow_factory() as uow:
-            existing_codes = [int(code) for (code,) in self.nsd_repository.iter_existing_by_columns("nsd", uow=uow)]
+            existing_codes = [int(code) for (code,) in self.repository_nsd.iter_existing_by_columns("nsd", uow=uow)]
 
             max_nsd_probable = max(start, self._find_next_probable_nsd(start=start, existing_codes=existing_codes, safety_factor=1.10, uow=uow))
 
@@ -49,7 +49,7 @@ class SyncNSDUseCase:
         cap_param = max_nsd or self.config.repository.batch_size or 50
 
         with self.uow_factory() as uow:
-            existing_codes: list[int] = [int(c) for (c,) in self.nsd_repository.get_all_by_columns("nsd", uow=uow)]
+            existing_codes: list[int] = [int(c) for (c,) in self.repository_nsd.get_all_by_columns("nsd", uow=uow)]
             skip_codes = set(existing_codes)
             last_nsd = max(existing_codes) if existing_codes else 1
 
@@ -100,7 +100,7 @@ class SyncNSDUseCase:
             return start
 
         # lê datas válidas do banco
-        dates = [d for (d,) in self.nsd_repository.iter_existing_by_columns("sent_date", uow=uow, include_nulls=False)]
+        dates = [d for (d,) in self.repository_nsd.iter_existing_by_columns("sent_date", uow=uow, include_nulls=False)]
 
         if not dates:
             return max(start, max(existing_codes))
@@ -134,7 +134,7 @@ class SyncNSDUseCase:
 
     #     # busca todos os cvm_code que já estão na tabela
     #     existing_nsd = [
-    #         code for (code,) in self.nsd_repository.iter_existing_by_columns("nsd")
+    #         code for (code,) in self.repository_nsd.iter_existing_by_columns("nsd")
     #     ]
 
     #     # Fetch all documents from the scraper, persisting them in batches.
@@ -167,7 +167,7 @@ class SyncNSDUseCase:
     #     # → busca os já cadastrados
     #     existing_companies = {
     #         company_name
-    #         for (company_name,) in self.company_repository.iter_existing_by_columns(
+    #         for (company_name,) in self.repository_company.iter_existing_by_columns(
     #             "company_name"
     #         )
     #     }
@@ -182,7 +182,7 @@ class SyncNSDUseCase:
     #             for name in missing
     #         ]
     #         # insere todas as empresas faltantes de uma vez
-    #         self.company_repository.save_all(to_create)
+    #         self.repository_company.save_all(to_create)
 
     #     # Save the batch to the repository in a single call.
-    #     self.nsd_repository.save_all(dtos)
+    #     self.repository_nsd.save_all(dtos)

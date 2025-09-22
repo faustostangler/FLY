@@ -3,10 +3,10 @@ from typing import Any
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
-from application.usecases.sync_stock_value import SyncStockQuoteUseCase
+from application.usecases.sync_stock_quote import SyncStockQuoteUseCase
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.ports.repository_stock_value_port import RepositoryStockQuotePort
-from domain.ports.scraper_stock_value_port import ScraperStockQuotePort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
 
 class StockQuoteService:
@@ -35,7 +35,7 @@ class StockQuoteService:
         self.uow_factory = uow_factory
 
         # Initialize the use case responsible for company synchronization
-        self.sync_stock_value_usecase = SyncStockQuoteUseCase(
+        self.sync_stock_quote_usecase = SyncStockQuoteUseCase(
             config=self.config,
             logger=self.logger,
             repository=repository,
@@ -54,4 +54,4 @@ class StockQuoteService:
             Any: The result of the synchronization use case execution.
         """
         # Delegate execution to the underlying use case
-        return self.sync_stock_value_usecase()
+        return self.sync_stock_quote_usecase()
