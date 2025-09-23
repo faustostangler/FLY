@@ -10,16 +10,16 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_stockquote import StockQuoteService
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -96,11 +96,11 @@ class Cli:
         #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
         # )
 
-        # Get NSD and stataments pipeline from B3
-        self._statements_service()
+        # # Get NSD and stataments pipeline from B3
+        # self._statements_service()
 
-        # # Get Stock Value for companies
-        # self.stock_quote_service()
+        # Get Stock Value for companies
+        self.stock_quote_service()
 
         return None
 
@@ -150,8 +150,9 @@ class Cli:
         stock_quote_service = StockQuoteService(
             config=self.config,
             logger=self.logger,
-            repository=self.repository_stock_quote,
-            scraper=self.scraper_stock_quote,
+            repository_company=self.repository_company,
+            repository_stock_quote=self.repository_stock_quote,
+            scraper_stock_quote=self.scraper_stock_quote,
             uow_factory=self.uow_factory,  # fábrica de UoW (SQLAlchemy + SQLite)
         )
 

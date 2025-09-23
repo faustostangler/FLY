@@ -5,6 +5,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.usecases.sync_stock_quote import SyncStockQuoteUseCase
 from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
@@ -16,8 +17,9 @@ class StockQuoteService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryStockQuotePort,
-        scraper: ScraperStockQuotePort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_stock_quote: RepositoryStockQuotePort,
+        scraper_stock_quote: ScraperStockQuotePort,
         uow_factory: UowFactoryPort,
     ):
         """Initialize the service with required dependencies.
@@ -32,14 +34,21 @@ class StockQuoteService:
         self.logger = logger
         self.config = config
 
+        self.repository_company = repository_company
+        self.repository_stock_quote = repository_stock_quote
+        self.scraper_stock_quote = scraper_stock_quote
+
         self.uow_factory = uow_factory
 
         # Initialize the use case responsible for company synchronization
         self.sync_stock_quote_usecase = SyncStockQuoteUseCase(
             config=self.config,
             logger=self.logger,
-            repository=repository,
-            scraper=scraper,
+
+            repository_company=self.repository_company,
+            repository_stock_quote=self.repository_stock_quote,
+            scraper_stock_quote=self.scraper_stock_quote,
+
             uow_factory=self.uow_factory,
             max_workers=self.config.worker_pool.max_workers,
         )

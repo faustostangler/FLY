@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from typing import Any
 
 from application.ports.config_port import ConfigPort
@@ -5,6 +6,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
@@ -19,8 +21,9 @@ class SyncStockQuoteUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryStockQuotePort,
-        scraper: ScraperStockQuotePort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_stock_quote: RepositoryStockQuotePort,
+        scraper_stock_quote: ScraperStockQuotePort,
         uow_factory: UowFactoryPort,
 
         max_workers: int = 1,
@@ -37,8 +40,9 @@ class SyncStockQuoteUseCase:
         """
         self.config = config
         self.logger = logger
-        self.repository = repository
-        self.scraper = scraper
+        self.repository_company = repository_company
+        self.repository_stock_quote = repository_stock_quote
+        self.scraper_stock_quote = scraper_stock_quote
         self.uow_factory = uow_factory
 
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
@@ -58,14 +62,20 @@ class SyncStockQuoteUseCase:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
-        # Collect identifiers already stored in the repository
+        today = date.today()
+        saved = 0
+        tickers_synced = 0
+
         with self.uow_factory() as uow:
-            existing_codes = [code for (code,) in self.repository.iter_existing_by_columns("ticker", uow=uow)]
+            source_tickers = {
+                    (c.company_name, c.ticker_codes, c.isin_codes)
+                    for c in self.repository_company.iter_existing_by_columns(
+                        ["company_name", "ticker_codes", "isin_codes"], uow=uow
+                    )
+                    if c.isin_codes
+                }
 
-            # Fetch companies from scraper and persist them in batch mode
-            results = self.scraper.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
-
-            return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
+        return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
 
     def _save_batch(
         self,

@@ -19,9 +19,11 @@ from infrastructure.repositories.repository_statements_fetched import (
     StatementFetchedRepository,
 )
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
+from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
+from infrastructure.scrapers.scraper_stock_quote import StockQuoteScraper
 from infrastructure.uow.uow import UowFactory
 from infrastructure.utils.metrics_collector import MetricsCollector
 from infrastructure.utils.worker_pool import WorkerPool
@@ -47,10 +49,9 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     # Build the repository backed by the configured persistence layer
     repository_company = RepositoryCompanyData(config=config, logger=logger)
     repository_nsd = RepositoryNsd(config=config, logger=logger)
-    raw_statements_repository = StatementRawRepository(config=config, logger=logger)
-    fetched_statements_repository = StatementFetchedRepository(
-        config=config, logger=logger
-    )
+    repository_raw_statements = StatementRawRepository(config=config, logger=logger)
+    repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
+    repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -92,11 +93,22 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         config=config,
         logger=logger,
         metrics_collector=metrics_collector,
-        # repository_statements_raw=raw_statements_repository,
+        # repository_statements_raw=repository_raw_statements,
         # datacleaner=datacleaner,
         # metrics_collector=metrics_collector,
         # worker_pool=worker_pool,
         http_client=http_client,
+    )
+
+    scraper_stock_quote = StockQuoteScraper(
+        config=config,
+        logger=logger,
+        repository_stock_quote=repository_stock_quote,
+
+        datacleaner=datacleaner,
+        metrics_collector=metrics_collector,
+        http_client=http_client,
+        worker_pool=worker_pool,
     )
 
     # Policy
@@ -119,11 +131,13 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         logger=logger,
         repository_company=repository_company,
         repository_nsd=repository_nsd,
-        repository_statements_raw=raw_statements_repository,
-        repository_statements_fetched=fetched_statements_repository,
+        repository_statements_raw=repository_raw_statements,
+        repository_statements_fetched=repository_fetched_statements,
+        repository_stock_quote=repository_stock_quote,
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
+        scraper_stock_quote=scraper_stock_quote,
         worker_pool=worker_pool,
         policy=policy,
         uow_factory=uow_factory,

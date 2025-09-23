@@ -128,7 +128,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         # Normalize the column name(s) to a list
         if isinstance(column_names, str):
             column_names = [column_names]
-        
+
         # Resolve ORM columns from names
         columns = [getattr(model, col) for col in column_names]
 
