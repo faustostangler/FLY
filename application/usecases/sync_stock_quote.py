@@ -1,17 +1,20 @@
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, Iterable, Iterator
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
+from application.ports.http_client_port import AffinityHttpClientPort
 from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
 
 # from infrastructure.helpers.list_flattener import ListFlattener
+from infrastructure.utils.save_strategy import SaveStrategy
 
 
 class SyncStockQuoteUseCase:
@@ -25,6 +28,7 @@ class SyncStockQuoteUseCase:
         repository_stock_quote: RepositoryStockQuotePort,
         scraper_stock_quote: ScraperStockQuotePort,
         uow_factory: UowFactoryPort,
+        http_client: AffinityHttpClientPort,
 
         max_workers: int = 1,
     ):
@@ -44,38 +48,52 @@ class SyncStockQuoteUseCase:
         self.repository_stock_quote = repository_stock_quote
         self.scraper_stock_quote = scraper_stock_quote
         self.uow_factory = uow_factory
+        self.http_client = http_client
 
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return self.run()
+    def __call__(self, task: WorkerTaskDTO) -> Any:
+        return self.run(task)
 
-    def run(self) -> SyncResultsDTO:
-        """Run the full company synchronization pipeline.
-
-        Steps:
-            1. Retrieve company data from the scraper.
-            2. Transform results into ``CompanyDataDTO`` objects.
-            3. Save them into the repository in batches.
-
-        Returns:
-            SyncCompanyDataResultDTO: Summary of the synchronization process,
-            including counts and network usage metrics.
+    def run(self, task: WorkerTaskDTO) -> SyncResultsDTO[StockQuoteDTO]:
         """
+        """
+        ticker, company_name = task.data
+
+
         today = date.today()
         saved = 0
-        tickers_synced = 0
 
         with self.uow_factory() as uow:
-            source_tickers = {
-                    (c.company_name, c.ticker_codes, c.isin_codes)
-                    for c in self.repository_company.iter_existing_by_columns(
-                        ["company_name", "ticker_codes", "isin_codes"], uow=uow
-                    )
-                    if c.isin_codes
-                }
+            try:
+                # get ticker last date
+                last = self.repository_stock_quote.get_last_date(ticker=ticker, uow=uow)
+                start_date = date(1900, 1, 1) if last is None else (last + timedelta(days=1))
+                if start_date and start_date > today:
+                    self.logger.log(f"Algouma coisa errada com a data", level="warning")
+                    return SyncResultsDTO(items_count=0, extra={"ticker": ticker})
+                
+                items = self.scraper_stock_quote.fetch_all(
+                    threshold=self.config.repository.persistence_threshold,
+                    existing_codes=None,
+                    save_callback=self._save_batch,
+                    data=task.data,
+                    start_date=start_date,
+                    end_date=today,
+                    uow=uow,
+                    http_client=self.http_client,
+                )
 
-        return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
+
+            except Exception as e:
+                pass
+
+        return SyncResultsDTO(items=(ticker, company_name), metrics=self.scraper.get_metrics())
+
+    def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
+        """Gerador preguiçoso sobre a lista já calculada externamente."""
+        for code in codes:
+            yield code
 
     def _save_batch(
         self,

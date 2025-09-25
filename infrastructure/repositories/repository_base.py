@@ -133,6 +133,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         columns = [getattr(model, col) for col in column_names]
 
         q = session.query(*columns)
+
         if not include_nulls:
             for c in columns:
                 q = q.filter(c.isnot(None))

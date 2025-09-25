@@ -104,12 +104,8 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         config=config,
         logger=logger,
         repository_stock_quote=repository_stock_quote,
-
-        datacleaner=datacleaner,
         metrics_collector=metrics_collector,
-        http_client=http_client,
-        worker_pool=worker_pool,
-    )
+        )
 
     # Policy
     policy = NsdPolicy(

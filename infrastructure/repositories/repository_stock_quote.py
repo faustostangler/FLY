@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import List, Set, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy import func
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -62,31 +63,12 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
 
-    def get_all_pending(
-        self,
-        company_names: Set[str],
-        valid_types: Set[str],
-        exclude_nsd: Set[str],
-        *,
-        uow: Uow,
-    ) -> List[StockQuoteDTO]:
-        """Retorna todos os NSDs que ainda não foram processados, filtrando por
-        empresa, tipo e NSD.
-
-        Args:
-            company_names (Set[str]): Conjunto de nomes de empresas válidas.
-            valid_types (Set[str]): Tipos de NSDs aceitos (ex: DFP, ITR...).
-            exclude_nsd (Set[str]): Lista de códigos NSD já processados (raw ou fetched).
-
-        Returns:
-            List[NsdDTO]: Lista de NSDs pendentes.
-        """
+    def get_last_date(self, *, ticker: str, uow: Uow):
+        """Retorna a última data persistida para o ticker ou None se não houver histórico."""
         session = uow.session
-        query = session.query(StockQuoteModel).filter(
-                StockQuoteModel.company_name.in_(company_names),
-            )
-        results = query.all()
-        return sorted(
-            [stock_quote.to_dto() for stock_quote in results],
-            key=lambda dto: (dto.company_name, dto.date),
+        model, _ = self.get_model_class()
+        return (
+            session.query(func.max(model.date))
+            .filter(model.ticker == ticker)
+            .scalar()
         )

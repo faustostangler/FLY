@@ -19,7 +19,8 @@ from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
-from domain.services.service_stockquote import StockQuoteService
+from domain.services.service_stock_quote import StockQuoteService
+from application.ports.http_client_port import AffinityHttpClientPort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -54,6 +55,7 @@ class Cli:
         worker_pool: WorkerPoolPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
+        http_client: AffinityHttpClientPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
     ) -> None:
@@ -74,6 +76,7 @@ class Cli:
         self.scraper_stock_quote = scraper_stock_quote
 
         self.worker_pool = worker_pool
+        self.http_client = http_client
 
         self.policy = policy
         self.uow_factory = uow_factory
@@ -139,7 +142,7 @@ class Cli:
             policy=self.policy,  # porta para política composta
             financial_normalizer=self.financial_normalizer,  # serviço de domínio puro
             ratios_calculator=self.ratios_calculator,  # serviço de domínio puro
-            uow_factory=self.uow_factory,  # fábrica de UoW (SQLAlchemy + SQLite)
+            uow_factory=self.uow_factory,
         )
 
         # Run the synchronization step
@@ -153,7 +156,9 @@ class Cli:
             repository_company=self.repository_company,
             repository_stock_quote=self.repository_stock_quote,
             scraper_stock_quote=self.scraper_stock_quote,
-            uow_factory=self.uow_factory,  # fábrica de UoW (SQLAlchemy + SQLite)
+            worker_pool=self.worker_pool,
+            uow_factory=self.uow_factory,
+            http_client=self.http_client,
         )
 
         # run the service

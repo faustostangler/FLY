@@ -54,7 +54,7 @@ class Logger:
         self.id_generator = IdGenerator(
             config=self.config, logger_name=self.logger_name
         )
-        self._run_id = self.id_generator.create_id(size=8, random=False)
+        self._run_id = self.id_generator.create_id(size=8, random=True)
         self.worker_id = self.id_generator.create_id(size=8)
 
         # Build the configured LoggerAdapter instance
