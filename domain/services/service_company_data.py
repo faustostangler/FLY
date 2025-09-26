@@ -16,8 +16,10 @@ class CompanyDataService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryCompanyDataPort,
+
+        repository_company: RepositoryCompanyDataPort,
         scraper: ScraperCompanyDataPort,
+
         uow_factory: UowFactoryPort,
     ):
         """Initialize the service with required dependencies.
@@ -32,13 +34,16 @@ class CompanyDataService:
         self.logger = logger
         self.config = config
 
+        self.repository_company = repository_company
+
         self.uow_factory = uow_factory
 
         # Initialize the use case responsible for company synchronization
         self.sync_companies_usecase = SyncCompanyDataUseCase(
             config=self.config,
             logger=self.logger,
-            repository=repository,
+
+            repository_company=self.repository_company,
             scraper=scraper,
             uow_factory=self.uow_factory,
             max_workers=self.config.worker_pool.max_workers,

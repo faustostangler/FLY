@@ -93,7 +93,7 @@ class Cli:
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
-        # # Kick off the company data pipeline
+        # Kick off the company data pipeline
         # company_results: SyncResultsDTO = self._company_service()
         # self.logger.log(
         #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
@@ -117,7 +117,7 @@ class Cli:
         company_service = CompanyDataService(
             config=self.config,
             logger=self.logger,
-            repository=repository_company,
+            repository_company=repository_company,
             scraper=scraper_company_data,
             uow_factory=self.uow_factory,
         )
@@ -156,9 +156,9 @@ class Cli:
             repository_company=self.repository_company,
             repository_stock_quote=self.repository_stock_quote,
             scraper_stock_quote=self.scraper_stock_quote,
-            worker_pool=self.worker_pool,
+            # worker_pool=self.worker_pool,
             uow_factory=self.uow_factory,
-            http_client=self.http_client,
+            # http_client=self.http_client,
         )
 
         # run the service

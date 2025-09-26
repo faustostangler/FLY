@@ -20,12 +20,13 @@ class StockQuoteService:
         self,
         config: ConfigPort,
         logger: LoggerPort,
+
         repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         scraper_stock_quote: ScraperStockQuotePort,
-        worker_pool: WorkerPoolPort,
+
         uow_factory: UowFactoryPort,
-        http_client: AffinityHttpClientPort,
+        # http_client: AffinityHttpClientPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -43,9 +44,8 @@ class StockQuoteService:
         self.repository_stock_quote = repository_stock_quote
         self.scraper_stock_quote = scraper_stock_quote
 
-        self.worker_pool = worker_pool
         self.uow_factory = uow_factory
-        self.http_client = http_client
+        # self.http_client = http_client
 
         # Initialize the use case responsible for company synchronization
         self.sync_stock_quote_usecase = SyncStockQuoteUseCase(
@@ -57,8 +57,8 @@ class StockQuoteService:
             scraper_stock_quote=self.scraper_stock_quote,
 
             uow_factory=self.uow_factory,
-            http_client=self.http_client,
-            max_workers=self.config.worker_pool.max_workers,
+            # http_client=self.http_client,
+            # max_workers=self.config.worker_pool.max_workers,
         )
 
     def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO:
@@ -70,40 +70,22 @@ class StockQuoteService:
         Returns:
             Any: The result of the synchronization use case execution.
         """
-        with self.uow_factory() as uow:
-            codes = self._get_tickers(uow)
-
-        code_stream = self.sync_stock_quote_usecase.stream_codes(codes)
-
-        results = self.worker_pool(
-            logger=self.logger,
-            tasks=enumerate(code_stream),
-            processor=self.sync_stock_quote_usecase,
-            total_size=len(codes)
-        )
-
-        items = list(results) if results is not None else []
-        return SyncResultsDTO[StockQuoteDTO](items=items, metrics=len(items))
-        # Delegate execution to the underlying use case
         return self.sync_stock_quote_usecase()
 
-    def _get_tickers(self, uow) -> list[tuple[str, str]]:
-        columns = ["company_name", "ticker_codes", "isin_codes"]
+        # with self.uow_factory() as uow:
+        #     codes = self._get_tickers(uow)
 
-        pairs: list[tuple[str, str]] = []
-        for row in self.repository_company.iter_existing_by_columns(columns, include_nulls=False, uow=uow):
-            # alguns drivers retornam ((a,b,c),)
-            if isinstance(row, tuple) and len(row) == 1 and hasattr(row[0], "_mapping"):
-                    row = row[0]
+        # code_stream = self.sync_stock_quote_usecase.stream_codes(codes)
 
-            company_name, ticker_codes, isin_codes = row
+        # results = self.worker_pool(
+        #     logger=self.logger,
+        #     tasks=enumerate(code_stream),
+        #     processor=self.sync_stock_quote_usecase,
+        #     total_size=len(codes)
+        # )
 
-            # include_nulls=False makes this reduntant, but just in case
-            isins = [s.strip() for s in str(isin_codes or "").split(",") if s.strip()]
-            if not isins:
-                continue  # ignora empresas sem ISIN
+        # items = list(results) if results is not None else []
+        # return SyncResultsDTO[StockQuoteDTO](items=items, metrics=len(items))
+        # # Delegate execution to the underlying use case
+        # return self.sync_stock_quote_usecase()
 
-            tickers = [t.strip() for t in str(ticker_codes or "").replace(" ", "").split(",") if t.strip()]
-            for t in tickers:
-                pairs.append((t, company_name))
-        return pairs

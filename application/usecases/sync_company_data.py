@@ -19,8 +19,10 @@ class SyncCompanyDataUseCase:
         self,
         config: ConfigPort,
         logger: LoggerPort,
-        repository: RepositoryCompanyDataPort,
+
+        repository_company: RepositoryCompanyDataPort,
         scraper: ScraperCompanyDataPort,
+
         uow_factory: UowFactoryPort,
 
         max_workers: int = 1,
@@ -37,7 +39,7 @@ class SyncCompanyDataUseCase:
         """
         self.config = config
         self.logger = logger
-        self.repository = repository
+        self.repository_company = repository_company
         self.scraper = scraper
         self.uow_factory = uow_factory
 
@@ -60,7 +62,7 @@ class SyncCompanyDataUseCase:
         """
         # Collect company identifiers already stored in the repository
         with self.uow_factory() as uow:
-            existing_codes = [code for (code,) in self.repository.iter_existing_by_columns("company_name", uow=uow)]
+            existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
 
             # Fetch companies from scraper and persist them in batch mode
             results = self.scraper.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
@@ -91,4 +93,4 @@ class SyncCompanyDataUseCase:
 
 
         # Persist the transformed DTOs in bulk
-        self.repository.save_all(dtos, uow=uow)
+        self.repository_company.save_all(dtos, uow=uow)
