@@ -86,10 +86,14 @@ class SyncStockQuoteUseCase:
                 *,
                 uow: Uow | None = None,
             ) -> None:
+# <<<<<<< codex/adjust-stock_quote-pipeline-logic-4v8pke
                 # Considera cada símbolo/ticker como um único item na estratégia,
                 # permitindo que o threshold seja aplicado por ticker (como no fluxo
                 # de companies) em vez de por quantidade de DTOs individuais.
                 strategy.handle(batch)
+# =======
+#                 strategy.handle_many(batch)  # não recebe uow; wrapper satisfaz a assinatura
+# >>>>>>> 2025-09-20-Stock-Value
 
             try:
                 items = self.scraper_stock_quote.fetch_all(
