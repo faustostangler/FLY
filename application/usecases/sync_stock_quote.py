@@ -62,30 +62,34 @@ class SyncStockQuoteUseCase:
         ticker, company_name = task.data
         today = date.today()
 
+        items: list[StockQuoteDTO] = []
+
         with self.uow_factory() as uow:
-            try:
-                # get ticker last date
-                last_date = self.repository_stock_quote.get_last_date(ticker=ticker, uow=uow)
-                start_date = (today - relativedelta(years=99)) if last_date is None else (last_date + timedelta(days=1))
-                if start_date > today:
-                    t = today
-                    today = start_date
-                    start_date = t
+            # get ticker last date
+            last_date = self.repository_stock_quote.get_last_date(ticker=ticker, uow=uow)
+            start_date = (today - relativedelta(years=99)) if last_date is None else (last_date + timedelta(days=1))
+            if start_date > today:
+                t = today
+                today = start_date
+                start_date = t
 
-                strategy = SaveStrategy.from_config(
-                    save_callback=self._save_batch,
-                    threshold=self.config.repository.persistence_threshold,
-                    config=self.config,
-                    uow_factory=self.uow_factory,
-                )
-                
+            strategy = SaveStrategy.from_config(
+                save_callback=self._save_batch,
+                threshold=self.config.repository.persistence_threshold,
+                config=self.config,
+                uow_factory=self.uow_factory,
+            )
+
             # wrapper para casar a assinatura do Scraper (items, *, uow)
-                def _strategy_callback(items: list[StockQuoteDTO], *, uow: Uow) -> None:
-                    strategy.handle_many(items)  # não recebe uow; wrapper satisfaz a assinatura
+            def _strategy_callback(
+                batch: list[StockQuoteDTO],
+                *,
+                uow: Uow | None = None,
+            ) -> None:
+                strategy.handle_many(batch)  # não recebe uow; wrapper satisfaz a assinatura
 
+            try:
                 items = self.scraper_stock_quote.fetch_all(
-                    threshold=self.config.repository.persistence_threshold,
-                    existing_codes=None,
                     save_callback=_strategy_callback,
                     data=task.data,
                     start_date=start_date,
@@ -93,13 +97,10 @@ class SyncStockQuoteUseCase:
                     uow=uow,
                     http_client=self.http_client,
                 )
-
+            finally:
                 strategy.finalize()
 
-            except Exception as e:
-                pass
-
-        return SyncResultsDTO(items=(ticker, company_name), metrics=len(items))
+        return SyncResultsDTO(items=items, metrics=len(items))
 
     def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
         """Gerador preguiçoso sobre a lista já calculada externamente."""
