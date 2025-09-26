@@ -99,6 +99,10 @@ class StockQuoteScraper(ScraperStockQuotePort):
             )
             out.append(dto)
 
+        if save_callback is not None:
+            callback_uow: Uow | None = kwargs.get("uow")
+            save_callback(out, uow=callback_uow)  # type: ignore[arg-type]
+
         return out
 
     def _save_date(self, val):
