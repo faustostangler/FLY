@@ -86,7 +86,14 @@ class SyncStockQuoteUseCase:
                 *,
                 uow: Uow | None = None,
             ) -> None:
-                strategy.handle_many(batch)  # não recebe uow; wrapper satisfaz a assinatura
+# <<<<<<< codex/adjust-stock_quote-pipeline-logic-4v8pke
+                # Considera cada símbolo/ticker como um único item na estratégia,
+                # permitindo que o threshold seja aplicado por ticker (como no fluxo
+                # de companies) em vez de por quantidade de DTOs individuais.
+                strategy.handle(batch)
+# =======
+#                 strategy.handle_many(batch)  # não recebe uow; wrapper satisfaz a assinatura
+# >>>>>>> 2025-09-20-Stock-Value
 
             try:
                 items = self.scraper_stock_quote.fetch_all(
@@ -109,7 +116,7 @@ class SyncStockQuoteUseCase:
 
     def _save_batch(
         self,
-        items: list[StockQuoteDTO],
+        items: list[StockQuoteDTO] | list[list[StockQuoteDTO]],
         *,
         uow: Uow | None = None,
     ) -> None:
@@ -123,7 +130,7 @@ class SyncStockQuoteUseCase:
             raise RuntimeError("SaveCallback chamado sem UoW")
 
         # with self.uow_factory() as uow:
-        # Flatten potential nested lists from scraper output
+        # Flatten potential nested lists from scraper output (lista por ticker)
         flat_items = ListFlattener.flatten(items)
 
         # Convert raw scraper DTOs into domain-level DTOs
