@@ -1,5 +1,6 @@
 from datetime import date, timedelta
-from typing import Any, Iterable, Iterator
+from dateutil.relativedelta import relativedelta
+from typing import Any, Iterable, Iterator, List
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -59,24 +60,33 @@ class SyncStockQuoteUseCase:
         """
         """
         ticker, company_name = task.data
-
-
         today = date.today()
-        saved = 0
 
         with self.uow_factory() as uow:
             try:
                 # get ticker last date
-                last = self.repository_stock_quote.get_last_date(ticker=ticker, uow=uow)
-                start_date = date(1900, 1, 1) if last is None else (last + timedelta(days=1))
-                if start_date and start_date > today:
-                    self.logger.log(f"Algouma coisa errada com a data", level="warning")
-                    return SyncResultsDTO(items_count=0, extra={"ticker": ticker})
+                last_date = self.repository_stock_quote.get_last_date(ticker=ticker, uow=uow)
+                start_date = (today - relativedelta(years=99)) if last_date is None else (last_date + timedelta(days=1))
+                if start_date > today:
+                    t = today
+                    today = start_date
+                    start_date = t
+
+                strategy = SaveStrategy.from_config(
+                    save_callback=self._save_batch,
+                    threshold=self.config.repository.persistence_threshold,
+                    config=self.config,
+                    uow_factory=self.uow_factory,
+                )
                 
+            # wrapper para casar a assinatura do Scraper (items, *, uow)
+                def _strategy_callback(items: list[StockQuoteDTO], *, uow: Uow) -> None:
+                    strategy.handle_many(items)  # não recebe uow; wrapper satisfaz a assinatura
+
                 items = self.scraper_stock_quote.fetch_all(
                     threshold=self.config.repository.persistence_threshold,
                     existing_codes=None,
-                    save_callback=self._save_batch,
+                    save_callback=_strategy_callback,
                     data=task.data,
                     start_date=start_date,
                     end_date=today,
@@ -84,11 +94,12 @@ class SyncStockQuoteUseCase:
                     http_client=self.http_client,
                 )
 
+                strategy.finalize()
 
             except Exception as e:
                 pass
 
-        return SyncResultsDTO(items=(ticker, company_name), metrics=self.scraper.get_metrics())
+        return SyncResultsDTO(items=(ticker, company_name), metrics=len(items))
 
     def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
         """Gerador preguiçoso sobre a lista já calculada externamente."""
@@ -119,4 +130,4 @@ class SyncStockQuoteUseCase:
 
 
         # Persist the transformed DTOs in bulk
-        self.repository.save_all(dtos, uow=uow)
+        self.repository_stock_quote.save_all(dtos, uow=uow)

@@ -45,10 +45,7 @@ class CompanyDataService:
         )
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
-        try:
-            return self.run()
-        except Exception:
-            pass
+        return self.run()
 
     def run(self) -> SyncResultsDTO:
         """Trigger company synchronization workflow.

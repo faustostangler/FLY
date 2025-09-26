@@ -137,6 +137,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         worker_pool=worker_pool,
         policy=policy,
         uow_factory=uow_factory,
+        http_client=http_client,
         financial_normalizer=financial_normalizer,
         ratios_calculator=ratios_calculator,
     )

@@ -1,8 +1,10 @@
 # infrastructure/adapters/scraper_stock_quote.py
 from __future__ import annotations
-from datetime import date
+from datetime import datetime, date
+import pandas as pd
 from typing import Iterable, Iterator, Optional, Sequence, Any, List
 
+import requests
 import yfinance as yf  # dependência de infraestrutura
 
 from application.ports.config_port import ConfigPort
@@ -42,49 +44,81 @@ class StockQuoteScraper(ScraperStockQuotePort):
         ticker, company_name = kwargs.get("data")
         start_date: date = kwargs.get("start_date").isoformat()
         end_date: date = kwargs.get("end_date").isoformat()
-        uow: Uow = kwargs.get("uow")
-        http_client: AffinityHttpClientPort = kwargs.get("http_client")
 
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}.SA"
+        symbol = ticker.upper() if "." in ticker else f"{ticker.upper()}.SA"
 
-        with http_client.borrow_session() as session:
-            resp = http_client.fetch_with(session, url, headers=session.headers)
-        data = resp.json()
+        # probe simples para evitar consent/blocked
+        url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/115.0.0.0 Safari/537.36",
+            "Referer": "https://finance.yahoo.com/",
+        }
+        try:
+            r = requests.get(url, headers=headers)
+            _ = r.json()  # não use raise_for_status
+            if r.status_code != 200:
+                return []
+        except Exception:
+            return []
 
+        if r.status_code != 200:
+            return []
+        # if not data:
+        #     return []
 
-        df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
+        df = yf.download(
+            symbol,
+            start=start_date,
+            end=end_date,
+            progress=False,
+            auto_adjust=False,
+        )
         if df is None or df.empty:
             return []
 
-        df = df.rename(columns={"Adj Close": "AdjClose"}).reset_index()
+        if isinstance(df.columns, pd.MultiIndex):
+            df = df.swaplevel(axis=1)[symbol]
 
-        items: list[StockQuoteDTO] = []
-        for _, row in df.iterrows():
-            d = getattr(row["Date"], "date", lambda: row["Date"])()
+        # df = df.rename(columns={"Adj Close": "AdjClose"}).reset_index()
+        out: list[StockQuoteDTO] = []
+
+        for idx, row in df.iterrows():
             dto = StockQuoteDTO(
                 company_name=company_name,
                 ticker=ticker,
-                date=d,
-                open=float(row.get("Open") or 0.0),
-                high=float(row.get("High") or 0.0),
-                low=float(row.get("Low") or 0.0),
-                close=float(row.get("Close") or 0.0),
-                adj_close=float(row.get("AdjClose") or row.get("Adj Close") or 0.0),
-                volume=int(row.get("Volume") or 0),
+                date=idx.date(),
+                open=row["Open"],
+                high=row["High"],
+                low=row["Low"],
+                close=row["Close"],
+                adj_close=row["Adj Close"],
+                volume=row["Volume"],
                 currency="BRL",
             )
-            items.append(dto)
+            out.append(dto)
 
-            # flush incremental
-            if save_callback and uow and threshold and len(items) >= threshold:
-                save_callback(items, uow=uow)
-                items.clear()
+        return out
 
-        # flush final
-        if save_callback and uow and items:
-            save_callback(items, uow=uow)
+    def _save_date(self, val):
+        if isinstance(val, pd.Series):
+            val = val
+        if isinstance(val, pd.Timestamp):
+            return val.date()
+        if isinstance(val, datetime):
+            return val.date()
+        if isinstance(val, date):
+            return val
+        return pd.to_datetime(val).date()
 
-        return items
+
+    def _safe_float(self, val: object, default: float = 0.0) -> float:
+        return default if pd.isna(val) else float(val)
+
+    def _safe_int(self, val: object, default: int = 0) -> int:
+        return default if pd.isna(val) else int(val)
+
 
     @property
     def metrics_collector(self) -> MetricsCollectorPort:
@@ -93,3 +127,4 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
     def get_metrics(self) -> int:
         return self._metrics_collector.network_bytes
+
