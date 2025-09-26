@@ -48,16 +48,22 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
 
             flat_items = ListFlattener.flatten(items)
             valid_items = [i for i in flat_items if i is not None]
+
             for dto in valid_items:
                 obj = model.from_dto(dto)
                 data = {c.name: getattr(obj, c.name) for c in model.__table__.columns}
+
                 stmt = insert(model).values(**data)
+
                 update_dict = {
                     c.name: getattr(stmt.excluded, c.name)
                     for c in model.__table__.columns
                     if c.name != "id"
                 }
-                stmt = stmt.on_conflict_do_update(index_elements=["nsd"], set_=update_dict)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["ticker", "date"],
+                    set_=update_dict,
+                )
                 session.execute(stmt)
         except Exception as e:
             self.logger.log(f"Error saving NSD data: {e}", level="error")

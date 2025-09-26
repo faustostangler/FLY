@@ -81,7 +81,15 @@ class StockQuoteScraper(ScraperStockQuotePort):
         if isinstance(df.columns, pd.MultiIndex):
             df = df.swaplevel(axis=1)[symbol]
 
-        # df = df.rename(columns={"Adj Close": "AdjClose"}).reset_index()
+        # garante ordenação por data
+        df = df.sort_index()
+
+        d_min = df.index[0].date()
+        d_max = df.index[-1].date()
+
+        close_min = float(df.iloc[0]["Close"])
+        close_max = float(df.iloc[-1]["Close"])
+
         out: list[StockQuoteDTO] = []
 
         for idx, row in df.iterrows():
@@ -100,8 +108,13 @@ class StockQuoteScraper(ScraperStockQuotePort):
             out.append(dto)
 
         if save_callback is not None:
-            callback_uow: Uow | None = kwargs.get("uow")
-            save_callback(out, uow=callback_uow)  # type: ignore[arg-type]
+            uow: Uow | None = kwargs.get("uow")
+            save_callback(out, uow=uow)  # type: ignore[arg-type]
+
+        self.logger.log(
+            f"{ticker} {d_min} to {d_max} {company_name} {close_min:.2f} {close_max:.2f}",
+            level="info",
+        )
 
         return out
 

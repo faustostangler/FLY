@@ -95,17 +95,15 @@ class SyncStockQuoteUseCase:
 #                 strategy.handle_many(batch)  # não recebe uow; wrapper satisfaz a assinatura
 # >>>>>>> 2025-09-20-Stock-Value
 
-            try:
-                items = self.scraper_stock_quote.fetch_all(
-                    save_callback=_strategy_callback,
-                    data=task.data,
-                    start_date=start_date,
-                    end_date=today,
-                    uow=uow,
-                    http_client=self.http_client,
-                )
-            finally:
-                strategy.finalize()
+            items = self.scraper_stock_quote.fetch_all(
+                save_callback=_strategy_callback,
+                data=task.data,
+                start_date=start_date,
+                end_date=today,
+                uow=uow,
+                http_client=self.http_client,
+            )
+        strategy.finalize()
 
         return SyncResultsDTO(items=items, metrics=len(items))
 
