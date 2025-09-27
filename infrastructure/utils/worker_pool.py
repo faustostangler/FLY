@@ -137,14 +137,15 @@ class WorkerPool(WorkerPoolPort):
                 task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id, total_size=total_size)
 
                 # Execute the task-specific processor
-                result = processor(task)
+                result:List[R] = processor(task)
 
                 # Append result and emit optional per-result callback
                 try:
                     with lock:
-                        results.append(result)
-                        if callable(on_result):
-                            on_result(result)
+                        if result is not None and len(result) > 0:
+                            results.append(result)
+                            if callable(on_result):
+                                on_result(result)
                 except Exception as exc:  # noqa: BLE001
                     # Log any callback/list append issues without crashing the worker
                     logger.log(

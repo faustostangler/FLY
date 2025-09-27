@@ -18,7 +18,7 @@ class CompanyDataService:
         logger: LoggerPort,
 
         repository_company: RepositoryCompanyDataPort,
-        scraper: ScraperCompanyDataPort,
+        scraper_company_data: ScraperCompanyDataPort,
 
         uow_factory: UowFactoryPort,
     ):
@@ -35,6 +35,7 @@ class CompanyDataService:
         self.config = config
 
         self.repository_company = repository_company
+        self.scraper_company_data = scraper_company_data
 
         self.uow_factory = uow_factory
 
@@ -44,8 +45,10 @@ class CompanyDataService:
             logger=self.logger,
 
             repository_company=self.repository_company,
-            scraper=scraper,
+            scraper_company_data=self.scraper_company_data,
+
             uow_factory=self.uow_factory,
+            
             max_workers=self.config.worker_pool.max_workers,
         )
 

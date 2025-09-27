@@ -105,6 +105,9 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         logger=logger,
         repository_stock_quote=repository_stock_quote,
         metrics_collector=metrics_collector,
+        worker_pool=worker_pool,
+        http_client=http_client,
+        uow_factory=uow_factory,
         )
 
     # Policy

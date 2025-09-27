@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+from typing import Union, Tuple, Iterable, Generic, List, Optional, Protocol, TypeVar, runtime_checkable
 
 from application.ports.uow_port import Uow
 
 # Type variable representing the entity type being scraped
 T = TypeVar("T")
+ExistingItem = Union[str, Tuple[str, str]]
 
 
 class SaveCallback(Protocol, Generic[T]):
@@ -24,7 +25,7 @@ class ScraperBasePort(Protocol, Generic[T]):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        existing_codes: Optional[Iterable[ExistingItem]] = None,
         save_callback: Optional[SaveCallback[T]] = None,
         **kwargs,
     ) -> List[T]:

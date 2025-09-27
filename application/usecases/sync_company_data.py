@@ -21,7 +21,7 @@ class SyncCompanyDataUseCase:
         logger: LoggerPort,
 
         repository_company: RepositoryCompanyDataPort,
-        scraper: ScraperCompanyDataPort,
+        scraper_company_data: ScraperCompanyDataPort,
 
         uow_factory: UowFactoryPort,
 
@@ -33,14 +33,14 @@ class SyncCompanyDataUseCase:
             config (ConfigPort): Application configuration provider.
             logger (LoggerPort): Logger interface for capturing messages.
             repository (RepositoryCompanyDataPort): Repository for persisting company data.
-            scraper (ScraperCompanyDataPort): Scraper used to fetch company data.
+            scraper_company (ScraperCompanyDataPort): Scraper used to fetch company data.
             max_workers (int, optional): Maximum number of workers for parallel execution.
                 Defaults to 1, or falls back to the value in the config worker pool.
         """
         self.config = config
         self.logger = logger
         self.repository_company = repository_company
-        self.scraper = scraper
+        self.scraper_company_data = scraper_company_data
         self.uow_factory = uow_factory
 
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
@@ -65,9 +65,9 @@ class SyncCompanyDataUseCase:
             existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
 
             # Fetch companies from scraper and persist them in batch mode
-            results = self.scraper.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
+            results = self.scraper_company_data.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
 
-            return SyncResultsDTO(items=results, metrics=self.scraper.get_metrics())
+            return SyncResultsDTO(items=results, metrics=self.scraper_company_data.get_metrics())
 
     def _save_batch(
         self,

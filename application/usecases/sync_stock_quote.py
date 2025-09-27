@@ -1,4 +1,7 @@
-from typing import Any
+from typing import Any, List
+
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -69,18 +72,35 @@ class SyncStockQuoteUseCase:
                 # existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
 
                 columns = ["company_name", "ticker_codes", "isin_codes"]
-                company_codes = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
+                codes = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
 
                 seen = set()
-                existing_codes = [
-                    t
-                    for name, tickers, isins in company_codes
+                company_codes: List[tuple[str, str]] = [
+                    (t, name)
+                    for name, tickers, _ in codes
                     for t in (s.strip() for s in str(tickers or "").replace(" ", "").split(","))
                     if t and not (t in seen or seen.add(t))
                 ]
 
+                # anexa a última data persistida por ticker
+                existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
+                today = datetime.today()
+                for t, n in company_codes:
+                    last_date = self.repository_stock_quote.get_last_date(ticker=t, uow=uow)
+                    if last_date is None:
+                        start_date = today - relativedelta(years=99)
+                    else:
+                        # se o repositório retorna date, combine com meia-noite
+                        if isinstance(last_date, datetime):
+                            start_date = last_date + timedelta(days=1)
+                        else:
+                            start_date = datetime.combine(last_date, datetime.min.time()) + timedelta(days=1)
+
+                    existing_codes.append((t, n, start_date, today))
+
                 # Fetch companies from scraper and persist them in batch mode
-                results = self.scraper_stock_quote.fetch_all(existing_codes=existing_codes,save_callback=self._save_batch)
+                results = self.scraper_stock_quote.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
+
             except Exception as e:
                 self.logger.log(f"{e}", level="error")
 
@@ -110,7 +130,7 @@ class SyncStockQuoteUseCase:
 
 
         # Persist the transformed DTOs in bulk
-        self.repository_company.save_all(dtos, uow=uow)
+        self.repository_stock_quote.save_all(dtos, uow=uow)
 
     # def _get_tickers(self, uow) -> list[tuple[str, str]]:
     #     columns = ["company_name", "ticker_codes", "isin_codes"]
