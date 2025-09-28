@@ -24,8 +24,10 @@ class EngineSetup:
         self.engine = create_engine(
             connection_string,
             connect_args={
-                "check_same_thread": False
+                "check_same_thread": False,
+                "timeout": 60,
             },  # allow usage from multiple threads
+            pool_pre_ping=True,
             future=True,
         )
 
@@ -34,7 +36,7 @@ class EngineSetup:
             # conn.execute(text("PRAGMA optimize"))
             # conn.execute(text("PRAGMA synchronous=FULL"))
             conn.execute(text("PRAGMA journal_mode=WAL"))
-            conn.execute(text("PRAGMA busy_timeout=5000;"))
+            conn.execute(text("PRAGMA busy_timeout=60000;"))
             conn.execute(text("PRAGMA foreign_keys=ON"))
             conn.execute(text("PRAGMA temp_store=MEMORY"))
             conn.execute(text("PRAGMA cache_size=-65536"))  # 64 MB
