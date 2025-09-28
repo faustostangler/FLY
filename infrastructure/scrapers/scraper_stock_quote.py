@@ -97,6 +97,21 @@ class StockQuoteScraper(ScraperStockQuotePort):
             has_yahoo_ticker = self.has_yahoo_ticker(symbol, start_date, end_date)
 
             if not has_yahoo_ticker:
+                extra_info = {
+                    "ticker": ticker,
+                    "company_name": company_name[:8],
+                    }
+                self.logger.log(
+                    f"{ticker}",
+                    level="info",
+                    progress={
+                        "index": index,
+                        "size": len(tasks),
+                        "start_time": start_time,
+                    },
+                    extra=extra_info,
+                    worker_id=worker_id,
+                )
                 return []
 
             df = yf.download(
