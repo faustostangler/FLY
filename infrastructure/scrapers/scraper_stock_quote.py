@@ -4,7 +4,7 @@ import calendar
 from datetime import datetime, date
 import time
 import pandas as pd
-from typing import Iterable, Iterator, Optional, Sequence, Any, List
+from typing import Iterable, Optional, List, Tuple, cast
 
 import requests
 import yfinance as yf  # dependência de infraestrutura
@@ -15,15 +15,17 @@ from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.uow_port import Uow
 from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.scraper_base_port import SaveCallback
+from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
+
+StockQuoteExistingItem = Tuple[str, str, datetime | None, datetime]
+
 
 class StockQuoteScraper(ScraperStockQuotePort):
     """Scraper de cotações com delta por ticker e saída em DTO."""
@@ -53,14 +55,27 @@ class StockQuoteScraper(ScraperStockQuotePort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        existing_codes: Optional[Iterable[ExistingItem]] = None,
         save_callback: Optional[SaveCallback[StockQuoteDTO]] = None,
         **kwargs,
     ) -> List[StockQuoteDTO]:
         """Stream de DTOs de `start..end` e persistência opcional em lotes."""
 
-        # Normalize list of codes to a set for O(1) membership checks
-        self.existing_codes = existing_codes or []
+        raw_existing = list(existing_codes or [])
+        normalized_existing: list[StockQuoteExistingItem] = []
+        for entry in raw_existing:
+            if isinstance(entry, tuple) and len(entry) == 4:
+                ticker, company_name, start_date, end_date = entry
+                if not isinstance(ticker, str) or not isinstance(company_name, str):
+                    continue
+                if start_date is not None and not isinstance(start_date, datetime):
+                    continue
+                if not isinstance(end_date, datetime):
+                    continue
+                normalized_existing.append((ticker, company_name, start_date, end_date))
+
+        # Normalize list of codes to a deterministic sequence for processing
+        self.existing_codes = normalized_existing
 
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
@@ -86,11 +101,11 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
 
         # Worker that processes a single company entry through the detail pipeline
-        def processor(task: WorkerTaskDTO) -> List[StockQuoteDTO]:  # noqa: F821
+        def processor(task: WorkerTaskDTO) -> List[StockQuoteDTO]:
             index = task.index
-            entry = task.data
+            entry = cast(StockQuoteExistingItem, task.data)
             worker_id = task.worker_id
-            
+
             ticker, company_name, start_date, end_date = entry
 
             symbol = ticker.upper() if "." in ticker else f"{ticker.upper()}.SA"
@@ -134,10 +149,14 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
             # garante ordenação por data
             df = df.sort_index()
-            self._metrics_collector.add_network_bytes(int(df.memory_usage(deep=True).sum()))   
+            memory_usage = df.memory_usage(deep=True)
+            bytes_used = int(memory_usage.sum() if isinstance(memory_usage, pd.Series) else memory_usage)
+            self._metrics_collector.add_network_bytes(bytes_used)
 
-            d_min = df.index[0].date()
-            d_max = df.index[-1].date()
+            first_index = pd.Timestamp(df.index[0])
+            last_index = pd.Timestamp(df.index[-1])
+            d_min = first_index.date()
+            d_max = last_index.date()
 
             close_min = float(df.iloc[0]["Close"])
             close_max = float(df.iloc[-1]["Close"])
@@ -187,9 +206,8 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
 
         # Handler that buffers items and triggers flushes via the strategy
-        def handle_batch(item: Optional[StockQuoteDTO]) -> None:  # noqa: F821
-            # Only buffer non-empty results
-            if item is not None:
+        def handle_batch(batch: List[StockQuoteDTO]) -> None:
+            for item in batch:
                 strategy.handle(item)
 
         # Execute detail processing concurrently
@@ -205,43 +223,49 @@ class StockQuoteScraper(ScraperStockQuotePort):
         # Ensure any residual buffered items are flushed
         strategy.finalize()
 
-        # Filter out None results from the execution
-        results = [r for r in pool_results if r is not None]
+        # Flatten nested worker results, skipping empty batches
+        results: List[StockQuoteDTO] = [
+            dto
+            for batch in pool_results
+            if batch
+            for dto in batch
+        ]
 
         # Return aggregated results and preserve execution metrics
         return results
 
     def has_yahoo_ticker(self, symbol: str, start_date: datetime, end_date: datetime) -> bool:
-            # probe simples para evitar consent/blocked
-            url = (
+        """Valida se um ticker possui dados disponíveis no intervalo informado."""
+        url = (
             f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
             f"?period1={calendar.timegm(start_date.utctimetuple())}"
             f"&period2={calendar.timegm(end_date.utctimetuple())}"
             f"&interval=1d"
         )
 
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                            "AppleWebKit/537.36 (KHTML, like Gecko) "
-                            "Chrome/115.0.0.0 Safari/537.36",
-                "Referer": "https://finance.yahoo.com/",
-            }
-            try:
-                r = requests.get(url, headers=headers)
-                j = r.json()
-                if r.status_code != 200:
-                    # symbol does not exist
-                    return False
-                else:
-                    q = j['chart']['result'][0]['indicators']['quote'][0]
-                    if not q:
-                        # symbol returns no data
-                        return False
-            except Exception as e:
-                # any other error
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/115.0.0.0 Safari/537.36"
+            ),
+            "Referer": "https://finance.yahoo.com/",
+        }
+
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            payload = response.json()
+            if response.status_code != 200:
                 return False
-            # data exists for symbol and date range
-            return True
+
+            indicators = payload.get("chart", {}).get("result", [{}])[0].get("indicators", {})
+            quote = indicators.get("quote", [{}])[0]
+            if not quote:
+                return False
+        except Exception:
+            return False
+
+        return True
 
     def get_metrics(self) -> int:
         return self._metrics_collector.network_bytes

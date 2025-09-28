@@ -337,6 +337,7 @@ class FinancialNormalizer(FinancialNormalizerPort):
                     return fetched
                 except Exception as e:
                     print(f"Erro no walk do nó {node}: {e}")
+                    return []
             # 3) Executa a árvore inteira sobre as linhas do trimestre
             out: list[StatementFetchedDTO] = []
             for node in roots:

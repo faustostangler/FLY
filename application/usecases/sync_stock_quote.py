@@ -68,6 +68,7 @@ class SyncStockQuoteUseCase:
         """
         # Collect company identifiers already stored in the repository
         with self.uow_factory() as uow:
+            results: list[StockQuoteDTO] = []
             try:
                 # existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
 

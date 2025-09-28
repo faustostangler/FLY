@@ -5,7 +5,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, cast
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -115,7 +115,7 @@ class WorkerPool(WorkerPoolPort):
         results: List[R] = []
 
         # Bounded queue to apply backpressure to producers
-        queue: Queue = Queue(self.config.worker_pool.queue_size)
+        queue: Queue[Any] = Queue(self.config.worker_pool.queue_size)
 
         # Lock to protect shared writes to the results list and callbacks
         lock = threading.Lock()
@@ -133,16 +133,23 @@ class WorkerPool(WorkerPoolPort):
                     break
 
                 # Unpack the work item and build a task DTO
-                index, entry = item
+                index, entry = cast(Tuple[int, Any], item)
                 task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id, total_size=total_size)
 
                 # Execute the task-specific processor
-                result:List[R] = processor(task)
+                result = processor(task)
 
                 # Append result and emit optional per-result callback
                 try:
                     with lock:
-                        if result is not None and len(result) > 0:
+                        if result is None:
+                            continue
+
+                        store_result = True
+                        if isinstance(result, list) and len(result) == 0:
+                            store_result = False
+
+                        if store_result:
                             results.append(result)
                             if callable(on_result):
                                 on_result(result)
