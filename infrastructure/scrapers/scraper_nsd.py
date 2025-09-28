@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -20,6 +20,26 @@ from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
 
+def _to_int_code(x: Any) -> Optional[int]:
+    if isinstance(x, int):
+        return x
+    if isinstance(x, str):
+        m = re.search(r"\d+", x)
+        return int(m.group()) if m else None
+    if isinstance(x, tuple):
+        for part in x:
+            v = _to_int_code(part)
+            if v is not None:
+                return v
+        return None
+    if isinstance(x, dict):
+        for key in ("nsd", "code", "id"):
+            if key in x:
+                v = _to_int_code(x[key])
+                if v is not None:
+                    return v
+        return None
+    return None
 
 class NsdScraper(ScraperNsdPort):
     """Scraper adapter responsible for fetching raw NSD documents."""
@@ -65,18 +85,26 @@ class NsdScraper(ScraperNsdPort):
         threshold: Optional[int] = None,
         existing_codes: Optional[Iterable[ExistingItem]] = None,
         save_callback: Optional[SaveCallback[NsdDTO]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> List[NsdDTO]:
+        # lê parâmetros extras sem quebrar a assinatura da porta
         start = int(kwargs.get("start", 1))
         max_nsd = int(kwargs.get("max_nsd", 1))
-        int_codes_list = [int(c) for c in (existing_codes or [])]
-        int_codes: Optional[List[int]] = int_codes_list or None
-        items = list(self.iter_nsd(start=start, threshold=threshold, existing_codes=int_codes, max_nsd=max_nsd))
-        if save_callback:
-            uow: Uow | None = kwargs.get("uow")
-            if uow is None:
-                raise RuntimeError("SaveCallback requires 'uow' keyword argument")
-            save_callback(items, uow=uow)
+        
+        codes: List[int] = []
+        for c in existing_codes or []:
+            v = _to_int_code(c)
+            if v is not None:
+                codes.append(v)
+
+        items = list(
+            self.iter_nsd(
+                start=start,
+                threshold=threshold,
+                existing_codes=codes or None,
+                max_nsd=max_nsd,
+            )
+        )
         return items
 
     def fetch_one(self, nsd: int) -> NsdDTO | None:

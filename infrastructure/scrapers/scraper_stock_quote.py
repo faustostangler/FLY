@@ -149,6 +149,12 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
             # garante ordenação por data
             df = df.sort_index()
+
+            # Garanta índice temporal concreto
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index, errors="coerce", utc=True)
+            df = df[df.index.notna()]
+
             memory_usage = df.memory_usage(deep=True)
             bytes_used = int(memory_usage.sum() if isinstance(memory_usage, pd.Series) else memory_usage)
             self._metrics_collector.add_network_bytes(bytes_used)
@@ -164,10 +170,11 @@ class StockQuoteScraper(ScraperStockQuotePort):
             out: list[StockQuoteDTO] = []
 
             for idx, row in df.iterrows():
+                ts = cast(pd.Timestamp, idx)
                 dto = StockQuoteDTO(
                     company_name=company_name,
                     ticker=ticker,
-                    date=idx.date(),
+                    date=ts.to_pydatetime().replace(tzinfo=None),
                     open=row["Open"],
                     high=row["High"],
                     low=row["Low"],
@@ -234,7 +241,14 @@ class StockQuoteScraper(ScraperStockQuotePort):
         # Return aggregated results and preserve execution metrics
         return results
 
-    def has_yahoo_ticker(self, symbol: str, start_date: datetime, end_date: datetime) -> bool:
+    # def has_yahoo_ticker(self, symbol: str, start_date: datetime, end_date: datetime) -> bool:
+    def has_yahoo_ticker(self, symbol: str, start_date: Optional[datetime], end_date: Optional[datetime]) -> bool:
+        """Valida se um ticker possui dados disponíveis no intervalo informado."""
+        # guarda de sanidade para o type checker e para a rede
+        if start_date is None or end_date is None:
+            return False
+        if end_date <= start_date:
+            return False
         """Valida se um ticker possui dados disponíveis no intervalo informado."""
         url = (
             f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
