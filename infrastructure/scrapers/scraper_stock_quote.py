@@ -46,10 +46,8 @@ class StockQuoteScraper(ScraperStockQuotePort):
         self.worker_pool_executor = worker_pool
         self._metrics_collector = metrics_collector
         self.uow_factory = uow_factory
-
         self.http_client = http_client
 
-        # Initialize helper for human-readable byte sizes
         self.byte_formatter = ByteFormatter()
 
     def fetch_all(
@@ -92,7 +90,7 @@ class StockQuoteScraper(ScraperStockQuotePort):
             index = task.index
             entry = task.data
             worker_id = task.worker_id
-
+            
             ticker, company_name, start_date, end_date = entry
 
             symbol = ticker.upper() if "." in ticker else f"{ticker.upper()}.SA"
@@ -121,6 +119,7 @@ class StockQuoteScraper(ScraperStockQuotePort):
 
             # garante ordenação por data
             df = df.sort_index()
+            self._metrics_collector.add_network_bytes(int(df.memory_usage(deep=True).sum()))   
 
             d_min = df.index[0].date()
             d_max = df.index[-1].date()
@@ -145,9 +144,28 @@ class StockQuoteScraper(ScraperStockQuotePort):
                 )
                 out.append(dto)
 
+            # Prepare diagnostic metadata for logs
+            extra_info = {
+                "ticker": ticker,
+                "company_name": company_name[:8],
+                "start_date": d_min,
+                "start_close": f"{close_min:.2f}",
+                "end_date": d_max,
+                "end_close": f"{close_max:.2f}",
+                "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
+            }
+            # Emit structured progress log for this item
             self.logger.log(
-                f"{d_min} to {d_max} {close_min:.2f} to {close_max:.2f} {ticker} {company_name}",
+                f"{ticker}",
                 level="info",
+                progress={
+                    "index": index,
+                    "size": len(tasks),
+                    "start_time": start_time,
+                },
+                extra=extra_info,
+                worker_id=worker_id,
             )
 
             return out
@@ -195,15 +213,19 @@ class StockQuoteScraper(ScraperStockQuotePort):
             }
             try:
                 r = requests.get(url, headers=headers)
-                j = r.json()  # não use raise_for_status
+                j = r.json()
                 if r.status_code != 200:
+                    # symbol does not exist
                     return False
                 else:
                     q = j['chart']['result'][0]['indicators']['quote'][0]
                     if not q:
+                        # symbol returns no data
                         return False
-            except Exception:
+            except Exception as e:
+                # any other error
                 return False
+            # data exists for symbol and date range
             return True
 
     def get_metrics(self) -> int:
