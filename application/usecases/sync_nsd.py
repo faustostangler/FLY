@@ -81,7 +81,7 @@ class SyncNSDUseCase:
         tail_start = max(last_nsd, start)
         tail = list(range(tail_start, end + 1)) if end >= tail_start else []
 
-        return tail + missing_nsd if len(missing_nsd) > (end - last_nsd) else tail
+        return missing_nsd + tail if len(missing_nsd) > (end - last_nsd) else tail
 
     def stream_codes(self, codes: Iterable[int]) -> Iterator[int]:
         """Gerador preguiçoso sobre a lista já calculada externamente."""
