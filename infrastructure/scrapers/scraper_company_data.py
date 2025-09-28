@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import time
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.mappers.company_data_merger import CompanyDataMerger
@@ -19,7 +19,7 @@ from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.fetch_results_dto import FetchResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.datacleaner_port import DataCleanerPort
-from domain.ports.scraper_base_port import SaveCallback
+from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from infrastructure.scrapers.scraper_company_detail import DetailFetcher
 
@@ -124,7 +124,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        existing_codes: Optional[Iterable[ExistingItem]] = None,
         save_callback: SaveCallback[CompanyDataDTO] | None = None,
         **kwargs,
     ) -> List[CompanyDataDTO]:
@@ -137,7 +137,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         Args:
             threshold (Optional[int]): Number of companies to buffer before flushing.
                 Falls back to repository configuration or 50 if not provided.
-            existing_codes (Optional[List[str]]): Collection of company identifiers to skip.
+            existing_codes (Optional[Iterable[ExistingItem]]): Collection of company identifiers to skip.
             save_callback (Optional[SaveCallback[CompanyDataDTO]]):
                 Callback to persist buffered DTOs when the threshold is reached.
             **kwargs: Reserved for future extensions.
@@ -146,7 +146,9 @@ class CompanyDataScraper(ScraperCompanyDataPort):
             List[CompanyDataDTO]: Fully fetched company detail DTOs.
         """
         # Normalize list of codes to a set for O(1) membership checks
-        self.existing_codes = set(existing_codes or [])
+        self.existing_codes = {
+            code for code in (existing_codes or []) if isinstance(code, str)
+        }
 
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50

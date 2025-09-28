@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Union, Tuple, Iterable, Generic, List, Optional, Protocol, TypeVar, runtime_checkable
 
 from application.ports.uow_port import Uow
 
 # Type variable representing the entity type being scraped
 T = TypeVar("T")
-ExistingItem = Union[str, Tuple[str, str]]
+ExistingItem = Union[
+    str,
+    int,
+    Tuple[str, str],
+    Tuple[str, str, datetime | None, datetime],
+]
 
 
 class SaveCallback(Protocol, Generic[T]):
@@ -34,8 +40,8 @@ class ScraperBasePort(Protocol, Generic[T]):
         Args:
             threshold (Optional[int]): Maximum number of items to fetch.
                 If None, no limit is applied.
-            existing_codes (Optional[List[str]]): Identifiers to exclude
-                from the scraping process.
+            existing_codes (Optional[Iterable[ExistingItem]]): Identifiers to
+                exclude from the scraping process.
             save_callback (Optional[SaveCallback[T]]): Optional callback
                 function executed after fetching, typically for persisting
                 results. The callback receives the buffered items and the

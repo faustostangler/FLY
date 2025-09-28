@@ -16,7 +16,7 @@ from application.ports.uow_port import Uow
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.scraper_base_port import SaveCallback
+from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
 
@@ -63,13 +63,14 @@ class NsdScraper(ScraperNsdPort):
     def fetch_all(
         self,
         threshold: Optional[int] = None,
-        existing_codes: Optional[List[str]] = None,
+        existing_codes: Optional[Iterable[ExistingItem]] = None,
         save_callback: Optional[SaveCallback[NsdDTO]] = None,
         **kwargs,
     ) -> List[NsdDTO]:
         start = int(kwargs.get("start", 1))
         max_nsd = int(kwargs.get("max_nsd", 1))
-        int_codes: Optional[List[int]] = [int(c) for c in existing_codes] if existing_codes else None
+        int_codes_list = [int(c) for c in (existing_codes or [])]
+        int_codes: Optional[List[int]] = int_codes_list or None
         items = list(self.iter_nsd(start=start, threshold=threshold, existing_codes=int_codes, max_nsd=max_nsd))
         if save_callback:
             uow: Uow | None = kwargs.get("uow")
