@@ -93,14 +93,14 @@ class Cli:
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
-        # Kick off the company data pipeline
-        company_results: SyncResultsDTO = self._company_service()
-        self.logger.log(
-            f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
-        )
+        # # Kick off the company data pipeline
+        # company_results: SyncResultsDTO = self._company_service()
+        # self.logger.log(
+        #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
+        # )
 
-        # # Get NSD and stataments pipeline from B3
-        # self._statements_service()
+        # Get NSD and stataments pipeline from B3
+        self._statements_service()
 
         # Get Stock Value for companies
         self.stock_quote_service()
