@@ -44,17 +44,20 @@ class Cli:
         self,
         config: ConfigPort,
         logger: LoggerPort,
+
         repository_company: RepositoryCompanyDataPort,
         repository_nsd: RepositoryNsdPort,
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
+
         scraper_nsd: ScraperNsdPort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_statements_raw: ScraperStatementRawPort,
         scraper_stock_quote: ScraperStockQuotePort,
         scraper_indicators: ScraperIndicatorsPort,
+        
         worker_pool: WorkerPoolPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
@@ -104,11 +107,11 @@ class Cli:
         #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
         # )
 
-        # Get NSD and stataments pipeline from B3
-        self._statements_service()
+        # # Get NSD and stataments pipeline from B3
+        # self._statements_service()
 
-        # Get Stock Value for companies
-        self._stock_quote_service()
+        # # Get Stock Value for companies
+        # self._stock_quote_service()
 
         # Get Indicators companies
         self._indicators_service()

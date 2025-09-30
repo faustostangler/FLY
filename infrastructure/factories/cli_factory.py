@@ -15,15 +15,15 @@ from infrastructure.factories.datacleaner_factory import datacleaner_factory
 from infrastructure.http.builders import build_http_client
 from infrastructure.repositories.repository_company_data import RepositoryCompanyData
 from infrastructure.repositories.repository_nsd import RepositoryNsd
-from infrastructure.repositories.repository_statements_fetched import (
-    StatementFetchedRepository,
-)
+from infrastructure.repositories.repository_statements_fetched import StatementFetchedRepository
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
+from infrastructure.repositories.repository_indicators import RepositoryIndicators
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
 from infrastructure.scrapers.scraper_stock_quote import StockQuoteScraper
+from infrastructure.scrapers.scraper_indicators import IndicatorsScraper
 from infrastructure.uow.uow import UowFactory
 from infrastructure.utils.metrics_collector import MetricsCollector
 from infrastructure.utils.worker_pool import WorkerPool
@@ -52,6 +52,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_raw_statements = StatementRawRepository(config=config, logger=logger)
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
+    repository_indicators = RepositoryIndicators(config=config, logger=logger)
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -110,6 +111,16 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         uow_factory=uow_factory,
         )
 
+    scraper_indicators = IndicatorsScraper(
+        config=config,
+        logger=logger,
+        repository_indicators=repository_indicators,
+        metrics_collector=metrics_collector,
+        worker_pool=worker_pool,
+        http_client=http_client,
+        uow_factory=uow_factory,
+        )
+
     # Policy
     policy = NsdPolicy(
         allowed_types=tuple(config.domain.statements_types),
@@ -128,15 +139,20 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     cli = Cli(
         config=config,
         logger=logger,
+
         repository_company=repository_company,
         repository_nsd=repository_nsd,
         repository_statements_raw=repository_raw_statements,
         repository_statements_fetched=repository_fetched_statements,
         repository_stock_quote=repository_stock_quote,
+        repository_indicators=repository_indicators,
+
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
         scraper_stock_quote=scraper_stock_quote,
+        scraper_indicators=scraper_indicators,
+
         worker_pool=worker_pool,
         policy=policy,
         uow_factory=uow_factory,
