@@ -6,20 +6,21 @@ from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
+from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_stock_quote import StockQuoteService
+from domain.services.service_indicators import IndicatorsService
 from application.ports.http_client_port import AffinityHttpClientPort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -48,10 +49,12 @@ class Cli:
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
-        scraper_company_data: ScraperCompanyDataPort,
+        repository_indicators: RepositoryIndicatorsPort,
         scraper_nsd: ScraperNsdPort,
+        scraper_company_data: ScraperCompanyDataPort,
         scraper_statements_raw: ScraperStatementRawPort,
         scraper_stock_quote: ScraperStockQuotePort,
+        scraper_indicators: ScraperIndicatorsPort,
         worker_pool: WorkerPoolPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
@@ -69,11 +72,13 @@ class Cli:
         self.repository_statements_raw = repository_statements_raw
         self.repository_statements_fetched = repository_statements_fetched
         self.repository_stock_quote = repository_stock_quote
+        self.repository_indicators = repository_indicators
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
         self.scraper_statements_raw = scraper_statements_raw
         self.scraper_stock_quote = scraper_stock_quote
+        self.scraper_indicators = scraper_indicators
 
         self.worker_pool = worker_pool
         self.http_client = http_client
@@ -103,7 +108,10 @@ class Cli:
         self._statements_service()
 
         # Get Stock Value for companies
-        self.stock_quote_service()
+        self._stock_quote_service()
+
+        # Get Indicators companies
+        self._indicators_service()
 
         return None
 
@@ -148,7 +156,7 @@ class Cli:
         # Run the synchronization step
         return nsd_service()
 
-    def stock_quote_service(self) -> SyncResultsDTO:
+    def _stock_quote_service(self) -> SyncResultsDTO:
         """ """
         stock_quote_service = StockQuoteService(
             config=self.config,
@@ -163,3 +171,18 @@ class Cli:
 
         # run the service
         return stock_quote_service()
+
+    def _indicators_service(self) -> SyncResultsDTO:
+        """ """
+        indicators_service = IndicatorsService(
+            config=self.config,
+            logger=self.logger,
+            repository_indicators=self.repository_indicators,
+            scraper_indicators=self.scraper_indicators,
+            # worker_pool=self.worker_pool,
+            uow_factory=self.uow_factory,
+            # http_client=self.http_client,
+        )
+
+        # run the service
+        return indicators_service()
