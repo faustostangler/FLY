@@ -15,6 +15,7 @@ from infrastructure.config.repository import RepositoryConfig, load_repository_c
 from infrastructure.config.scraping import ScrapingConfig, load_scraping_config
 from infrastructure.config.statements import StatementsConfig, load_statements_config
 from infrastructure.config.worker_pool import WorkerPoolConfig, load_worker_pool_config
+from infrastructure.config.indicators import IndicatorsConfig, load_indicators_config
 
 
 @dataclass(frozen=True)
@@ -55,4 +56,7 @@ class ConfigAdapter:
 
     # Statements to Scrape
     statements: StatementsConfig = field(default_factory=load_statements_config)
+
+    # Financial indicators integrations (e.g., BCB time series)
+    indicators: IndicatorsConfig = field(default_factory=load_indicators_config)
 

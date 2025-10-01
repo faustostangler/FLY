@@ -9,5 +9,17 @@ from infrastructure.config.paths import Path
 from infrastructure.config.repository import RepositoryConfig
 from infrastructure.config.scraping import ScrapingConfig
 from infrastructure.config.worker_pool import WorkerPoolConfig
+from infrastructure.config.indicators import IndicatorsConfig
 
-__all__ = ["DatabaseConfig", "DomainConfig", "ExchangeApiConfig", "FlyConfig", "LoggerConfig", "Path", "RepositoryConfig", "ScrapingConfig", "WorkerPoolConfig"]
+__all__ = [
+    "DatabaseConfig",
+    "DomainConfig",
+    "ExchangeApiConfig",
+    "FlyConfig",
+    "LoggerConfig",
+    "Path",
+    "RepositoryConfig",
+    "ScrapingConfig",
+    "WorkerPoolConfig",
+    "IndicatorsConfig",
+]
