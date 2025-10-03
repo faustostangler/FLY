@@ -23,7 +23,7 @@ from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
-IndicatorsExistingItem = Tuple[str, str, datetime | None, datetime]
+IndicatorsExistingItem = Tuple[str, str, str]
 
 
 class IndicatorsScraper(ScraperIndicatorsPort):
@@ -92,8 +92,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             entry = cast(IndicatorsExistingItem, task.data)
             worker_id = task.worker_id
 
-            source, code_series, url = entry
-
+            name, code_series, url = entry
 
             try:
                 with self.http_client.borrow_session() as session:
@@ -101,54 +100,33 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
                 parsed = self._parse_json(
                     body.decode("utf-8"),
-                    source=source,
+                    name=name,
                     code_series=code_series,
                 )
 
+                # Prepare diagnostic metadata for logs
+                extra_info = {
+                    "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                    "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
+                }
+                # Emit structured progress log for this item
+                self.logger.log(
+                    f"{name} {code_series}",
+                    level="info",
+                    progress={
+                        "index": index,
+                        "size": len(tasks),
+                        "start_time": start_time,
+                    },
+                    extra=extra_info,
+                    worker_id=worker_id,
+                )
 
+                return parsed
 
-
-
-
-
-                # parsed = self._parse_html(code, body.decode("utf-8"))
-                # if not parsed:
-                #     self.logger.log(f"Processed NSD: {code} Empty", level="info")
-                #     continue
-
-                # dto = NsdDTO.from_dict(parsed, cleandate=self._cleandate_required)
-                # if dto is None:
-                #     continue  # evita yield de None, satisfaz o type checker
-                # yield dto
-
-                # # aqui não há persistência nem batch; é só streaming
             except Exception as e:
-                self.logger.log(f"Failed to fetch NSD: {code_series} {e}", level="warning")
-                # continue
-
-
-
-
-
-            # Prepare diagnostic metadata for logs
-            extra_info = {
-                "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
-                "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
-            }
-            # Emit structured progress log for this item
-            self.logger.log(
-                f"{source} {code_series}",
-                level="info",
-                progress={
-                    "index": index,
-                    "size": len(tasks),
-                    "start_time": start_time,
-                },
-                extra=extra_info,
-                worker_id=worker_id,
-            )
-
-            return out
+                self.logger.log(f"Failed to fetch: {code_series} {e}", level="warning")
+                return []
 
 
         # Handler that buffers items and triggers flushes via the strategy
@@ -184,7 +162,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         self,
         raw: str,
         *,
-        source: str,
+        name: str,
         code_series: str,
     ) -> List[IndicatorRecordDTO]:
         try:
@@ -205,7 +183,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                 continue
 
             # datas "01/08/2025"
-            dt = datetime.strptime(str(ds).strip(), "%d/%m/%Y").date()
+            dt = datetime.strptime(str(ds).strip(), "%d/%m/%Y")
 
             # números "1.31" ou "1,31"
             num_str = str(vs).strip()
@@ -217,8 +195,8 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                 continue
 
             out.append(IndicatorRecordDTO(
-                source=source,
-                name=str(code_series),
+                source="BCB",
+                name=str(name),
                 code=str(code_series),
                 date=dt,
                 value=value,

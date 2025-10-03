@@ -127,20 +127,20 @@ class WorkerPool(WorkerPoolPort):
         def worker(worker_id: str) -> None:
             # Process items until a sentinel is encountered
             while True:
-                item = queue.get()
-                if item is sentinel:
-                    queue.task_done()
-                    break
-
-                # Unpack the work item and build a task DTO
-                index, entry = cast(Tuple[int, Any], item)
-                task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id, total_size=total_size)
-
-                # Execute the task-specific processor
-                result = processor(task)
-
-                # Append result and emit optional per-result callback
                 try:
+                    item = queue.get()
+                    if item is sentinel:
+                        queue.task_done()
+                        break
+
+                    # Unpack the work item and build a task DTO
+                    index, entry = cast(Tuple[int, Any], item)
+                    task = WorkerTaskDTO(index=index, data=entry, worker_id=worker_id, total_size=total_size)
+
+                    # Execute the task-specific processor
+                    result = processor(task)
+
+                    # Append result and emit optional per-result callback
                     with lock:
                         if result is None:
                             continue

@@ -132,11 +132,12 @@ class SaveStrategy(Generic[T]):
         if not self._buffer:
             return
         if uow is None:
-            with self.uow_factory() as local:
-                self.save_callback(self._buffer, uow=local)
-                local.commit()
+            with self.uow_factory() as wow:
+                self.save_callback(self._buffer, uow=wow)
+                wow.commit()
         else:
             self.save_callback(self._buffer, uow=uow)
+            uow.commit()
         self._buffer.clear()
 
     def finalize(self) -> None:

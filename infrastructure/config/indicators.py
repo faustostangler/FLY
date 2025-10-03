@@ -12,7 +12,7 @@ ENDPOINT = {
     }
 
 SOURCE = {
-    "bcb": [("bcb", "433"),],
+    "bcb": [("IPCA", "433"), ("IPCA ALimentação e Bebidas", "1635"),],
 }
 
 
