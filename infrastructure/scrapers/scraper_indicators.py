@@ -5,8 +5,7 @@ from datetime import datetime, date
 import time
 import pandas as pd
 from typing import Iterable, Optional, List, Tuple, cast
-
-import requests
+import json
 import yfinance as yf  # dependência de infraestrutura
 
 from application.ports.config_port import ConfigPort
@@ -61,21 +60,8 @@ class IndicatorsScraper(ScraperIndicatorsPort):
     ) -> List[IndicatorRecordDTO]:
         """Stream de DTOs de `start..end` e persistência opcional em lotes."""
 
-        raw_existing = list(existing_codes or [])
-        normalized_existing: list[IndicatorsExistingItem] = []
-        for entry in raw_existing:
-            if isinstance(entry, tuple) and len(entry) == 4:
-                ticker, company_name, start_date, end_date = entry
-                if not isinstance(ticker, str) or not isinstance(company_name, str):
-                    continue
-                if start_date is not None and not isinstance(start_date, datetime):
-                    continue
-                if not isinstance(end_date, datetime):
-                    continue
-                normalized_existing.append((ticker, company_name, start_date, end_date))
-
         # Normalize list of codes to a deterministic sequence for processing
-        self.existing_codes = normalized_existing
+        self.existing_codes = list(existing_codes or [])
 
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
@@ -106,94 +92,52 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             entry = cast(IndicatorsExistingItem, task.data)
             worker_id = task.worker_id
 
-            ticker, company_name, start_date, end_date = entry
+            source, code_series, url = entry
 
-            symbol = ticker.upper() if "." in ticker else f"{ticker.upper()}.SA"
-            has_yahoo_ticker = self.has_yahoo_ticker(symbol, start_date, end_date)
 
-            if not has_yahoo_ticker:
-                extra_info = {
-                    "ticker": ticker,
-                    "company_name": company_name[:8],
-                    }
-                self.logger.log(
-                    f"{ticker}",
-                    level="info",
-                    progress={
-                        "index": index,
-                        "size": len(tasks),
-                        "start_time": start_time,
-                    },
-                    extra=extra_info,
-                    worker_id=worker_id,
+            try:
+                with self.http_client.borrow_session() as session:
+                    body = self.http_client.fetch_with(session, url, headers=session.headers)
+
+                parsed = self._parse_json(
+                    body.decode("utf-8"),
+                    source=source,
+                    code_series=code_series,
                 )
-                return []
 
-            df = yf.download(
-                symbol,
-                start=start_date,
-                end=end_date,
-                progress=False,
-                auto_adjust=False,
-                actions=False,
-                group_by="column",
-                threads=False,
-            )
 
-            if df is None or df.empty:
-                return []
 
-            # Se ainda vier MultiIndex por algum motivo raro
-            if isinstance(df.columns, pd.MultiIndex):
-                df = df.swaplevel(axis=1)[symbol]
 
-            # garante ordenação por data
-            df = df.sort_index()
 
-            # Garanta índice temporal concreto
-            if not isinstance(df.index, pd.DatetimeIndex):
-                df.index = pd.to_datetime(df.index, errors="coerce", utc=True)
-            df = df[df.index.notna()]
 
-            memory_usage = df.memory_usage(deep=True)
-            bytes_used = int(memory_usage.sum() if isinstance(memory_usage, pd.Series) else memory_usage)
-            self._metrics_collector.add_network_bytes(bytes_used)
 
-            first_index = pd.Timestamp(df.index[0])
-            last_index = pd.Timestamp(df.index[-1])
-            d_min = first_index.date()
-            d_max = last_index.date()
+                # parsed = self._parse_html(code, body.decode("utf-8"))
+                # if not parsed:
+                #     self.logger.log(f"Processed NSD: {code} Empty", level="info")
+                #     continue
 
-            close_min = float(df.iloc[0]["Close"])
-            close_max = float(df.iloc[-1]["Close"])
+                # dto = NsdDTO.from_dict(parsed, cleandate=self._cleandate_required)
+                # if dto is None:
+                #     continue  # evita yield de None, satisfaz o type checker
+                # yield dto
 
-            out: list[IndicatorRecordDTO] = []
+                # # aqui não há persistência nem batch; é só streaming
+            except Exception as e:
+                self.logger.log(f"Failed to fetch NSD: {code_series} {e}", level="warning")
+                # continue
 
-            for idx, row in df.iterrows():
-                ts = cast(pd.Timestamp, idx)
-                dto = IndicatorRecordDTO(
-                    source=row['source'],
-                    name=row['name'],
-                    code=row['code'],
-                    date=ts.to_pydatetime().replace(tzinfo=None),
-                    value=row["value"],
-                )
-                out.append(dto)
+
+
+
 
             # Prepare diagnostic metadata for logs
             extra_info = {
-                "ticker": ticker,
-                "company_name": company_name[:8],
-                "start_date": d_min,
-                "start_close": f"{close_min:.2f}",
-                "end_date": d_max,
-                "end_close": f"{close_max:.2f}",
                 "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                 "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
             }
             # Emit structured progress log for this item
             self.logger.log(
-                f"{ticker}",
+                f"{source} {code_series}",
                 level="info",
                 progress={
                     "index": index,
@@ -236,45 +180,50 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         # Return aggregated results and preserve execution metrics
         return results
 
-    # def has_yahoo_ticker(self, symbol: str, start_date: datetime, end_date: datetime) -> bool:
-    def has_yahoo_ticker(self, symbol: str, start_date: Optional[datetime], end_date: Optional[datetime]) -> bool:
-        """Valida se um ticker possui dados disponíveis no intervalo informado."""
-        # guarda de sanidade para o type checker e para a rede
-        if start_date is None or end_date is None:
-            return False
-        if end_date <= start_date:
-            return False
-        """Valida se um ticker possui dados disponíveis no intervalo informado."""
-        url = (
-            f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
-            f"?period1={calendar.timegm(start_date.utctimetuple())}"
-            f"&period2={calendar.timegm(end_date.utctimetuple())}"
-            f"&interval=1d"
-        )
-
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/115.0.0.0 Safari/537.36"
-            ),
-            "Referer": "https://finance.yahoo.com/",
-        }
-
+    def _parse_json(
+        self,
+        raw: str,
+        *,
+        source: str,
+        code_series: str,
+    ) -> List[IndicatorRecordDTO]:
         try:
-            response = requests.get(url, headers=headers, timeout=15)
-            payload = response.json()
-            if response.status_code != 200:
-                return False
+            payload = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"JSON inválido: {e}") from e
 
-            indicators = payload.get("chart", {}).get("result", [{}])[0].get("indicators", {})
-            quote = indicators.get("quote", [{}])[0]
-            if not quote:
-                return False
-        except Exception:
-            return False
+        if not isinstance(payload, Iterable):
+            raise ValueError("Payload não é uma coleção")
 
-        return True
+        out: List[IndicatorRecordDTO] = []
+        for row in payload:
+            if not isinstance(row, dict):
+                continue
+            ds = row.get("data")
+            vs = row.get( "valor")
+            if ds is None or vs is None:
+                continue
+
+            # datas "01/08/2025"
+            dt = datetime.strptime(str(ds).strip(), "%d/%m/%Y").date()
+
+            # números "1.31" ou "1,31"
+            num_str = str(vs).strip()
+            if num_str in {"", "NaN", "nan", "None"}:
+                continue
+            try:
+                value = float(num_str)
+            except ValueError:
+                continue
+
+            out.append(IndicatorRecordDTO(
+                source=source,
+                name=str(code_series),
+                code=str(code_series),
+                date=dt,
+                value=value,
+            ))
+        return out
 
     def get_metrics(self) -> int:
         return self._metrics_collector.network_bytes

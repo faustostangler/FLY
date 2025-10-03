@@ -90,7 +90,6 @@ class NsdScraper(ScraperNsdPort):
         # lê parâmetros extras sem quebrar a assinatura da porta
         start = int(kwargs.get("start", 1))
         max_nsd = int(kwargs.get("max_nsd", 1))
-        
         codes: List[int] = []
         for c in existing_codes or []:
             v = _to_int_code(c)

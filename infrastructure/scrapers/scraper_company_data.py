@@ -88,7 +88,7 @@ class CompanyDataScraper(ScraperCompanyDataPort):
         self.logger = logger
         self.datacleaner = datacleaner
         self.mapper = mapper
-        
+
         self.worker_pool_executor = worker_pool
         self._metrics_collector = metrics_collector
         self.uow_factory = uow_factory

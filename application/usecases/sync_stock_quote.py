@@ -67,9 +67,9 @@ class SyncStockQuoteUseCase:
             including counts and network usage metrics.
         """
         # Collect company identifiers already stored in the repository
-        with self.uow_factory() as uow:
-            results: list[StockQuoteDTO] = []
-            try:
+        results: list[StockQuoteDTO] = []
+        try:
+            with self.uow_factory() as uow:
                 # existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
 
                 columns = ["company_name", "ticker_codes", "isin_codes"]
@@ -102,10 +102,10 @@ class SyncStockQuoteUseCase:
                 # Fetch companies from scraper and persist them in batch mode
                 results = self.scraper_stock_quote.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
 
-            except Exception as e:
-                self.logger.log(f"{e}", level="error")
+        except Exception as e:
+            self.logger.log(f"{e}", level="error")
 
-            return SyncResultsDTO(items=results, metrics=self.scraper_stock_quote.get_metrics())
+        return SyncResultsDTO(items=results, metrics=self.scraper_stock_quote.get_metrics())
 
     def _save_batch(
         self,

@@ -146,6 +146,16 @@ class StatementsConfigPort(Protocol):
     def url_capital(self) -> str: ...
 
 
+# Indicators
+@runtime_checkable
+class IndicatorsConfigPort(Protocol):
+    """Contract for stock exchange API configuration."""
+
+    @property
+    def endpoint(self) -> Mapping[str, str]: ...
+    @property
+    def source(self) -> Mapping[str, List[Tuple[str, str]]]: ...
+
 # Aggregates all configuration ports into a single access surface
 @runtime_checkable
 class ConfigPort(Protocol):
@@ -171,3 +181,5 @@ class ConfigPort(Protocol):
     def worker_pool(self) -> WorkerPoolConfig: ...
     @property
     def statements(self) -> StatementsConfigPort: ...
+    @property
+    def indicators(self) -> IndicatorsConfigPort: ...

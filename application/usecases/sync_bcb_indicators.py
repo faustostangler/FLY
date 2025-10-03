@@ -2,6 +2,7 @@ from typing import Any, List
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from typing import Tuple
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -65,47 +66,24 @@ class SyncBCBIndicatorUseCase:
             including counts and network usage metrics.
         """
         # Collect company identifiers already stored in the repository
-        with self.uow_factory() as uow:
-            results: list[IndicatorRecordDTO] = []
-            # should implement the logic to call the scraper fetch method. 
+        results: list[IndicatorRecordDTO] = []
+        existing_codes = []
+        try:
+            with self.uow_factory() as uow:
+                sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
+                start_date = "01/01/1900"
+                end_date = datetime.today().strftime("%d/%m/%Y")
 
-            # try:
-            #     existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
+                for (source, code_series) in sources:
+                    url = self.config.indicators.endpoint["bcb"].format(codigo_serie=code_series, dataInicial=start_date, dataFinal=end_date,)
+                    existing_codes.append((source, code_series, url))
+                # Fetch from scraper and persist them in batch mode
+                results = self.scraper_indicators.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
 
-            #     columns = ["company_name", "ticker_codes", "isin_codes"]
-            #     codes = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
+        except Exception as e:
+            self.logger.log(f"Erro {e}")
 
-            #     seen = set()
-            #     company_codes: List[tuple[str, str]] = [
-            #         (t, name)
-            #         for name, tickers, _ in codes
-            #         for t in (s.strip() for s in str(tickers or "").replace(" ", "").split(","))
-            #         if t and not (t in seen or seen.add(t))
-            #     ]
-
-            #     # anexa a última data persistida por ticker
-            #     existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
-            #     today = datetime.today()
-            #     for t, n in company_codes:
-            #         last_date = self.repository_stock_quote.get_last_date(ticker=t, uow=uow)
-            #         if last_date is None:
-            #             start_date = today - relativedelta(years=99)
-            #         else:
-            #             # se o repositório retorna date, combine com meia-noite
-            #             if isinstance(last_date, datetime):
-            #                 start_date = last_date + timedelta(days=1)
-            #             else:
-            #                 start_date = datetime.combine(last_date, datetime.min.time()) + timedelta(days=1)
-
-            #         existing_codes.append((t, n, start_date, today))
-
-            #     # Fetch companies from scraper and persist them in batch mode
-            #     results = self.scraper_stock_quote.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
-
-            # except Exception as e:
-            #     self.logger.log(f"{e}", level="error")
-
-            return SyncResultsDTO(items=results, metrics=self.scraper_indicators.get_metrics())
+        return SyncResultsDTO(items=results, metrics=self.scraper_indicators.get_metrics())
 
     def _save_batch(
         self,
