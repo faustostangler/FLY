@@ -57,7 +57,7 @@ class Cli:
         scraper_statements_raw: ScraperStatementRawPort,
         scraper_stock_quote: ScraperStockQuotePort,
         scraper_indicators: ScraperIndicatorsPort,
-        
+
         worker_pool: WorkerPoolPort,
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
@@ -93,10 +93,10 @@ class Cli:
 
         self.byte_formatter = ByteFormatter()
 
-    def __call__(self) -> None:
+    def __call__(self) -> SyncResultsDTO:
         return self.run()
 
-    def run(self) -> None:
+    def run(self) -> SyncResultsDTO:
         """Execute the top-level application workflow."""
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
@@ -114,9 +114,9 @@ class Cli:
         # self._stock_quote_service()
 
         # Get Indicators companies
-        self._indicators_service()
+        results = self._indicators_service()
 
-        return None
+        return results
 
     def _company_service(self) -> SyncResultsDTO:
         """Build and execute the company data synchronization flow."""

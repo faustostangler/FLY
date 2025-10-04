@@ -131,21 +131,27 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
         # Handler that buffers items and triggers flushes via the strategy
         def handle_batch(batch: List[IndicatorRecordDTO]) -> None:
-            for item in batch:
-                strategy.handle(item)
+            try:
+                strategy.handle(batch)
+            except Exception as e:
+                for item in batch:
+                    strategy.handle(item)
 
-        # Execute detail processing concurrently
-        pool_results = self.worker_pool_executor.run(
-            tasks=tasks,
-            processor=processor,
-            logger=self.logger,
-            on_result=handle_batch,
-            max_workers=self.config.worker_pool.max_workers or 1,
-            total_size=len(tasks),
-        )
+        try:
+            # Execute detail processing concurrently
+            pool_results = self.worker_pool_executor.run(
+                tasks=tasks,
+                processor=processor,
+                logger=self.logger,
+                on_result=handle_batch,
+                max_workers=self.config.worker_pool.max_workers or 1,
+                total_size=len(tasks),
+            )
 
-        # Ensure any residual buffered items are flushed
-        strategy.finalize()
+            # Ensure any residual buffered items are flushed
+            strategy.finalize()
+        except Exception as e:
+            pass
 
         # Flatten nested worker results, skipping empty batches
         results: List[IndicatorRecordDTO] = [

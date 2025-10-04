@@ -111,6 +111,8 @@ class WorkerPool(WorkerPoolPort):
             - The queue is bounded by ``config.worker_pool.queue_size`` to avoid
               unbounded memory growth.
         """
+        workers = max_workers or self.max_workers
+
         # Container for processed results
         results: List[R] = []
 
@@ -130,7 +132,7 @@ class WorkerPool(WorkerPoolPort):
                 try:
                     item = queue.get()
                     if item is sentinel:
-                        queue.task_done()
+                        # queue.task_done()
                         break
 
                     # Unpack the work item and build a task DTO
@@ -163,7 +165,7 @@ class WorkerPool(WorkerPoolPort):
                     queue.task_done()
 
         # Create a fixed-size pool of worker threads
-        with ThreadPoolExecutor(max_workers=max_workers or self.max_workers) as worker_pool_executor:
+        with ThreadPoolExecutor(max_workers=workers) as worker_pool_executor:
             # Launch workers with short identifiers for easier logging
             futures = [
                 worker_pool_executor.submit(worker, self.generator.create_id(size=8))
@@ -176,7 +178,7 @@ class WorkerPool(WorkerPoolPort):
                 queue.put(task)
 
             # Signal workers to shut down after all tasks are queued
-            for _ in range(self.max_workers):
+            for _ in range(workers):
                 queue.put(sentinel)
 
             # Block until the queue is fully drained

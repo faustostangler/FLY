@@ -12,7 +12,15 @@ ENDPOINT = {
     }
 
 SOURCE = {
-    "bcb": [("IPCA", "433"), ("IPCA ALimentação e Bebidas", "1635"),],
+    "bcb": [
+        ("IPCA", "433"), 
+        ("IPCA ALimentação e Bebidas", "1635"),
+        ("Índice nacional de preços ao consumidor (INPC)", "188"),
+        ("INPC - Alimentação e bebidas", "1644"),
+        ("Reservas internacionais - Total - diária", "13621"),
+        ("Taxa de câmbio - Livre - Dólar americano (venda) - diário", "1"),
+        ("Taxa de câmbio - Livre - Dólar americano (compra) - Fim de período - mensal", "3695"), 
+        ],
 }
 
 
