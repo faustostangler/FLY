@@ -54,7 +54,7 @@ class IndicatorsService:
 
             uow_factory=self.uow_factory,
             # http_client=self.http_client,
-            
+
             # max_workers=self.config.worker_pool.max_workers,
         )
 
