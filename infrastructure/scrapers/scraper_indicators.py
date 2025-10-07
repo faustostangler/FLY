@@ -23,7 +23,7 @@ from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
-IndicatorsExistingItem = Tuple[str, str, str]
+IndicatorsExistingItem = Tuple[str, str, datetime | None, datetime]
 
 
 class IndicatorsScraper(ScraperIndicatorsPort):
@@ -92,7 +92,16 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             entry = cast(IndicatorsExistingItem, task.data)
             worker_id = task.worker_id
 
-            name, code_series, url = entry
+            name, code_series, start_date, end_date = entry
+
+            start = start_date or datetime(1900, 1, 1)
+            start_str = start.strftime("%d/%m/%Y")
+            end_str = end_date.strftime("%d/%m/%Y")
+            url = self.config.indicators.endpoint["bcb"].format(
+                codigo_serie=code_series,
+                dataInicial=start_str,
+                dataFinal=end_str,
+            )
 
             try:
                 with self.http_client.borrow_session() as session:

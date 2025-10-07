@@ -67,16 +67,15 @@ class SyncBCBIndicatorUseCase:
         """
         # Collect company identifiers already stored in the repository
         results: list[IndicatorRecordDTO] = []
-        existing_codes = []
+        existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
         try:
             with self.uow_factory() as uow:
                 sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
-                start_date = "01/01/1900"
-                end_date = datetime.today().strftime("%d/%m/%Y")
+                start_date = datetime(1900, 1, 1)
+                end_date = datetime.today()
 
                 for (source, code_series) in sources:
-                    url = self.config.indicators.endpoint["bcb"].format(codigo_serie=code_series, dataInicial=start_date, dataFinal=end_date,)
-                    existing_codes.append((source, code_series, url))
+                    existing_codes.append((source, code_series, start_date, end_date))
                 # Fetch from scraper and persist them in batch mode
                 results = self.scraper_indicators.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
 
