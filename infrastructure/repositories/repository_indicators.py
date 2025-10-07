@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple, TypeVar
+from datetime import datetime
+from typing import List, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
@@ -69,12 +70,12 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
         return None
-    def get_last_date(self, *, ticker: str, uow: Uow):
-        """Retorna a última data persistida para o ticker ou None se não houver histórico."""
+    def get_last_date(self, *, source: str, code: str, uow: Uow) -> datetime | None:
+        """Retorna a última data persistida para a combinação ``source`` e ``code``."""
         session = uow.session
         model, _ = self.get_model_class()
         return (
             session.query(func.max(model.date))
-            .filter(model.ticker == ticker)
+            .filter(model.source == source, model.code == code)
             .scalar()
         )

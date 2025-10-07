@@ -66,6 +66,9 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
 
+        endpoint_template = self.config.indicators.endpoint["bcb"]
+        default_start_date = datetime.strptime("01/01/1900", "%d/%m/%Y")
+
         # adapter para a estratégia
         def _adapter(items: List[IndicatorRecordDTO], *, uow: Uow) -> None:
             if save_callback is not None:
@@ -94,13 +97,35 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
             name, code_series, start_date, end_date = entry
 
-            start = start_date or datetime(1900, 1, 1)
-            start_str = start.strftime("%d/%m/%Y")
-            end_str = end_date.strftime("%d/%m/%Y")
-            url = self.config.indicators.endpoint["bcb"].format(
+# <<<<<<< codex/add-get_last_date-method-and-functionality
+            start_dt = (
+                start_date
+                if isinstance(start_date, datetime)
+                else datetime.combine(start_date, datetime.min.time())
+                if isinstance(start_date, date)
+                else default_start_date
+            )
+            end_dt = (
+                end_date
+                if isinstance(end_date, datetime)
+                else datetime.combine(end_date, datetime.min.time())
+                if isinstance(end_date, date)
+                else datetime.today()
+            )
+
+            url = endpoint_template.format(
                 codigo_serie=code_series,
-                dataInicial=start_str,
-                dataFinal=end_str,
+                dataInicial=start_dt.strftime("%d/%m/%Y"),
+                dataFinal=end_dt.strftime("%d/%m/%Y"),
+# =======
+#             start = start_date or datetime(1900, 1, 1)
+#             start_str = start.strftime("%d/%m/%Y")
+#             end_str = end_date.strftime("%d/%m/%Y")
+#             url = self.config.indicators.endpoint["bcb"].format(
+#                 codigo_serie=code_series,
+#                 dataInicial=start_str,
+#                 dataFinal=end_str,
+# >>>>>>> 2025-09-29-Indexes
             )
 
             try:

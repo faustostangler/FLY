@@ -1,7 +1,6 @@
 from typing import Any, List
 
-from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
+from datetime import date, datetime, timedelta
 from typing import Tuple
 
 from application.ports.config_port import ConfigPort
@@ -67,15 +66,46 @@ class SyncBCBIndicatorUseCase:
         """
         # Collect company identifiers already stored in the repository
         results: list[IndicatorRecordDTO] = []
-        existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
+# <<<<<<< codex/add-get_last_date-method-and-functionality
+        existing_codes: List[Tuple[str, str, datetime | None, datetime]] = []
+        today = datetime.today()
+        default_start_date = datetime.strptime("01/01/1900", "%d/%m/%Y")
         try:
             with self.uow_factory() as uow:
                 sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
-                start_date = datetime(1900, 1, 1)
-                end_date = datetime.today()
+                for (name, code_series) in sources:
+                    last_date = self.repository_indicators.get_last_date(
+                        source="BCB", code=code_series, uow=uow
+                    )
 
-                for (source, code_series) in sources:
-                    existing_codes.append((source, code_series, start_date, end_date))
+                    last_datetime: datetime | None = None
+                    if isinstance(last_date, datetime):
+                        last_datetime = last_date
+                    elif isinstance(last_date, date):
+                        last_datetime = datetime.combine(
+                            last_date, datetime.min.time()
+                        )
+
+                    if last_datetime is not None:
+                        start_date = last_datetime + timedelta(days=1)
+                    else:
+                        start_date = default_start_date
+
+                    if start_date > today:
+                        continue
+
+                    existing_codes.append((name, code_series, start_date, today))
+# =======
+#         existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
+#         try:
+#             with self.uow_factory() as uow:
+#                 sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
+#                 start_date = datetime(1900, 1, 1)
+#                 end_date = datetime.today()
+
+#                 for (source, code_series) in sources:
+#                     existing_codes.append((source, code_series, start_date, end_date))
+# >>>>>>> 2025-09-29-Indexes
                 # Fetch from scraper and persist them in batch mode
                 results = self.scraper_indicators.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
 
