@@ -106,12 +106,14 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
                 # Prepare diagnostic metadata for logs
                 extra_info = {
+                    "code_series": code_series, 
+                    "name": name,
                     "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                     "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
                 }
                 # Emit structured progress log for this item
                 self.logger.log(
-                    f"{name} {code_series}",
+                    f"{code_series}",
                     level="info",
                     progress={
                         "index": index,
