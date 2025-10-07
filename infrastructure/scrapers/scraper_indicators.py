@@ -97,6 +97,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
             name, code_series, start_date, end_date = entry
 
+# <<<<<<< codex/add-get_last_date-method-and-functionality
             start_dt = (
                 start_date
                 if isinstance(start_date, datetime)
@@ -116,6 +117,15 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                 codigo_serie=code_series,
                 dataInicial=start_dt.strftime("%d/%m/%Y"),
                 dataFinal=end_dt.strftime("%d/%m/%Y"),
+# =======
+#             start = start_date or datetime(1900, 1, 1)
+#             start_str = start.strftime("%d/%m/%Y")
+#             end_str = end_date.strftime("%d/%m/%Y")
+#             url = self.config.indicators.endpoint["bcb"].format(
+#                 codigo_serie=code_series,
+#                 dataInicial=start_str,
+#                 dataFinal=end_str,
+# >>>>>>> 2025-09-29-Indexes
             )
 
             try:
