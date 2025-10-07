@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from application.ports.uow_port import Uow
+from datetime import datetime
+
 from domain.dtos.indicators_dto import IndicatorRecordDTO
 from domain.ports.repository_base_port import RepositoryBasePort
 
@@ -20,12 +22,5 @@ class RepositoryIndicatorsPort(RepositoryBasePort[IndicatorRecordDTO, int], Prot
         for CRUD operations on CompanyData entities.
     """
 
-    def get_indicator_by_code(self, code: str, *, uow: Uow) -> str | None:
-            """Retrieve the indicator for a record by its code.
-
-        Args:
-            code (str): The indicator code.
-
-        Returns:
-            str: The code associated with the given indicator.
-        """
+    def get_last_date(self, *, source: str, code: str, uow: Uow) -> datetime | None:
+        """Retrieve the most recent persisted date for a given indicator."""

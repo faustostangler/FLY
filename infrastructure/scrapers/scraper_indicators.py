@@ -23,7 +23,7 @@ from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
-IndicatorsExistingItem = Tuple[str, str, str]
+IndicatorsExistingItem = Tuple[str, str, datetime | None, datetime]
 
 
 class IndicatorsScraper(ScraperIndicatorsPort):
@@ -66,6 +66,9 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         # Determine persistence threshold (explicit > config > default)
         self.threshold = threshold or self.config.repository.persistence_threshold or 50
 
+        endpoint_template = self.config.indicators.endpoint["bcb"]
+        default_start_date = datetime.strptime("01/01/1900", "%d/%m/%Y")
+
         # adapter para a estratégia
         def _adapter(items: List[IndicatorRecordDTO], *, uow: Uow) -> None:
             if save_callback is not None:
@@ -92,7 +95,28 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             entry = cast(IndicatorsExistingItem, task.data)
             worker_id = task.worker_id
 
-            name, code_series, url = entry
+            name, code_series, start_date, end_date = entry
+
+            start_dt = (
+                start_date
+                if isinstance(start_date, datetime)
+                else datetime.combine(start_date, datetime.min.time())
+                if isinstance(start_date, date)
+                else default_start_date
+            )
+            end_dt = (
+                end_date
+                if isinstance(end_date, datetime)
+                else datetime.combine(end_date, datetime.min.time())
+                if isinstance(end_date, date)
+                else datetime.today()
+            )
+
+            url = endpoint_template.format(
+                codigo_serie=code_series,
+                dataInicial=start_dt.strftime("%d/%m/%Y"),
+                dataFinal=end_dt.strftime("%d/%m/%Y"),
+            )
 
             try:
                 with self.http_client.borrow_session() as session:
