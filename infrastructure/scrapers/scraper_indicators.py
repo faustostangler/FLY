@@ -83,8 +83,8 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         )
 
         # Pair each entry with its index for progress reporting
-        tasks = list(enumerate(self.existing_codes))
-
+        tasks = list(enumerate(self.existing_codes[40:]))
+        self.logger.log(f"Getting {len(self.existing_codes[40:])} items from {len(self.existing_codes[:])} starting from '{self.existing_codes[40][0]}'")
         # Mark the start time for progress ETA computations
         start_time = time.perf_counter()
 
