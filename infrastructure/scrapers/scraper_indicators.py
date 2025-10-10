@@ -23,7 +23,7 @@ from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 
-IndicatorsExistingItem = Tuple[str, str, datetime | None, datetime]
+IndicatorsExistingItem = Tuple[str, str, str, datetime | None, datetime]
 
 
 class IndicatorsScraper(ScraperIndicatorsPort):
@@ -84,7 +84,21 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
         # Pair each entry with its index for progress reporting
         tasks = list(enumerate(self.existing_codes[40:]))
-        self.logger.log(f"Getting {len(self.existing_codes[40:])} items from {len(self.existing_codes[:])} starting from '{self.existing_codes[40][0]}'")
+        if len(self.existing_codes) > 40:
+            code_preview, name_preview, *_ = self.existing_codes[40]
+            start_hint = f"{code_preview} - {name_preview}"
+        elif self.existing_codes:
+            code_preview, name_preview, *_ = self.existing_codes[0]
+            start_hint = f"{code_preview} - {name_preview}"
+        else:
+            start_hint = ""
+        remaining_items = len(self.existing_codes[40:])
+        total_items = len(self.existing_codes)
+        message = (
+            "Getting "
+            f"{remaining_items} items from {total_items} starting from '{start_hint}'"
+        )
+        self.logger.log(message)
         # Mark the start time for progress ETA computations
         start_time = time.perf_counter()
 
@@ -95,7 +109,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             entry = cast(IndicatorsExistingItem, task.data)
             worker_id = task.worker_id
 
-            name, code_series, start_date, end_date = entry
+            code_series, name, periodicity, start_date, end_date = entry
 
 # <<<<<<< codex/add-get_last_date-method-and-functionality
             start_dt = (
@@ -140,8 +154,9 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
                 # Prepare diagnostic metadata for logs
                 extra_info = {
-                    "code_series": code_series, 
+                    "code_series": code_series,
                     "name": name,
+                    "periodicity": periodicity,
                     "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                     "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
                 }

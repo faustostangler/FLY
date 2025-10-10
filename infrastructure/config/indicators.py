@@ -74,7 +74,7 @@ class IndicatorsConfig:
 
     # 
     endpoint: Mapping[str, str] = field(default_factory=lambda:ENDPOINT)
-    source: Mapping[str, List[Tuple[str, str]]] = field(default_factory=lambda: SOURCE)
+    source: Mapping[str, List[Tuple[str, str, str]]] = field(default_factory=lambda: SOURCE)
 
 
 
