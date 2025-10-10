@@ -1,7 +1,7 @@
 # infrastructure/adapters/scraper_stock_quote.py
 from __future__ import annotations
 import calendar
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import time
 import pandas as pd
 from typing import Iterable, Optional, List, Tuple, cast
@@ -127,30 +127,39 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                 else datetime.today()
             )
 
-            url = endpoint_template.format(
-                codigo_serie=code_series,
-                dataInicial=start_dt.strftime("%d/%m/%Y"),
-                dataFinal=end_dt.strftime("%d/%m/%Y"),
-# =======
-#             start = start_date or datetime(1900, 1, 1)
-#             start_str = start.strftime("%d/%m/%Y")
-#             end_str = end_date.strftime("%d/%m/%Y")
-#             url = self.config.indicators.endpoint["bcb"].format(
-#                 codigo_serie=code_series,
-#                 dataInicial=start_str,
-#                 dataFinal=end_str,
-# >>>>>>> 2025-09-29-Indexes
-            )
-
             try:
-                with self.http_client.borrow_session() as session:
-                    body = self.http_client.fetch_with(session, url, headers=session.headers)
+                parsed_records: List[IndicatorRecordDTO] = []
 
-                parsed = self._parse_json(
-                    body.decode("utf-8"),
-                    name=name,
-                    code_series=code_series,
-                )
+                for chunk_start, chunk_end in self._chunk_date_ranges(start_dt, end_dt):
+                    chunk_url = endpoint_template.format(
+                        codigo_serie=code_series,
+                        dataInicial=chunk_start.strftime("%d/%m/%Y"),
+                        dataFinal=chunk_end.strftime("%d/%m/%Y"),
+                    )
+
+                    try:
+                        with self.http_client.borrow_session() as session:
+                            body = self.http_client.fetch_with(
+                                session, chunk_url, headers=session.headers
+                            )
+
+                        parsed_chunk = self._parse_json(
+                            body.decode("utf-8"),
+                            name=name,
+                            code_series=code_series,
+                        )
+                        parsed_records.extend(parsed_chunk)
+                    except Exception as chunk_error:
+                        self.logger.log(
+                            (
+                                f"Failed to fetch chunk: {code_series} "
+                                f"({chunk_start.strftime('%d/%m/%Y')} - "
+                                f"{chunk_end.strftime('%d/%m/%Y')}) "
+                                f"{chunk_error}"
+                            ),
+                            level="warning",
+                        )
+                        continue
 
                 # Prepare diagnostic metadata for logs
                 extra_info = {
@@ -173,7 +182,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                     worker_id=worker_id,
                 )
 
-                return parsed
+                return parsed_records
 
             except Exception as e:
                 self.logger.log(f"Failed to fetch: {code_series} {e}", level="warning")
@@ -262,6 +271,33 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
     def get_metrics(self) -> int:
         return self._metrics_collector.network_bytes
+
+
+    def _chunk_date_ranges(
+        self, start: datetime, end: datetime, years: int = 10
+    ) -> Iterable[Tuple[datetime, datetime]]:
+        if start > end:
+            return
+
+        chunk_start = start
+        while chunk_start <= end:
+            tentative_end = self._safe_add_years(chunk_start, years)
+            chunk_end = tentative_end if tentative_end <= end else end
+
+            yield chunk_start, chunk_end
+
+            if chunk_end >= end:
+                break
+
+            chunk_start = chunk_end + timedelta(days=1)
+
+    def _safe_add_years(self, dt: datetime, years: int) -> datetime:
+        target_year = dt.year + years
+        try:
+            return dt.replace(year=target_year)
+        except ValueError:
+            # Handles leap day for non-leap target years
+            return dt.replace(year=target_year, day=28)
 
 
 
