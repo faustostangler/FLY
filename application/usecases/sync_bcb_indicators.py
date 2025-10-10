@@ -1,7 +1,7 @@
-from typing import Any, List
+from typing import Any, List, Tuple
 
+import calendar
 from datetime import date, datetime, timedelta
-from typing import Tuple
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -52,6 +52,34 @@ class SyncBCBIndicatorUseCase:
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
 
+    @staticmethod
+    def _add_months(base: datetime, months: int) -> datetime:
+        month = base.month - 1 + months
+        year = base.year + month // 12
+        month = month % 12 + 1
+        day = min(base.day, calendar.monthrange(year, month)[1])
+        return base.replace(year=year, month=month, day=day)
+
+    def _calculate_start_from_periodicity(
+        self, last_datetime: datetime, periodicity: str
+    ) -> datetime:
+        normalized = (periodicity or "").strip().lower()
+
+        if normalized == "daily":
+            return last_datetime + timedelta(days=1)
+        if normalized == "weekly":
+            return last_datetime + timedelta(weeks=1)
+        if normalized == "monthly":
+            return self._add_months(last_datetime, 1)
+        if normalized == "quarterly":
+            return self._add_months(last_datetime, 3)
+        if normalized == "annual":
+            return self._add_months(last_datetime, 12)
+        if normalized == "triannually":
+            return self._add_months(last_datetime, 4)
+
+        return last_datetime + timedelta(days=1)
+
     def run(self) -> SyncResultsDTO:
         """Run the full synchronization pipeline.
 
@@ -67,13 +95,13 @@ class SyncBCBIndicatorUseCase:
         # Collect company identifiers already stored in the repository
         results: list[IndicatorRecordDTO] = []
 # <<<<<<< codex/add-get_last_date-method-and-functionality
-        existing_codes: List[Tuple[str, str, datetime | None, datetime]] = []
+        existing_codes: List[Tuple[str, str, str, datetime | None, datetime]] = []
         today = datetime.today()
         default_start_date = datetime.strptime("01/01/1900", "%d/%m/%Y")
         try:
             with self.uow_factory() as uow:
-                sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
-                for (name, code_series) in sources:
+                sources: List[Tuple[str, str, str]] = self.config.indicators.source["bcb"]
+                for (code_series, name, periodicity) in sources:
                     last_date = self.repository_indicators.get_last_date(
                         source="BCB", code=code_series, uow=uow
                     )
@@ -87,14 +115,18 @@ class SyncBCBIndicatorUseCase:
                         )
 
                     if last_datetime is not None:
-                        start_date = last_datetime + timedelta(days=1)
+                        start_date = self._calculate_start_from_periodicity(
+                            last_datetime, periodicity
+                        )
                     else:
                         start_date = default_start_date
 
                     if start_date > today:
                         continue
 
-                    existing_codes.append((name, code_series, start_date, today))
+                    existing_codes.append(
+                        (code_series, name, periodicity, start_date, today)
+                    )
 # =======
 #         existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
 #         try:

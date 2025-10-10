@@ -12,6 +12,7 @@ ExistingItem = Union[
     int,
     Tuple[str, str],
     Tuple[str, str, datetime | None, datetime],
+    Tuple[str, str, str, datetime | None, datetime],
 ]
 
 
