@@ -1,10 +1,13 @@
-from typing import List
+from typing import List, Sequence
 
 from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
+from domain.dtos.indicators_dto import IndicatorRecordDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
@@ -26,6 +29,7 @@ from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_indicators import IndicatorsService
 from domain.services.service_nsd import NsdService
+from domain.services.service_ratios import RatiosService
 from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -110,35 +114,35 @@ class Cli:
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
-        # # Kick off the company data pipeline
-        # company_results: SyncResultsDTO = self._company_service()
-        # self.logger.log(
-        #     f"Total Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
-        # )
-        # try:
-        #     total_download += company_results.metrics
-        # except:
-        #     pass
+        # Kick off the company data pipeline
+        company_results: SyncResultsDTO = self._company_service()
+        self.logger.log(
+            f"Total Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
+        )
+        try:
+            total_download += company_results.metrics
+        except Exception:
+            pass
 
-        # # Get NSD and stataments pipeline from B3
-        # statements_results: SyncResultsDTO = self._statements_service()
-        # self.logger.log(
-        #     f"Total Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}"
-        # )
-        # try:
-        #     total_download += statements_results.metrics
-        # except:
-        #     pass
+        # Get NSD and statements pipeline from B3
+        statements_results: SyncResultsDTO = self._statements_service()
+        self.logger.log(
+            f"Total Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}"
+        )
+        try:
+            total_download += statements_results.metrics
+        except Exception:
+            pass
 
-        # # Get Stock Value for companies
-        # stock_quote_results: SyncResultsDTO = self._stock_quote_service()
-        # self.logger.log(
-        #     f"Total Stock Quote Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}"
-        # )
-        # try:
-        #     total_download += stock_quote_results.metrics
-        # except:
-        #     pass
+        # Get Stock Value for companies
+        stock_quote_results: SyncResultsDTO = self._stock_quote_service()
+        self.logger.log(
+            f"Total Stock Quote Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}"
+        )
+        try:
+            total_download += stock_quote_results.metrics
+        except Exception:
+            pass
 
         # Get Indicators companies
         indicators_results = self._indicators_service()
@@ -147,7 +151,20 @@ class Cli:
         )
         try:
             total_download += indicators_results.metrics
-        except:
+        except Exception:
+            pass
+
+        ratios_results = self._ratios_service(
+            statements=statements_results.items,
+            stock_quotes=stock_quote_results.items,
+            indicators=indicators_results.items,
+        )
+        self.logger.log(
+            f"Total Ratios Generated: {self.byte_formatter.format_bytes(ratios_results.metrics)}"
+        )
+        try:
+            total_download += ratios_results.metrics
+        except Exception:
             pass
 
         self.logger.log(
@@ -220,7 +237,6 @@ class Cli:
             logger=self.logger,
             repository_indicators=self.repository_indicators,
             scraper_indicators=self.scraper_indicators,
-            indicator_normalizer=self.indicator_normalizer,
             # worker_pool=self.worker_pool,
             uow_factory=self.uow_factory,
             # http_client=self.http_client,
@@ -228,3 +244,22 @@ class Cli:
 
         # run the service
         return indicators_service()
+
+    def _ratios_service(
+        self,
+        *,
+        statements: Sequence[StatementFetchedDTO],
+        stock_quotes: Sequence[StockQuoteDTO],
+        indicators: Sequence[IndicatorRecordDTO],
+    ) -> SyncResultsDTO:
+        ratios_service = RatiosService(
+            config=self.config,
+            logger=self.logger,
+            indicator_normalizer=self.indicator_normalizer,
+        )
+
+        return ratios_service(
+            statements=statements,
+            stock_quotes=stock_quotes,
+            indicators=indicators,
+        )
