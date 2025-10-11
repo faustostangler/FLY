@@ -3,10 +3,17 @@ from __future__ import annotations
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.services.daily_series_normalizer_service import (
+    DailySeriesNormalizerService,
+    IndicatorFactorRule,
+)
 from application.services.indicator_normalizer_service import IndicatorNormalizerService
+from application.usecases.calculate_ratios import CalculateRatiosUseCase
 from domain.polices.nsd_policy import NsdPolicy
 from domain.services.financial_normalizer import FinancialNormalizer
+from domain.services.ratio_service import RatioService
 from domain.services.ratios_calculator import RatiosCalculator
+from domain.services.service_ratios import RatiosService
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
@@ -20,6 +27,7 @@ from infrastructure.repositories.repository_statements_fetched import StatementF
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.repositories.repository_indicators import RepositoryIndicators
+from infrastructure.repositories.repository_ratios import RepositoryRatios
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
@@ -54,6 +62,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
+    repository_ratios = RepositoryRatios(config=config, logger=logger)
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -137,6 +146,30 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     )
 
     indicator_normalizer = IndicatorNormalizerService()
+    factor_rules = [
+        IndicatorFactorRule(code="433", output_code="IND.IPCA_FACTOR", method="index"),
+        IndicatorFactorRule(code="11", output_code="IND.SELIC_FACTOR", method="rate", scale=0.01),
+    ]
+    daily_series_normalizer = DailySeriesNormalizerService(
+        indicator_normalizer=indicator_normalizer,
+        indicator_factor_rules=factor_rules,
+    )
+
+    ratio_domain_service = RatioService(logger=logger)
+    calculate_ratios_usecase = CalculateRatiosUseCase(
+        logger=logger,
+        normalizer=daily_series_normalizer,
+        ratio_service=ratio_domain_service,
+        repository_statements=repository_fetched_statements,
+        repository_quotes=repository_stock_quote,
+        repository_indicators=repository_indicators,
+        repository_ratios=repository_ratios,
+        uow_factory=uow_factory,
+    )
+    ratios_service = RatiosService(
+        logger=logger,
+        calculate_usecase=calculate_ratios_usecase,
+    )
 
     # Return the CLI controller with its dependencies injected
     cli = Cli(
@@ -148,6 +181,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         repository_statements_raw=repository_raw_statements,
         repository_statements_fetched=repository_fetched_statements,
         repository_stock_quote=repository_stock_quote,
+        repository_ratios=repository_ratios,
         repository_indicators=repository_indicators,
 
         scraper_company_data=scraper_company_data,
@@ -163,6 +197,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         financial_normalizer=financial_normalizer,
         ratios_calculator=ratios_calculator,
         indicator_normalizer=indicator_normalizer,
+        ratios_service=ratios_service,
     )
 
     return cli

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Tuple, TypeVar
+from typing import Iterable, List, Sequence, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
@@ -79,3 +79,24 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
             .filter(model.source == source, model.code == code)
             .scalar()
         )
+
+    def get_by_codes_and_period(
+        self,
+        *,
+        source: str | None,
+        codes: Iterable[str],
+        start: datetime,
+        end: datetime,
+    ) -> Sequence[IndicatorRecordDTO]:
+        with self.Session() as session:
+            query = session.query(IndicatorModel).filter(
+                IndicatorModel.observation_date >= start,
+                IndicatorModel.observation_date <= end,
+            )
+            if source is not None:
+                query = query.filter(IndicatorModel.source == source)
+            code_list = list(codes)
+            if code_list:
+                query = query.filter(IndicatorModel.code.in_(code_list))
+            results = query.order_by(IndicatorModel.observation_date).all()
+            return [row.to_dto() for row in results]

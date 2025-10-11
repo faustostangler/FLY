@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from datetime import datetime
+from typing import List, Sequence, Tuple
 
 from sqlalchemy.dialects.sqlite import insert
 
@@ -78,4 +79,23 @@ class StatementFetchedRepository(
                 .all()
             )
             return [r.to_dto() for r in results]
+
+    def get_by_company_and_period(
+        self,
+        company_name: str,
+        *,
+        start: datetime,
+        end: datetime,
+    ) -> Sequence[StatementFetchedDTO]:
+        """Return statements within the provided date range (inclusive)."""
+
+        with self.Session() as session:
+            results = (
+                session.query(StatementFetchedModel)
+                .filter(StatementFetchedModel.company_name == company_name)
+                .filter(StatementFetchedModel.quarter >= start)
+                .filter(StatementFetchedModel.quarter <= end)
+                .all()
+            )
+            return [row.to_dto() for row in results]
 

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple, TypeVar
+from datetime import datetime
+from typing import List, Sequence, Set, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
@@ -78,3 +79,21 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
             .filter(model.ticker == ticker)
             .scalar()
         )
+
+    def get_by_company_and_period(
+        self,
+        company_name: str,
+        *,
+        start: datetime,
+        end: datetime,
+    ) -> Sequence[StockQuoteDTO]:
+        with self.Session() as session:
+            results = (
+                session.query(StockQuoteModel)
+                .filter(StockQuoteModel.company_name == company_name)
+                .filter(StockQuoteModel.date >= start)
+                .filter(StockQuoteModel.date <= end)
+                .order_by(StockQuoteModel.date)
+                .all()
+            )
+            return [row.to_dto() for row in results]
