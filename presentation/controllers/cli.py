@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import List
 
 from application.ports.config_port import ConfigPort
@@ -14,6 +15,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_ratios_port import RepositoryRatiosPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
@@ -26,6 +28,7 @@ from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_indicators import IndicatorsService
 from domain.services.service_nsd import NsdService
+from application.services.ratios_runner_service import RatiosRunnerService
 from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -55,6 +58,7 @@ class Cli:
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
+        repository_ratios: RepositoryRatiosPort,
         repository_indicators: RepositoryIndicatorsPort,
 
         scraper_nsd: ScraperNsdPort,
@@ -70,6 +74,7 @@ class Cli:
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
         indicator_normalizer: IndicatorNormalizerService,
+        ratios_service: RatiosRunnerService,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -81,6 +86,7 @@ class Cli:
         self.repository_statements_raw = repository_statements_raw
         self.repository_statements_fetched = repository_statements_fetched
         self.repository_stock_quote = repository_stock_quote
+        self.repository_ratios = repository_ratios
         self.repository_indicators = repository_indicators
 
         self.scraper_company_data = scraper_company_data
@@ -97,6 +103,7 @@ class Cli:
         self.financial_normalizer = financial_normalizer
         self.ratios_calculator = ratios_calculator
         self.indicator_normalizer = indicator_normalizer
+        self.ratios_service = ratios_service
 
         self.byte_formatter = ByteFormatter()
 
@@ -149,6 +156,12 @@ class Cli:
             total_download += indicators_results.metrics
         except:
             pass
+
+        ratio_results = self._ratio_service()
+        self.logger.log(
+            f"Total ratios computed: {len(ratio_results)}",
+            level="info",
+        )
 
         self.logger.log(
             f"Total Download: {self.byte_formatter.format_bytes(total_download)}"
@@ -228,3 +241,37 @@ class Cli:
 
         # run the service
         return indicators_service()
+
+    def _ratio_service(self) -> list:
+        companies = self._load_company_names()
+        if not companies:
+            self.logger.log(
+                "No companies available for ratio computation",
+                level="warning",
+            )
+            return []
+
+        end_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+        start_date = end_date - timedelta(days=365)
+        indicator_codes = self._default_indicator_codes()
+
+        return self.ratios_service.run(
+            companies,
+            start_date=start_date,
+            end_date=end_date,
+            indicator_codes=indicator_codes,
+            indicator_source=None,
+        )
+
+    def _load_company_names(self) -> list[str]:
+        with self.uow_factory() as uow:
+            rows = self.repository_company.get_all_by_columns(
+                "company_name",
+                uow=uow,
+                include_nulls=False,
+            )
+        return [row[0] for row in rows if row and row[0]]
+
+    @staticmethod
+    def _default_indicator_codes() -> list[str]:
+        return ["433", "11"]

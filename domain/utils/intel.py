@@ -4170,3 +4170,27 @@ indicators_30 = [
         ),
     },
 ]
+
+
+ratios_daily_core = [
+    {
+        "account": "R.EPS",
+        "description": "Lucro por Ação Diário",
+        "formula": Addition("21.01"),
+    },
+    {
+        "account": "R.PE",
+        "description": "Preço/Lucro (P/L) Diário",
+        "formula": Division("QUOTE.CLOSE", "21.01"),
+    },
+    {
+        "account": "R.EPS.IPCA",
+        "description": "Lucro por Ação Deflacionado pelo IPCA",
+        "formula": Division("21.01", "IND.IPCA_FACTOR"),
+    },
+    {
+        "account": "R.EPS.SELIC",
+        "description": "Lucro por Ação Corrigido pela Selic",
+        "formula": Multiplication("21.01", "IND.SELIC_FACTOR"),
+    },
+]
