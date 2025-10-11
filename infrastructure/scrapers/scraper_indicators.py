@@ -15,6 +15,7 @@ from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from domain.dtos.indicators_dto import IndicatorRecordDTO
+from domain.value_objects.indicators import Coverage, Frequency, Period
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
@@ -96,6 +97,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             worker_id = task.worker_id
 
             code_series, name, periodicity, start_date, end_date = entry
+            frequency = Frequency.from_string(periodicity)
 
             start_dt = (
                 start_date
@@ -169,6 +171,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                             body.decode("utf-8"),
                             name=name,
                             code_series=code_series,
+                            frequency=frequency,
                         )
                         parsed_records.extend(parsed_chunk)
 
@@ -223,6 +226,7 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         *,
         name: str,
         code_series: str,
+        frequency: Frequency,
     ) -> List[IndicatorRecordDTO]:
         try:
             payload = json.loads(raw)
@@ -253,13 +257,23 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             except ValueError:
                 continue
 
-            out.append(IndicatorRecordDTO(
-                source="BCB",
-                name=str(name),
-                code=str(code_series),
-                date=dt,
-                value=value,
-            ))
+            period = Period.from_frequency(dt, frequency)
+            observation_date = period.end
+            availability_date = dt if dt >= observation_date else observation_date
+
+            out.append(
+                IndicatorRecordDTO(
+                    source="BCB",
+                    name=str(name),
+                    code=str(code_series),
+                    frequency=frequency,
+                    coverage=Coverage.STOCK,
+                    observation_period=period,
+                    observation_date=observation_date,
+                    availability_date=availability_date,
+                    value=value,
+                )
+            )
         return out
 
     def get_metrics(self) -> int:

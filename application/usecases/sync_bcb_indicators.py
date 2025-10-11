@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
+from application.services.indicator_normalizer_service import IndicatorNormalizerService
 from domain.dtos.indicators_dto import IndicatorRecordDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -26,6 +27,7 @@ class SyncBCBIndicatorUseCase:
 
         repository_indicators: RepositoryIndicatorsPort,
         scraper_indicators: ScraperIndicatorsPort,
+        indicator_normalizer: IndicatorNormalizerService,
 
         uow_factory: UowFactoryPort,
 
@@ -45,6 +47,7 @@ class SyncBCBIndicatorUseCase:
         self.logger = logger
         self.repository_indicators = repository_indicators
         self.scraper_indicators = scraper_indicators
+        self.indicator_normalizer = indicator_normalizer
         self.uow_factory = uow_factory
 
         self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
@@ -128,7 +131,10 @@ class SyncBCBIndicatorUseCase:
                         (code_series, name, periodicity, start_date, today)
                     )
 
-                results = self.scraper_indicators.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
+                raw_results = self.scraper_indicators.fetch_all(
+                    existing_codes=existing_codes, save_callback=self._save_batch
+                )
+                results = self.indicator_normalizer.normalize(raw_results)
 
         except Exception as e:
             self.logger.log(f"Erro {e}")
@@ -154,7 +160,8 @@ class SyncBCBIndicatorUseCase:
         flat_items = ListFlattener.flatten(items)
 
         # Convert raw scraper DTOs into domain-level DTOs
-        dtos = [IndicatorRecordDTO.from_raw(item) for item in flat_items]
+        raw_dtos = [IndicatorRecordDTO.from_raw(item) for item in flat_items]
+        normalized = self.indicator_normalizer.normalize(raw_dtos)
 
         # Persist the transformed DTOs in bulk
-        self.repository_indicators.save_all(dtos, uow=uow)
+        self.repository_indicators.save_all(normalized, uow=uow)

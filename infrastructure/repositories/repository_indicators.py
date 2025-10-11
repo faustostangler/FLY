@@ -62,7 +62,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
                     if c.name != "id"
                 }
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["source", "code", "date"],
+                    index_elements=["source", "code", "observation_date"],
                     set_=update_dict,
                 )
                 session.execute(stmt)
@@ -75,7 +75,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
         session = uow.session
         model, _ = self.get_model_class()
         return (
-            session.query(func.max(model.date))
+            session.query(func.max(model.observation_date))
             .filter(model.source == source, model.code == code)
             .scalar()
         )
