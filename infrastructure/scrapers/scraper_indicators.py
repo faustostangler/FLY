@@ -83,22 +83,8 @@ class IndicatorsScraper(ScraperIndicatorsPort):
         )
 
         # Pair each entry with its index for progress reporting
-        tasks = list(enumerate(self.existing_codes[40:]))
-        if len(self.existing_codes) > 40:
-            code_preview, name_preview, *_ = self.existing_codes[40]
-            start_hint = f"{code_preview} - {name_preview}"
-        elif self.existing_codes:
-            code_preview, name_preview, *_ = self.existing_codes[0]
-            start_hint = f"{code_preview} - {name_preview}"
-        else:
-            start_hint = ""
-        remaining_items = len(self.existing_codes[40:])
-        total_items = len(self.existing_codes)
-        message = (
-            "Getting "
-            f"{remaining_items} items from {total_items} starting from '{start_hint}'"
-        )
-        self.logger.log(message)
+        tasks = list(enumerate(self.existing_codes))
+
         # Mark the start time for progress ETA computations
         start_time = time.perf_counter()
 
@@ -111,7 +97,6 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
             code_series, name, periodicity, start_date, end_date = entry
 
-# <<<<<<< codex/add-get_last_date-method-and-functionality
             start_dt = (
                 start_date
                 if isinstance(start_date, datetime)
@@ -130,42 +115,15 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             try:
                 parsed_records: List[IndicatorRecordDTO] = []
 
-                for chunk_start, chunk_end in self._chunk_date_ranges(start_dt, end_dt):
-                    chunk_url = endpoint_template.format(
-                        codigo_serie=code_series,
-                        dataInicial=chunk_start.strftime("%d/%m/%Y"),
-                        dataFinal=chunk_end.strftime("%d/%m/%Y"),
-                    )
-
-                    try:
-                        with self.http_client.borrow_session() as session:
-                            body = self.http_client.fetch_with(
-                                session, chunk_url, headers=session.headers
-                            )
-
-                        parsed_chunk = self._parse_json(
-                            body.decode("utf-8"),
-                            name=name,
-                            code_series=code_series,
-                        )
-                        parsed_records.extend(parsed_chunk)
-                    except Exception as chunk_error:
-                        self.logger.log(
-                            (
-                                f"Failed to fetch chunk: {code_series} "
-                                f"({chunk_start.strftime('%d/%m/%Y')} - "
-                                f"{chunk_end.strftime('%d/%m/%Y')}) "
-                                f"{chunk_error}"
-                            ),
-                            level="warning",
-                        )
-                        continue
+                today = datetime.today()
+                last_request_end: datetime | None = None
 
                 # Prepare diagnostic metadata for logs
                 extra_info = {
                     "code_series": code_series,
-                    "name": name,
-                    "periodicity": periodicity,
+                    "name": name[:32],
+                    # "periodicity": periodicity,
+                    # "period": f' {end_dt.strftime("%d/%m/%Y")}', 
                     "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
                     "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
                 }
@@ -181,6 +139,41 @@ class IndicatorsScraper(ScraperIndicatorsPort):
                     extra=extra_info,
                     worker_id=worker_id,
                 )
+
+                # chunk url processing
+                for chunk_start, chunk_end in self._chunk_date_ranges(start_dt, end_dt):
+                    resolved_window = self._resolve_request_window(
+                        chunk_start,
+                        chunk_end,
+                        periodicity,
+                        today=today,
+                    )
+                    if resolved_window is None:
+                        continue
+
+                    request_start, request_end = resolved_window
+
+                    chunk_url = endpoint_template.format(
+                        codigo_serie=code_series,
+                        dataInicial=request_start.strftime("%d/%m/%Y"),
+                        dataFinal=request_end.strftime("%d/%m/%Y"),
+                    )
+
+                    try:
+                        with self.http_client.borrow_session() as session:
+                            body = self.http_client.fetch_with(
+                                session, chunk_url, headers=session.headers
+                            )
+
+                        parsed_chunk = self._parse_json(
+                            body.decode("utf-8"),
+                            name=name,
+                            code_series=code_series,
+                        )
+                        parsed_records.extend(parsed_chunk)
+
+                    finally:
+                        continue
 
                 return parsed_records
 
@@ -291,6 +284,31 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
             chunk_start = chunk_end + timedelta(days=1)
 
+    def _resolve_request_window(
+        self,
+        chunk_start: datetime,
+        chunk_end: datetime,
+        periodicity: str,
+        *,
+        today: datetime,
+    ) -> Optional[Tuple[datetime, datetime]]:
+        normalized = (periodicity or "").strip().lower()
+
+        if normalized == "monthly":
+            adjusted_end = chunk_end
+            while adjusted_end >= chunk_start:
+                candidate_end = self._first_day_of_next_month(adjusted_end)
+                if candidate_end <= today:
+                    return chunk_start, candidate_end
+                adjusted_end -= timedelta(days=1)
+            return None
+
+        effective_end = min(chunk_end, today)
+        if effective_end < chunk_start:
+            return None
+
+        return chunk_start, effective_end
+
     def _safe_add_years(self, dt: datetime, years: int) -> datetime:
         target_year = dt.year + years
         try:
@@ -299,24 +317,14 @@ class IndicatorsScraper(ScraperIndicatorsPort):
             # Handles leap day for non-leap target years
             return dt.replace(year=target_year, day=28)
 
+    def _first_day_of_next_month(self, dt: datetime) -> datetime:
+        return self._add_months(dt.replace(day=1), 1)
 
-
-    # def _save_date(self, val):
-    #     if isinstance(val, pd.Series):
-    #         val = val
-    #     if isinstance(val, pd.Timestamp):
-    #         return val.date()
-    #     if isinstance(val, datetime):
-    #         return val.date()
-    #     if isinstance(val, date):
-    #         return val
-    #     return pd.to_datetime(val).date()
-
-
-    # def _safe_float(self, val: object, default: float = 0.0) -> float:
-    #     return default if pd.isna(val) else float(val)
-
-    # def _safe_int(self, val: object, default: int = 0) -> int:
-    #     return default if pd.isna(val) else int(val)
+    def _add_months(self, dt: datetime, months: int) -> datetime:
+        month = dt.month - 1 + months
+        year = dt.year + month // 12
+        month = month % 12 + 1
+        day = min(dt.day, calendar.monthrange(year, month)[1])
+        return dt.replace(year=year, month=month, day=day)
 
 

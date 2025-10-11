@@ -127,18 +127,7 @@ class SyncBCBIndicatorUseCase:
                     existing_codes.append(
                         (code_series, name, periodicity, start_date, today)
                     )
-# =======
-#         existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
-#         try:
-#             with self.uow_factory() as uow:
-#                 sources: List[Tuple[str, str]] = self.config.indicators.source["bcb"]
-#                 start_date = datetime(1900, 1, 1)
-#                 end_date = datetime.today()
 
-#                 for (source, code_series) in sources:
-#                     existing_codes.append((source, code_series, start_date, end_date))
-# >>>>>>> 2025-09-29-Indexes
-                # Fetch from scraper and persist them in batch mode
                 results = self.scraper_indicators.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
 
         except Exception as e:

@@ -111,91 +111,111 @@ class StockQuoteScraper(ScraperStockQuotePort):
             symbol = ticker.upper() if "." in ticker else f"{ticker.upper()}.SA"
             has_yahoo_ticker = self.has_yahoo_ticker(symbol, start_date, end_date)
 
+            extra_info = []
+            limit = 32
             if not has_yahoo_ticker:
+                # has not yahoo_ticker
                 extra_info = {
                     "ticker": ticker,
-                    "company_name": company_name[:8],
+                    "company_name": company_name[:limit],
                     }
-                self.logger.log(
-                    f"{ticker}",
-                    level="info",
-                    progress={
-                        "index": index,
-                        "size": len(tasks),
-                        "start_time": start_time,
-                    },
-                    extra=extra_info,
-                    worker_id=worker_id,
-                )
-                return []
+                out = []
+            else:
+                # has yahoo_ticker
+                if start_date and start_date.date() == end_date.date():
+                    # has yahoo_ticker and start==end
+                    extra_info = {
+                        "ticker": ticker,
+                        "company_name": company_name[:limit],
+                        # "start_date": d_min,
+                        # "start_close": f"{close_min:.2f}",
+                        # "end_date": d_max,
+                        # "end_close": f"{close_max:.2f}",
+                        # "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                        # "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
+                    }
+                    out = []
+                else:
+                    # has yahoo_ticker and start!=end
+                    df = yf.download(
+                        symbol,
+                        start=start_date,
+                        end=end_date,
+                        progress=False,
+                        auto_adjust=False,
+                        actions=False,
+                        group_by="column",
+                        threads=False,
+                    )
 
-            df = yf.download(
-                symbol,
-                start=start_date,
-                end=end_date,
-                progress=False,
-                auto_adjust=False,
-                actions=False,
-                group_by="column",
-                threads=False,
-            )
+                    if df is None or df.empty:
+                        # has yahoo_ticker and start!=end and df empty
+                        extra_info = {
+                            "ticker": ticker,
+                            "company_name": company_name[:limit],
+                            # "start_date": start_date.date(),
+                            # "start_close": f"{close_min:.2f}",
+                            # "end_date": d_max,
+                            # "end_close": f"{close_max:.2f}",
+                            "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                            "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
+                        }
+                        out = []
+                    else:
+                        # has yahoo_ticker and start!=end and df not empty
+                        if isinstance(df.columns, pd.MultiIndex):
+                            df = df.swaplevel(axis=1)[symbol]
 
-            if df is None or df.empty:
-                return []
+                        # garante ordenação por data
+                        df = df.sort_index()
 
-            # Se ainda vier MultiIndex por algum motivo raro
-            if isinstance(df.columns, pd.MultiIndex):
-                df = df.swaplevel(axis=1)[symbol]
+                        # Garanta índice temporal concreto
+                        if not isinstance(df.index, pd.DatetimeIndex):
+                            df.index = pd.to_datetime(df.index, errors="coerce", utc=True)
+                        df = df[df.index.notna()]
 
-            # garante ordenação por data
-            df = df.sort_index()
+                        memory_usage = df.memory_usage(deep=True)
+                        bytes_used = int(memory_usage.sum() if isinstance(memory_usage, pd.Series) else memory_usage)
+                        self._metrics_collector.add_network_bytes(bytes_used)
 
-            # Garanta índice temporal concreto
-            if not isinstance(df.index, pd.DatetimeIndex):
-                df.index = pd.to_datetime(df.index, errors="coerce", utc=True)
-            df = df[df.index.notna()]
+                        first_index = pd.Timestamp(df.index[0])
+                        last_index = pd.Timestamp(df.index[-1])
+                        d_min = first_index.date()
+                        d_max = last_index.date()
 
-            memory_usage = df.memory_usage(deep=True)
-            bytes_used = int(memory_usage.sum() if isinstance(memory_usage, pd.Series) else memory_usage)
-            self._metrics_collector.add_network_bytes(bytes_used)
+                        close_min = float(df.iloc[0]["Close"])
+                        close_max = float(df.iloc[-1]["Close"])
 
-            first_index = pd.Timestamp(df.index[0])
-            last_index = pd.Timestamp(df.index[-1])
-            d_min = first_index.date()
-            d_max = last_index.date()
+                        out: list[StockQuoteDTO] = []
 
-            close_min = float(df.iloc[0]["Close"])
-            close_max = float(df.iloc[-1]["Close"])
+                        for idx, row in df.iterrows():
+                            ts = cast(pd.Timestamp, idx)
+                            dto = StockQuoteDTO(
+                                company_name=company_name,
+                                ticker=ticker,
+                                date=ts.to_pydatetime().replace(tzinfo=None),
+                                open=row["Open"],
+                                high=row["High"],
+                                low=row["Low"],
+                                close=row["Close"],
+                                adj_close=row["Adj Close"],
+                                volume=row["Volume"],
+                                currency="BRL",
+                            )
+                            out.append(dto)
 
-            out: list[StockQuoteDTO] = []
+                        # Prepare diagnostic metadata for logs
+                        extra_info = {
+                            "ticker": ticker,
+                            "company_name": company_name[:limit],
+                            "start_date": d_min,
+                            "start_close": f"{close_min:.2f}",
+                            "end_date": d_max,
+                            "end_close": f"{close_max:.2f}",
+                            "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
+                            "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
+                        }
 
-            for idx, row in df.iterrows():
-                ts = cast(pd.Timestamp, idx)
-                dto = StockQuoteDTO(
-                    company_name=company_name,
-                    ticker=ticker,
-                    date=ts.to_pydatetime().replace(tzinfo=None),
-                    open=row["Open"],
-                    high=row["High"],
-                    low=row["Low"],
-                    close=row["Close"],
-                    adj_close=row["Adj Close"],
-                    volume=row["Volume"],
-                    currency="BRL",
-                )
-                out.append(dto)
-
-            # Prepare diagnostic metadata for logs
-            extra_info = {
-                "ticker": ticker,
-                "company_name": company_name[:8],
-                "start_date": d_min,
-                "start_close": f"{close_min:.2f}",
-                "end_date": d_max,
-                "end_close": f"{close_max:.2f}",
-                "download": self.byte_formatter.format_bytes(self._metrics_collector.download_bytes),
-                "total_download": self.byte_formatter.format_bytes(self._metrics_collector.network_bytes),
-            }
             # Emit structured progress log for this item
             self.logger.log(
                 f"{ticker}",
@@ -210,7 +230,6 @@ class StockQuoteScraper(ScraperStockQuotePort):
             )
 
             return out
-
 
         # Handler that buffers items and triggers flushes via the strategy
         def handle_batch(batch: List[StockQuoteDTO]) -> None:

@@ -13,18 +13,32 @@ ENDPOINT = {
 
 SOURCE = {
     "bcb": [
-        ("17880", "Interest rate - Australia", "Monthly"),
-        ("17881", "Interest rate - Canada", "Monthly"),
-        ("17899", "Interest rate - China", "Monthly"),
-        ("17901", "Interest rate - India", "Monthly"),
-        ("17903", "Interest rate - Japan", "Monthly"),
-        ("17904", "Interest rate - Mexico", "Monthly"),
-        ("17905", "Interest rate - Russia", "Monthly"),
-        ("17906", "Interest rate - South Africa", "Monthly"),
-        ("17907", "Interest rate - Turkey", "Monthly"),
-        ("17908", "Interest rate - United Kingdom", "Monthly"),
-        ("29508", "CET1 Ratio Brazil Quarterly", "Quarterly"),
-        ("29515", "Leverage Ratio Brazil Quarterly", "Quarterly"),
+        # 1. Economic Activity
+        # 1.1. PIB
+        ("4380", "GDP monthly - current prices", "Monthly"), # PIB Mensal
+        ("4385", "GDP monthly - current prices in dollar", "Monthly"), # PIB Mensal em dólares
+        ("4382", "GDP accumulated in the last 12 months - current prices", "Monthly"), # PIB Acumulado 12 meses
+        # 1.2. IBC-BR
+        ("24364", "IBC-Br - Seasonally Adjusted", "Monthly"),  # Central Bank Economic Activity Index (dessazonalizado)
+        ("29602", "IBC-Br - Agriculture - Seasonally Adjusted", "Monthly"),  # Agropecuária (dessazonalizado)
+        ("29604", "IBC-Br - Industry - Seasonally Adjusted", "Monthly"),  # Indústria (dessazonalizado)
+        ("29606", "IBC-Br - Services - Seasonally Adjusted", "Monthly"),  # Serviços (dessazonalizado)
+        ("29608", "IBC-Br - Nonfarm - Seasonally Adjusted", "Monthly"),  # Ex-agropecuária (dessazonalizado)
+        ("29610", "IBC-Br - Taxes - Seasonally Adjusted", "Monthly"),  # Impostos sobre produtos (dessazonalizado)
+
+
+        # ("17880", "Interest rate - Australia", "Monthly"),
+        # ("17881", "Interest rate - Canada", "Monthly"),
+        # ("17899", "Interest rate - China", "Monthly"),
+        # ("17901", "Interest rate - India", "Monthly"),
+        # ("17903", "Interest rate - Japan", "Monthly"),
+        # ("17904", "Interest rate - Mexico", "Monthly"),
+        # ("17905", "Interest rate - Russia", "Monthly"),
+        # ("17906", "Interest rate - South Africa", "Monthly"),
+        # ("17907", "Interest rate - Turkey", "Monthly"),
+        # ("17908", "Interest rate - United Kingdom", "Monthly"),
+        # ("29508", "CET1 Ratio Brazil Quarterly", "Quarterly"),
+        # ("29515", "Leverage Ratio Brazil Quarterly", "Quarterly"),
         ("12469", "IMA - General", "Daily"),
         ("7", "Bovespa index", "Daily"),
         ("7804", "Swap reference rate - preset DI rate (BM&F) - 120-day term", "Daily"),

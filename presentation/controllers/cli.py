@@ -1,27 +1,31 @@
+from typing import List
+
 from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
+from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
+from domain.services.service_indicators import IndicatorsService
 from domain.services.service_nsd import NsdService
 from domain.services.service_stock_quote import StockQuoteService
-from domain.services.service_indicators import IndicatorsService
-from application.ports.http_client_port import AffinityHttpClientPort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -96,27 +100,58 @@ class Cli:
     def __call__(self) -> SyncResultsDTO:
         return self.run()
 
-    def run(self) -> SyncResultsDTO:
+    def run(self) -> int:
         """Execute the top-level application workflow."""
+        total_download = 0
+
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
 
         # # Kick off the company data pipeline
         # company_results: SyncResultsDTO = self._company_service()
         # self.logger.log(
-        #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
+        #     f"Total Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
         # )
+        # try:
+        #     total_download += company_results.metrics
+        # except:
+        #     pass
 
         # # Get NSD and stataments pipeline from B3
-        # self._statements_service()
+        # statements_results: SyncResultsDTO = self._statements_service()
+        # self.logger.log(
+        #     f"Total Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}"
+        # )
+        # try:
+        #     total_download += statements_results.metrics
+        # except:
+        #     pass
 
-        # # Get Stock Value for companies
-        # self._stock_quote_service()
+        # Get Stock Value for companies
+        stock_quote_results: SyncResultsDTO = self._stock_quote_service()
+        self.logger.log(
+            f"Total Stock Quote Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}"
+        )
+        try:
+            total_download += stock_quote_results.metrics
+        except:
+            pass
 
         # Get Indicators companies
-        results = self._indicators_service()
+        indicators_results = self._indicators_service()
+        self.logger.log(
+            f"Total Indicators Download: {self.byte_formatter.format_bytes(indicators_results.metrics)}"
+        )
+        try:
+            total_download += indicators_results.metrics
+        except:
+            pass
 
-        return results
+        self.logger.log(
+            f"Total Download: {self.byte_formatter.format_bytes(total_download)}"
+        )
+
+        return total_download
 
     def _company_service(self) -> SyncResultsDTO:
         """Build and execute the company data synchronization flow."""

@@ -77,6 +77,9 @@ class CloudscraperAffinityHttpClient(AffinityHttpClientPort, EngineSetup):
 
                 return r.content
             except requests.RequestException as e:  # noqa: PERF203
+                error_list = [404, ]
+                if r.status_code in error_list:
+                    break
                 last_exc = e
                 # backoff local além do Retry do adapter
                 sleep_expo_jitter(attempts)
