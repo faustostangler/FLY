@@ -3,6 +3,7 @@ from __future__ import annotations
 from application.mappers.company_data_mapper import CompanyDataMapper
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.services.indicator_normalizer_service import IndicatorNormalizerService
 from domain.polices.nsd_policy import NsdPolicy
 from domain.services.financial_normalizer import FinancialNormalizer
 from domain.services.ratios_calculator import RatiosCalculator
@@ -135,6 +136,8 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         intel_module_path=(getattr(config.domain, "intel_module_path", None))
     )
 
+    indicator_normalizer = IndicatorNormalizerService()
+
     # Return the CLI controller with its dependencies injected
     cli = Cli(
         config=config,
@@ -159,6 +162,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         http_client=http_client,
         financial_normalizer=financial_normalizer,
         ratios_calculator=ratios_calculator,
+        indicator_normalizer=indicator_normalizer,
     )
 
     return cli

@@ -20,6 +20,7 @@ from domain.ports.scraper_indicators_port import ScraperIndicatorsPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
+from application.services.indicator_normalizer_service import IndicatorNormalizerService
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
@@ -68,6 +69,7 @@ class Cli:
         http_client: AffinityHttpClientPort,
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
+        indicator_normalizer: IndicatorNormalizerService,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -94,6 +96,7 @@ class Cli:
         self.uow_factory = uow_factory
         self.financial_normalizer = financial_normalizer
         self.ratios_calculator = ratios_calculator
+        self.indicator_normalizer = indicator_normalizer
 
         self.byte_formatter = ByteFormatter()
 
@@ -217,6 +220,7 @@ class Cli:
             logger=self.logger,
             repository_indicators=self.repository_indicators,
             scraper_indicators=self.scraper_indicators,
+            indicator_normalizer=self.indicator_normalizer,
             # worker_pool=self.worker_pool,
             uow_factory=self.uow_factory,
             # http_client=self.http_client,

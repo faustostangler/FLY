@@ -5,6 +5,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.http_client_port import AffinityHttpClientPort
+from application.services.indicator_normalizer_service import IndicatorNormalizerService
 from application.usecases.sync_bcb_indicators import SyncBCBIndicatorUseCase
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.indicators_dto import IndicatorRecordDTO
@@ -22,6 +23,7 @@ class IndicatorsService:
 
         repository_indicators: RepositoryIndicatorsPort,
         scraper_indicators: ScraperIndicatorsPort,
+        indicator_normalizer: IndicatorNormalizerService,
 
         uow_factory: UowFactoryPort,
         # http_client: AffinityHttpClientPort,
@@ -40,6 +42,7 @@ class IndicatorsService:
 
         self.repository_indicators = repository_indicators
         self.scraper_indicators = scraper_indicators
+        self.indicator_normalizer = indicator_normalizer
 
         self.uow_factory = uow_factory
         # self.http_client = http_client
@@ -51,6 +54,7 @@ class IndicatorsService:
 
             repository_indicators=self.repository_indicators,
             scraper_indicators=self.scraper_indicators,
+            indicator_normalizer=self.indicator_normalizer,
 
             uow_factory=self.uow_factory,
             # http_client=self.http_client,

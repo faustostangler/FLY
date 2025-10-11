@@ -25,7 +25,6 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
-from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -474,11 +473,12 @@ class NsdProcessor:
         )
         quarter_display = quarter or ""
         sent_date = nsd.sent_date or ""
-        form_initials = "".join(word[0].upper() for word in str(nsd.nsd_type).split() if word and len(word) > 3)[:2].ljust(2)
+        form_type = str(nsd.nsd_type or "").strip().upper()
+        form_display = form_type[:4]
         return (
             f"{quarter_display} v{nsd.version} | "
             f"{sent_date} | "
-            f"{form_initials} {nsd.company_name[:16]}"
+            f"{form_display} {nsd.company_name[:16]}"
         )
 
     def _filter_new_fetched(
@@ -547,7 +547,7 @@ class NsdProcessor:
 
         return combined or None
 
-    def _collect_metrics(self, scraper: Any | None) -> Mapping[str, str] | None:
+    def _collect_metrics(self, scraper: Any | None) -> Mapping[str, Any] | None:
         if scraper is None:
             return None
 
@@ -555,16 +555,15 @@ class NsdProcessor:
         if collector is None:
             return None
 
-        fmt = ByteFormatter()
-        metrics: dict[str, str] = {}
+        metrics: dict[str, Any] = {}
 
-        # download_bytes = getattr(collector, "download_bytes", None)
-        # if isinstance(download_bytes, int) and download_bytes >= 0:
-        #     metrics["Download"] = fmt.format_bytes(download_bytes)
+        download_bytes = getattr(collector, "download_bytes", None)
+        if isinstance(download_bytes, int) and download_bytes >= 0:
+            metrics["download_bytes"] = download_bytes
 
         network_bytes = getattr(collector, "network_bytes", None)
         if isinstance(network_bytes, int) and network_bytes >= 0:
-            metrics["Total download"] = fmt.format_bytes(network_bytes)
+            metrics["network_bytes"] = network_bytes
 
         return metrics or None
 
