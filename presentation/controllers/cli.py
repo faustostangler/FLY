@@ -127,15 +127,15 @@ class Cli:
         # except:
         #     pass
 
-        # Get Stock Value for companies
-        stock_quote_results: SyncResultsDTO = self._stock_quote_service()
-        self.logger.log(
-            f"Total Stock Quote Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}"
-        )
-        try:
-            total_download += stock_quote_results.metrics
-        except:
-            pass
+        # # Get Stock Value for companies
+        # stock_quote_results: SyncResultsDTO = self._stock_quote_service()
+        # self.logger.log(
+        #     f"Total Stock Quote Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}"
+        # )
+        # try:
+        #     total_download += stock_quote_results.metrics
+        # except:
+        #     pass
 
         # Get Indicators companies
         indicators_results = self._indicators_service()

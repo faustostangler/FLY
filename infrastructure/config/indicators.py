@@ -188,206 +188,207 @@ SOURCE = {
         ('5356', 'Banco Central - 5356 (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - PBSR (%GDP) - Current monthly flows - Primary result - Total - Banco Central
         ('7864', 'National Social Security Institute - 7864 (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - PBSR (%GDP) - Current monthly flows - Primary result - Total - National Social Security Institute
 
-# # External sector statistics-Balance of Payments-BPM6-Balance of payments indicators-Current account accumulated in 12 months
-# ('24419', 'External Sector - Balance of Payments - Current account accumulated in 12 months - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Current account accumulated in 12 months - monthly
-# # 1. Current Account
-# # 1. 1. Current Account
-# ('22701', 'Current account - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Current account - monthly - net
-# ('22702', 'Current account - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Current account - monthly - credit
-# ('22703', 'Current account - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Current account - monthly - debit
-# # 1. 2. Balance of Payments
-# ('22707', 'Balance on goods - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods - Balance of Payments - monthly - net
-# ('22708', 'Exports - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Exports - Balance of Payments - monthly
-# ('22709', 'Imports - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Imports - Balance of Payments - monthly
-# # 2. Goods - goods and services
-# ('22704', 'Balance on goods and services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods and services - monthly - net
-# ('22705', 'Balance on goods and services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods and services - monthly - credit
-# ('22706', 'Balance on goods and services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods and services - monthly - debit
-# # 2. 1. general merchandise
-# ('22710', 'Balance on goods - general merchandise - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods - general merchandise - Balance of Payments - monthly - net
-# ('22711', 'Exports - general merchandise - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Exports - general merchandise - Balance of Payments - monthly
-# ('22712', 'Imports - general merchandise - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Imports - general merchandise - Balance of Payments - monthly
-# # 2. 2. under merchanting
-# ('22713', 'Balance on goods - exports under merchanting - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods - exports under merchanting - monthly - net
-# ('22714', 'Exported goods under merchanting - positive exports - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Exported goods under merchanting - positive exports - monthly
-# ('22715', 'Imported goods under merchanting - negative exports - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Imported goods under merchanting - negative exports - monthly
-# # 2. 3. non-monetary gold
-# ('22716', 'Balance on goods - non-monetary gold - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Balance on goods - non-monetary gold - Balance of Payments - monthly - net
-# ('22717', 'Exports - non-monetary gold - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Exports - non-monetary gold - Balance of Payments - monthly
-# ('22718', 'Imports - non-monetary gold - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Imports - non-monetary gold - Balance of Payments - monthly
-# # 3. Services
-# # 3. 1. Manufacturing services on physical inputs owned by others
-# ('22722', 'Manufacturing services on physical inputs owned by others - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - net
-# ('22723', 'Manufacturing services on physical inputs owned by others - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - credit
-# ('22724', 'Manufacturing services on physical inputs owned by others - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - debit
-# # 3. 2. Maintenance and repair services
-# ('22725', 'Maintenance and repair services n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - net
-# ('22726', 'Maintenance and repair services n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - credit
-# ('22727', 'Maintenance and repair services n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - debit
-# # 3. 3. 1. Transport - Passenger
-# ('22731', 'Transport - Passenger - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Passenger - monthly - net
-# ('22732', 'Transport - Passenger - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Passenger - monthly - credit
-# ('22733', 'Transport - Passenger - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Passenger - monthly - debit
-# # 3. 3. 2. Transport - Freight
-# ('22734', 'Transport - Freight - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Freight - monthly - net
-# ('22735', 'Transport - Freight - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Freight - monthly - credit
-# ('22736', 'Transport - Freight - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Transport - Freight - monthly - debit
-# # 3. 3. 3. Other transport services
-# ('22737', 'Other transport services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other transport services - monthly - net
-# ('22738', 'Other transport services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other transport services - monthly - credit
-# ('22739', 'Other transport services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other transport services - monthly - debit
-# # 3. 4. Travel
-# ('22740', 'Travel - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - monthly - net
-# ('22741', 'Travel - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - monthly - credit
-# ('22742', 'Travel - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - monthly - debit
-# # 3. 4. 1. Travel - business
-# ('22743', 'Travel - business - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - business - monthly - net
-# ('22744', 'Travel - business - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - business - monthly - credit
-# ('22745', 'Travel - business - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - business - monthly - debit
-# # 3. 4. 2. Travel - personal
-# ('22746', 'Travel - personal - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - monthly - net
-# ('22747', 'Travel - personal - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - monthly - credit
-# ('22748', 'Travel - personal - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - monthly - debit
-# # 3. 4. 2. 1. Travel - personal - health-related
-# ('22749', 'Travel - personal - health-related - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - health-related - monthly - net
-# ('22750', 'Travel - personal - health-related - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - health-related - monthly - credit
-# ('22751', 'Travel - personal - health-related - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - health-related - monthly - debit
-# # 3. 4. 2. 2. Travel - personal - education-related
-# ('22752', 'Travel - personal - education-related - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - education-related - monthly - net
-# ('22753', 'Travel - personal - education-related - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - education-related - monthly - credit
-# ('22754', 'Travel - personal - education-related - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - education-related - monthly - debit
-# # 3. 4. 2. 3. Travel - personal - tourism and others
-# ('22755', 'Travel - personal - other, including tourism - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - other, including tourism - monthly - net
-# ('22756', 'Travel - personal - other, including tourism - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - other, including tourism - monthly - credit
-# ('22757', 'Travel - personal - other, including tourism - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - personal - other, including tourism - monthly - debit
-# # 3. 4. 3. Travel - international cards
-# ('22758', 'Travel - settled by international cards - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - settled by international cards - monthly - net
-# ('22759', 'Travel - settled by international cards - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - settled by international cards - monthly - credit
-# ('22760', 'Travel - settled by international cards - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Travel - settled by international cards - monthly - debit
-# # 3. 5. Construction
-# ('22761', 'Construction - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Construction - monthly - net
-# ('22762', 'Construction - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Construction - monthly - credit
-# ('22763', 'Construction - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Construction - monthly - debit
-# # 3. 6. Insurance and pension 
-# ('22764', 'Insurance and pension services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Insurance and pension services - monthly - net
-# ('22765', 'Insurance and pension services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Insurance and pension services - monthly - credit
-# ('22766', 'Insurance and pension services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Insurance and pension services - monthly - debit
-# # 3. 7. Financial services
-# ('22767', 'Financial services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - monthly - net
-# ('22768', 'Financial services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - monthly - credit
-# ('22769', 'Financial services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - monthly - debit
-# # 3. 7. 1. Financial services Explicitly charged
-# ('22770', 'Financial services - explicitly charged and other financial services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - net
-# ('22771', 'Financial services - explicitly charged and other financial services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - credit
-# ('22772', 'Financial services - explicitly charged and other financial services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - debit
-# # 3. 7. 2. Financial services - indirectly measured
-# ('22773', 'Financial services - Financial intermediation services indirectly measured - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - Financial intermediation services indirectly measured - monthly - net
-# ('22774', 'Financial services - Financial intermediation services indirectly measured - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - Financial intermediation services indirectly measured - monthly - credit
-# ('22775', 'Financial services - Financial intermediation services indirectly measured - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Financial services - Financial intermediation services indirectly measured - monthly - debit
-# # 3. 8. intellectual property
-# ('22776', 'Charges for the use of intellectual property n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - net
-# ('22777', 'Charges for the use of intellectual property n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - credit
-# ('22778', 'Charges for the use of intellectual property n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - debit
-# # 3. 9. Telecom
-# ('22779', 'Telecommunications, computer, and information services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Telecommunications, computer, and information services - monthly - net
-# ('22780', 'Telecommunications, computer, and information services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Telecommunications, computer, and information services - monthly - credit
-# ('22781', 'Telecommunications, computer, and information services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Telecommunications, computer, and information services - monthly - debit
-# # 3. 10. Leasing
-# ('22782', 'Operating leasing services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Operating leasing services - monthly - net
-# ('22783', 'Operating leasing services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Operating leasing services - monthly - credit
-# ('22784', 'Operating leasing services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Operating leasing services - monthly - debit
-# # 3. 11. architecture and engineering
-# ('22785', 'Other business services, including architecture and engineering - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other business services, including architecture and engineering - monthly - net
-# ('22786', 'Other business services, including architecture and engineering - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other business services, including architecture and engineering - monthly - credit
-# ('22787', 'Other business services, including architecture and engineering - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other business services, including architecture and engineering - monthly - debit
-# # 3. 12. cultural, and recreational
-# ('22788', 'Personal, cultural, and recreational services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Personal, cultural, and recreational services - monthly - net
-# ('22789', 'Personal, cultural, and recreational services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Personal, cultural, and recreational services - monthly - credit
-# ('22790', 'Personal, cultural, and recreational services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Personal, cultural, and recreational services - monthly - debit
-# # 3. 12. 1. Audiovisual
-# ('22791', 'Audiovisual services and related - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Audiovisual services and related - monthly - net
-# ('22792', 'Audiovisual services and related - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Audiovisual services and related - monthly - credit
-# ('22793', 'Audiovisual services and related - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Audiovisual services and related - monthly - debit
-# # 3. 12. 2. Health and Education
-# ('22794', 'Health, education and other cultural, personal and recreational services - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Health, education and other cultural, personal and recreational services - monthly - net
-# ('22795', 'Health, education and other cultural, personal and recreational services - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Health, education and other cultural, personal and recreational services - monthly - credit
-# ('22796', 'Health, education and other cultural, personal and recreational services - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Health, education and other cultural, personal and recreational services - monthly - debit
-# # 3. 13. Government goods and services
-# ('22797', 'Government goods and services n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Government goods and services n.i.e. - monthly - net
-# ('22798', 'Government goods and services n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Government goods and services n.i.e. - monthly - credit
-# ('22799', 'Government goods and services n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Government goods and services n.i.e. - monthly - debit
-# # 4. Primary Income
-# ('22800', 'Primary income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Primary income - monthly - net
-# ('22801', 'Primary income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Primary income - monthly - credit
-# ('22802', 'Primary income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Primary income - monthly - debit
-# # 4. 1. Compensation of employees
-# ('22803', 'Compensation of employees - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Compensation of employees - monthly - net
-# ('22804', 'Compensation of employees - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Compensation of employees - monthly - credit
-# ('22805', 'Compensation of employees - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Compensation of employees - monthly - debit
-# # 4. 2. Investment income
-# ('22806', 'Investment income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Investment income - monthly - net
-# ('22807', 'Investment income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Investment income - monthly - credit
-# ('22808', 'Investment income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Investment income - monthly - debit
-# # 4. 2. 1. Direct investment
-# ('22809', 'Direct investment income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - monthly - net
-# ('22810', 'Direct investment income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - monthly - credit
-# ('22811', 'Direct investment income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - monthly - debit
-# # 4. 2. 1. 1. Dividends
-# ('22812', 'Direct investment income - Dividends remitted - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - Dividends remitted - monthly - net
-# ('22813', 'Direct investment income - Dividends remitted - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - Dividends remitted - monthly - credit
-# ('22814', 'Direct investment income - Dividends remitted - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income - Dividends remitted - monthly - debit
-# # 4. 2. 1. 2. Reinvested
-# ('22815', 'Direct investment income Reinvested earnings - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Reinvested earnings - monthly - net
-# ('22816', 'Direct investment income Reinvested earnings - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Reinvested earnings - monthly - credit
-# ('22817', 'Direct investment income Reinvested earnings - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Reinvested earnings - monthly - debit
-# # 4. 2. 1. 3. intercompany loans
-# ('22818', 'Direct investment income Interest on intercompany loans - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Interest on intercompany loans - monthly - net
-# ('22819', 'Direct investment income Interest on intercompany loans - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Interest on intercompany loans - monthly - credit
-# ('22820', 'Direct investment income Interest on intercompany loans - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Direct investment income Interest on intercompany loans - monthly - debit
-# # 4. 2. 2. Portfolio investment
-# ('22821', 'Portfolio investment income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - monthly - net
-# ('22822', 'Portfolio investment income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - monthly - credit
-# ('22823', 'Portfolio investment income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - monthly - debit
-# # 4. 2. 2. 1. Dividends
-# ('22824', 'Portfolio investment income - Dividends - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Dividends - monthly - net
-# ('22825', 'Portfolio investment income - Dividends - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Dividends - monthly - credit
-# ('22826', 'Portfolio investment income - Dividends - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Dividends - monthly - debit
-# # 4. 2. 2. 2. securities abroad
-# ('22827', 'Portfolio investment income - Interest on securities issued abroad - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Interest on securities issued abroad - monthly - net
-# ('22828', 'Portfolio investment income - Interest on securities issued abroad - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Interest on securities issued abroad - monthly - credit
-# ('22829', 'Portfolio investment income - Interest on securities issued abroad - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Interest on securities issued abroad - monthly - debit
-# # 4. 2. 2. 3. securities in Brazil
-# ('22830', 'Portfolio investment income - Interest on securities issued in Brazil - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Portfolio investment income - Interest on securities issued in Brazil - monthly - debit
-# # 4. 2. 2. 4. Other investment income
-# ('22831', 'Other investment income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other investment income - monthly - net
-# ('22832', 'Other investment income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other investment income - monthly - credit
-# ('22833', 'Other investment income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other investment income - monthly - debit
-# # 4. 3. Reserve assets
-# ('22834', 'Reserve assets - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Reserve assets - monthly - credit
-# # 4. 4. Other primary income
-# ('22835', 'Other primary income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other primary income - monthly - net
-# ('22836', 'Other primary income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other primary income - monthly - credit
-# ('22837', 'Other primary income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Other primary income - monthly - debit
-# # 4. 5. Secondary income
-# ('22838', 'Secondary income - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - monthly - net
-# ('22839', 'Secondary income - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - monthly - credit
-# ('22840', 'Secondary income - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - monthly - debit
-# # 4. 5. 1. General government
-# ('22841', 'Secondary income - General government - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - General government - monthly - net
-# ('22842', 'Secondary income - General government - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - General government - monthly - credit
-# ('22843', 'Secondary income - General government - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - General government - monthly - debit
-# # 4. 5. 2. corporations & households
-# ('22844', 'Secondary income - Financial corporations, nonfinancial corporations, households, and NPISHs - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Financial corporations, nonfinancial corporations, households, and NPISHs - monthly - net
-# # 4. 5. 3. personal transfers
-# ('22845', 'Secondary income - Personal transfers - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Personal transfers - monthly - net
-# ('22846', 'Secondary income - Personal transfers - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Personal transfers - monthly - credit
-# ('22847', 'Secondary income - Personal transfers - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Personal transfers - monthly - debit
-# # 4. 5. 4. Others
-# ('22848', 'Secondary income - Other current transfers - monthly - net (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Other current transfers - monthly - net
-# ('22849', 'Secondary income - Other current transfers - monthly - credit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Other current transfers - monthly - credit
-# ('22850', 'Secondary income - Other current transfers - monthly - debit (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Secondary income - Other current transfers - monthly - debit
+        # 4 External sector statistics-Balance of Payments-BPM6-Balance of payments indicators-Current account accumulated in 12 months
+        # 1. Current Account
+        # 1. 1. Current Account
+        ('22701', 'External Sector - 1.1. Current account - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Current account - monthly - net
+        ('22702', 'External Sector - 1.1. Current account - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Current account - monthly - credit
+        ('22703', 'External Sector - 1.1. Current account - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Current account - monthly - debit
+        # 1. 2. Balance of Payments
+        ('22707', 'External Sector - 1.2. Balance on goods - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods - Balance of Payments - monthly - net
+        ('22708', 'External Sector - 1.2. Exports - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Exports - Balance of Payments - monthly
+        ('22709', 'External Sector - 1.2. Imports - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Imports - Balance of Payments - monthly
 
+        # 2. Goods - goods and services
+        ('22704', 'External Sector - 2. Balance on goods and services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods and services - monthly - net
+        ('22705', 'External Sector - 2. Balance on goods and services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods and services - monthly - credit
+        ('22706', 'External Sector - 2. Balance on goods and services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods and services - monthly - debit
+        # 2. 1. general merchandise
+        ('22710', 'External Sector - 2.1. Balance on goods - general merchandise - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods - general merchandise - Balance of Payments - monthly - net
+        ('22711', 'External Sector - 2.1. Exports - general merchandise - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Exports - general merchandise - Balance of Payments - monthly
+        ('22712', 'External Sector - 2.1. Imports - general merchandise - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Imports - general merchandise - Balance of Payments - monthly
+        # 2. 2. under merchanting
+        ('22713', 'External Sector - 2.2. Balance on goods - exports under merchanting - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods - exports under merchanting - monthly - net
+        ('22714', 'External Sector - 2.2. Exported goods under merchanting - positive exports - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Exported goods under merchanting - positive exports - monthly
+        ('22715', 'External Sector - 2.2. Imported goods under merchanting - negative exports - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Imported goods under merchanting - negative exports - monthly
+        # 2. 3. non-monetary gold
+        ('22716', 'External Sector - 2.3. Balance on goods - non-monetary gold - Balance of Payments - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Balance on goods - non-monetary gold - Balance of Payments - monthly - net
+        ('22717', 'External Sector - 2.3. Exports - non-monetary gold - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Exports - non-monetary gold - Balance of Payments - monthly
+        ('22718', 'External Sector - 2.3. Imports - non-monetary gold - Balance of Payments - monthly (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Imports - non-monetary gold - Balance of Payments - monthly
 
+        ('24419', 'External Sector - 3. Balance of Payments - Current account accumulated in 12 months - monthly (BCB-DSTAT)', 'Monthly'), # BCB-DSTAT - Current account accumulated in 12 months - monthly
+        # 3. Services
+        # 3. 1. Manufacturing services on physical inputs owned by others
+        ('22722', 'External Sector - 3.1. Manufacturing services on physical inputs owned by others - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - net
+        ('22723', 'External Sector - 3.1. Manufacturing services on physical inputs owned by others - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - credit
+        ('22724', 'External Sector - 3.1. Manufacturing services on physical inputs owned by others - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Manufacturing services on physical inputs owned by others - monthly - debit
+        # 3. 2. Maintenance and repair services
+        ('22725', 'External Sector - 3.2. Maintenance and repair services n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - net
+        ('22726', 'External Sector - 3.2. Maintenance and repair services n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - credit
+        ('22727', 'External Sector - 3.2. Maintenance and repair services n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Maintenance and repair services n.i.e. - monthly - debit
+        # 3. 3. 1. Transport - Passenger
+        ('22731', 'External Sector - 3.3.1. Transport - Passenger - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Passenger - monthly - net
+        ('22732', 'External Sector - 3.3.1. Transport - Passenger - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Passenger - monthly - credit
+        ('22733', 'External Sector - 3.3.1. Transport - Passenger - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Passenger - monthly - debit
+        # 3. 3. 2. Transport - Freight
+        ('22734', 'External Sector - 3.3.2. Transport - Freight - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Freight - monthly - net
+        ('22735', 'External Sector - 3.3.2. Transport - Freight - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Freight - monthly - credit
+        ('22736', 'External Sector - 3.3.2. Transport - Freight - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Transport - Freight - monthly - debit
+        # 3. 3. 3. Other transport services
+        ('22737', 'External Sector - 3.3.3. Other transport services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other transport services - monthly - net
+        ('22738', 'External Sector - 3.3.3. Other transport services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other transport services - monthly - credit
+        ('22739', 'External Sector - 3.3.3. Other transport services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other transport services - monthly - debit
+        # 3. 4. Travel
+        ('22740', 'External Sector - 3.4. Travel - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - monthly - net
+        ('22741', 'External Sector - 3.4. Travel - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - monthly - credit
+        ('22742', 'External Sector - 3.4. Travel - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - monthly - debit
+        # 3. 4. 1. Travel - business
+        ('22743', 'External Sector - 3.4.1. Travel - business - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - business - monthly - net
+        ('22744', 'External Sector - 3.4.1. Travel - business - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - business - monthly - credit
+        ('22745', 'External Sector - 3.4.1. Travel - business - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - business - monthly - debit
+        # 3. 4. 2. Travel - personal
+        ('22746', 'External Sector - 3.4.2. Travel - personal - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - monthly - net
+        ('22747', 'External Sector - 3.4.2. Travel - personal - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - monthly - credit
+        ('22748', 'External Sector - 3.4.2. Travel - personal - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - monthly - debit
+        # 3. 4. 2. 1. Health-related
+        ('22749', 'External Sector - 3.4.2.1. Travel - personal - health-related - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - health-related - monthly - net
+        ('22750', 'External Sector - 3.4.2.1. Travel - personal - health-related - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - health-related - monthly - credit
+        ('22751', 'External Sector - 3.4.2.1. Travel - personal - health-related - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - health-related - monthly - debit
+        # 3. 4. 2. 2. Education-related
+        ('22752', 'External Sector - 3.4.2.2. Travel - personal - education-related - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - education-related - monthly - net
+        ('22753', 'External Sector - 3.4.2.2. Travel - personal - education-related - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - education-related - monthly - credit
+        ('22754', 'External Sector - 3.4.2.2. Travel - personal - education-related - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - education-related - monthly - debit
+        # 3. 4. 2. 3. Tourism and others
+        ('22755', 'External Sector - 3.4.2.3. Travel - personal - other, including tourism - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - other, including tourism - monthly - net
+        ('22756', 'External Sector - 3.4.2.3. Travel - personal - other, including tourism - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - other, including tourism - monthly - credit
+        ('22757', 'External Sector - 3.4.2.3. Travel - personal - other, including tourism - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - personal - other, including tourism - monthly - debit
+        # 3. 4. 3. International cards
+        ('22758', 'External Sector - 3.4.3. Travel - settled by international cards - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - settled by international cards - monthly - net
+        ('22759', 'External Sector - 3.4.3. Travel - settled by international cards - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - settled by international cards - monthly - credit
+        ('22760', 'External Sector - 3.4.3. Travel - settled by international cards - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Travel - settled by international cards - monthly - debit
+        # 3. 5. Construction
+        ('22761', 'External Sector - 3.5. Construction - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Construction - monthly - net
+        ('22762', 'External Sector - 3.5. Construction - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Construction - monthly - credit
+        ('22763', 'External Sector - 3.5. Construction - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Construction - monthly - debit
+        # 3. 6. Insurance and pension
+        ('22764', 'External Sector - 3.6. Insurance and pension services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Insurance and pension services - monthly - net
+        ('22765', 'External Sector - 3.6. Insurance and pension services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Insurance and pension services - monthly - credit
+        ('22766', 'External Sector - 3.6. Insurance and pension services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Insurance and pension services - monthly - debit
+        # 3. 7. Financial services
+        ('22767', 'External Sector - 3.7. Financial services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - monthly - net
+        ('22768', 'External Sector - 3.7. Financial services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - monthly - credit
+        ('22769', 'External Sector - 3.7. Financial services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - monthly - debit
+        # 3. 7. 1. Explicitly charged
+        ('22770', 'External Sector - 3.7.1. Financial services - explicitly charged and other financial services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - net
+        ('22771', 'External Sector - 3.7.1. Financial services - explicitly charged and other financial services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - credit
+        ('22772', 'External Sector - 3.7.1. Financial services - explicitly charged and other financial services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial services - explicitly charged and other financial services - monthly - debit
+        # 3. 7. 2. Indirectly measured
+        ('22773', 'External Sector - 3.7.2. Financial intermediation services indirectly measured - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial intermediation services indirectly measured - monthly - net
+        ('22774', 'External Sector - 3.7.2. Financial intermediation services indirectly measured - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial intermediation services indirectly measured - monthly - credit
+        ('22775', 'External Sector - 3.7.2. Financial intermediation services indirectly measured - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Financial intermediation services indirectly measured - monthly - debit
+        # 3. 8. Intellectual property
+        ('22776', 'External Sector - 3.8. Charges for the use of intellectual property n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - net
+        ('22777', 'External Sector - 3.8. Charges for the use of intellectual property n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - credit
+        ('22778', 'External Sector - 3.8. Charges for the use of intellectual property n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Charges for the use of intellectual property n.i.e. - monthly - debit
+        # 3. 9. Telecom
+        ('22779', 'External Sector - 3.9. Telecommunications, computer, and information services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Telecommunications, computer, and information services - monthly - net
+        ('22780', 'External Sector - 3.9. Telecommunications, computer, and information services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Telecommunications, computer, and information services - monthly - credit
+        ('22781', 'External Sector - 3.9. Telecommunications, computer, and information services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Telecommunications, computer, and information services - monthly - debit
+        # 3. 10. Leasing
+        ('22782', 'External Sector - 3.10. Operating leasing services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Operating leasing services - monthly - net
+        ('22783', 'External Sector - 3.10. Operating leasing services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Operating leasing services - monthly - credit
+        ('22784', 'External Sector - 3.10. Operating leasing services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Operating leasing services - monthly - debit
+        # 3. 11. Architecture and engineering
+        ('22785', 'External Sector - 3.11. Other business services, including architecture and engineering - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other business services, including architecture and engineering - monthly - net
+        ('22786', 'External Sector - 3.11. Other business services, including architecture and engineering - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other business services, including architecture and engineering - monthly - credit
+        ('22787', 'External Sector - 3.11. Other business services, including architecture and engineering - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Other business services, including architecture and engineering - monthly - debit
+        # 3. 12. Cultural and recreational
+        ('22788', 'External Sector - 3.12. Personal, cultural, and recreational services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Personal, cultural, and recreational services - monthly - net
+        ('22789', 'External Sector - 3.12. Personal, cultural, and recreational services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Personal, cultural, and recreational services - monthly - credit
+        ('22790', 'External Sector - 3.12. Personal, cultural, and recreational services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Personal, cultural, and recreational services - monthly - debit
+        # 3. 12. 1. Audiovisual
+        ('22791', 'External Sector - 3.12.1. Audiovisual services and related - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Audiovisual services and related - monthly - net
+        ('22792', 'External Sector - 3.12.1. Audiovisual services and related - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Audiovisual services and related - monthly - credit
+        ('22793', 'External Sector - 3.12.1. Audiovisual services and related - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Audiovisual services and related - monthly - debit
+        # 3. 12. 2. Health and Education
+        ('22794', 'External Sector - 3.12.2. Health, education and other cultural, personal and recreational services - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Health, education and other cultural, personal and recreational services - monthly - net
+        ('22795', 'External Sector - 3.12.2. Health, education and other cultural, personal and recreational services - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - credit
+        ('22796', 'External Sector - 3.12.2. Health, education and other cultural, personal and recreational services - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - debit
+        # 3. 13. Government goods and services
+        ('22797', 'External Sector - 3.13. Government goods and services n.i.e. - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Government goods and services n.i.e. - monthly - net
+        ('22798', 'External Sector - 3.13. Government goods and services n.i.e. - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Government goods and services n.i.e. - monthly - credit
+        ('22799', 'External Sector - 3.13. Government goods and services n.i.e. - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Government goods and services n.i.e. - monthly - debit
+
+        # 4. Primary Income
+        ('22800', 'External Sector - 4. Primary income - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Primary income - monthly - net
+        ('22801', 'External Sector - 4. Primary income - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Primary income - monthly - credit
+        ('22802', 'External Sector - 4. Primary income - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Primary income - monthly - debit
+        # 4. 1. Compensation of employees
+        ('22803', 'External Sector - 4.1. Compensation of employees - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Compensation of employees - monthly - net
+        ('22804', 'External Sector - 4.1. Compensation of employees - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - credit
+        ('22805', 'External Sector - 4.1. Compensation of employees - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - debit
+        # 4. 2. Investment income
+        ('22806', 'External Sector - 4.2. Investment income - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Investment income - monthly - net
+        ('22807', 'External Sector - 4.2. Investment income - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - credit
+        ('22808', 'External Sector - 4.2. Investment income - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - debit
+        # 4. 2. 1. Direct investment
+        ('22809', 'External Sector - 4.2.1. Direct investment income - monthly - net (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - Direct investment income - monthly - net
+        ('22810', 'External Sector - 4.2.1. Direct investment income - monthly - credit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - credit
+        ('22811', 'External Sector - 4.2.1. Direct investment income - monthly - debit (BCB-DSTAT)', 'Monthly'),  # BCB-DSTAT - ... - debit
+        # 4. 2. 1. 1. Dividends
+        ('22812', 'External Sector - 4.2.1.1. Direct investment income - Dividends remitted - monthly - net (BCB-DSTAT)', 'Monthly'),  # ...
+        ('22813', 'External Sector - 4.2.1.1. Direct investment income - Dividends remitted - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22814', 'External Sector - 4.2.1.1. Direct investment income - Dividends remitted - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 1. 2. Reinvested
+        ('22815', 'External Sector - 4.2.1.2. Direct investment income Reinvested earnings - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22816', 'External Sector - 4.2.1.2. Direct investment income Reinvested earnings - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22817', 'External Sector - 4.2.1.2. Direct investment income Reinvested earnings - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 1. 3. Intercompany loans
+        ('22818', 'External Sector - 4.2.1.3. Direct investment income Interest on intercompany loans - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22819', 'External Sector - 4.2.1.3. Direct investment income Interest on intercompany loans - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22820', 'External Sector - 4.2.1.3. Direct investment income Interest on intercompany loans - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 2. Portfolio investment
+        ('22821', 'External Sector - 4.2.2. Portfolio investment income - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22822', 'External Sector - 4.2.2. Portfolio investment income - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22823', 'External Sector - 4.2.2. Portfolio investment income - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 2. 1. Dividends
+        ('22824', 'External Sector - 4.2.2.1. Portfolio investment income - Dividends - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22825', 'External Sector - 4.2.2.1. Portfolio investment income - Dividends - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22826', 'External Sector - 4.2.2.1. Portfolio investment income - Dividends - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 2. 2. Securities abroad
+        ('22827', 'External Sector - 4.2.2.2. Portfolio investment income - Interest on securities issued abroad - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22828', 'External Sector - 4.2.2.2. Portfolio investment income - Interest on securities issued abroad - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22829', 'External Sector - 4.2.2.2. Portfolio investment income - Interest on securities issued abroad - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 2. 3. Securities in Brazil
+        ('22830', 'External Sector - 4.2.2.3. Portfolio investment income - Interest on securities issued in Brazil - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 2. 2. 4. Other investment income
+        ('22831', 'External Sector - 4.2.2.4. Other investment income - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22832', 'External Sector - 4.2.2.4. Other investment income - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22833', 'External Sector - 4.2.2.4. Other investment income - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 3. Reserve assets
+        ('22834', 'External Sector - 4.3. Reserve assets - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        # 4. 4. Other primary income
+        ('22835', 'External Sector - 4.4. Other primary income - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22836', 'External Sector - 4.4. Other primary income - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22837', 'External Sector - 4.4. Other primary income - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 5. Secondary income
+        ('22838', 'External Sector - 4.5. Secondary income - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22839', 'External Sector - 4.5. Secondary income - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22840', 'External Sector - 4.5. Secondary income - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 5. 1. General government
+        ('22841', 'External Sector - 4.5.1. Secondary income - General government - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22842', 'External Sector - 4.5.1. Secondary income - General government - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22843', 'External Sector - 4.5.1. Secondary income - General government - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 5. 2. Corporations & households
+        ('22844', 'External Sector - 4.5.2. Secondary income - Financial corporations, nonfinancial corporations, households, and NPISHs - monthly - net (BCB-DSTAT)', 'Monthly'),
+        # 4. 5. 3. Personal transfers
+        ('22845', 'External Sector - 4.5.3. Secondary income - Personal transfers - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22846', 'External Sector - 4.5.3. Secondary income - Personal transfers - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22847', 'External Sector - 4.5.3. Secondary income - Personal transfers - monthly - debit (BCB-DSTAT)', 'Monthly'),
+        # 4. 5. 4. Others
+        ('22848', 'External Sector - 4.5.4. Secondary income - Other current transfers - monthly - net (BCB-DSTAT)', 'Monthly'),
+        ('22849', 'External Sector - 4.5.4. Secondary income - Other current transfers - monthly - credit (BCB-DSTAT)', 'Monthly'),
+        ('22850', 'External Sector - 4.5.4. Secondary income - Other current transfers - monthly - debit (BCB-DSTAT)', 'Monthly'),
 
         ],}
 
