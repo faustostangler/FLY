@@ -45,9 +45,9 @@ class RatiosRunnerService:
 #                     )
 #                     results.extend(ratios)
 # >>>>>>> 2025-10-11-Ratios
-            except Exception as exc:
+            except Exception as e:
                 self._logger.log(
-                    f"Ratio computation failed for {company}: {exc}",
+                    f"Ratio computation failed for {company}: {e}",
                     level="error",
                 )
         return results

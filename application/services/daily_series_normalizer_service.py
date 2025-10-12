@@ -126,8 +126,7 @@ class DailySeriesNormalizerService:
             update_bounds(quote.date)
 
         for record in indicators:
-            update_bounds(record.observation_period.start)
-            update_bounds(record.observation_period.end)
+            update_bounds(record.date)
 
         return start, end
 
