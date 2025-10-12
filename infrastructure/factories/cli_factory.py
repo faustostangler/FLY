@@ -174,7 +174,6 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         ratio_service=ratio_domain_service,
         repository_statements=repository_fetched_statements,
         repository_quotes=repository_stock_quote,
-        repository_indicators=repository_indicators,
         repository_ratios=repository_ratios,
         uow_factory=uow_factory,
     )

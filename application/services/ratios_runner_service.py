@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Sequence
+from typing import List, Mapping, Sequence
 
 from application.ports.logger_port import LoggerPort
 from application.usecases.calculate_ratios import CalculateRatiosUseCase
+from domain.dtos.indicators_dto import IndicatorRecordDTO
 from domain.dtos.ratio_result_dto import RatioResultDTO
 
 
@@ -23,19 +24,26 @@ class RatiosRunnerService:
         self,
         companies: Sequence[str],
         *,
-        indicator_codes: Iterable[str],
-        indicator_source: str | None = None,
+        indicators: Mapping[str, Sequence[IndicatorRecordDTO]],
     ) -> List[RatioResultDTO]:
         results: List[RatioResultDTO] = []
         for company in companies:
             try:
-                if  company == 'ALPARGATAS SA':
-                    ratios = self._calculate(
-                        company_name=company,
-                        indicator_codes=indicator_codes,
-                        indicator_source=indicator_source,
-                    )
-                    results.extend(ratios)
+# <<<<<<< codex/move-indicator-loading-to-_ratio_service
+                ratios = self._calculate(
+                    company_name=company,
+                    indicators=indicators,
+                )
+                results.extend(ratios)
+# =======
+#                 if  company == 'ALPARGATAS SA':
+#                     ratios = self._calculate(
+#                         company_name=company,
+#                         indicator_codes=indicator_codes,
+#                         indicator_source=indicator_source,
+#                     )
+#                     results.extend(ratios)
+# >>>>>>> 2025-10-11-Ratios
             except Exception as exc:
                 self._logger.log(
                     f"Ratio computation failed for {company}: {exc}",
