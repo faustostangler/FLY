@@ -11,7 +11,11 @@ from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_ratios_port import RepositoryRatiosPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.services.ratio_service import RatioService
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
+from domain.services.ratio_domain_service import RatioDomainService
+# =======
+# from domain.services.ratio_service import RatioService
+# >>>>>>> 2025-10-11-Ratios
 
 
 class CalculateRatiosUseCase:
@@ -22,7 +26,11 @@ class CalculateRatiosUseCase:
         *,
         logger: LoggerPort,
         normalizer: DailySeriesNormalizerService,
-        ratio_service: RatioService,
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
+        ratio_service: RatioDomainService,
+# x=======
+#         ratio_service: RatioService,
+# >>>>>>> 2025-10-11-Ratios
         repository_statements: RepositoryStatementFetchedPort,
         repository_quotes: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,

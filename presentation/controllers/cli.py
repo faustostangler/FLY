@@ -28,7 +28,11 @@ from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_indicators import IndicatorsService
 from domain.services.service_nsd import NsdService
-from domain.services.service_ratios import RatiosService
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
+from application.services.ratios_runner_service import RatiosRunnerService
+# =======
+# from domain.services.service_ratios import RatiosService
+# >>>>>>> 2025-10-11-Ratios
 from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -74,7 +78,11 @@ class Cli:
         financial_normalizer: FinancialNormalizerPort,
         ratios_calculator: RatiosCalculatorPort,
         indicator_normalizer: IndicatorNormalizerService,
-        ratios_service: RatiosService,
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
+        ratios_service: RatiosRunnerService,
+# =======
+#         ratios_service: RatiosService,
+# >>>>>>> 2025-10-11-Ratios
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
