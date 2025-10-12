@@ -261,17 +261,7 @@ class Cli:
             return []
 
         with self.uow_factory() as uow:
-            rows = self.repository_indicators.get_all_by_columns(
-                "code",
-                uow=uow,
-                include_nulls=False,
-            )
-        indicator_codes = set([row[0] for row in rows if row and row[0]])
-
-        indicator_records = self.repository_indicators.get_by_codes(
-            source=None,
-            codes=indicator_codes,
-        )
+            indicator_records = self.repository_indicators.get_all(uow=uow)
         indicators = self._group_indicators(indicator_records)
 
         return self.ratios_service.run(

@@ -168,6 +168,52 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         rows = q.all()
         yield from yield_rows(rows)
 
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> List[T]:
+        """Load every record managed by the repository as DTOs.
+
+        Args:
+            uow (Uow):
+                Active unit of work providing the SQLAlchemy session.
+            batch_size (int | None, optional):
+                Optional chunk size. When provided the query is paginated
+                using OFFSET/LIMIT windows to keep the memory footprint small.
+
+        Returns:
+            List[T]:
+                A list containing DTO instances ordered by the model's
+                primary key columns (when available).
+        """
+
+        model, pk_columns = self.get_model_class()
+        session = uow.session
+
+        query = session.query(model)
+        if pk_columns:
+            query = query.order_by(*pk_columns)
+
+        def _to_dtos(rows: Sequence[Any]) -> List[T]:
+            return [row.to_dto() for row in rows]
+
+        size = batch_size or self.config.repository.batch_size or 0
+
+        if size > 0:
+            offset = 0
+            items: List[T] = []
+            while True:
+                chunk = query.offset(offset).limit(size).all()
+                if not chunk:
+                    break
+                items.extend(_to_dtos(chunk))
+                offset += size
+            return items
+
+        return _to_dtos(query.all())
+
     def get_all_by_columns(
         self,
         column_names: Union[str, List[str], Tuple[str, ...]],

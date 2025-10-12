@@ -62,6 +62,13 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         include_nulls: bool = False,
     ) -> Iterator[Tuple]: ...
 
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> List[T]:...
+
     def get_all_by_columns(
         self,
         column_names: Union[str, List[str], Tuple[str, ...]],
