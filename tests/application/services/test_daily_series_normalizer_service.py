@@ -47,11 +47,19 @@ def test_normalize_quotes_creates_ticker_specific_metrics() -> None:
         statements=[],
         quotes=quotes,
         indicators=[],
+# <<<<<<< codex/load-company-statements-and-calculate-ratios-zi2jed
+# =======
+#         start_date=datetime(2023, 1, 1),
+#         end_date=datetime(2023, 1, 3),
+# >>>>>>> 2025-10-11-Ratios
     )
 
     assert bundle.get("QUOTE.ABCD3.CLOSE") is not None
     assert bundle.get("QUOTE.ABCD4.CLOSE") is not None
+# <<<<<<< codex/load-company-statements-and-calculate-ratios-zi2jed
     assert bundle.calendar == (
         datetime(2023, 1, 1),
         datetime(2023, 1, 2),
     )
+# =======
+# >>>>>>> 2025-10-11-Ratios
