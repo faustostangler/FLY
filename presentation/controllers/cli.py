@@ -92,18 +92,34 @@ class Cli:
         """Execute the top-level application workflow."""
         # Emit lifecycle start event
         self.logger.log("Start FLY", level="info")
+        metrics: int = 0
 
-        # # Kick off the company data pipeline
-        # company_results: SyncResultsDTO = self._company_service()
-        # self.logger.log(
-        #     f"Total Download: {self.byte_formatter.format_bytes(company_results.metrics)}"
-        # )
+        # Kick off the company data pipeline
+        company_results: SyncResultsDTO = self._company_service()
+        if company_results:
+            metrics += company_results.metrics
+            self.logger.log(f"Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
         # Get NSD and stataments pipeline from B3
-        self._statements_service()
+        statements_results = self._statements_service()
+        if statements_results:
+            metrics += statements_results.metrics
+            self.logger.log(f"Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
 
         # Get Stock Value for companies
-        self.stock_quote_service()
+        stock_quote_results = self.stock_quote_service()
+        if stock_quote_results:
+            metrics += stock_quote_results.metrics
+            self.logger.log(f"Stock Quotes Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}")
+
+        # Ratios Service
+        ratios_results = self.ratios_service()
+        if ratios_results:
+            metrics += ratios_results.metrics
+            self.logger.log(f"Ratios Download: {self.byte_formatter.format_bytes(ratios_results.metrics)}")
+
+        if metrics > 0:
+            self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(metrics)}")
 
         return None
 
