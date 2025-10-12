@@ -68,22 +68,12 @@ class CalculateRatiosUseCase:
 
         statements = self._repository_statements.get_by_company_name(company_name)
         quotes = self._repository_quotes.get_by_company_name(company_name)
-# <<<<<<< codex/move-indicator-loading-to-_ratio_service
-        indicator_values = list(chain.from_iterable(indicators.values()))
-# =======
-#         # with self._uow_factory() as uow:
-#         #     indicators = self._repository_indicators.get_all_by_columns(column_names='code', uow=uow)
-#         indicators = self._repository_indicators.get_by_codes(
-#             source=indicator_source,
-#             codes=indicator_codes,
-#         )
-# >>>>>>> 2025-10-11-Ratios
 
         bundle = self._normalizer.normalize(
             company_id=company_name,
             statements=statements,
             quotes=quotes,
-            indicators=indicator_values,
+            indicators=indicators,
         )
 
         ratios = self._ratio_service.calculate(bundle)

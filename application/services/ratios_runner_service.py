@@ -30,11 +30,12 @@ class RatiosRunnerService:
         for company in companies:
             try:
 # <<<<<<< codex/move-indicator-loading-to-_ratio_service
-                ratios = self._calculate(
-                    company_name=company,
-                    indicators=indicators,
-                )
-                results.extend(ratios)
+                if  company == 'ALPARGATAS SA':
+                    ratios = self._calculate(
+                        company_name=company,
+                        indicators=indicators,
+                    )
+                    results.extend(ratios)
 # =======
 #                 if  company == 'ALPARGATAS SA':
 #                     ratios = self._calculate(
