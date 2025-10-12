@@ -4,7 +4,7 @@ import hashlib
 from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from application.services.indicator_normalizer_service import IndicatorNormalizerService
 from domain.dtos.indicators_dto import IndicatorRecordDTO
@@ -47,27 +47,31 @@ class DailySeriesNormalizerService:
         statements: Sequence[StatementFetchedDTO],
         quotes: Sequence[StockQuoteDTO],
         indicators: Sequence[IndicatorRecordDTO],
-        start_date: datetime,
-        end_date: datetime,
     ) -> NormalizedSeriesBundleDTO:
-        if start_date > end_date:
-            raise ValueError("start_date must be earlier than end_date")
-
-        calendar = tuple(self._iter_calendar(start_date, end_date))
+        calendar = tuple(
+            self._iter_calendar_bounds(
+                statements=statements, quotes=quotes, indicators=indicators
+            )
+        )
 
         series_map: MutableMapping[str, NormalizedMetricSeriesDTO] = {}
 
-        series_map.update(
-            self._normalize_statements(company_id=company_id, statements=statements, calendar=calendar)
-        )
-        series_map.update(
-            self._normalize_quotes(company_id=company_id, quotes=quotes, calendar=calendar)
-        )
-        series_map.update(
-            self._normalize_indicators(
-                company_id=company_id, indicators=indicators, calendar=calendar
+        if calendar:
+            series_map.update(
+                self._normalize_statements(
+                    company_id=company_id, statements=statements, calendar=calendar
+                )
             )
-        )
+            series_map.update(
+                self._normalize_quotes(
+                    company_id=company_id, quotes=quotes, calendar=calendar
+                )
+            )
+            series_map.update(
+                self._normalize_indicators(
+                    company_id=company_id, indicators=indicators, calendar=calendar
+                )
+            )
 
         return NormalizedSeriesBundleDTO(
             company_id=company_id,
@@ -81,6 +85,51 @@ class DailySeriesNormalizerService:
         while current <= end:
             yield current
             current += timedelta(days=1)
+
+    def _iter_calendar_bounds(
+        self,
+        *,
+        statements: Sequence[StatementFetchedDTO],
+        quotes: Sequence[StockQuoteDTO],
+        indicators: Sequence[IndicatorRecordDTO],
+    ) -> Iterable[datetime]:
+        start, end = self._determine_bounds(
+            statements=statements, quotes=quotes, indicators=indicators
+        )
+        if start is None or end is None:
+            return ()
+        return self._iter_calendar(start, end)
+
+    @staticmethod
+    def _determine_bounds(
+        *,
+        statements: Sequence[StatementFetchedDTO],
+        quotes: Sequence[StockQuoteDTO],
+        indicators: Sequence[IndicatorRecordDTO],
+    ) -> tuple[Optional[datetime], Optional[datetime]]:
+        start: Optional[datetime] = None
+        end: Optional[datetime] = None
+
+        def update_bounds(candidate: Optional[datetime]) -> None:
+            nonlocal start, end
+            if candidate is None:
+                return
+            if start is None or candidate < start:
+                start = candidate
+            if end is None or candidate > end:
+                end = candidate
+
+        for row in statements:
+            update_bounds(row.quarter)
+
+        for quote in quotes:
+            update_bounds(quote.date)
+
+        for record in indicators:
+            update_bounds(record.observation_period.start)
+            update_bounds(record.observation_period.end)
+
+        return start, end
 
     def _normalize_statements(
         self,

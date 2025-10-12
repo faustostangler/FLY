@@ -100,3 +100,21 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
                 query = query.filter(IndicatorModel.code.in_(code_list))
             results = query.order_by(IndicatorModel.observation_date).all()
             return [row.to_dto() for row in results]
+
+    def get_by_codes(
+        self,
+        *,
+        source: str | None,
+        codes: Iterable[str],
+    ) -> Sequence[IndicatorRecordDTO]:
+        code_list = list(codes)
+        if not code_list:
+            return []
+
+        with self.Session() as session:
+            query = session.query(IndicatorModel)
+            if source is not None:
+                query = query.filter(IndicatorModel.source == source)
+            query = query.filter(IndicatorModel.code.in_(code_list))
+            results = query.order_by(IndicatorModel.observation_date).all()
+            return [row.to_dto() for row in results]
