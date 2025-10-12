@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Iterable, List, Sequence
 
 from application.ports.logger_port import LoggerPort
@@ -24,8 +23,6 @@ class RatiosRunnerService:
         self,
         companies: Sequence[str],
         *,
-        start_date: datetime,
-        end_date: datetime,
         indicator_codes: Iterable[str],
         indicator_source: str | None = None,
     ) -> List[RatioResultDTO]:
@@ -34,8 +31,6 @@ class RatiosRunnerService:
             try:
                 ratios = self._calculate(
                     company_name=company,
-                    start_date=start_date,
-                    end_date=end_date,
                     indicator_codes=indicator_codes,
                     indicator_source=indicator_source,
                 )

@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from typing import List
 
 from application.ports.config_port import ConfigPort
@@ -259,14 +258,10 @@ class Cli:
             )
             return []
 
-        end_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = end_date - timedelta(days=365)
         indicator_codes = self._default_indicator_codes()
 
         return self.ratios_service.run(
             companies,
-            start_date=start_date,
-            end_date=end_date,
             indicator_codes=indicator_codes,
             indicator_source=None,
         )

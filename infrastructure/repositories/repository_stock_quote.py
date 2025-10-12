@@ -97,3 +97,13 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
                 .all()
             )
             return [row.to_dto() for row in results]
+
+    def get_by_company_name(self, company_name: str) -> Sequence[StockQuoteDTO]:
+        with self.Session() as session:
+            results = (
+                session.query(StockQuoteModel)
+                .filter(StockQuoteModel.company_name == company_name)
+                .order_by(StockQuoteModel.date)
+                .all()
+            )
+            return [row.to_dto() for row in results]

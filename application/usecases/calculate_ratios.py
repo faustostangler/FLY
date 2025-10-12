@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Iterable, Sequence
 
 from application.ports.logger_port import LoggerPort
@@ -50,15 +49,11 @@ class CalculateRatiosUseCase:
         self,
         *,
         company_name: str,
-        start_date: datetime,
-        end_date: datetime,
         indicator_codes: Iterable[str],
         indicator_source: str | None = None,
     ) -> Sequence[RatioResultDTO]:
         return self.run(
             company_name=company_name,
-            start_date=start_date,
-            end_date=end_date,
             indicator_codes=indicator_codes,
             indicator_source=indicator_source,
         )
@@ -67,31 +62,19 @@ class CalculateRatiosUseCase:
         self,
         *,
         company_name: str,
-        start_date: datetime,
-        end_date: datetime,
         indicator_codes: Iterable[str],
         indicator_source: str | None = None,
     ) -> Sequence[RatioResultDTO]:
         self._logger.log(
-            f"Calculating ratios for {company_name} between {start_date.date()} and {end_date.date()}",
+            f"Calculating ratios for {company_name}",
             level="info",
         )
 
-        statements = self._repository_statements.get_by_company_and_period(
-            company_name,
-            start=start_date,
-            end=end_date,
-        )
-        quotes = self._repository_quotes.get_by_company_and_period(
-            company_name,
-            start=start_date,
-            end=end_date,
-        )
-        indicators = self._repository_indicators.get_by_codes_and_period(
+        statements = self._repository_statements.get_by_company_name(company_name)
+        quotes = self._repository_quotes.get_by_company_name(company_name)
+        indicators = self._repository_indicators.get_by_codes(
             source=indicator_source,
             codes=indicator_codes,
-            start=start_date,
-            end=end_date,
         )
 
         bundle = self._normalizer.normalize(
@@ -99,8 +82,6 @@ class CalculateRatiosUseCase:
             statements=statements,
             quotes=quotes,
             indicators=indicators,
-            start_date=start_date,
-            end_date=end_date,
         )
 
         ratios = self._ratio_service.calculate(bundle)

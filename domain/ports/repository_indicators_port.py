@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Iterable, Protocol, Sequence, runtime_checkable
 
 from application.ports.uow_port import Uow
 from datetime import datetime
@@ -24,3 +24,10 @@ class RepositoryIndicatorsPort(RepositoryBasePort[IndicatorRecordDTO, int], Prot
 
     def get_last_date(self, *, source: str, code: str, uow: Uow) -> datetime | None:
         """Retrieve the most recent persisted date for a given indicator."""
+
+    def get_by_codes(
+        self,
+        *,
+        source: str | None,
+        codes: Iterable[str],
+    ) -> Sequence[IndicatorRecordDTO]: ...
