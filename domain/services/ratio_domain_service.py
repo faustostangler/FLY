@@ -11,7 +11,10 @@ from typing import Dict, List, Mapping, Sequence, Set, Tuple
 import numpy as np
 
 from application.ports.logger_port import LoggerPort
-from domain.dtos.normalized_series_dto import NormalizedSeriesBundleDTO
+from domain.dtos.normalized_series_dto import (
+    NormalizedMetricSeriesDTO,
+    NormalizedSeriesBundleDTO,
+)
 from domain.dtos.ratio_result_dto import RatioResultDTO
 
 
@@ -199,7 +202,114 @@ class RatioDomainService:
                     )
                 )
 
+        results.extend(self._calculate_revenue_price_ratios(frame, bundle))
+
         return results
+
+    def _calculate_revenue_price_ratios(
+        self,
+        frame: _DailyFrame,
+        bundle: NormalizedSeriesBundleDTO,
+    ) -> List[RatioResultDTO]:
+        revenue_series = bundle.get("03.01")
+        selic_series = bundle.get("IND.SELIC_FACTOR")
+        if revenue_series is None or selic_series is None:
+            return []
+
+        tickers = sorted(
+            {
+                code.split(".")[1]
+                for code in bundle.keys()
+                if code.startswith("QUOTE.") and code.endswith(".CLOSE") and code.count(".") == 2
+            }
+        )
+        if not tickers:
+            return []
+
+        revenue_array = frame["03.01"]
+        selic_array = frame["IND.SELIC_FACTOR"]
+        results: List[RatioResultDTO] = []
+
+        for ticker in tickers:
+            price_code = f"QUOTE.{ticker}.CLOSE"
+            price_series = bundle.get(price_code)
+            if price_series is None:
+                continue
+            price_array = frame[price_code]
+            ratio_values = self._compute_revenue_price_values(
+                revenue_array,
+                price_array,
+                selic_array,
+            )
+
+            dependencies: List[tuple[str, NormalizedMetricSeriesDTO]] = [
+                ("03.01", revenue_series),
+                (price_code, price_series),
+                ("IND.SELIC_FACTOR", selic_series),
+            ]
+
+            ratio_code = f"R.REV_PRICE.{ticker}"
+            for idx, (company_id, day) in enumerate(frame.index):
+                versions_map: Dict[str, str | None] = {}
+                hashes_map: Dict[str, str | None] = {}
+                missing: List[str] = []
+
+                for token, series in dependencies:
+                    versions_map[token] = series.versions[idx]
+                    hashes_map[token] = series.hashes[idx]
+                    value = series.values[idx]
+                    if value is None:
+                        missing.append(token)
+                    elif token == price_code and value <= 0:
+                        missing.append(token)
+                    elif token == "IND.SELIC_FACTOR" and value <= 0:
+                        missing.append(token)
+
+                raw_value = ratio_values[idx]
+                if missing or raw_value is None or math.isnan(raw_value):
+                    ratio_value = None
+                    if missing:
+                        self._log_gap(ratio_code, company_id, day, missing)
+                else:
+                    ratio_value = float(raw_value)
+
+                version_token = self._compute_version(ratio_code, versions_map)
+                hash_token = self._compute_hash(ratio_code, hashes_map, ratio_value)
+
+                results.append(
+                    RatioResultDTO(
+                        company_id=company_id,
+                        ratio_code=ratio_code,
+                        date=day,
+                        value=ratio_value,
+                        version=version_token,
+                        calculation_hash=hash_token,
+                        input_versions=RatioResultDTO.serialize_mapping(versions_map),
+                        input_hashes=RatioResultDTO.serialize_mapping(hashes_map),
+                        is_current=True,
+                    )
+                )
+
+        return results
+
+    @staticmethod
+    def _compute_revenue_price_values(
+        revenue: np.ndarray,
+        price: np.ndarray,
+        selic: np.ndarray,
+    ) -> np.ndarray:
+        size = len(revenue)
+        ratios = np.full(size, np.nan, dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            valid_price = ~np.isnan(revenue) & ~np.isnan(price) & (price > 0)
+            ratios[valid_price] = revenue[valid_price] / price[valid_price]
+
+            valid_selic = ~np.isnan(selic) & (selic > 0)
+            combined_valid = valid_price & valid_selic
+            ratios[combined_valid] = ratios[combined_valid] / selic[combined_valid]
+            ratios[valid_price & ~combined_valid] = np.nan
+
+        return ratios
 
     def _log_gap(
         self,
