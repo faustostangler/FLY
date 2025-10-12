@@ -1,4 +1,5 @@
-from typing import List
+from collections import defaultdict
+from typing import Sequence
 
 from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
@@ -22,6 +23,7 @@ from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 from application.services.indicator_normalizer_service import IndicatorNormalizerService
+from domain.dtos.indicators_dto import IndicatorRecordDTO
 from domain.services.financial_normalizer import FinancialNormalizerPort
 from domain.services.ratios_calculator import RatiosCalculatorPort
 from domain.services.service_company_data import CompanyDataService
@@ -259,12 +261,26 @@ class Cli:
             return []
 
         indicator_codes = self._default_indicator_codes()
+        indicator_records = self.repository_indicators.get_by_codes(
+            source=None,
+            codes=indicator_codes,
+        )
+        indicators = self._group_indicators(indicator_records)
 
         return self.ratios_service.run(
             companies,
-            indicator_codes=indicator_codes,
-            indicator_source=None,
+            indicators=indicators,
         )
+
+    @staticmethod
+    def _group_indicators(
+        records: Sequence[IndicatorRecordDTO],
+    ) -> dict[str, list[IndicatorRecordDTO]]:
+        grouped: dict[str, list[IndicatorRecordDTO]] = defaultdict(list)
+        for record in records:
+            key = f"{record.code} - {record.name}"
+            grouped[key].append(record)
+        return dict(grouped)
 
     def _load_company_names(self) -> list[str]:
         with self.uow_factory() as uow:

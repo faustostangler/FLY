@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Iterable, Sequence
+from itertools import chain
+from typing import Mapping, Sequence
 
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.services.daily_series_normalizer_service import DailySeriesNormalizerService
+from domain.dtos.indicators_dto import IndicatorRecordDTO
 from domain.dtos.ratio_result_dto import RatioResultDTO
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_ratios_port import RepositoryRatiosPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
@@ -32,7 +33,6 @@ class CalculateRatiosUseCase:
 # >>>>>>> 2025-10-11-Ratios
         repository_statements: RepositoryStatementFetchedPort,
         repository_quotes: RepositoryStockQuotePort,
-        repository_indicators: RepositoryIndicatorsPort,
         repository_ratios: RepositoryRatiosPort,
         uow_factory: UowFactoryPort,
     ) -> None:
@@ -41,7 +41,6 @@ class CalculateRatiosUseCase:
         self._ratio_service = ratio_service
         self._repository_statements = repository_statements
         self._repository_quotes = repository_quotes
-        self._repository_indicators = repository_indicators
         self._repository_ratios = repository_ratios
         self._uow_factory = uow_factory
 
@@ -49,21 +48,18 @@ class CalculateRatiosUseCase:
         self,
         *,
         company_name: str,
-        indicator_codes: Iterable[str],
-        indicator_source: str | None = None,
+        indicators: Mapping[str, Sequence[IndicatorRecordDTO]],
     ) -> Sequence[RatioResultDTO]:
         return self.run(
             company_name=company_name,
-            indicator_codes=indicator_codes,
-            indicator_source=indicator_source,
+            indicators=indicators,
         )
 
     def run(
         self,
         *,
         company_name: str,
-        indicator_codes: Iterable[str],
-        indicator_source: str | None = None,
+        indicators: Mapping[str, Sequence[IndicatorRecordDTO]],
     ) -> Sequence[RatioResultDTO]:
         self._logger.log(
             f"Calculating ratios for {company_name}",
@@ -72,16 +68,13 @@ class CalculateRatiosUseCase:
 
         statements = self._repository_statements.get_by_company_name(company_name)
         quotes = self._repository_quotes.get_by_company_name(company_name)
-        indicators = self._repository_indicators.get_by_codes(
-            source=indicator_source,
-            codes=indicator_codes,
-        )
+        indicator_values = list(chain.from_iterable(indicators.values()))
 
         bundle = self._normalizer.normalize(
             company_id=company_name,
             statements=statements,
             quotes=quotes,
-            indicators=indicators,
+            indicators=indicator_values,
         )
 
         ratios = self._ratio_service.calculate(bundle)
