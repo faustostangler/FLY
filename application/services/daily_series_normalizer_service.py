@@ -129,10 +129,7 @@ class DailySeriesNormalizerService:
         quotes: Sequence[StockQuoteDTO],
         calendar: Tuple[datetime, ...],
     ) -> Mapping[str, NormalizedMetricSeriesDTO]:
-        metrics: Dict[str, Dict[datetime, tuple[float | None, str | None, str | None]]] = {
-            "QUOTE.CLOSE": {},
-            "QUOTE.ADJ_CLOSE": {},
-        }
+        metrics: Dict[str, Dict[datetime, tuple[float | None, str | None, str | None]]] = {}
 
         for quote in quotes:
             date = quote.date
@@ -140,6 +137,8 @@ class DailySeriesNormalizerService:
             entries = {
                 "QUOTE.CLOSE": quote.close,
                 "QUOTE.ADJ_CLOSE": quote.adj_close,
+                f"QUOTE.{quote.ticker}.CLOSE": quote.close,
+                f"QUOTE.{quote.ticker}.ADJ_CLOSE": quote.adj_close,
             }
             for metric_code, raw_value in entries.items():
                 if raw_value is None:
@@ -153,7 +152,8 @@ class DailySeriesNormalizerService:
                     value,
                     quote.ticker,
                 )
-                metrics[metric_code][date] = (value, version, digest)
+                bucket = metrics.setdefault(metric_code, {})
+                bucket[date] = (value, version, digest)
 
         series: Dict[str, NormalizedMetricSeriesDTO] = {}
         for metric_code, points in metrics.items():
