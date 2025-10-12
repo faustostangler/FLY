@@ -70,6 +70,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
         return None
+
     def get_last_date(self, *, source: str, code: str, uow: Uow) -> datetime | None:
         """Retorna a última data persistida para a combinação ``source`` e ``code``."""
         session = uow.session
@@ -116,5 +117,4 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
             if source is not None:
                 query = query.filter(IndicatorModel.source == source)
             query = query.filter(IndicatorModel.code.in_(code_list))
-            results = query.order_by(IndicatorModel.observation_date).all()
-            return [row.to_dto() for row in results]
+            return [row.to_dto() for row in query]
