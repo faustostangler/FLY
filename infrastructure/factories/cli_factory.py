@@ -4,8 +4,6 @@ from application.mappers.company_data_mapper import CompanyDataMapper
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from domain.polices.nsd_policy import NsdPolicy
-from domain.services.financial_normalizer import FinancialNormalizer
-from domain.services.ratios_calculator import RatiosCalculator
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
@@ -20,6 +18,7 @@ from infrastructure.repositories.repository_statements_fetched import (
 )
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
+from infrastructure.repositories.repository_indicators import RepositoryIndicators
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
@@ -52,6 +51,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_raw_statements = StatementRawRepository(config=config, logger=logger)
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
+    repository_indicators = RepositoryIndicators(config=config, logger=logger)
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -116,14 +116,6 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         recency_year=config.domain.recency_year,
     )
 
-    # Financial Normalizer
-    financial_normalizer = FinancialNormalizer()
-
-    # Ratios
-    ratios_calculator = RatiosCalculator(
-        intel_module_path=(getattr(config.domain, "intel_module_path", None))
-    )
-
     # Return the CLI controller with its dependencies injected
     cli = Cli(
         config=config,
@@ -133,6 +125,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         repository_statements_raw=repository_raw_statements,
         repository_statements_fetched=repository_fetched_statements,
         repository_stock_quote=repository_stock_quote,
+        repository_indicators=repository_indicators,
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
@@ -141,8 +134,6 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         policy=policy,
         uow_factory=uow_factory,
         http_client=http_client,
-        financial_normalizer=financial_normalizer,
-        ratios_calculator=ratios_calculator,
     )
 
     return cli

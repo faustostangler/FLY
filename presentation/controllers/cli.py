@@ -6,20 +6,22 @@ from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-from domain.services.financial_normalizer import FinancialNormalizerPort
-from domain.services.ratios_calculator import RatiosCalculatorPort
+
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_stock_quote import StockQuoteService
+from domain.services.service_ratios import RatiosService
+
+
 from application.ports.http_client_port import AffinityHttpClientPort
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -48,6 +50,7 @@ class Cli:
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
+        repository_indicators: RepositoryIndicatorsPort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
@@ -56,8 +59,6 @@ class Cli:
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         http_client: AffinityHttpClientPort,
-        financial_normalizer: FinancialNormalizerPort,
-        ratios_calculator: RatiosCalculatorPort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -69,6 +70,7 @@ class Cli:
         self.repository_statements_raw = repository_statements_raw
         self.repository_statements_fetched = repository_statements_fetched
         self.repository_stock_quote = repository_stock_quote
+        self.repository_indicators = repository_indicators
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
@@ -80,8 +82,6 @@ class Cli:
 
         self.policy = policy
         self.uow_factory = uow_factory
-        self.financial_normalizer = financial_normalizer
-        self.ratios_calculator = ratios_calculator
 
         self.byte_formatter = ByteFormatter()
 
@@ -94,23 +94,23 @@ class Cli:
         self.logger.log("Start FLY", level="info")
         metrics: int = 0
 
-        # Kick off the company data pipeline
-        company_results: SyncResultsDTO = self._company_service()
-        if company_results:
-            metrics += company_results.metrics
-            self.logger.log(f"Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
+        # # Kick off the company data pipeline
+        # company_results: SyncResultsDTO = self._company_service()
+        # if company_results:
+        #     metrics += company_results.metrics
+        #     self.logger.log(f"Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
-        # Get NSD and stataments pipeline from B3
-        statements_results: SyncResultsDTO = self._statements_service()
-        if statements_results:
-            metrics += statements_results.metrics
-            self.logger.log(f"Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
+        # # Get NSD and stataments pipeline from B3
+        # statements_results: SyncResultsDTO = self._statements_service()
+        # if statements_results:
+        #     metrics += statements_results.metrics
+        #     self.logger.log(f"Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
 
-        # Get Stock Value for companies
-        stock_quote_results: SyncResultsDTO = self._stock_quote_service()
-        if stock_quote_results:
-            metrics += stock_quote_results.metrics
-            self.logger.log(f"Stock Quotes Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}")
+        # # Get Stock Value for companies
+        # stock_quote_results: SyncResultsDTO = self._stock_quote_service()
+        # if stock_quote_results:
+        #     metrics += stock_quote_results.metrics
+        #     self.logger.log(f"Stock Quotes Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}")
 
         # Ratios Service
         ratios_results: SyncResultsDTO = self._ratios_service()
@@ -188,6 +188,7 @@ class Cli:
 
             repository_company=self.repository_company,
             repository_stock_quote=self.repository_stock_quote,
+            repository_indicators=self.repository_indicators,
 
             uow_factory=self.uow_factory,
         )

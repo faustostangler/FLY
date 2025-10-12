@@ -23,8 +23,7 @@ from domain.ports.repository_statements_raw_port import RepositoryStatementsRawP
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-from domain.services.financial_normalizer import FinancialNormalizerPort
-from domain.services.ratios_calculator import RatiosCalculatorPort
+
 from infrastructure.utils.id_generator import IdGenerator
 
 
