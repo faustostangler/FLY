@@ -101,19 +101,19 @@ class Cli:
             self.logger.log(f"Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
 
         # Get NSD and stataments pipeline from B3
-        statements_results = self._statements_service()
+        statements_results: SyncResultsDTO = self._statements_service()
         if statements_results:
             metrics += statements_results.metrics
             self.logger.log(f"Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
 
         # Get Stock Value for companies
-        stock_quote_results = self.stock_quote_service()
+        stock_quote_results: SyncResultsDTO = self._stock_quote_service()
         if stock_quote_results:
             metrics += stock_quote_results.metrics
             self.logger.log(f"Stock Quotes Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}")
 
         # Ratios Service
-        ratios_results = self.ratios_service()
+        ratios_results: SyncResultsDTO = self._ratios_service()
         if ratios_results:
             metrics += ratios_results.metrics
             self.logger.log(f"Ratios Download: {self.byte_formatter.format_bytes(ratios_results.metrics)}")
@@ -164,7 +164,7 @@ class Cli:
         # Run the synchronization step
         return nsd_service()
 
-    def stock_quote_service(self) -> SyncResultsDTO:
+    def _stock_quote_service(self) -> SyncResultsDTO:
         """ """
         stock_quote_service = StockQuoteService(
             config=self.config,
@@ -179,3 +179,18 @@ class Cli:
 
         # run the service
         return stock_quote_service()
+
+    def _ratios_service(self) -> SyncResultsDTO:
+        """ """
+        ratios_service = RatiosService(
+            config=self.config,
+            logger=self.logger,
+
+            repository_company=self.repository_company,
+            repository_stock_quote=self.repository_stock_quote,
+
+            uow_factory=self.uow_factory,
+        )
+
+        # run the service
+        return ratios_service()
