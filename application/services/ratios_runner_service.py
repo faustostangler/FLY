@@ -29,12 +29,13 @@ class RatiosRunnerService:
         results: List[RatioResultDTO] = []
         for company in companies:
             try:
-                ratios = self._calculate(
-                    company_name=company,
-                    indicator_codes=indicator_codes,
-                    indicator_source=indicator_source,
-                )
-                results.extend(ratios)
+                if  company == 'ALPARGATAS SA':
+                    ratios = self._calculate(
+                        company_name=company,
+                        indicator_codes=indicator_codes,
+                        indicator_source=indicator_source,
+                    )
+                    results.extend(ratios)
             except Exception as exc:
                 self._logger.log(
                     f"Ratio computation failed for {company}: {exc}",

@@ -72,6 +72,8 @@ class CalculateRatiosUseCase:
 
         statements = self._repository_statements.get_by_company_name(company_name)
         quotes = self._repository_quotes.get_by_company_name(company_name)
+        # with self._uow_factory() as uow:
+        #     indicators = self._repository_indicators.get_all_by_columns(column_names='code', uow=uow)
         indicators = self._repository_indicators.get_by_codes(
             source=indicator_source,
             codes=indicator_codes,
