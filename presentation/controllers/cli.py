@@ -155,15 +155,15 @@ class Cli:
         # except:
         #     pass
 
-        # Get Indicators companies
-        indicators_results = self._indicators_service()
-        self.logger.log(
-            f"Total Indicators Download: {self.byte_formatter.format_bytes(indicators_results.metrics)}"
-        )
-        try:
-            total_download += indicators_results.metrics
-        except:
-            pass
+        # # Get Indicators companies
+        # indicators_results = self._indicators_service()
+        # self.logger.log(
+        #     f"Total Indicators Download: {self.byte_formatter.format_bytes(indicators_results.metrics)}"
+        # )
+        # try:
+        #     total_download += indicators_results.metrics
+        # except:
+        #     pass
 
         ratio_results = self._ratio_service()
         self.logger.log(
