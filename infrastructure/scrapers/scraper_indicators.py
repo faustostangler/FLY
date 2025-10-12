@@ -15,7 +15,7 @@ from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from domain.dtos.indicators_dto import IndicatorRecordDTO
-from domain.value_objects.indicators import Coverage, Frequency, Period
+from domain.value_objects.indicators import Frequency, Period
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
@@ -259,18 +259,13 @@ class IndicatorsScraper(ScraperIndicatorsPort):
 
             period = Period.from_frequency(dt, frequency)
             observation_date = period.end
-            availability_date = dt if dt >= observation_date else observation_date
 
             out.append(
                 IndicatorRecordDTO(
                     source="BCB",
                     name=str(name),
                     code=str(code_series),
-                    frequency=frequency,
-                    coverage=Coverage.STOCK,
-                    observation_period=period,
-                    observation_date=observation_date,
-                    availability_date=availability_date,
+                    date=observation_date,
                     value=value,
                 )
             )

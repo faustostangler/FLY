@@ -62,7 +62,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
                     if c.name != "id"
                 }
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=["source", "code", "observation_date"],
+                    index_elements=["source", "code", "date"],
                     set_=update_dict,
                 )
                 session.execute(stmt)
@@ -76,7 +76,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
         session = uow.session
         model, _ = self.get_model_class()
         return (
-            session.query(func.max(model.observation_date))
+            session.query(func.max(model.date))
             .filter(model.source == source, model.code == code)
             .scalar()
         )
@@ -91,15 +91,15 @@ class RepositoryIndicators(RepositoryBase[IndicatorRecordDTO, int], RepositoryIn
     ) -> Sequence[IndicatorRecordDTO]:
         with self.Session() as session:
             query = session.query(IndicatorModel).filter(
-                IndicatorModel.observation_date >= start,
-                IndicatorModel.observation_date <= end,
+                IndicatorModel.date >= start,
+                IndicatorModel.date <= end,
             )
             if source is not None:
                 query = query.filter(IndicatorModel.source == source)
             code_list = list(codes)
             if code_list:
                 query = query.filter(IndicatorModel.code.in_(code_list))
-            results = query.order_by(IndicatorModel.observation_date).all()
+            results = query.order_by(IndicatorModel.date).all()
             return [row.to_dto() for row in results]
 
     def get_by_codes(

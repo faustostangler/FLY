@@ -230,10 +230,10 @@ class DailySeriesNormalizerService:
 
         grouped: Dict[str, Dict[datetime, tuple[float | None, str | None, str | None]]] = {}
         for record in normalized:
-            date = record.observation_date
+            date = record.date
             code = record.code
             value = float(record.value) if record.value is not None else None
-            version = record.availability_date.isoformat()
+            version = date.isoformat()
             digest = self._hash_parts(
                 company_id,
                 record.source,
