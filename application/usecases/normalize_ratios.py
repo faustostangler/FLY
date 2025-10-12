@@ -68,7 +68,20 @@ class NormalizeUseCase:
             including counts and network usage metrics.
         """
         # Collect company identifiers already stored in the repository
+        columns='company_name'
         with self.uow_factory() as uow:
+            companies = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
+
+
+
+
+
+
+
+
+
+
+
             results: list[IndicatorsDTO] = []
             try:
                 # existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
