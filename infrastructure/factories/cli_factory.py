@@ -8,12 +8,20 @@ from application.services.daily_series_normalizer_service import (
     IndicatorFactorRule,
 )
 from application.services.indicator_normalizer_service import IndicatorNormalizerService
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
 from application.services.ratios_runner_service import RatiosRunnerService
 from application.usecases.calculate_ratios import CalculateRatiosUseCase
 from domain.polices.nsd_policy import NsdPolicy
 from domain.services.financial_normalizer import FinancialNormalizer
 from domain.services.ratio_domain_service import RatioDomainService
+# =======
+# from application.usecases.calculate_ratios import CalculateRatiosUseCase
+# from domain.polices.nsd_policy import NsdPolicy
+# from domain.services.financial_normalizer import FinancialNormalizer
+# from domain.services.ratio_service import RatioService
+# >>>>>>> 2025-10-11-Ratios
 from domain.services.ratios_calculator import RatiosCalculator
+from domain.services.service_ratios import RatiosService
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
@@ -155,7 +163,11 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         indicator_factor_rules=factor_rules,
     )
 
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
     ratio_domain_service = RatioDomainService(logger=logger)
+# =======
+#     ratio_domain_service = RatioService(logger=logger)
+# >>>>>>> 2025-10-11-Ratios
     calculate_ratios_usecase = CalculateRatiosUseCase(
         logger=logger,
         normalizer=daily_series_normalizer,
@@ -166,7 +178,11 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         repository_ratios=repository_ratios,
         uow_factory=uow_factory,
     )
+# <<<<<<< codex/create-standalone-ratioservice-for-ratios-calculation-ot39np
     ratios_service = RatiosRunnerService(
+# =======
+#     ratios_service = RatiosService(
+# >>>>>>> 2025-10-11-Ratios
         logger=logger,
         calculate_usecase=calculate_ratios_usecase,
     )
