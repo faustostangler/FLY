@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import (
+    Any,
     Generic,
     Iterator,
+    Iterable,
     List,
     Protocol,
     Tuple,
@@ -10,6 +12,7 @@ from typing import (
     Union,
     runtime_checkable,
 )
+from sqlalchemy import and_, or_
 
 from application.ports.uow_port import Uow
 
@@ -70,6 +73,21 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         include_nulls: bool = False,
         batch_size: int | None = None,
     ) -> List[Tuple]: ...
+
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> list[T]:...
+
+    def get_by_column_values(
+        self,
+        values: Iterable[tuple[str, Any]] | dict[str, Any],
+        *,
+        uow: Uow,
+        batch_size: int | None = None,  # opcional, apenas para manter padrão
+    ) -> list[T]:...
 
     # def get_existing_by_columns(
     #     self, column_names: Union[str, List[str]],

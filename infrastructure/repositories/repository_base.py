@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from typing import (
     Any,
+    Generic,
     Iterator,
+    Iterable,
     List,
-    Sequence,
+    Protocol,
     Tuple,
     TypeVar,
     Union,
+    runtime_checkable,
 )
+from sqlalchemy import and_, or_
 
 from sqlalchemy.engine import Row
 
@@ -191,6 +195,104 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
                 batch_size=batch_size,
             )
         )
+
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> list[T]:
+        """Retorna todos os registros como DTOs."""
+        size = batch_size or self.config.repository.batch_size or 50
+        model, pk_columns = self.get_model_class()
+        session = uow.session
+
+        # Ordena por PK para estabilidade
+        order_cols = pk_columns if pk_columns else []
+        q = session.query(model)
+        if order_cols:
+            q = q.order_by(*order_cols)
+
+        # Varre em blocos para não estourar memória, mas materializa tudo no final
+        results: list[T] = []
+        offset = 0
+        while True:
+            chunk = q.offset(offset).limit(size).all()
+            if not chunk:
+                break
+            results.extend(m.to_dto() for m in chunk)
+            offset += size
+
+        return results
+
+    def get_by_column_values(
+        self,
+        values: Iterable[tuple[str, Any]] | dict[str, Any],
+        *,
+        uow: Uow,
+        batch_size: int | None = None,  # opcional, apenas para manter padrão
+    ) -> list[T]:
+        """
+        Filtra por uma ou mais colunas com um ou mais valores por coluna.
+
+        Ex.: values=[("code", ["PETR4","VALE3"]), ("source", "BCB")]
+        Se o valor for escalar, vira lista. Lista vazia retorna [].
+        None dentro da lista significa aceitar NULL na coluna.
+        """
+        model, pk_columns = self.get_model_class()
+        session = uow.session
+
+        # Normaliza dict -> lista de tuplas
+        if isinstance(values, dict):
+            items = list(values.items())
+        else:
+            items = list(values)
+
+        if not items:
+            # Sem filtros: retorna tudo
+            q = session.query(model)
+            if pk_columns:
+                q = q.order_by(*pk_columns)
+            return [m.to_dto() for m in q.all()]
+
+        filters = []
+        for col_name, val in items:
+            # Normaliza para lista
+            if isinstance(val, (list, tuple, set)):
+                vals = list(val)
+            else:
+                vals = [val]
+
+            # Lista vazia implica resultado vazio
+            if len(vals) == 0:
+                return []
+
+            col = getattr(model, col_name)
+
+            # Separa None de não-None para tratar NULL corretamente
+            non_null_vals = [v for v in vals if v is not None]
+            wants_null = any(v is None for v in vals)
+
+            exprs = []
+            if non_null_vals:
+                exprs.append(col.in_(non_null_vals))
+            if wants_null:
+                exprs.append(col.is_(None))
+
+            # Se só há um termo, usa direto; senão OR entre IN e IS NULL
+            if len(exprs) == 1:
+                filters.append(exprs[0])
+            elif len(exprs) > 1:
+                filters.append(or_(*exprs))
+            else:
+                # Ex.: todos valores eram None mas já tratado acima; por segurança
+                filters.append(col.is_(None))
+
+        q = session.query(model).filter(and_(*filters))
+        if pk_columns:
+            q = q.order_by(*pk_columns)
+
+        return [m.to_dto() for m in q.all()]
 
     # def get_existing_by_columns(
     #     self, column_names: Union[str, List[str]],

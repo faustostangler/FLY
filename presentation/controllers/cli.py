@@ -189,6 +189,7 @@ class Cli:
             repository_company=self.repository_company,
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
+            repository_statements_fetched=self.repository_statements_fetched,
 
             uow_factory=self.uow_factory,
         )

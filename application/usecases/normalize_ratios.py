@@ -11,7 +11,10 @@ from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from infrastructure.utils.list_flatenner import ListFlattener
+
+import pandas as pd
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -27,6 +30,7 @@ class NormalizeUseCase:
         repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
 
         uow_factory: UowFactoryPort,
 
@@ -47,6 +51,7 @@ class NormalizeUseCase:
         self.repository_company = repository_company
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
+        self.repository_statements_fetched = repository_statements_fetched
 
         self.uow_factory = uow_factory
 
@@ -68,81 +73,143 @@ class NormalizeUseCase:
             including counts and network usage metrics.
         """
         # Collect company identifiers already stored in the repository
-        columns='company_name'
         with self.uow_factory() as uow:
-            companies = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
-
-
-
-
-
-
-
-
-
-
-
-            results: list[IndicatorsDTO] = []
             try:
-                # existing_codes = [code for (code,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
+                indicators_df = self._load_indicators(uow=uow)
+                indicators_df.to_csv("df_indicators.csv")
+                indicator_matrices = self._prepare_indicator_matrices(indicators_df)
 
-                columns = ["company_name", "ticker_codes", "isin_codes"]
-                codes = [code for (code,) in self.repository_company.iter_existing_by_columns(columns, uow=uow)]
+                companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
+                if not companies:
+                    return SyncResultsDTO(items=[], metrics=0)
+                for company_name in companies:
+                    if company_name == "ALPARGATAS SA":
+                        rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
+                        ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
+                        statements_df = self._load_statements(company_name=company_name, uow=uow)
+                        statements_df.to_csv(f"df_statements_{company_name}.csv")
 
-                seen = set()
-                company_codes: List[tuple[str, str]] = [
-                    (t, name)
-                    for name, tickers, _ in codes
-                    for t in (s.strip() for s in str(tickers or "").replace(" ", "").split(","))
-                    if t and not (t in seen or seen.add(t))
-                ]
+                        dfs = self._split_statements(statements_df)
 
-                # anexa a última data persistida por ticker
-                existing_codes: list[tuple[str, str, datetime | None, datetime]] = []
-                today = datetime.today()
-                for t, n in company_codes:
-                    last_date = self.repository_stock_quote.get_last_date(ticker=t, uow=uow)
-                    if last_date is None:
-                        start_date = today - relativedelta(years=99)
-                    else:
-                        # se o repositório retorna date, combine com meia-noite
-                        if isinstance(last_date, datetime):
-                            start_date = last_date + timedelta(days=1)
-                        else:
-                            start_date = datetime.combine(last_date, datetime.min.time()) + timedelta(days=1)
-
-                    existing_codes.append((t, n, start_date, today))
-
-                # # Fetch companies from scraper and persist them in batch mode
-                # results = self.scraper_stock_quote.fetch_all(existing_codes=existing_codes, save_callback=self._save_batch)
+                        quotes_df = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                        quotes_df.to_csv(f"df_quotes_{company_name}.csv")
 
             except Exception as e:
-                self.logger.log(f"{e}", level="error")
+                self.logger.log(f"NormalizeUseCase failed: {e}", level="error")
+                raise
 
-            return SyncResultsDTO(items=results, metrics=0)
+    def _load_indicators(self, uow: Uow) -> pd.DataFrame:
+        rows = self.repository_indicators.get_all(uow=uow)
+        if not rows:
+            from sqlalchemy.inspection import inspect
+            model, _ = self.repository_indicators.get_model_class()
+            columns = [c.key for c in inspect(model).mapper.column_attrs]
+            return pd.DataFrame(columns=columns)
 
-    # def _save_batch(
-    #     self,
-    #     items: list[IndicatorsDTO],
-    #     *,
-    #     uow: Uow | None = None,
-    # ) -> None:
-    #     """Transform and persist a batch of company data.
+        indicators = pd.DataFrame(rows)
+        indicators["date"] = pd.to_datetime(indicators["date"], errors="coerce")
+        indicators["value"] = pd.to_numeric(indicators["value"], errors="coerce")
+        indicators.sort_values(["code", "name", "date"], inplace=True)
+        return indicators.dropna(subset=["date"]).reset_index(drop=True)
 
-    #     Args:
-    #         buffer (List[CompanyDataDTO]): Raw or nested DTOs retrieved by the scraper.
-    #     """
-    #     # type narrowing
-    #     if uow is None:
-    #         raise RuntimeError("SaveCallback chamado sem UoW")
+    def _prepare_indicator_matrices(
+        self, indicators: pd.DataFrame
+    ) -> dict[str, pd.DataFrame]:
+        matrices: dict[str, pd.DataFrame] = {}
+        if indicators.empty:
+            return matrices
 
-    #     # with self.uow_factory() as uow:
-    #     # Flatten potential nested lists from scraper output
-    #     flat_items = ListFlattener.flatten(items)
+        for (source, code), group in indicators.groupby(["source", "code"]):
+            pivot = (
+                group.pivot_table(
+                    index="date",
+                    columns="name",
+                    values="value",
+                    aggfunc="last",
+                )
+                .sort_index()
+            )
+            matrices[str(code)] = pivot
+            pivot.to_csv(f"df_indicator_{source}_{str(code)}.csv")
 
-    #     # Convert raw scraper DTOs into domain-level DTOs
-    #     dtos = [IndicatorsDTO.from_raw(item) for item in flat_items]
+        return matrices
 
+    def _load_statements(self, company_name:str, uow: Uow) -> pd.DataFrame:
+        rows = self.repository_statements_fetched.get_by_column_values(values=[("company_name", company_name)], uow=uow)
+        if not rows:
+            from sqlalchemy.inspection import inspect
+            model, _ = self.repository_statements_fetched.get_model_class()
+            columns = [c.key for c in inspect(model).mapper.column_attrs]
+            return pd.DataFrame(columns=columns)
 
-    #     # Persist the transformed DTOs in bulk
-    #     self.repository_stock_quote.save_all(dtos, uow=uow)
+        statements = pd.DataFrame(rows)
+        statements["quarter"] = pd.to_datetime(statements["quarter"], errors="coerce")
+        statements["value"] = pd.to_numeric(statements["value"], errors="coerce")
+        statements["version_numeric"] = pd.to_numeric(statements["version"], errors="coerce").fillna(-1)
+        statements.sort_values(["company_name", "quarter", "version_numeric"], inplace=True)
+        return statements.dropna(subset=["quarter"]).reset_index(drop=True)
+
+    def _split_statements(self, df: pd.DataFrame) -> dict[str, pd.DataFrame]:
+        """
+        Retorna {'df_ind': DataFrame|None, 'df_con': DataFrame|None}.
+        Regras:
+        - Mantém linhas cujo grupo é exatamente IND ou CON.
+        - Linhas de outros grupos são copiadas e atribuídas a IND e/ou CON conforme disponibilidade.
+        - Se não existir IND nem CON, cria ambos a partir dos “outros”.
+        """
+        IND = "DFs Individuais"
+        CON = "DFs Consolidadas"
+        if "grupo" not in df.columns:
+            raise ValueError("coluna 'grupo' ausente")
+
+        df_ind0 = df[df["grupo"] == IND]
+        df_con0 = df[df["grupo"] == CON]
+        df_other = df[~df["grupo"].isin([IND, CON])].drop(columns=[], errors="ignore")
+
+        has_ind = not df_ind0.empty
+        has_con = not df_con0.empty
+        has_other = not df_other.empty
+
+        # Se não existir IND nem CON: cria os dois a partir de OTHER
+        if not has_ind and not has_con:
+            if not has_other:
+                return {"df_ind": None, "df_con": None}
+            df_ind = df_other.assign(grupo=IND)
+            df_con = df_other.assign(grupo=CON)
+            return {"df_ind": df_ind.reset_index(drop=True), "df_con": df_con.reset_index(drop=True)}
+
+        # Construção do IND
+        df_ind_parts = [df_ind0]
+        if has_other:
+            # “Outros” também pertencem ao IND quando IND existe
+            df_ind_parts.append(df_other.assign(grupo=IND) if has_ind else pd.DataFrame())
+        df_ind = pd.concat(df_ind_parts, ignore_index=True) if has_ind or has_other else None
+
+        # Construção do CON
+        df_con_parts = [df_con0]
+        if has_other:
+            # “Outros” também pertencem ao CON quando CON existe
+            df_con_parts.append(df_other.assign(grupo=CON) if has_con else pd.DataFrame())
+        df_con = pd.concat(df_con_parts, ignore_index=True) if has_con or (not has_ind and has_other) else (df_con0 if has_con else None)
+
+        return {
+            "df_ind": df_ind.reset_index(drop=True) if df_ind is not None and not df_ind.empty else None,
+            "df_con": df_con.reset_index(drop=True) if df_con is not None and not df_con.empty else None,
+            }
+
+    def _load_quotes(self, ticker_codes: List, uow: Uow) -> pd.DataFrame:
+        rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker_codes)], uow=uow)
+        if not rows:
+            from sqlalchemy.inspection import inspect
+            model, _ = self.repository_stock_quote.get_model_class()
+            columns = [c.key for c in inspect(model).mapper.column_attrs]
+            return pd.DataFrame(columns=columns)
+
+        quotes = pd.DataFrame(rows)
+        quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
+        numeric_cols = ["open", "low", "high", "close", "adj_close", "volume"]
+        for col in numeric_cols:
+            quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
+        quotes.sort_values(["ticker", "date"], inplace=True)
+        return quotes.dropna(subset=["date"]).reset_index(drop=True)
+

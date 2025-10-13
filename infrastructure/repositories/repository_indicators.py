@@ -12,7 +12,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.indicators_dto import IndicatorsDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from infrastructure.models.stock_quote_model import StockQuoteModel
+from infrastructure.models.indicators_model import IndicatorModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -36,7 +36,7 @@ class RepositoryIndicators(RepositoryBase[IndicatorsDTO, int], RepositoryIndicat
         Returns:
             type: The model class associated with this repository.
         """
-        return StockQuoteModel, (StockQuoteModel.id,)
+        return IndicatorModel, (IndicatorModel.id,)
 
     def save_all(self, items: List[T], *, uow: Uow) -> None:
         """Persist ``NsdDTO`` objects using SQLite upserts.
@@ -68,13 +68,3 @@ class RepositoryIndicators(RepositoryBase[IndicatorsDTO, int], RepositoryIndicat
         except Exception as e:
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
-
-    def get_last_date(self, *, ticker: str, uow: Uow):
-        """Retorna a última data persistida para o ticker ou None se não houver histórico."""
-        session = uow.session
-        model, _ = self.get_model_class()
-        return (
-            session.query(func.max(model.date))
-            .filter(model.ticker == ticker)
-            .scalar()
-        )
