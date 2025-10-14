@@ -2,6 +2,8 @@ from typing import Any, List
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import time
+import re
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -73,37 +75,63 @@ class NormalizeUseCase:
             including counts and network usage metrics.
         """
         data = {}
+        company_result = []
+        metrics=0
+        code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
+        start_time = time.perf_counter()
         with self.uow_factory() as uow:
             try:
-                df_indicators = df_statements = df_quotes = {}
+                data['indicators'] = self._load_indicators(uow=uow)
 
                 companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
                 if not companies:
                     self.logger.log("ERRO companies normalize", level="warning")
                     raise Exception
 
-                data['indicators'] = self._load_indicators(uow=uow)
-
-                for company_name in companies:
-                    if company_name == "ALPARGATAS SA":
-                        rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-                        ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
-
+                for i, company_name in enumerate(companies):
+                    len_s = 0
+                    len_q = 0
+                    # if company_name == "ALPARGATAS SA":
+                    # if i > 30000:
+                    #     break
+                    rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
+                    pre_ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
+                    ticker_codes = [
+                        code for code in pre_ticker_codes
+                        if isinstance(code, str) and len(code) >= 5 and code_parameter.match(code)
+                        ]
+                    if ticker_codes:
                         data['statements'] = self._load_statements(company_name=company_name, uow=uow)
                         data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                        if data['quotes'] and data['statements']:
+                            len_s = len(data['statements'])
+                            len_q = len(data['quotes'])
+                            company_result.append(self._treat_data(data))
+                    # else:
+                    #     company_result.append({})
 
-                        data_treated = self._treat_data(data)
-                        pass
+                    progress={
+                            "index": i,
+                            "size": len(companies),
+                            "start_time": start_time,  # noqa: F821 (assumed provided in context)
+                        }
+                    extra_info = {
+                            # "Ticker Codes": ticker_codes,
+                            "Indicators": len(data['indicators']) or 0,
+                            "Statements": len_s,
+                            "Quotes": len_q,
+                        }
+
+                    self.logger.log(f"{' '.join(ticker_codes)} {company_name}", level="info", progress=progress, extra=extra_info)
 
             except Exception as e:
                 self.logger.log(f"NormalizeUseCase failed: {e}", level="error")
                 raise
 
-        results = {
-            'indicators': df_indicators,
-            'statements': df_statements,
-            'quotes': df_quotes,
-            }
+        results:SyncResultsDTO = SyncResultsDTO(
+            items=company_result,
+            metrics=metrics,
+        )
 
         return results
 
@@ -172,8 +200,10 @@ class NormalizeUseCase:
             out = pd.concat(parts, ignore_index=True)
             return out.sort_values(["quarter", "account"], kind="mergesort").reset_index(drop=True)
 
-        statements_df['ind'] = _build_set(df_ind0, has_other and has_ind, df_other)
-        statements_df['con'] = _build_set(df_con0, has_other and has_con, df_other)
+        if has_ind:
+            statements_df['ind'] = _build_set(df_ind0, has_other and has_ind, df_other)
+        if has_con:
+            statements_df['con'] = _build_set(df_con0, has_other and has_con, df_other)
 
         return statements_df
 
@@ -182,10 +212,7 @@ class NormalizeUseCase:
         for ticker in ticker_codes:
             rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker)], uow=uow)
             if not rows:
-                from sqlalchemy.inspection import inspect
-                model, _ = self.repository_stock_quote.get_model_class()
-                columns = [c.key for c in inspect(model).mapper.column_attrs]
-                quotes_df[ticker] = pd.DataFrame(columns=columns)
+                return quotes_df
 
             quotes = pd.DataFrame(rows)
             quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
@@ -253,12 +280,18 @@ class NormalizeUseCase:
 
             k = "statements"
             data_treated[k] = {}
-            for statement, df_statement in data[k].items():
-                data_treated[k][statement] = self._treat_statements(df_statement, q)
+            if data[k]:
+                for statement, df_statement in data[k].items():
+                    data_treated[k][statement] = self._treat_statements(df_statement, q)
+            else:
+                data_treated[k] = []
 
             k = "indicators"
             data_treated[k] = {}
-            for indicator, df_indicator in data[k].items():
-                data_treated[k][indicator] = self._treat_indicators(df_indicator, q)
+            if data[k]:
+                for indicator, df_indicator in data[k].items():
+                    data_treated[k][indicator] = self._treat_indicators(df_indicator, q)
+            else:
+                data_treated[k] = []
 
         return data_treated

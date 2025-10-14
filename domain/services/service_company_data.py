@@ -48,7 +48,7 @@ class CompanyDataService:
             scraper_company_data=self.scraper_company_data,
 
             uow_factory=self.uow_factory,
-            
+
             max_workers=self.config.worker_pool.max_workers,
         )
 
