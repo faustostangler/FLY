@@ -72,26 +72,40 @@ class NormalizeUseCase:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
-        # Collect company identifiers already stored in the repository
+        data = {}
         with self.uow_factory() as uow:
             try:
+                df_indicators = df_statements = df_quotes = {}
+
                 companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
                 if not companies:
-                    return SyncResultsDTO(items=[], metrics=0)
+                    self.logger.log("ERRO companies normalize", level="warning")
+                    raise Exception
 
-                indicators_df = self._load_indicators(uow=uow)
+                data['indicators'] = self._load_indicators(uow=uow)
 
                 for company_name in companies:
                     if company_name == "ALPARGATAS SA":
                         rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
                         ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
-                        statements_df = self._load_statements(company_name=company_name, uow=uow)
 
-                        quotes_df = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                        data['statements'] = self._load_statements(company_name=company_name, uow=uow)
+                        data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+
+                        data_treated = self._treat_data(data)
+                        pass
 
             except Exception as e:
                 self.logger.log(f"NormalizeUseCase failed: {e}", level="error")
                 raise
+
+        results = {
+            'indicators': df_indicators,
+            'statements': df_statements,
+            'quotes': df_quotes,
+            }
+
+        return results
 
     def _load_indicators(self, uow: Uow) -> dict[str, pd.DataFrame]:
         matrices: dict[str, pd.DataFrame] = {}
@@ -115,6 +129,7 @@ class NormalizeUseCase:
                     aggfunc="last",
                 )
                 .sort_index()
+                .reset_index()
             )
             matrices[str(code)] = pivot
 
@@ -181,3 +196,69 @@ class NormalizeUseCase:
             quotes_df[ticker] = quotes.dropna(subset=["date"]).reset_index(drop=True)
         return quotes_df
 
+    def _treat_quotes(self, q: pd.DataFrame, cutoff=datetime | None) -> pd.DataFrame:
+        if not cutoff:
+            cutoff = datetime(year=2010, month=12, day=31)
+
+        q["date"] = pd.to_datetime(q["date"])
+        q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
+        if cutoff:
+            q = q[q.index >= cutoff]
+        return q
+
+    def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
+        if c.empty:
+            return pd.DataFrame()
+
+        key_columns = ["company_name", "quarter", "grupo", "quadro", "account"]
+        s["account_description"] = s["account"].str.cat(s["description"], sep=" - ")
+        s["quarter"] = pd.to_datetime(s["quarter"])
+        s = s.sort_values(key_columns)
+        s = s.drop_duplicates(subset=key_columns, keep="last")
+        statements_wide = s.pivot_table(index="quarter",
+                                columns="account_description",  # use "description" se preferir nomes ou "account" se preferir contas
+                                values="value",
+                                aggfunc="last").sort_index()
+        statements_wide.columns.name = None
+
+        s = statements_wide.sort_index().reindex(c.index, method="ffill")
+        if s.iloc[0].isna().any():
+            s = s.bfill()
+
+        return s
+
+    def _treat_indicators(self, i: pd.DataFrame, c:pd.DataFrame) -> pd.DataFrame:
+        if c.empty:
+            return pd.DataFrame()
+
+        i["date"] = pd.to_datetime(i["date"])
+        i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
+
+        i = i.sort_index().reindex(c.index, method="ffill")
+        if i.iloc[0].isna().any():
+            i = i.bfill()
+
+        return i
+
+    def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
+        cutoff = datetime(year=2010, month=12, day=31)
+        data_treated = {}
+
+        for k, d in data.items():
+            k = "quotes"
+            data_treated[k] = {}
+            for stock_quote, df_stock_quote in data[k].items():
+                q = self._treat_quotes(df_stock_quote, cutoff)
+                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, cutoff)
+
+            k = "statements"
+            data_treated[k] = {}
+            for statement, df_statement in data[k].items():
+                data_treated[k][statement] = self._treat_statements(df_statement, q)
+
+            k = "indicators"
+            data_treated[k] = {}
+            for indicator, df_indicator in data[k].items():
+                data_treated[k][indicator] = self._treat_indicators(df_indicator, q)
+
+        return data_treated
