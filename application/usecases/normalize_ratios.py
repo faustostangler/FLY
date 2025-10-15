@@ -1,22 +1,23 @@
+import re
+import time
+from datetime import datetime, timedelta
 from typing import Any, List, Optional
 
-from datetime import datetime, timedelta
+import numpy as np
+import pandas as pd
 from dateutil.relativedelta import relativedelta
-import time
-import re
 
+import domain.utils.intel as intel
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.indicators_dto import IndicatorsDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
-
-import pandas as pd
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -252,14 +253,14 @@ class NormalizeUseCase:
         s["quarter"] = pd.to_datetime(s["quarter"])
         s = s.sort_values(key_columns)
         s = s.drop_duplicates(subset=key_columns, keep="last")
-        statements_wide = s.pivot_table(index="quarter",
+        s = s.pivot_table(index="quarter",
                                 columns="account_description",  # use "description" se preferir nomes ou "account" se preferir contas
                                 values="value",
                                 aggfunc="last").sort_index()
-        statements_wide.columns.name = None
+        s.columns.name = None
 
-        if c is not None and not c.empty:
-            s = statements_wide.sort_index().reindex(c.index, method="ffill")
+        if c is not None:
+            s = s.sort_index().reindex(c.index, method="ffill")
             if s.iloc[0].isna().any():
                 s = s.bfill()
 
@@ -284,6 +285,8 @@ class NormalizeUseCase:
             key = next(iter(data["quotes"].keys()), None)
             calendar = data["quotes"][key].set_index('date').iloc[:, :0]
             calendar = calendar[calendar.index > cutoff]
+        else:
+            calendar = pd.DataFrame()
 
         data_treated = {}
 
@@ -311,22 +314,51 @@ class NormalizeUseCase:
 
         return data_treated
 
-    def _create_ratios(self, company_data:dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
-        result = pd.DataFrame()
-
-        data = {}
-
-        if 'con' in company_data['statements']:
-            data['statements'] = company_data['statements']['con']
-        elif 'ind' in company_data['statements']:
-            data['statements'] = company_data['statements']['ind']
-
-        for ticker, df in company_data['quotes'].items():
-            digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
-            data[f"stock_{digit}"] = df
-
-        data['indicators'] = company_data['indicators']
+    def _create_ratios(self, c:dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 
+        source_df = c['statements']['statements'].copy()
+        ratios_df = source_df.copy()
 
-        return result
+        indicator_names = [
+            name
+            for name in dir(intel)
+            if name.startswith('indicators_')
+            and isinstance(getattr(intel, name), list)
+            ]
+        indicator_names.sort()
+        for name in indicator_names:
+            indicator_list = getattr(intel, name)
+            ratios_df = self._calculate_ratios(ratios_df, source_df, indicator_list)
+        ratios_df['11.02.01 - Passivos Circulantes de Curto Prazo por Ativos'].plot()
+        return ratios_df
+
+    def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
+        # 1 Mapeamento
+        account_map_long_to_short = account_map_short_to_long = {}
+        for col in source_df.columns:
+            try:
+                account_code = col.split(' - ')[0]
+                account_map_long_to_short[col] = account_code
+                account_map_short_to_long[account_code] = col
+            finally:
+                pass
+
+        # 2 temp rename
+        calculate_df = source_df.rename(columns=account_map_long_to_short)
+
+        # 3 Indicators Formulas
+        for indicator in indicators_list:
+            account_name = indicator["account"]
+            description = indicator["description"]
+            formula_object = indicator["formula"]
+
+            new_col_name = f"{account_name} - {description}"
+
+            try:
+                ratios_df[new_col_name] = formula_object(calculate_df)
+            except KeyError as e:
+                print(f"AVISO: Conta contábil '{e}' ou dependência de fórmula faltando para o ratio: {new_col_name}. Preenchendo com NaN.")
+                ratios_df[new_col_name] = np.nan
+
+        return ratios_df.copy()
