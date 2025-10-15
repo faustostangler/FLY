@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -74,14 +74,16 @@ class NormalizeUseCase:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
-        data = {}
-        company_result = []
+        data:dict = {}
         metrics=0
         code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
         with self.uow_factory() as uow:
             try:
-                data['indicators'] = self._load_indicators(uow=uow)
+                indicators = self._load_indicators(uow=uow)
+                data['indicators'] = {}
+                for indicator, df_indicator in indicators.items():
+                    data["indicators"][indicator] = self._treat_indicators(df_indicator)
 
                 companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
                 if not companies:
@@ -92,7 +94,7 @@ class NormalizeUseCase:
                     len_s = 0
                     len_q = 0
                     # if company_name == "ALPARGATAS SA":
-                    # if i > 30000:
+                    # if i > 30:
                     #     break
                     rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
                     pre_ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
@@ -102,13 +104,13 @@ class NormalizeUseCase:
                         ]
                     if ticker_codes:
                         data['statements'] = self._load_statements(company_name=company_name, uow=uow)
-                        data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
-                        if data['quotes'] and data['statements']:
-                            len_s = len(data['statements'])
-                            len_q = len(data['quotes'])
-                            company_result.append(self._treat_data(data))
-                    # else:
-                    #     company_result.append({})
+                        if data['statements']:
+                            data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                            if data['quotes']:
+                                len_s = len(data['statements'])
+                                len_q = len(data['quotes'])
+                                company_data = self._treat_data(data)
+                                df_ratios:pd.DataFrame = self._create_ratios(company_data)
 
                     progress={
                             "index": i,
@@ -122,14 +124,15 @@ class NormalizeUseCase:
                             "Quotes": len_q,
                         }
 
-                    self.logger.log(f"{' '.join(ticker_codes)} {company_name}", level="info", progress=progress, extra=extra_info)
+                    ticker_str = ' '.join(ticker_codes).strip() if ticker_codes else ''
+                    self.logger.log(f"{ticker_str} {company_name}", level="info", progress=progress, extra=extra_info)
 
             except Exception as e:
                 self.logger.log(f"NormalizeUseCase failed: {e}", level="error")
                 raise
 
         results:SyncResultsDTO = SyncResultsDTO(
-            items=company_result,
+            items=df_ratios,
             metrics=metrics,
         )
 
@@ -169,6 +172,15 @@ class NormalizeUseCase:
         if not rows:
             return statements_df
 
+        def _build_set(df: pd.DataFrame, use_other: bool, df_other: pd.DataFrame) -> pd.DataFrame:
+            if df is None or df.empty:
+                return pd.DataFrame()
+            parts = [df]
+            if use_other and df_other is not None and not df_other.empty:
+                parts.append(df_other)
+            out = pd.concat(parts, ignore_index=True)
+            return out.sort_values(["quarter", "account"], kind="mergesort").reset_index(drop=True)
+
         statements = pd.DataFrame(rows)
         statements["quarter"] = pd.to_datetime(statements["quarter"], errors="coerce")
         statements["value"] = pd.to_numeric(statements["value"], errors="coerce")
@@ -191,19 +203,10 @@ class NormalizeUseCase:
         has_con = not df_con0.empty
         has_other = not df_other.empty
 
-        def _build_set(df: pd.DataFrame, use_other: bool, df_other: pd.DataFrame) -> pd.DataFrame:
-            if df is None or df.empty:
-                return pd.DataFrame()
-            parts = [df]
-            if use_other and df_other is not None and not df_other.empty:
-                parts.append(df_other)
-            out = pd.concat(parts, ignore_index=True)
-            return out.sort_values(["quarter", "account"], kind="mergesort").reset_index(drop=True)
-
-        if has_ind:
-            statements_df['ind'] = _build_set(df_ind0, has_other and has_ind, df_other)
         if has_con:
-            statements_df['con'] = _build_set(df_con0, has_other and has_con, df_other)
+            statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
+        else:
+            statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
 
         return statements_df
 
@@ -220,22 +223,29 @@ class NormalizeUseCase:
             for col in numeric_cols:
                 quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
             quotes.sort_values(["ticker", "date"], inplace=True)
-            quotes_df[ticker] = quotes.dropna(subset=["date"]).reset_index(drop=True)
+
+            digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
+            quotes_df[f"stock_{digit}"] = quotes.dropna(subset=["date"]).reset_index(drop=True)
+
         return quotes_df
 
-    def _treat_quotes(self, q: pd.DataFrame, cutoff=datetime | None) -> pd.DataFrame:
-        if not cutoff:
-            cutoff = datetime(year=2010, month=12, day=31)
+    def _treat_quotes(self, q: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
+        # if c.empty:
+        #     return pd.DataFrame()
 
         q["date"] = pd.to_datetime(q["date"])
         q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-        if cutoff:
-            q = q[q.index >= cutoff]
+
+        if c is not None and not c.empty:
+            q = q.sort_index().reindex(c.index, method="ffill")
+            if q.iloc[0].isna().any():
+                q = q.bfill()
+
         return q
 
-    def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
-        if c.empty:
-            return pd.DataFrame()
+    def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
+        # if c.empty:
+        #     return pd.DataFrame()
 
         key_columns = ["company_name", "quarter", "grupo", "quadro", "account"]
         s["account_description"] = s["account"].str.cat(s["description"], sep=" - ")
@@ -248,41 +258,46 @@ class NormalizeUseCase:
                                 aggfunc="last").sort_index()
         statements_wide.columns.name = None
 
-        s = statements_wide.sort_index().reindex(c.index, method="ffill")
-        if s.iloc[0].isna().any():
-            s = s.bfill()
+        if c is not None and not c.empty:
+            s = statements_wide.sort_index().reindex(c.index, method="ffill")
+            if s.iloc[0].isna().any():
+                s = s.bfill()
 
         return s
 
-    def _treat_indicators(self, i: pd.DataFrame, c:pd.DataFrame) -> pd.DataFrame:
-        if c.empty:
-            return pd.DataFrame()
-
-        i["date"] = pd.to_datetime(i["date"])
-        i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-
-        i = i.sort_index().reindex(c.index, method="ffill")
-        if i.iloc[0].isna().any():
-            i = i.bfill()
+    def _treat_indicators(self, i: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
+        # if c is None or c.empty: 
+        #     return pd.DataFrame()
+        if c is None:
+            i["date"] = pd.to_datetime(i["date"])
+            i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
+        else:
+            i = i.sort_index().reindex(c.index, method="ffill")
+            if i.iloc[0].isna().any():
+                i = i.bfill()
 
         return i
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
         cutoff = datetime(year=2010, month=12, day=31)
+        if cutoff:
+            key = next(iter(data["quotes"].keys()), None)
+            calendar = data["quotes"][key].set_index('date').iloc[:, :0]
+            calendar = calendar[calendar.index > cutoff]
+
         data_treated = {}
 
         for k, d in data.items():
             k = "quotes"
             data_treated[k] = {}
             for stock_quote, df_stock_quote in data[k].items():
-                q = self._treat_quotes(df_stock_quote, cutoff)
-                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, cutoff)
+                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
 
             k = "statements"
             data_treated[k] = {}
             if data[k]:
                 for statement, df_statement in data[k].items():
-                    data_treated[k][statement] = self._treat_statements(df_statement, q)
+                    data_treated[k][statement] = self._treat_statements(df_statement, calendar)
             else:
                 data_treated[k] = []
 
@@ -290,8 +305,28 @@ class NormalizeUseCase:
             data_treated[k] = {}
             if data[k]:
                 for indicator, df_indicator in data[k].items():
-                    data_treated[k][indicator] = self._treat_indicators(df_indicator, q)
+                    data_treated[k][indicator] = self._treat_indicators(df_indicator, calendar)
             else:
                 data_treated[k] = []
 
         return data_treated
+
+    def _create_ratios(self, company_data:dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
+        result = pd.DataFrame()
+
+        data = {}
+
+        if 'con' in company_data['statements']:
+            data['statements'] = company_data['statements']['con']
+        elif 'ind' in company_data['statements']:
+            data['statements'] = company_data['statements']['ind']
+
+        for ticker, df in company_data['quotes'].items():
+            digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
+            data[f"stock_{digit}"] = df
+
+        data['indicators'] = company_data['indicators']
+
+
+
+        return result
