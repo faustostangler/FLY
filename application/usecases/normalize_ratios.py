@@ -1,3 +1,4 @@
+import hashlib
 import re
 import time
 from datetime import datetime, timedelta
@@ -11,7 +12,9 @@ import domain.utils.intel as intel
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.indicators_dto import IndicatorsDTO
+from domain.dtos.ratio_dto import RatioDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -77,6 +80,7 @@ class NormalizeUseCase:
         """
         data:dict = {}
         metrics=0
+        all_ratios: List[RatioDTO] = []
         code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
         with self.uow_factory() as uow:
@@ -98,7 +102,8 @@ class NormalizeUseCase:
                     # if i > 30:
                     #     break
                     rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-                    pre_ticker_codes:List = next((row.ticker_codes for row in rows if row.company_name == company_name),[],)
+                    company_row: Optional[CompanyDataDTO] = next((row for row in rows if row.company_name == company_name), None)
+                    pre_ticker_codes:List = company_row.ticker_codes if company_row else []
                     ticker_codes = [
                         code for code in pre_ticker_codes
                         if isinstance(code, str) and len(code) >= 5 and code_parameter.match(code)
@@ -112,6 +117,15 @@ class NormalizeUseCase:
                                 len_q = len(data['quotes'])
                                 company_data = self._treat_data(data)
                                 df_ratios:pd.DataFrame = self._create_ratios(company_data)
+                                ratios_long = self._build_ratio_dtos(
+                                    df_ratios=df_ratios,
+                                    company=company_row,
+                                    ticker_codes=ticker_codes,
+                                )
+                                if ratios_long:
+                                    self.repository_indicators.save_ratios_batch(ratios_long, uow=uow)
+                                    all_ratios.extend(ratios_long)
+                                    metrics += len(ratios_long)
 
                     progress={
                             "index": i,
@@ -133,7 +147,7 @@ class NormalizeUseCase:
                 raise
 
         results:SyncResultsDTO = SyncResultsDTO(
-            items=df_ratios,
+            items=all_ratios,
             metrics=metrics,
         )
 
@@ -332,6 +346,147 @@ class NormalizeUseCase:
             ratios_df = self._calculate_ratios(ratios_df, source_df, indicator_list)
 
         return ratios_df
+
+    def _build_ratio_dtos(
+        self,
+        *,
+        df_ratios: pd.DataFrame,
+        company: Optional[CompanyDataDTO],
+        ticker_codes: List[str],
+    ) -> List[RatioDTO]:
+        if company is None or df_ratios.empty:
+            return []
+
+        idx_name = df_ratios.index.name or "date"
+        tidy = df_ratios.reset_index()
+        if idx_name != "date":
+            tidy = tidy.rename(columns={idx_name: "date"})
+
+        tidy["date"] = pd.to_datetime(tidy["date"], errors="coerce")
+        tidy = tidy.dropna(subset=["date"])
+
+        melted = tidy.melt(id_vars=["date"], var_name="metric_full_name", value_name="value")
+        melted = melted.dropna(subset=["value"])
+
+        if melted.empty:
+            return []
+
+        company_id, cnpj_root = self._resolve_company_identifiers(company)
+        scope = "IND"
+        ticker = ticker_codes[0] if ticker_codes else ""
+        version = getattr(getattr(self.config, "fly_settings", None), "version", None) or "1.0"
+        created_at = datetime.utcnow()
+
+        ratios: List[RatioDTO] = []
+        for record in melted.to_dict("records"):
+            metric_code, metric_name = self._split_metric_name(record["metric_full_name"])
+            value = record["value"]
+            if pd.isna(value):
+                continue
+
+            try:
+                value_float = float(value)
+            except (TypeError, ValueError):
+                continue
+
+            date_value = record["date"]
+            if isinstance(date_value, pd.Timestamp):
+                date_value = date_value.to_pydatetime()
+
+            if not isinstance(date_value, datetime):
+                continue
+
+            date_value = date_value.replace(hour=0, minute=0, second=0, microsecond=0)
+
+            hash_value = self._generate_ratio_hash(
+                company_id=company_id,
+                cnpj_root=cnpj_root,
+                scope=scope,
+                ticker=ticker,
+                metric_code=metric_code,
+                version=version,
+                date_value=date_value,
+                value=value_float,
+            )
+
+            ratios.append(
+                RatioDTO(
+                    company_id=company_id,
+                    cnpj_root=cnpj_root,
+                    date=date_value,
+                    scope=scope,
+                    ticker=ticker,
+                    metric_code=metric_code,
+                    metric_name=metric_name,
+                    value=value_float,
+                    unit=None,
+                    version=version,
+                    is_current=True,
+                    hash=hash_value,
+                    created_at=created_at,
+                )
+            )
+
+        return ratios
+
+    @staticmethod
+    def _resolve_company_identifiers(company: CompanyDataDTO) -> tuple[str, Optional[str]]:
+        cnpj_root = NormalizeUseCase._compute_cnpj_root(company.cnpj)
+        company_id = (
+            cnpj_root
+            or (company.cvm_code or "")
+            or (company.issuing_company or "")
+            or (company.company_name or "UNKNOWN")
+        )
+        if not company_id:
+            company_id = "UNKNOWN"
+        return company_id, cnpj_root
+
+    @staticmethod
+    def _compute_cnpj_root(cnpj: Optional[str]) -> Optional[str]:
+        if not cnpj:
+            return None
+        digits = re.sub(r"\D", "", str(cnpj))
+        root = digits[:8]
+        return root or None
+
+    @staticmethod
+    def _split_metric_name(metric_full_name: str) -> tuple[str, str]:
+        if not metric_full_name:
+            return "", ""
+        parts = [p.strip() for p in str(metric_full_name).split(" - ", 1)]
+        if len(parts) == 2:
+            code = parts[0] or parts[1]
+            name = parts[1] or parts[0]
+            return code, name
+        cleaned = str(metric_full_name).strip()
+        return cleaned, cleaned
+
+    @staticmethod
+    def _generate_ratio_hash(
+        *,
+        company_id: str,
+        cnpj_root: Optional[str],
+        scope: str,
+        ticker: Optional[str],
+        metric_code: str,
+        version: str,
+        date_value: datetime,
+        value: float,
+    ) -> str:
+        payload = "|".join(
+            [
+                company_id,
+                cnpj_root or "",
+                scope,
+                ticker or "",
+                metric_code,
+                version,
+                date_value.strftime("%Y-%m-%d"),
+                f"{value:.10f}",
+            ]
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
         # 1 Mapeamento
