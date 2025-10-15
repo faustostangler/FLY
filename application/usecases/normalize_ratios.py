@@ -330,7 +330,7 @@ class NormalizeUseCase:
         for name in indicator_names:
             indicator_list = getattr(intel, name)
             ratios_df = self._calculate_ratios(ratios_df, source_df, indicator_list)
-        ratios_df['11.02.01 - Passivos Circulantes de Curto Prazo por Ativos'].plot()
+
         return ratios_df
 
     def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
@@ -358,7 +358,7 @@ class NormalizeUseCase:
             try:
                 ratios_df[new_col_name] = formula_object(calculate_df)
             except KeyError as e:
-                print(f"AVISO: Conta contábil '{e}' ou dependência de fórmula faltando para o ratio: {new_col_name}. Preenchendo com NaN.")
+                self.logger.log(f"{new_col_name}. {e}.", level="error")
                 ratios_df[new_col_name] = np.nan
 
         return ratios_df.copy()
