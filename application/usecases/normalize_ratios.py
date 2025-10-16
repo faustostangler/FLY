@@ -416,17 +416,8 @@ class NormalizeUseCase:
         suffix = melted["account"].fillna("").str[:2]
         melted["quadro"] = melted["quadro"].fillna("Indicador " + suffix)
         melted = melted.sort_values(["company_name", "nsd", "date", "account"]).reset_index(drop=True)
+        melted.to_csv("melted.csv")
 
-
-
-
-
-
-
-
-
-        company_id, cnpj_root = self._resolve_company_identifiers(company)
-        scope = "IND"
         ticker = ticker_codes[0] if ticker_codes else ""
         version = getattr(getattr(self.config, "fly_settings", None), "version", None) or "1.0"
         created_at = datetime.utcnow()

@@ -11,7 +11,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.indicators_dto import IndicatorsDTO
-from domain.dtos.ratio_dto import RatioDTO
+from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from infrastructure.models.indicators_model import IndicatorModel
 from infrastructure.models.ratio_model import RatioModel
