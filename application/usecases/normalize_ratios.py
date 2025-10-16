@@ -101,8 +101,8 @@ class NormalizeUseCase:
                     # if company_name == "ALPARGATAS SA":
                     # if i > 30:
                     #     break
-                    rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-                    company_row: Optional[CompanyDataDTO] = next((row for row in rows if row.company_name == company_name), None)
+                    company_rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
+                    company_row: Optional[CompanyDataDTO] = next((row for row in company_rows if row.company_name == company_name), None)
                     pre_ticker_codes:List = company_row.ticker_codes if company_row else []
                     ticker_codes = [
                         code for code in pre_ticker_codes
@@ -261,22 +261,50 @@ class NormalizeUseCase:
     def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
         # if c.empty:
         #     return pd.DataFrame()
-
-        key_columns = ["company_name", "quarter", "grupo", "quadro", "account"]
-        s["account_description"] = s["account"].str.cat(s["description"], sep=" - ")
         s["quarter"] = pd.to_datetime(s["quarter"])
+
+        key_columns = ["company_name", "quarter", "account"]
+        # sep = " - "
+        s["account_description"] = s["account"] + " - " + s["description"] + " - " + s["grupo"] + " - " + s["quadro"]
+
+        context_columns = ["nsd", "company_name", "version"]
+        meta = (
+            s[["quarter"] + context_columns]
+            .drop_duplicates(subset=["quarter"], keep="last")
+            .set_index("quarter")
+        )
+
         s = s.sort_values(key_columns)
         s = s.drop_duplicates(subset=key_columns, keep="last")
-        s = s.pivot_table(index="quarter",
+        s = s.pivot_table(index=["quarter"],
                                 columns="account_description",  # use "description" se preferir nomes ou "account" se preferir contas
                                 values="value",
                                 aggfunc="last").sort_index()
         s.columns.name = None
 
+        s = meta.join(s, how="right")
+
         if c is not None:
-            s = s.sort_index().reindex(c.index, method="ffill")
+            # reset_multiindex
+            s = s.copy()
+            # s.index = s.index.set_names(["quarter", "nsd", "company_name", "version"])
+            s = s.reset_index()
+
+            # create date index
+            s["quarter"] = pd.to_datetime(s["quarter"])
+            s = (
+                s.rename(columns={"quarter": "date"})
+                .set_index("date")
+                .sort_index()
+            )
+
+            # reindex ffill bfill
+            s = s.reindex(c.index, method="ffill")
             if s.iloc[0].isna().any():
                 s = s.bfill()
+
+            # recreate multiindex
+            s = s.set_index(context_columns, append=True).sort_index()
 
         return s
 
@@ -330,7 +358,6 @@ class NormalizeUseCase:
 
     def _create_ratios(self, c:dict[str, pd.DataFrame]) -> pd.DataFrame:
 
-
         source_df = c['statements']['statements'].copy()
         ratios_df = source_df.copy()
 
@@ -356,20 +383,47 @@ class NormalizeUseCase:
     ) -> List[RatioDTO]:
         if company is None or df_ratios.empty:
             return []
-
-        idx_name = df_ratios.index.name or "date"
         tidy = df_ratios.reset_index()
-        if idx_name != "date":
-            tidy = tidy.rename(columns={idx_name: "date"})
-
         tidy["date"] = pd.to_datetime(tidy["date"], errors="coerce")
+
         tidy = tidy.dropna(subset=["date"])
+        tidy['nsd'] = tidy['nsd'].astype(str)
+        tidy['company_name'] = tidy['company_name'].astype(str)
+        tidy['version'] = tidy['version'].astype(str)
 
-        melted = tidy.melt(id_vars=["date"], var_name="metric_full_name", value_name="value")
-        melted = melted.dropna(subset=["value"])
-
+        context_columns = ["nsd", "company_name", "version"] # quarter, account e value vão ser pivotados
+        melted = tidy.melt(id_vars=["date"] + context_columns, var_name="account_description", value_name="value")
         if melted.empty:
             return []
+
+        sep = " - "
+        cols = ["account", "description", "grupo", "quadro"]
+        parts = melted["account_description"].str.split(sep, n=3, expand=True)
+        parts.columns = cols[:parts.shape[1]]
+        for col in parts.columns:
+            parts[col] = parts[col].str.strip()
+        melted = melted.drop(columns=["account_description"]).join(parts)
+        for col in cols:
+            if col not in melted.columns:
+                melted[col] = pd.NA
+        melted[cols] = melted[cols].astype("string")
+        melted = melted[[
+            "company_name", "nsd", "date", "grupo", "quadro", "account", "description", "value", "version",
+        ]]
+        melted["grupo"] = melted["grupo"].replace("", pd.NA)
+        melted["quadro"] = melted["quadro"].replace("", pd.NA)
+        melted["grupo"] = melted["grupo"].fillna("Indicadores")
+        suffix = melted["account"].fillna("").str[:2]
+        melted["quadro"] = melted["quadro"].fillna("Indicador " + suffix)
+        melted = melted.sort_values(["company_name", "nsd", "date", "account"]).reset_index(drop=True)
+
+
+
+
+
+
+
+
 
         company_id, cnpj_root = self._resolve_company_identifiers(company)
         scope = "IND"
@@ -379,7 +433,7 @@ class NormalizeUseCase:
 
         ratios: List[RatioDTO] = []
         for record in melted.to_dict("records"):
-            metric_code, metric_name = self._split_metric_name(record["metric_full_name"])
+            metric_code, metric_name = self._split_metric_name(record["account_description"])
             value = record["value"]
             if pd.isna(value):
                 continue
