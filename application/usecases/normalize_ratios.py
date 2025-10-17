@@ -13,11 +13,11 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.indicators_dto import IndicatorsDTO
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
@@ -36,6 +36,7 @@ class NormalizeUseCase:
         repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
+        repository_statements_ratio: RepositoryStatementRatioPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
 
         uow_factory: UowFactoryPort,
@@ -57,6 +58,7 @@ class NormalizeUseCase:
         self.repository_company = repository_company
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
+        self.repository_statements_ratio = repository_statements_ratio
         self.repository_statements_fetched = repository_statements_fetched
 
         self.uow_factory = uow_factory
@@ -117,15 +119,15 @@ class NormalizeUseCase:
                                 len_q = len(data['quotes'])
                                 company_data = self._treat_data(data)
                                 df_ratios:pd.DataFrame = self._create_ratios(company_data)
-                                ratios_long = self._build_ratio_dtos(
+                                ratios_dtos = self._build_ratio_dtos(
                                     df_ratios=df_ratios,
                                     company=company_row,
                                     ticker_codes=ticker_codes,
                                 )
-                                if ratios_long:
-                                    self.repository_indicators.save_ratios_batch(ratios_long, uow=uow)
-                                    all_ratios.extend(ratios_long)
-                                    metrics += len(ratios_long)
+                                if ratios_dtos:
+                                    self.repository_statements_ratio.save_all(ratios_dtos, uow=uow)
+                                    all_ratios.extend(ratios_dtos)
+                                    metrics += len(ratios_dtos)
 
                     progress={
                             "index": i,
@@ -416,18 +418,16 @@ class NormalizeUseCase:
         suffix = melted["account"].fillna("").str[:2]
         melted["quadro"] = melted["quadro"].fillna("Indicador " + suffix)
         melted = melted.sort_values(["company_name", "nsd", "date", "account"]).reset_index(drop=True)
-        melted.to_csv("melted.csv")
+        # melted.to_csv("melted.csv")
 
         ticker = ticker_codes[0] if ticker_codes else ""
-        # version = getattr(getattr(self.config, "fly_settings", None), "version", None) or "1.0"
-        # created_at = datetime.utcnow()
 
-        chunk_size = 1000
-        ratios: List[StatementRatioDTO] = []
+        chunk_size = 100000
+        start_time = time.perf_counter()
+        dtos: list[StatementRatioDTO] = []
         for start in range(0, len(melted), chunk_size):
-            part = melted.iloc[start:start + chunk_size]
-            dtos: list[StatementRatioDTO] = []
-            for company_name, nsd, d, grupo, quadro, account, description, value, version in part.itertuples(index=False, name=None):
+            chunk = melted.iloc[start:start + chunk_size]
+            for company_name, nsd, d, grupo, quadro, account, description, value, version in chunk.itertuples(index=False, name=None):
                 dto = StatementRatioDTO(
                     nsd=nsd,
                     company_name=company_name,
@@ -441,120 +441,19 @@ class NormalizeUseCase:
                     version=version,
                 )
                 dtos.append(dto)
-            yield dtos
+            progress={
+                "index": start,
+                "size": len(melted),
+                "start_time": start_time,  # noqa: F821 (assumed provided in context)
+            }
+            extra_info = {
+                "Info": "",
+            }
 
+            self.logger.log(f"item {start}", level="info", progress=progress, extra=extra_info)
+            return dtos
 
-
-
-        for record in melted.to_dict("records"):
-            metric_code, metric_name = self._split_metric_name(record["account_description"])
-            value = record["value"]
-            if pd.isna(value):
-                continue
-
-            try:
-                value_float = float(value)
-            except (TypeError, ValueError):
-                continue
-
-            date_value = record["date"]
-            if isinstance(date_value, pd.Timestamp):
-                date_value = date_value.to_pydatetime()
-
-            if not isinstance(date_value, datetime):
-                continue
-
-            date_value = date_value.replace(hour=0, minute=0, second=0, microsecond=0)
-
-            hash_value = self._generate_ratio_hash(
-                company_id=company_id,
-                cnpj_root=cnpj_root,
-                scope=scope,
-                ticker=ticker,
-                metric_code=metric_code,
-                version=version,
-                date_value=date_value,
-                value=value_float,
-            )
-
-            ratios.append(
-                StatementRatioDTO(
-                    company_id=company_id,
-                    cnpj_root=cnpj_root,
-                    date=date_value,
-                    scope=scope,
-                    ticker=ticker,
-                    metric_code=metric_code,
-                    metric_name=metric_name,
-                    value=value_float,
-                    unit=None,
-                    version=version,
-                    is_current=True,
-                    hash=hash_value,
-                    created_at=created_at,
-                )
-            )
-
-        return ratios
-
-    @staticmethod
-    def _resolve_company_identifiers(company: CompanyDataDTO) -> tuple[str, Optional[str]]:
-        cnpj_root = NormalizeUseCase._compute_cnpj_root(company.cnpj)
-        company_id = (
-            cnpj_root
-            or (company.cvm_code or "")
-            or (company.issuing_company or "")
-            or (company.company_name or "UNKNOWN")
-        )
-        if not company_id:
-            company_id = "UNKNOWN"
-        return company_id, cnpj_root
-
-    @staticmethod
-    def _compute_cnpj_root(cnpj: Optional[str]) -> Optional[str]:
-        if not cnpj:
-            return None
-        digits = re.sub(r"\D", "", str(cnpj))
-        root = digits[:8]
-        return root or None
-
-    @staticmethod
-    def _split_metric_name(metric_full_name: str) -> tuple[str, str]:
-        if not metric_full_name:
-            return "", ""
-        parts = [p.strip() for p in str(metric_full_name).split(" - ", 1)]
-        if len(parts) == 2:
-            code = parts[0] or parts[1]
-            name = parts[1] or parts[0]
-            return code, name
-        cleaned = str(metric_full_name).strip()
-        return cleaned, cleaned
-
-    @staticmethod
-    def _generate_ratio_hash(
-        *,
-        company_id: str,
-        cnpj_root: Optional[str],
-        scope: str,
-        ticker: Optional[str],
-        metric_code: str,
-        version: str,
-        date_value: datetime,
-        value: float,
-    ) -> str:
-        payload = "|".join(
-            [
-                company_id,
-                cnpj_root or "",
-                scope,
-                ticker or "",
-                metric_code,
-                version,
-                date_value.strftime("%Y-%m-%d"),
-                f"{value:.10f}",
-            ]
-        )
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        return dtos
 
     def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
         # 1 Mapeamento

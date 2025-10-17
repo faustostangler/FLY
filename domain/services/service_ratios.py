@@ -12,6 +12,7 @@ from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
 
 
@@ -27,6 +28,7 @@ class RatiosService:
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
+        repository_statements_ratio=RepositoryStatementRatioPort,
 
         uow_factory: UowFactoryPort,
     ):
@@ -46,6 +48,7 @@ class RatiosService:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
+        self.repository_statements_ratio = repository_statements_ratio
 
         self.uow_factory = uow_factory
         # self.http_client = http_client
@@ -59,6 +62,7 @@ class RatiosService:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
+            repository_statements_ratio = self.repository_statements_ratio
 
             uow_factory=self.uow_factory,
             # http_client=self.http_client,

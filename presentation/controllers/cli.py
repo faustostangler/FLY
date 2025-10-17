@@ -6,8 +6,10 @@ from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
+
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 
@@ -47,10 +49,11 @@ class Cli:
         logger: LoggerPort,
         repository_company: RepositoryCompanyDataPort,
         repository_nsd: RepositoryNsdPort,
-        repository_statements_raw: RepositoryStatementsRawPort,
-        repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
+        repository_statements_raw: RepositoryStatementsRawPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
+        repository_statements_ratio=RepositoryStatementRatioPort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
@@ -67,10 +70,11 @@ class Cli:
 
         self.repository_company = repository_company
         self.repository_nsd = repository_nsd
-        self.repository_statements_raw = repository_statements_raw
-        self.repository_statements_fetched = repository_statements_fetched
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
+        self.repository_statements_raw = repository_statements_raw
+        self.repository_statements_fetched = repository_statements_fetched
+        self.repository_statements_ratio = repository_statements_ratio
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
@@ -190,6 +194,7 @@ class Cli:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
+            repository_statements_ratio=self.repository_statements_ratio,
 
             uow_factory=self.uow_factory,
         )
