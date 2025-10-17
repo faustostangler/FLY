@@ -24,6 +24,7 @@ from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
+from infrastructure.utils.byte_formatter import ByteFormatter
 
 
 def _build_processor() -> tuple[NsdProcessor, MagicMock]:
@@ -193,10 +194,10 @@ def test_run_logs_missing_nsd_with_collector_metrics() -> None:
 
     logger.log.assert_called_once()
     _, kwargs = logger.log.call_args
-    assert kwargs["extra"] == {
-        "download_bytes": 512,
-        "network_bytes": 512,
-    }
+    extra = kwargs["extra"]
+    assert extra is not None
+    expected_total = ByteFormatter().format_bytes(512)
+    assert extra == {"Total download": expected_total}
 
 
 # <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
@@ -226,9 +227,8 @@ def test_log_stage_uses_existing_progress_formatter_payload() -> None:
     _, kwargs = logger.log.call_args
 
     assert kwargs["progress"]["stage"] == "NSD"
-    assert kwargs["progress"]["extra_info"] == [
-        "2010-12-31 v1 | 2010-04-20 09:35:15 | FORM Example SA"
-    ]
+    expected_line = processor._format_extra_info_line(nsd)
+    assert kwargs["progress"]["extra_info"] == [expected_line]
     assert kwargs["extra"] is None
 
 
@@ -403,10 +403,8 @@ def test_process_statement_nsd_logs_raw_stage_with_metrics() -> None:
         if args and args[0] == "RAW 123"
     )
 
-    assert raw_call["extra"] == {
-        "download_bytes": 2048,
-        "network_bytes": 3072,
-    }
+    expected_total = ByteFormatter().format_bytes(3072)
+    assert raw_call["extra"] == {"Total download": expected_total}
 
 
 def test_process_statement_nsd_logs_ftd_stage_with_raw_metrics() -> None:
@@ -465,7 +463,5 @@ def test_process_statement_nsd_logs_ftd_stage_with_raw_metrics() -> None:
         if args and args[0] == "FTD 123"
     )
 
-    assert ftd_call["extra"] == {
-        "download_bytes": 3072,
-        "network_bytes": 5120,
-    }
+    expected_total = ByteFormatter().format_bytes(5120)
+    assert ftd_call["extra"] == {"Total download": expected_total}

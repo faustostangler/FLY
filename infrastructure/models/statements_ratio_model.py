@@ -14,7 +14,6 @@ class StatementRatioModel(BaseModel):
     __tablename__ = "tbl_statements_ratio"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
     nsd: Mapped[str] = mapped_column(
         String,
         ForeignKey("tbl_nsd.nsd"),
