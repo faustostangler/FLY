@@ -53,7 +53,7 @@ class Cli:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        repository_statements_ratio=RepositoryStatementRatioPort,
+        repository_statements_ratio: RepositoryStatementRatioPort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
