@@ -28,7 +28,7 @@ class RatiosService:
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        repository_statements_ratio=RepositoryStatementRatioPort,
+        repository_statements_ratio: RepositoryStatementRatioPort,
 
         uow_factory: UowFactoryPort,
     ):
@@ -62,7 +62,7 @@ class RatiosService:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
-            repository_statements_ratio = self.repository_statements_ratio
+            repository_statements_ratio=self.repository_statements_ratio,
 
             uow_factory=self.uow_factory,
             # http_client=self.http_client,

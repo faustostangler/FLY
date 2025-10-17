@@ -16,6 +16,9 @@ from infrastructure.repositories.repository_nsd import RepositoryNsd
 from infrastructure.repositories.repository_statements_fetched import (
     StatementFetchedRepository,
 )
+from infrastructure.repositories.repository_statements_ratio import (
+    StatementRatioRepository,
+)
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.repositories.repository_indicators import RepositoryIndicators
@@ -52,6 +55,9 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
+    repository_ratio_statements = StatementRatioRepository(
+        config=config, logger=logger
+    )
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
