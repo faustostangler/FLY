@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, Float
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
@@ -13,6 +13,8 @@ class StatementRatioModel(BaseModel):
 
     __tablename__ = "tbl_statements_ratio"
 
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
     nsd: Mapped[str] = mapped_column(
         String,
         ForeignKey("tbl_nsd.nsd"),
@@ -21,23 +23,25 @@ class StatementRatioModel(BaseModel):
         String,
         ForeignKey("tbl_company.company_name"),
     )
+    ticker: Mapped[str] = mapped_column(String, nullable=False)
     date: Mapped[object] = mapped_column(_YMDDate, nullable=False)
-    version: Mapped[str] = mapped_column(String, nullable=False)
     grupo: Mapped[str] = mapped_column(String, nullable=False)
     quadro: Mapped[str] = mapped_column(String, nullable=False)
     account: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
+    version: Mapped[str] = mapped_column(String, nullable=False)
 
     __table_args__ = (
         UniqueConstraint(
             "nsd",
             "company_name",
+            "ticker",
             "date",
-            "version",
             "grupo",
             "quadro",
             "account",
+            "version",
             name="uq_statements_ratio_fullkey",
         ),
         Index("ix_statements_ratio_company_name", "company_name"),
@@ -50,13 +54,14 @@ class StatementRatioModel(BaseModel):
     _FIELDS = (
         "nsd",
         "company_name",
+        "ticker",
         "date",
-        "version",
         "grupo",
         "quadro",
         "account",
         "description",
         "value",
+        "version",
     )
 
     @classmethod
@@ -67,7 +72,7 @@ class StatementRatioModel(BaseModel):
 
     def _dto_kwargs(self) -> dict:
         data = {field: getattr(self, field) for field in self._FIELDS}
-        # data["id"] = self.id
+        data["id"] = self.id
         return data
 
     @staticmethod

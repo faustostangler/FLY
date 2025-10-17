@@ -25,6 +25,7 @@ class StatementRatioDTO:
     id: Optional[int] = None
     nsd: str
     company_name: str
+    ticker: str
     date: datetime
     version: str
     grupo: str
@@ -63,6 +64,7 @@ class StatementRatioDTO:
             id=raw.get("id"),
             nsd=nsd_value,
             company_name=raw.get("company_name", ""),
+            ticker=raw.get("ticker",""),
             date=d,
             version=raw.get("version", ""),
             grupo=str(raw.get("grupo", "")),
