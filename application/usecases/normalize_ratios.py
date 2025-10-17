@@ -14,7 +14,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.indicators_dto import IndicatorsDTO
-from domain.dtos.ratio_dto import RatioDTO
+from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -80,7 +80,7 @@ class NormalizeUseCase:
         """
         data:dict = {}
         metrics=0
-        all_ratios: List[RatioDTO] = []
+        all_ratios: List[StatementRatioDTO] = []
         code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
         with self.uow_factory() as uow:
@@ -380,7 +380,7 @@ class NormalizeUseCase:
         df_ratios: pd.DataFrame,
         company: Optional[CompanyDataDTO],
         ticker_codes: List[str],
-    ) -> List[RatioDTO]:
+    ) -> List[StatementRatioDTO]:
         if company is None or df_ratios.empty:
             return []
         tidy = df_ratios.reset_index()
@@ -419,10 +419,33 @@ class NormalizeUseCase:
         melted.to_csv("melted.csv")
 
         ticker = ticker_codes[0] if ticker_codes else ""
-        version = getattr(getattr(self.config, "fly_settings", None), "version", None) or "1.0"
-        created_at = datetime.utcnow()
+        # version = getattr(getattr(self.config, "fly_settings", None), "version", None) or "1.0"
+        # created_at = datetime.utcnow()
 
-        ratios: List[RatioDTO] = []
+        chunk_size = 1000
+        ratios: List[StatementRatioDTO] = []
+        for start in range(0, len(melted), chunk_size):
+            part = melted.iloc[start:start + chunk_size]
+            dtos: list[StatementRatioDTO] = []
+            for company_name, nsd, d, grupo, quadro, account, description, value, version in part.itertuples(index=False, name=None):
+                dto = StatementRatioDTO(
+                    nsd=nsd,
+                    company_name=company_name,
+                    ticker=ticker,
+                    date=d,
+                    grupo=grupo,
+                    quadro=quadro,
+                    account=account,
+                    description=description,
+                    value=float(value) if value else 0.00,
+                    version=version,
+                )
+                dtos.append(dto)
+            yield dtos
+
+
+
+
         for record in melted.to_dict("records"):
             metric_code, metric_name = self._split_metric_name(record["account_description"])
             value = record["value"]
@@ -455,7 +478,7 @@ class NormalizeUseCase:
             )
 
             ratios.append(
-                RatioDTO(
+                StatementRatioDTO(
                     company_id=company_id,
                     cnpj_root=cnpj_root,
                     date=date_value,
