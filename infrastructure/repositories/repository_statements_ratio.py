@@ -3,17 +3,16 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
+from sqlalchemy.dialects.sqlite import insert
+
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort 
 from infrastructure.models.statements_ratio_model import StatementRatioModel
-from infrastructure.repositories._shared import (
-    execute_sqlite_upsert,
-    iter_valid_dtos,
-)
 from infrastructure.repositories.repository_base import RepositoryBase
+from infrastructure.utils.list_flatenner import ListFlattener
 
 
 class StatementRatioRepository(
@@ -44,26 +43,37 @@ class StatementRatioRepository(
         session = uow.session
         model, _ = self.get_model_class()
 
-        valid_items = list(iter_valid_dtos(items))
+        flat_items = ListFlattener.flatten(items)
+        valid_items = [item for item in flat_items if item is not None]
         if not valid_items:
             return
 
         for dto in valid_items:
-            execute_sqlite_upsert(
-                session,
-                model,
-                dto,
-                conflict_columns=(
+            obj = model.from_dto(dto)
+            data = {column.name: getattr(obj, column.name) for column in model.__table__.columns}
+
+            stmt = insert(model).values(**data)
+            update_dict = {
+                column.name: getattr(stmt.excluded, column.name)
+                for column in model.__table__.columns
+                if column.name != "id"
+            }
+
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[
                     "nsd",
                     "company_name",
+                    "ticker",
                     "date",
-                    "version",
                     "grupo",
                     "quadro",
                     "account",
-                ),
-                skip_update_columns=("id",),
+                    "version",
+                ],
+                set_=update_dict,
             )
+
+            session.execute(stmt)
 
     def get_by_company_name(
         self, company_name: str, *, uow: Uow
