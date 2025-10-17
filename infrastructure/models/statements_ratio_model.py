@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, Float
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
@@ -13,6 +13,7 @@ class StatementRatioModel(BaseModel):
 
     __tablename__ = "tbl_statements_ratio"
 
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nsd: Mapped[str] = mapped_column(
         String,
         ForeignKey("tbl_nsd.nsd"),
