@@ -49,6 +49,7 @@ class StatementRatioRepository(
             return
 
         for dto in valid_items:
+            self.logger.log(f"dto: {dto}")
             obj = model.from_dto(dto)
             data = {column.name: getattr(obj, column.name) for column in model.__table__.columns}
 

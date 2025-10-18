@@ -417,6 +417,7 @@ class NormalizeUseCase:
         melted["grupo"] = melted["grupo"].fillna("Indicadores")
         suffix = melted["account"].fillna("").str[:2]
         melted["quadro"] = melted["quadro"].fillna("Indicador " + suffix)
+        melted["value"] = pd.to_numeric(melted["value"], errors="coerce").fillna(0.0)
         melted = melted.sort_values(["company_name", "nsd", "date", "account"]).reset_index(drop=True)
         # melted.to_csv("melted.csv")
 
