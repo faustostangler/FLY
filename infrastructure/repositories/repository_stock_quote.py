@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple, TypeVar
+from datetime import datetime
+from typing import List, Sequence, Tuple, TypeVar
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
@@ -44,7 +45,7 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
         """
         try:
             session = uow.session
-            model, pk_columns = self.get_model_class()
+            model, _ = self.get_model_class()
 
             flat_items = ListFlattener.flatten(items)
             valid_items = [i for i in flat_items if i is not None]
@@ -78,3 +79,23 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
             .filter(model.ticker == ticker)
             .scalar()
         )
+
+    def list_between_dates(
+        self,
+        *,
+        company_name: str,
+        start: datetime,
+        end: datetime,
+        uow: Uow,
+    ) -> Sequence[StockQuoteDTO]:
+        session = uow.session
+        model, _ = self.get_model_class()
+        rows = (
+            session.query(model)
+            .filter(model.company_name == company_name)
+            .filter(model.date >= start)
+            .filter(model.date <= end)
+            .order_by(model.date.asc())
+            .all()
+        )
+        return [row.to_dto() for row in rows]

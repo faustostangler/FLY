@@ -7,9 +7,19 @@ from .company_data_dto import (
     CompanyDataListingDTO,
 )
 from .nsd_dto import NsdDTO
+from .quarter_price_dto import QuarterPriceDTO
 from .statement_fetched_dto import StatementFetchedDTO
 from .statement_raw_dto import StatementRawDTO
 from .worker_task_dto import WorkerTaskDTO
 
-__all__ = ["CodeDTO", "CompanyDataDetailDTO", "CompanyDataDTO", "CompanyDataListingDTO",
-           "NsdDTO", "StatementRawDTO", "StatementFetchedDTO", "WorkerTaskDTO"]
+__all__ = [
+    "CodeDTO",
+    "CompanyDataDetailDTO",
+    "CompanyDataDTO",
+    "CompanyDataListingDTO",
+    "NsdDTO",
+    "QuarterPriceDTO",
+    "StatementRawDTO",
+    "StatementFetchedDTO",
+    "WorkerTaskDTO",
+]

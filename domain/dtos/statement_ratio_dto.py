@@ -25,7 +25,7 @@ class StatementRatioDTO:
     id: Optional[int] = None
     nsd: str
     company_name: str
-    ticker: str
+    ticker: str = ""
     date: datetime
     version: str
     grupo: str
