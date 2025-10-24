@@ -31,6 +31,7 @@ class RatiosService:
         repository_statements_ratio: RepositoryStatementRatioPort,
 
         uow_factory: UowFactoryPort,
+        worker_pool: WorkerPoolPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -51,6 +52,7 @@ class RatiosService:
         self.repository_statements_ratio = repository_statements_ratio
 
         self.uow_factory = uow_factory
+        self.worker_pool = worker_pool
         # self.http_client = http_client
 
         # Initialize the use case responsible for company synchronization
@@ -65,6 +67,7 @@ class RatiosService:
             repository_statements_ratio=self.repository_statements_ratio,
 
             uow_factory=self.uow_factory,
+            worker_pool=self.worker_pool,
             # http_client=self.http_client,
 
             # max_workers=self.config.worker_pool.max_workers,

@@ -197,6 +197,7 @@ class Cli:
             repository_statements_ratio=self.repository_statements_ratio,
 
             uow_factory=self.uow_factory,
+            worker_pool=self.worker_pool,
         )
 
         # run the service
