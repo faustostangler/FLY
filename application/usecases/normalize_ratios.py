@@ -1,6 +1,7 @@
 import hashlib
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from typing import Any, List, Optional
 
@@ -12,6 +13,7 @@ import domain.utils.intel as intel
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
@@ -21,6 +23,7 @@ from domain.ports.repository_statements_ratio_port import RepositoryStatementRat
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from infrastructure.utils.list_flatenner import ListFlattener
+from infrastructure.utils.save_strategy import SaveStrategy
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -80,82 +83,189 @@ class NormalizeUseCase:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
-        data:dict = {}
-        metrics=0
+        metrics = 0
         all_ratios: List[StatementRatioDTO] = []
         code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
-        with self.uow_factory() as uow:
-            try:
-                indicators = self._load_indicators(uow=uow)
-                data['indicators'] = {}
-                for indicator, indicator_df in indicators.items():
-                    data["indicators"][indicator] = self._treat_indicators(indicator_df)
 
-                companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
+        strategy: SaveStrategy[StatementRatioDTO] = SaveStrategy.from_config(
+            self._save_ratios_batch,
+            threshold=self.config.repository.persistence_threshold,
+            config=self.config,
+            auto_flush=False,
+            uow_factory=self.uow_factory,
+        )
+
+        try:
+            with self.uow_factory() as bootstrap_uow:
+                indicators = self._load_indicators(uow=bootstrap_uow)
+                treated_indicators = {
+                    indicator: self._treat_indicators(indicator_df)
+                    for indicator, indicator_df in indicators.items()
+                }
+
+                companies = [
+                    company
+                    for (company,) in self.repository_company.iter_existing_by_columns(
+                        "company_name", uow=bootstrap_uow
+                    )
+                ]
+
                 if not companies:
                     self.logger.log("ERRO companies normalize", level="warning")
-                    raise Exception
+                    raise Exception("Nenhuma companhia encontrada para normalização")
 
-                for i, company_name in enumerate(companies):
-                    len_s = 0
-                    len_q = 0
-                    # if company_name == "ALPARGATAS SA":
-                    # if i > 30:
-                    #     break
-                    company_rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-                    company_row: Optional[CompanyDataDTO] = next((row for row in company_rows if row.company_name == company_name), None)
-                    ticker_codes = [
-                        code for code in 
-                        (company_row.ticker_codes if company_row else [])
-                        if isinstance(code, str) and len(code) >= 5 and code_parameter.match(code)
+        except Exception as exc:  # noqa: BLE001
+            self.logger.log(f"NormalizeUseCase failed: {exc}", level="error")
+            raise
+
+        total_companies = len(companies)
+
+        def processor(task: WorkerTaskDTO) -> Optional[dict[str, Any]]:  # noqa: ANN401
+            company_name = task.data["company_name"]
+            len_s = 0
+            len_q = 0
+            ratios_dtos: List[StatementRatioDTO] = []
+            ticker_codes: List[str] = []
+
+            with self.uow_factory() as uow:
+                success = False
+                try:
+                    company_rows = self.repository_company.get_by_column_values(
+                        values=[("company_name", company_name)],
+                        uow=uow,
+                    )
+                    company_row: Optional[CompanyDataDTO] = next(
+                        (row for row in company_rows if row.company_name == company_name),
+                        None,
+                    )
+
+                    if company_row:
+                        ticker_codes = [
+                            code
+                            for code in (company_row.ticker_codes or [])
+                            if isinstance(code, str)
+                            and len(code) >= 5
+                            and code_parameter.match(code)
                         ]
+
                     if ticker_codes:
-                        data['statements'] = self._load_statements(company_name=company_name, uow=uow)
-                        if data['statements']:
-                            data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
-                            if data['quotes']:
-                                len_s = len(data['statements']['statements'])
-                                len_q = 0
-                                for v in data['quotes'].values():
-                                    len_q += len(v)
-                                company_data = self._treat_data(data)
-                                df_ratios:pd.DataFrame = self._create_ratios(company_data)
+                        statements = self._load_statements(company_name=company_name, uow=uow)
+                        if statements:
+                            quotes = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                            if quotes:
+                                len_s = len(statements.get("statements", []))
+                                len_q = sum(len(v) for v in quotes.values())
+                                data_snapshot = {
+                                    "indicators": treated_indicators,
+                                    "statements": statements,
+                                    "quotes": quotes,
+                                }
+                                company_data = self._treat_data(data_snapshot)
+                                df_ratios = self._create_ratios(company_data)
                                 ratios_dtos = self._build_ratio_dtos(
                                     df_ratios=df_ratios,
                                     company=company_row,
                                     ticker_codes=ticker_codes,
                                 )
-                                if ratios_dtos:
-                                    self.repository_statements_ratio.save_all(ratios_dtos, uow=uow)
-                                    all_ratios.extend(ratios_dtos)
-                                    metrics += len(ratios_dtos)
 
-                    progress={
-                            "index": i,
-                            "size": len(companies),
-                            "start_time": start_time,  # noqa: F821 (assumed provided in context)
-                        }
+                    success = True
+
+                except Exception as error:  # noqa: BLE001
+                    self.logger.log(
+                        f"NormalizeUseCase company {company_name} failed: {error}",
+                        level="error",
+                    )
+                    raise
+                finally:
+                    progress = {
+                        "index": task.index,
+                        "size": total_companies,
+                        "start_time": start_time,
+                    }
                     extra_info = {
-                            # "Ticker Codes": ticker_codes,
-                            "Indicators": len(data['indicators']) or 0,
-                            "Statements": len_s,
-                            "Quotes": len_q,
-                        }
+                        "Indicators": len(treated_indicators) or 0,
+                        "Statements": len_s,
+                        "Quotes": len_q,
+                    }
+                    ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
+                    self.logger.log(
+                        f"{ticker_str} {company_name}",
+                        level="info",
+                        progress=progress,
+                        extra=extra_info,
+                    )
 
-                    ticker_str = ' '.join(ticker_codes).strip() if ticker_codes else ''
-                    self.logger.log(f"{ticker_str} {company_name}", level="info", progress=progress, extra=extra_info)
+                    if success:
+                        uow.commit()
 
-            except Exception as e:
-                self.logger.log(f"NormalizeUseCase failed: {e}", level="error")
-                raise
+            if not ratios_dtos:
+                return None
 
-        results:SyncResultsDTO = SyncResultsDTO(
+            return {
+                "company_name": company_name,
+                "ratios": ratios_dtos,
+            }
+
+        def handle_batch(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
+            if not item:
+                return
+
+            with self.uow_factory() as uow:
+                strategy.handle_many(item.get("ratios", []))
+                strategy.flush(uow=uow)
+                uow.commit()
+
+        futures = []
+        try:
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                for index, company_name in enumerate(companies):
+                    task_payload = {"company_name": company_name}
+                    worker_task = WorkerTaskDTO(
+                        index=index,
+                        data=task_payload,
+                        worker_id=f"normalize-{index}",
+                        total_size=total_companies,
+                    )
+                    futures.append(executor.submit(processor, worker_task))
+
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
+                    except Exception as exc:  # noqa: BLE001
+                        self.logger.log(
+                            f"NormalizeUseCase processing failed: {exc}",
+                            level="error",
+                        )
+                        raise
+
+                    handle_batch(result)
+
+                    if result:
+                        ratios = result.get("ratios", [])
+                        all_ratios.extend(ratios)
+                        metrics += len(ratios)
+
+        finally:
+            strategy.finalize()
+
+        results: SyncResultsDTO = SyncResultsDTO(
             items=all_ratios,
             metrics=metrics,
         )
 
         return results
+
+    def _save_ratios_batch(
+        self,
+        items: List[StatementRatioDTO],
+        *,
+        uow: Uow,
+    ) -> None:
+        if not items:
+            return
+
+        self.repository_statements_ratio.save_all(items, uow=uow)
 
     def _load_indicators(self, uow: Uow) -> dict[str, pd.DataFrame]:
         indicators: dict[str, pd.DataFrame] = {}
