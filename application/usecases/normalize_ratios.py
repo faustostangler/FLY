@@ -1,7 +1,6 @@
 import hashlib
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from typing import Any, List, Optional
 
@@ -12,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 import domain.utils.intel as intel
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.dtos.company_data_dto import CompanyDataDTO
@@ -43,8 +43,9 @@ class NormalizeUseCase:
         repository_statements_fetched: RepositoryStatementFetchedPort,
 
         uow_factory: UowFactoryPort,
+        worker_pool: WorkerPoolPort,
 
-        max_workers: int = 1,
+        max_workers: int | None = None,
     ):
         """Initialize the use case with its dependencies.
 
@@ -65,8 +66,9 @@ class NormalizeUseCase:
         self.repository_statements_fetched = repository_statements_fetched
 
         self.uow_factory = uow_factory
+        self.worker_pool = worker_pool
 
-        self.max_workers = max_workers or (self.config.worker_pool.max_workers or 1)
+        self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -216,36 +218,37 @@ class NormalizeUseCase:
                 strategy.flush(uow=uow)
                 uow.commit()
 
-        futures = []
+        def on_result(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
+            nonlocal metrics
+            handle_batch(item)
+            if not item:
+                return
+
+            ratios = item.get("ratios", [])
+            all_ratios.extend(ratios)
+            metrics += len(ratios)
+
+        tasks = (
+            (index, {"company_name": company_name})
+            for index, company_name in enumerate(companies)
+        )
+
         try:
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                for index, company_name in enumerate(companies):
-                    task_payload = {"company_name": company_name}
-                    worker_task = WorkerTaskDTO(
-                        index=index,
-                        data=task_payload,
-                        worker_id=f"normalize-{index}",
-                        total_size=total_companies,
-                    )
-                    futures.append(executor.submit(processor, worker_task))
-
-                for future in as_completed(futures):
-                    try:
-                        result = future.result()
-                    except Exception as exc:  # noqa: BLE001
-                        self.logger.log(
-                            f"NormalizeUseCase processing failed: {exc}",
-                            level="error",
-                        )
-                        raise
-
-                    handle_batch(result)
-
-                    if result:
-                        ratios = result.get("ratios", [])
-                        all_ratios.extend(ratios)
-                        metrics += len(ratios)
-
+            self.worker_pool(
+                logger=self.logger,
+                tasks=tasks,
+                processor=processor,
+                on_result=on_result,
+                post_callback=None,
+                max_workers=self.max_workers,
+                total_size=total_companies,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.logger.log(
+                f"NormalizeUseCase processing failed: {exc}",
+                level="error",
+            )
+            raise
         finally:
             strategy.finalize()
 
