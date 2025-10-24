@@ -89,8 +89,8 @@ class NormalizeUseCase:
             try:
                 indicators = self._load_indicators(uow=uow)
                 data['indicators'] = {}
-                for indicator, df_indicator in indicators.items():
-                    data["indicators"][indicator] = self._treat_indicators(df_indicator)
+                for indicator, indicator_df in indicators.items():
+                    data["indicators"][indicator] = self._treat_indicators(indicator_df)
 
                 companies = [company for (company,) in self.repository_company.iter_existing_by_columns("company_name", uow=uow)]
                 if not companies:
@@ -105,9 +105,9 @@ class NormalizeUseCase:
                     #     break
                     company_rows = self.repository_company.get_by_column_values(values=[("company_name", company_name)], uow=uow)
                     company_row: Optional[CompanyDataDTO] = next((row for row in company_rows if row.company_name == company_name), None)
-                    pre_ticker_codes:List = company_row.ticker_codes if company_row else []
                     ticker_codes = [
-                        code for code in pre_ticker_codes
+                        code for code in 
+                        (company_row.ticker_codes if company_row else [])
                         if isinstance(code, str) and len(code) >= 5 and code_parameter.match(code)
                         ]
                     if ticker_codes:
@@ -115,8 +115,10 @@ class NormalizeUseCase:
                         if data['statements']:
                             data['quotes'] = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
                             if data['quotes']:
-                                len_s = len(data['statements'])
-                                len_q = len(data['quotes'])
+                                len_s = len(data['statements']['statements'])
+                                len_q = 0
+                                for v in data['quotes'].values():
+                                    len_q += len(v)
                                 company_data = self._treat_data(data)
                                 df_ratios:pd.DataFrame = self._create_ratios(company_data)
                                 ratios_dtos = self._build_ratio_dtos(
@@ -156,19 +158,19 @@ class NormalizeUseCase:
         return results
 
     def _load_indicators(self, uow: Uow) -> dict[str, pd.DataFrame]:
-        matrices: dict[str, pd.DataFrame] = {}
+        indicators: dict[str, pd.DataFrame] = {}
 
         rows = self.repository_indicators.get_all(uow=uow)
         if not rows:
-            return matrices
+            return indicators
 
-        indicators = pd.DataFrame(rows)
-        indicators["date"] = pd.to_datetime(indicators["date"], errors="coerce")
-        indicators["value"] = pd.to_numeric(indicators["value"], errors="coerce")
-        indicators.sort_values(["code", "name", "date"], inplace=True)
-        indicators = indicators.dropna(subset=["date"]).reset_index(drop=True)
+        indicators_df = pd.DataFrame(rows)
+        indicators_df["date"] = pd.to_datetime(indicators_df["date"], errors="coerce")
+        indicators_df["value"] = pd.to_numeric(indicators_df["value"], errors="coerce")
+        indicators_df.sort_values(["code", "name", "date"], inplace=True)
+        indicators_df = indicators_df.dropna(subset=["date"]).reset_index(drop=True)
 
-        for (source, code), group in indicators.groupby(["source", "code"]):
+        for (source, code), group in indicators_df.groupby(["source", "code"]):
             pivot = (
                 group.pivot_table(
                     index="date",
@@ -179,9 +181,9 @@ class NormalizeUseCase:
                 .sort_index()
                 .reset_index()
             )
-            matrices[str(code)] = pivot
+            indicators[str(code)] = pivot
 
-        return matrices
+        return indicators
 
     def _load_statements(self, company_name:str, uow: Uow) -> dict[str, pd.DataFrame]:
         statements_df = {}
@@ -221,7 +223,7 @@ class NormalizeUseCase:
         has_other = not df_other.empty
 
         if has_con:
-            statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
+            statements_df['statements'] = _build_set(df_con0, has_other and has_con, df_other)
         else:
             statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
 
@@ -358,11 +360,52 @@ class NormalizeUseCase:
 
         return data_treated
 
-    def _create_ratios(self, c:dict[str, pd.DataFrame]) -> pd.DataFrame:
-
+    def _create_ratios(self, c: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
         source_df = c['statements']['statements'].copy()
         ratios_df = source_df.copy()
 
+        # preços por classe (fechamento), já reindexados pelo calendário em _treat_quotes
+        quotes: dict[str, pd.DataFrame] = c.get("quotes", {}) or {}
+
+        # coleta e ordena chaves stock_* independentemente de quantas existam
+        stock_keys = [k for k in quotes.keys() if str(k).startswith('stock_')]
+        stock_keys.sort(key=lambda x: int(str(x).split('_', 1)[1]) if '_' in str(x) else float('inf'))
+
+        ignore_stock_keys_cols = ['id', 'date', 'company_name', 'ticker']
+        frames = []
+
+        for i, qkey in enumerate(stock_keys):
+            try:
+                suffix = qkey.split("_", 1)[1]           # '3', '4', ...
+                code = f"99.{suffix}"
+            except Exception:
+                code = f"99.{i+3}"
+
+            dfq = quotes.get(qkey)
+            if dfq is None or dfq.empty:
+                continue
+
+            # filtra colunas relevantes
+            dfq = dfq.loc[:, [c for c in dfq.columns if c not in ignore_stock_keys_cols]].copy()
+            if dfq.empty:
+                continue
+
+            # renomeia todas as colunas em bloco
+            dfq.columns = [f"{code}.{c} - {qkey}" for c in dfq.columns]
+            frames.append(dfq)
+
+        if frames:
+            price_df = pd.concat(frames, axis=1)
+            source_df = source_df.join(price_df, how='left')
+            ratios_df = ratios_df.join(price_df, how="left")
+
+        # mapeia uma vez e congela calculate_df base
+        # account_long_map_old = {c: c.split(" - ")[0] for c in source_df.columns
+        #             if " - " in c and not c.startswith("99.")}
+        account_long_map = {c: c.split(" - ")[0] for c in source_df.columns if " - " in c}
+        calculate_df = source_df.rename(columns=account_long_map).copy()
+
+        # percorre TODAS as listas mantendo o mesmo calculate_df
         indicator_names = [
             name
             for name in dir(intel)
@@ -370,11 +413,25 @@ class NormalizeUseCase:
             and isinstance(getattr(intel, name), list)
             ]
         indicator_names.sort()
-        for name in indicator_names:
-            indicator_list = getattr(intel, name)
-            ratios_df = self._calculate_ratios(ratios_df, source_df, indicator_list)
 
-        return ratios_df
+        for name in indicator_names:
+            ratios_df = ratios_df.copy()
+            calculate_df = calculate_df.copy()
+            indicators_list = getattr(intel, name)
+            for indicator in indicators_list:
+                account_name = indicator["account"]
+                description  = indicator["description"]
+                formula_obj  = indicator["formula"]
+                col_out = f"{account_name} - {description}"
+                try:
+                    series_value = formula_obj(calculate_df)
+                    ratios_df[col_out] = series_value
+                    calculate_df[account_name] = series_value   # persiste para loops
+                except KeyError:
+                    ratios_df[col_out] = np.nan
+                    calculate_df[account_name] = np.nan   # persiste para loops
+            
+        return ratios_df.fillna(0)
 
     def _build_ratio_dtos(
         self,
@@ -451,37 +508,42 @@ class NormalizeUseCase:
                 "Info": "",
             }
 
-            self.logger.log(f"item {start}", level="info", progress=progress, extra=extra_info)
-            return dtos
+            self.logger.log(f"item {start+chunk_size}", level="info", progress=progress, extra=extra_info)
+            pass
 
         return dtos
 
-    def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
-        # 1 Mapeamento
-        account_map_long_to_short = account_map_short_to_long = {}
-        for col in source_df.columns:
-            try:
-                account_code = col.split(' - ')[0]
-                account_map_long_to_short[col] = account_code
-                account_map_short_to_long[account_code] = col
-            finally:
-                pass
+    # def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
+    #     # 1 Mapeamento
+    #     account_map_long = {}
+    #     account_map_short = {}
+    #     for col in source_df.columns:
+    #         try:
+    #             account_code = col.split(' - ')[0]
+    #             account_map_long[col] = account_code
+    #             account_map_short[account_code] = col
+    #         finally:
+    #             pass
 
-        # 2 temp rename
-        calculate_df = source_df.rename(columns=account_map_long_to_short)
+    #     # 2 temp rename
+    #     calculate_df = source_df.rename(columns=account_map_long).copy()
 
-        # 3 Indicators Formulas
-        for indicator in indicators_list:
-            account_name = indicator["account"]
-            description = indicator["description"]
-            formula_object = indicator["formula"]
+    #     # 3 Indicators Formulas
+    #     for indicator in indicators_list:
+    #         account_name = indicator["account"]
+    #         description = indicator["description"]
+    #         formula_object = indicator["formula"]
 
-            new_col_name = f"{account_name} - {description}"
+    #         new_col_name = f"{account_name} - {description}"
+    #         try:
+    #             print(account_name)
+    #             if account_name == '22.04':
+    #                 pass
+    #             series_value = formula_object(calculate_df)
+    #             ratios_df[new_col_name] = series_value
+    #             calculate_df[account_name] = series_value
+    #         except KeyError as e:
+    #             # self.logger.log(f"{new_col_name}. {e}.", level="error")
+    #             ratios_df[new_col_name] = np.nan
 
-            try:
-                ratios_df[new_col_name] = formula_object(calculate_df)
-            except KeyError as e:
-                self.logger.log(f"{new_col_name}. {e}.", level="error")
-                ratios_df[new_col_name] = np.nan
-
-        return ratios_df.copy()
+    #     return ratios_df.copy()

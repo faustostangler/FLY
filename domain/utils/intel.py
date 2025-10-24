@@ -23,10 +23,9 @@ class Addition(Formula):
     def __call__(self, df):
         try:
             # Sum all accounts or formulas
-            result = sum(
-                acc(df) if isinstance(acc, Formula) else df[acc]
-                for acc in self.accounts
-            )
+            result = pd.Series(0, index=df.index)
+            for account in self.accounts:
+                result += _get(df, account)
             return result * self.multiplier
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")
@@ -48,16 +47,9 @@ class Subtraction(Formula):
 
     def __call__(self, df):
         try:
-            # Compute minuend value
-            result = (
-                self.minuend(df)
-                if isinstance(self.minuend, Formula)
-                else df[self.minuend]
-            )
-            # Subtract each subtrahend
+            result = _get(df, self.minuend)
             for account in self.subtrahends:
-                sub_val = account(df) if isinstance(account, Formula) else df[account]
-                result -= sub_val
+                result -= _get(df, account)
             return result * self.multiplier
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")
@@ -77,12 +69,9 @@ class Multiplication(Formula):
 
     def __call__(self, df):
         try:
-            # Run with an initial value of 1 for multiplication
-            result = np.ones(len(df))
-            # Multiply each multiplicand
-            for acc in self.multiplicands:
-                val = acc(df) if isinstance(acc, Formula) else df[acc]
-                result *= val
+            result = pd.Series(1, index=df.index)
+            for account in self.multiplicands:
+                result *= _get(df, account)
             return result * self.multiplier
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")
@@ -96,23 +85,12 @@ class Division(Formula):
 
     def __call__(self, df):
         try:
-            numerator_val = (
-                self.numerator(df)
-                if isinstance(self.numerator, Formula)
-                else df[self.numerator]
-            )
-            denominator_val = (
-                self.denominator(df)
-                if isinstance(self.denominator, Formula)
-                else df[self.denominator]
-            )
+            numerator_val = _get(df, self.numerator)
+            denominator_val = _get(df, self.denominator)
+            denominator_val = denominator_val.replace(0, np.nan)
             with np.errstate(divide="ignore", invalid="ignore"):
-                result = np.where(
-                    denominator_val != 0,
-                    (numerator_val / denominator_val) * self.multiplier,
-                    np.nan,
-                )
-            return result
+                out = (numerator_val / denominator_val) * self.multiplier
+            return out.fillna(0)
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")
 
@@ -132,17 +110,26 @@ class Average(Formula):
 
     def __call__(self, df):
         try:
-            # Calculate the sum of all accounts or formulas
-            total = sum(
-                acc(df) if isinstance(acc, Formula) else df[acc]
-                for acc in self.accounts
-            )
-            # Calculate the average
-            result = total / len(self.accounts)
-            return result * self.multiplier
+            total = pd.Series(0, index=df.index)
+            for account in self.accounts:
+                total += _get(df, account)
+            return (total / len(self.accounts)) * self.multiplier
         except KeyError as e:
             raise KeyError(f"Missing account: {e}")
 
+
+import pandas as pd
+import numpy as np
+
+def _get(df, key, ohlc:str="close"):
+    if isinstance(key, Formula):
+        return key(df)
+    if isinstance(key, (int, float, np.number)):
+        return pd.Series([key] * len(df), index=df.index)
+    s = df.get(key)
+    if s is None and isinstance(key, str) and key.startswith("99."):
+        s = df.get(f"{key}.{ohlc}")      # default para preços
+    return s if s is not None else pd.Series(0, index=df.index)
 
 # statements standardization
 
