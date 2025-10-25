@@ -2,7 +2,7 @@ import hashlib
 import re
 import time
 from datetime import datetime, timedelta
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -158,6 +158,12 @@ class NormalizeUseCase:
                             if quotes:
                                 len_s = len(statements.get("statements", []))
                                 len_q = sum(len(v) for v in quotes.values())
+
+                                # check if need to update
+                                with self.uow_factory() as uow:
+                                    if not self._should_process(company_name, uow=uow):
+                                        return  # sai antes de _treat_data
+
                                 data_snapshot = {
                                     "indicators": treated_indicators,
                                     "statements": statements,
@@ -209,14 +215,25 @@ class NormalizeUseCase:
                 "ratios": ratios_dtos,
             }
 
+        local_buffer: list[Any] = []
         def handle_batch(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
             if not item:
                 return
 
-            with self.uow_factory() as uow:
-                strategy.handle_many(item.get("ratios", []))
-                strategy.flush(uow=uow)
-                uow.commit()
+            local_buffer.append(item.get("ratios", []))  # mantém bloco de listas
+
+            # Flush imediatamente se atingir o limite e auto_flush estiver ativo
+            if len(local_buffer) >= strategy.threshold:
+                # strategy.handle(item.get("ratios", []))  # enfileira o bloco de 3 dtos
+                strategy.handle_many(local_buffer)
+                strategy.flush()
+                local_buffer.clear()
+            # with self.uow_factory() as uow:
+            #     strategy.handle(item.get("ratios", []))
+            #     # strategy.handle_many(item.get("ratios", []))
+            #     # strategy.flush(uow=uow)
+            #     # uow.commit()
+            #     pass
 
         def on_result(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
             nonlocal metrics
@@ -258,6 +275,87 @@ class NormalizeUseCase:
         )
 
         return results
+
+    def _incoming_head(self, company: str, *, uow: Uow) -> Optional[Tuple[pd.Timestamp, int]]:
+        rows = self.repository_statements_fetched.get_by_column_values(
+            values=[("company_name", company)], uow=uow
+        )
+        if not rows:
+            return None
+        # df = pd.DataFrame(rows)[["quarter", "version"]].copy()
+
+        df = pd.DataFrame(rows, copy=True)
+        cols = [c for c in ("quarter", "version") if c in df.columns]
+        if len(cols) < 2:
+            return None
+        df = df[cols].copy()
+
+        df["quarter"] = pd.to_datetime(df["quarter"], errors="coerce")
+        df["version"] = pd.to_numeric(df["version"], errors="coerce").fillna(-1).astype(int)
+
+        # q = df["quarter"].max()
+        # v = df.loc[df["quarter"] == q, "version"].max()
+        # return q, int(v)
+
+        q: pd.Timestamp = df["quarter"].max(skipna=True)  # garante Timestamp
+        if pd.isna(q):
+            return None
+        series = df.loc[df["quarter"] == q, "version"]
+        series = pd.to_numeric(series, errors="coerce")   # garante Series numérica
+        v_val = int(series.max(skipna=True)) if not series.empty else -1
+        return q, v_val
+
+    def _db_head(self, company: str, *, uow: Uow) -> Optional[Tuple[pd.Timestamp, int]]:
+        rows = self.repository_statements_ratio.get_by_column_values(
+            values=[("company_name", company)], uow=uow
+            )
+        if not rows:
+            return None
+
+        # df = pd.DataFrame(rows)[["date", "version"]].copy()
+        # df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+        df = pd.DataFrame(rows, copy=True)
+        cols = [c for c in ("date", "version") if c in df.columns]
+        if len(cols) < 2:
+            return None
+        df = df[cols].copy()
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")  # vira Timestamp
+
+
+        df["version"] = pd.to_numeric(df["version"], errors="coerce").fillna(-1).astype(int)
+
+        # dq = df["date"].max()
+        # dv = df.loc[df["date"] == dq, "version"].max()
+        # if pd.isna(dq):
+        #     return None
+
+        dq: pd.Timestamp = df["date"].max(skipna=True)
+        if pd.isna(dq):
+             return None
+
+        s = df.loc[df["date"] == dq, "version"]
+        s = pd.to_numeric(s, errors="coerce")
+        dv = int(s.max(skipna=True)) if not s.empty else -1
+
+        # return pd.to_datetime(dq), int(dv if pd.notna(dv) else -1)
+        return pd.to_datetime(dq), dv
+
+    def _should_process(self, company: str, *, uow: Uow) -> bool:
+        inc = self._incoming_head(company, uow=uow)
+        if not inc:
+            return False
+        in_q, in_v = inc
+        db = self._db_head(company, uow=uow)
+        if not db:
+            return True
+        db_q, db_v = db
+        if in_q > db_q:
+            return True
+        if in_q < db_q:
+            return False
+        return in_v > db_v  # mesma data: só processa se versão maior
+
 
     def _save_ratios_batch(
         self,
@@ -347,7 +445,8 @@ class NormalizeUseCase:
         for ticker in ticker_codes:
             rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker)], uow=uow)
             if not rows:
-                return quotes_df
+                # return quotes_df
+                continue
 
             quotes = pd.DataFrame(rows)
             quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
@@ -356,8 +455,13 @@ class NormalizeUseCase:
                 quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
             quotes.sort_values(["ticker", "date"], inplace=True)
 
-            digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
-            quotes_df[f"stock_{digit}"] = quotes.dropna(subset=["date"]).reset_index(drop=True)
+            # digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
+            # quotes_df[f"stock_{digit}"] = quotes.dropna(subset=["date"]).reset_index(drop=True)
+
+            m = re.search(r'\d+$', ticker)
+            digit = m.group() if m else ""
+            key = f"stock_{digit}" if digit else f"stock_{len(quotes_df)+1}"
+            quotes_df[key] = quotes.dropna(subset=["date"]).reset_index(drop=True)
 
         return quotes_df
 
@@ -440,13 +544,19 @@ class NormalizeUseCase:
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
         cutoff = datetime(year=2010, month=12, day=31)
-        if cutoff:
-            key = next(iter(data["quotes"].keys()), None)
-            calendar = data["quotes"][key].set_index('date').iloc[:, :0]
-            calendar = calendar[calendar.index > cutoff]
-        else:
-            calendar = pd.DataFrame()
+        calendar = pd.DataFrame()
 
+        quotes_map: dict[str, pd.DataFrame] = data.get("quotes", {}) or {}
+        if quotes_map:
+            # pega a primeira série válida com coluna 'date'
+            for k, dfq in quotes_map.items():
+                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
+                    tmp = dfq.set_index("date").iloc[:, :0]
+                    # tmp.index = pd.to_datetime(tmp.index, errors="coerce")
+                    tmp.index = pd.to_datetime(tmp.index, errors="coerce").tz_localize(None)
+                    mask = tmp.index.to_series().gt(cutoff)  # Series[bool], alinhada ao índice
+                    calendar = tmp.loc[mask]
+                    break  # encontrado o primeiro válido
         data_treated = {}
 
         for k, d in data.items():
@@ -613,7 +723,7 @@ class NormalizeUseCase:
                 )
                 dtos.append(dto)
             progress={
-                "index": start,
+                "index": start + len(chunk) - 1,
                 "size": len(melted),
                 "start_time": start_time,  # noqa: F821 (assumed provided in context)
             }
@@ -621,7 +731,7 @@ class NormalizeUseCase:
                 "Info": "",
             }
 
-            self.logger.log(f"item {start+chunk_size}", level="info", progress=progress, extra=extra_info)
+            self.logger.log(f"{ticker}", level="info", progress=progress, extra=extra_info)
             pass
 
         return dtos

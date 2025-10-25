@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import List, Tuple
-
+import time
 from sqlalchemy.dialects.sqlite import insert
 
 from application.ports.config_port import ConfigPort
@@ -48,8 +48,20 @@ class StatementRatioRepository(
         if not valid_items:
             return
 
-        for dto in valid_items:
-            self.logger.log(f"dto: {dto}")
+        chunk_size = 10000
+        start_time = time.perf_counter()
+        for i, dto in enumerate(valid_items):
+            if i % chunk_size == 0:
+                position = i+chunk_size
+                extra_info = {} # {"Item": i, "Total": len(valid_items)}
+
+                # Log Progress
+                self.logger.log(
+                f"Item {position}",
+                    level="info",
+                    progress={"index": position, "size": len(valid_items),"start_time": start_time,},
+                    extra=extra_info,
+                )
             obj = model.from_dto(dto)
             data = {column.name: getattr(obj, column.name) for column in model.__table__.columns}
 
