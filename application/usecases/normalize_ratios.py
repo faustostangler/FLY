@@ -1,3 +1,4 @@
+from calendar import calendar
 import hashlib
 import re
 import time
@@ -472,7 +473,21 @@ class NormalizeUseCase:
 
         return i
 
-    def _create_daily_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DataFrame:
+    def _get_stock_calendar(self, data:dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DatetimeIndex:
+        stock_calendar = pd.DatetimeIndex([])
+        data_quotes = data.get("quotes", {})
+        if data_quotes:
+            for k, dfq in data_quotes.items():
+                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
+                    stock_calendar = pd.to_datetime(dfq["date"], errors="coerce")
+                    stock_calendar = pd.DatetimeIndex(stock_calendar).tz_localize(None)
+                    stock_calendar = stock_calendar[~stock_calendar.isna()]
+                    stock_calendar = stock_calendar[stock_calendar > cutoff]
+                    break
+
+        return stock_calendar
+
+    def _create_daily_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DatetimeIndex:
         date_min = cutoff
         date_max = pd.Timestamp.now()
         data_quotes = data.get("quotes", {})
@@ -518,49 +533,214 @@ class NormalizeUseCase:
                 date_max = max(maxs)
 
         start = max(date_min, pd.Timestamp(cutoff)) + pd.Timedelta(days=1)
-        end = min(date_max, pd.Timestamp.now()) - pd.Timedelta(days=1)
-        daily_calendar = pd.DataFrame(index=pd.date_range(start, end, freq='D'))
+        end = max(date_max, pd.Timestamp.now()) - pd.Timedelta(days=1)
+        daily_calendar = pd.date_range(start, end, freq='B')
 
         return daily_calendar
 
     def _create_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime, granularity:str="month", aggregate_method:str="last") -> pd.DataFrame:
         cutoff = cutoff or datetime(year=2010, month=12, day=31)
-        allowed_granularities = ['day', 'month', 'quarter', 'year']
+        allowed_granularities = [
+            'D', 'day', 'B', 'business days',  # Diária (calendário ou business)
+            'ME', 'month', 'MS', 'month start',  # Mensal (end ou start)
+            'QE', 'quarter', 'QS', 'quarter start',  # Trimestral
+            'YE', 'year', 'YS', 'year start'  # Anual
+            ]
         if granularity not in allowed_granularities:
             raise ValueError(f"Invalid granularity: {granularity}. Must be one of {allowed_granularities}.")
         allowed_aggregate_methods = ['last', 'first', 'mean', 'median', 'max', 'min', 'sum', 'std', 'var']
         if aggregate_method not in allowed_aggregate_methods:
             raise ValueError(f"Invalid agg_method: {aggregate_method}. Must be one of {allowed_aggregate_methods}.")
-        calendar_frequency_map:dict[str, str] = {'day': 'D', 'month': 'M', 'quarter': 'Q', 'year': 'Y'}
-        calendar = pd.DataFrame()
 
-        daily_calendar = self._create_daily_calendar(data, cutoff)
+        daily_calendar = self._get_stock_calendar(data, cutoff)
+        if daily_calendar.empty:
+            daily_calendar = self._create_daily_calendar(data, cutoff)
+        daily_calendar_2 = self._create_daily_calendar(data, cutoff)
+
+        daily_series = pd.Series(1, index=daily_calendar) # Valor 1 em cada trading day
+
+        # Create resampled calendar if granularity coarser than 'day'
+        if granularity == 'D':
+            anchor_calendar = daily_calendar
+            anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
+        else:
+            anchor_calendar = daily_series.groupby(pd.Grouper(freq=granularity)).size().to_frame(name="trading_days")
+        anchor_calendar.index.name = 'date'
+
+        return anchor_calendar
+
+    def _infer_granularity(self, idx:pd.Index) -> str:
+        """
+        Infere a granularidade de um índice DatetimeIndex.
+
+        Args:
+            idx: pd.Index, esperado como DatetimeIndex.
+            data_type: Tipo de dado ('quotes', 'statements', 'indicators') para ajustar lógica.
+
+        Returns:
+            str: Granularidade inferida ('day', 'month', 'quarter', 'year') ou 'unknown' se falhar.
+        """
+        if not isinstance(idx, pd.DatetimeIndex):
+            try:
+                idx = pd.to_datetime(idx, errors='coerce')
+                idx = idx[~idx.isna()]
+                if len(idx) < 2:
+                    # self.logger.log(f"Índice muito curto para inferir granularidade ({data_type})", level="warning")
+                    return 'unknown'
+            except Exception as e:
+                # self.logger.log(f"Erro ao converter índice para DatetimeIndex ({data_type}): {e}", level="error")
+                return 'unknown'
+
+        inferred_freq = pd.infer_freq(idx)
+        freq_map = {
+            'D': 'day', 'B': 'business days',  # Diária (calendário ou business)
+            'ME': 'month', 'MS': 'month',  # Mensal (end ou start)
+            'QE': 'quarter', 'QS': 'quarter',  # Trimestral
+            'YE': 'year', 'YS': 'year'  # Anual
+        }
+        if inferred_freq in freq_map:
+            return freq_map[inferred_freq]
+
+        # Fallback: calcula mediana dos deltas
+        deltas = np.diff(idx.view("i8"))  # Diferenças em nanossegundos
+        if len(deltas) == 0:
+            # self.logger.log(f"Índice muito curto para calcular deltas ({data_type})", level="warning")
+            return 'unknown'
+
+        med = np.median(deltas)
+        d1 = pd.Timedelta(days=1).value  # 1 dia em nanossegundos
+
+        # Thresholds ajustados por tipo de dado
+        # Indicadores podem variar; thresholds mais amplos
+        if med <= 7 * d1:
+            return 'day'
+        if med <= 45 * d1:
+            return 'month'
+        if med <= 120 * d1:
+            return 'quarter'
+        return 'year'
+
+        # return 'unknown'
+
+    def _resample_series(
+        self,
+        df_data: pd.DataFrame,
+        anchor_calendar: pd.DataFrame,
+        agg_method: str,
+    ) -> pd.DataFrame:
+        """
+        Alinha df_data ao anchor_calendar com upsampling ou downsampling.
+
+        Args:
+            df_data: DataFrame com índice DatetimeIndex.
+            anchor_calendar: DataFrame com índice date e coluna trading_days.
+            granularity_anchor: Granularidade do anchor ('D', 'B', 'ME', 'QE', 'YE').
+            agg_method: Método de agregação padrão ('last', 'mean', etc.).
+            data_type: Tipo de dado ('quotes', 'statements', 'indicators').
+
+        Returns:
+            pd.DataFrame: DataFrame alinhado ao anchor_calendar.
+        """
+        if df_data.empty:
+            return df_data
+
+        # Garantir índice DatetimeIndex
+        if not isinstance(df_data.index, pd.DatetimeIndex):
+            df_data.index = pd.to_datetime(df_data.index, errors='coerce')
+            df_data = df_data.dropna(subset=[df_data.index.name])
+
+        granularity_anchor = pd.infer_freq(anchor_calendar.index)
 
 
-        return calendar
+        # Inferir granularidade de df_data
+        granularity_data = self._infer_granularity(df_data.index)
+        if granularity_data == 'unknown':
+            # self.logger.log(f"Could not infer granularity for {data_type}; assuming 'day'", level="warning")
+            granularity_data = 'day'
+
+        # Ordenar granularidades por fineness
+        granularity_order = {'D': 1, 'B': 1, 'ME': 2, 'QE': 3, 'YE': 4}
+        if granularity_anchor not in granularity_order:
+            raise ValueError(f"Invalid anchor granularity: {granularity_anchor}")
+
+        # Índice diário base
+        daily_freq = 'B' if granularity_anchor in ['D', 'B'] else 'D'
+        daily_index = pd.date_range(anchor_calendar.index.min(), anchor_calendar.index.max(), freq=daily_freq)
+
+        # Comparar granularidades
+        data_level = granularity_order.get(granularity_data, 1)  # Default to 'day'
+        anchor_level = granularity_order[granularity_anchor]
+
+        # Upsampling (data mais grossa que anchor)
+        if data_level > anchor_level:
+            df_data = df_data.reindex(daily_index, method='ffill').bfill()
+            if granularity_anchor in ['D', 'B']:
+                min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
+                masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
+                if granularity_anchor == 'B':
+                    masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
+                return df_data.reindex(masked_index)
+            else:
+                # Para ME/QE/YE, reindexar após upsampling
+                freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
+                periods = df_data.index.to_period(freq_map[granularity_anchor])
+                resampled = df_data.groupby(periods).last()  # Usa 'last' para upsampling
+                resampled.index = anchor_calendar.index[:len(resampled)]
+                return resampled.join(anchor_calendar['trading_days'], how='left')
+
+        # Downsampling ou igualdade
+        df_data = df_data.reindex(daily_index, method='ffill').bfill()  # Preencher gaps
+        if granularity_anchor in ['D', 'B']:
+            min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
+            masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
+            if granularity_anchor == 'B':
+                masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
+            return df_data.reindex(masked_index)
+
+        # Downsampling para ME/QE/YE
+        freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
+        freq = freq_map[granularity_anchor]
+        periods = df_data.index.to_period(freq)
+
+        # Agregadores financeiros
+        agg_dict = {}
+        if data_type == 'quotes':
+            agg_dict = {
+                'open': 'first', 'high': 'max', 'low': 'min',
+                'close': 'last', 'adj_close': 'last', 'volume': 'sum'
+            }
+            for col in df_data.columns:
+                if col not in agg_dict and col not in ['id', 'company_name', 'ticker', 'currency']:
+                    agg_dict[col] = agg_method
+        elif data_type == 'statements':
+            for col in df_data.columns:
+                if any(flow in col.lower() for flow in ['revenue', 'expense', 'profit', 'cash flow']):
+                    agg_dict[col] = 'sum' if agg_method == 'sum' else 'last'
+                else:
+                    agg_dict[col] = 'last' if agg_method == 'last' else agg_method
+        else:  # indicators
+            agg_dict = {col: agg_method for col in df_data.columns}
+
+        resampled = df_data.groupby(periods).agg(agg_dict)
+        resampled.index = anchor_calendar.index[:len(resampled)]
+        resampled = resampled.join(anchor_calendar['trading_days'], how='left')
+
+        return resampled
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
-        cutoff = datetime(year=2010, month=12, day=31)
-        calendar = self._create_calendar(data, cutoff, granularity="month", aggregate_method="last")
+        cutoff:datetime = datetime(year=2010, month=12, day=31)
+        g_map:dict[str, str] = {'day': 'D', 'month': 'ME', 'quarter': 'QE', 'year': 'Y'}
+        granularity = g_map['month']
+        calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method="last")
 
-        quotes_map: dict[str, pd.DataFrame] = data.get("quotes", {}) or {}
-        if quotes_map:
-            # pega a primeira série válida com coluna 'date'
-            for k, dfq in quotes_map.items():
-                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
-                    tmp = dfq.set_index("date").iloc[:, :0]
-                    # tmp.index = pd.to_datetime(tmp.index, errors="coerce")
-                    tmp.index = pd.to_datetime(tmp.index, errors="coerce").tz_localize(None)
-                    mask = tmp.index.to_series().gt(cutoff)  # Series[bool], alinhada ao índice
-                    calendar = tmp.loc[mask]
-                    break  # encontrado o primeiro válido
         data_treated = {}
-
         for k, d in data.items():
             k = "quotes"
             data_treated[k] = {}
             for stock_quote, df_stock_quote in data[k].items():
-                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
+                df_stock_quote = df_stock_quote.set_index('date')
+                resampled = self._resample_series(df_stock_quote, calendar, agg_method="last")
+                # data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
 
             k = "statements"
             data_treated[k] = {}
