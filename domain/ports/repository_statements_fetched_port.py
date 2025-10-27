@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from datetime import datetime
+
+from typing import Protocol, runtime_checkable, Optional
+
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
-from .repository_base_port import RepositoryBasePort
+from domain.ports.repository_base_port import RepositoryBasePort
+from application.ports.uow_port import Uow
 
 
 @runtime_checkable
@@ -14,3 +18,4 @@ class RepositoryStatementFetchedPort(RepositoryBasePort[StatementFetchedDTO, int
     financial statements associated with companies.
     """
 
+    def get_head(self, company: str, *, uow: Uow) -> Optional[tuple[datetime, int]]: ...

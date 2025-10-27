@@ -1,8 +1,10 @@
 # infrastructure/repositories/repository_ratios.py
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import time
+from pandas import Timestamp
+from sqlalchemy import and_, or_, func, select
 from sqlalchemy.dialects.sqlite import insert
 
 from application.ports.config_port import ConfigPort
@@ -101,3 +103,23 @@ class StatementRatioRepository(
         )
         return [r.to_dto() for r in results]
 
+    def get_head(self, company_name: str, uow) -> Optional[tuple[Timestamp, int]]:
+        s = uow.session
+        max_date = (
+            s.query(func.max(StatementRatioModel.date))
+            .filter(StatementRatioModel.company_name == company_name)
+            .scalar()
+        )
+        if max_date is None:
+            return None
+        max_ver = (
+            s.query(func.max(StatementRatioModel.version))
+            .filter(
+                and_(
+                    StatementRatioModel.company_name == company_name,
+                    StatementRatioModel.date == max_date,
+                )
+            )
+            .scalar()
+        ) or -1
+        return max_date, int(max_ver)

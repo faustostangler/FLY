@@ -151,24 +151,24 @@ class NormalizeUseCase:
                             and code_parameter.match(code)
                         ]
 
-                    if ticker_codes:
-                        statements = self._load_statements(company_name=company_name, uow=uow)
-                        if statements:
-                            quotes = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
-                            if quotes:
-                                len_s = len(statements.get("statements", []))
-                                len_q = sum(len(v) for v in quotes.values())
-
+                    if ticker_codes and len(ticker_codes[0]) > 4:
+                        quotes = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
+                        if quotes:
+                            statements = self._load_statements(company_name=company_name, uow=uow)
+                            if statements:
                                 # check if need to update
                                 with self.uow_factory() as uow:
                                     if not self._should_process(company_name, uow=uow):
                                         return  # sai antes de _treat_data
 
+                                len_s = len(statements.get("statements", []))
+                                len_q = sum(len(v) for v in quotes.values())
                                 data_snapshot = {
                                     "indicators": treated_indicators,
                                     "statements": statements,
                                     "quotes": quotes,
                                 }
+
                                 company_data = self._treat_data(data_snapshot)
                                 df_ratios = self._create_ratios(company_data)
                                 ratios_dtos = self._build_ratio_dtos(
@@ -198,7 +198,7 @@ class NormalizeUseCase:
                     }
                     ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
                     self.logger.log(
-                        f"{ticker_str} {company_name}",
+                        f"{' '.join([ticker_str.strip(), company_name]).strip()}",
                         level="info",
                         progress=progress,
                         extra=extra_info,
@@ -276,86 +276,16 @@ class NormalizeUseCase:
 
         return results
 
-    def _incoming_head(self, company: str, *, uow: Uow) -> Optional[Tuple[pd.Timestamp, int]]:
-        rows = self.repository_statements_fetched.get_by_column_values(
-            values=[("company_name", company)], uow=uow
-        )
-        if not rows:
-            return None
-        # df = pd.DataFrame(rows)[["quarter", "version"]].copy()
-
-        df = pd.DataFrame(rows, copy=True)
-        cols = [c for c in ("quarter", "version") if c in df.columns]
-        if len(cols) < 2:
-            return None
-        df = df[cols].copy()
-
-        df["quarter"] = pd.to_datetime(df["quarter"], errors="coerce")
-        df["version"] = pd.to_numeric(df["version"], errors="coerce").fillna(-1).astype(int)
-
-        # q = df["quarter"].max()
-        # v = df.loc[df["quarter"] == q, "version"].max()
-        # return q, int(v)
-
-        q: pd.Timestamp = df["quarter"].max(skipna=True)  # garante Timestamp
-        if pd.isna(q):
-            return None
-        series = df.loc[df["quarter"] == q, "version"]
-        series = pd.to_numeric(series, errors="coerce")   # garante Series numérica
-        v_val = int(series.max(skipna=True)) if not series.empty else -1
-        return q, v_val
-
-    def _db_head(self, company: str, *, uow: Uow) -> Optional[Tuple[pd.Timestamp, int]]:
-        rows = self.repository_statements_ratio.get_by_column_values(
-            values=[("company_name", company)], uow=uow
-            )
-        if not rows:
-            return None
-
-        # df = pd.DataFrame(rows)[["date", "version"]].copy()
-        # df["date"] = pd.to_datetime(df["date"], errors="coerce")
-
-        df = pd.DataFrame(rows, copy=True)
-        cols = [c for c in ("date", "version") if c in df.columns]
-        if len(cols) < 2:
-            return None
-        df = df[cols].copy()
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")  # vira Timestamp
-
-
-        df["version"] = pd.to_numeric(df["version"], errors="coerce").fillna(-1).astype(int)
-
-        # dq = df["date"].max()
-        # dv = df.loc[df["date"] == dq, "version"].max()
-        # if pd.isna(dq):
-        #     return None
-
-        dq: pd.Timestamp = df["date"].max(skipna=True)
-        if pd.isna(dq):
-             return None
-
-        s = df.loc[df["date"] == dq, "version"]
-        s = pd.to_numeric(s, errors="coerce")
-        dv = int(s.max(skipna=True)) if not s.empty else -1
-
-        # return pd.to_datetime(dq), int(dv if pd.notna(dv) else -1)
-        return pd.to_datetime(dq), dv
-
     def _should_process(self, company: str, *, uow: Uow) -> bool:
-        inc = self._incoming_head(company, uow=uow)
-        if not inc:
+        fetched_head = self.repository_statements_fetched.get_head(company, uow=uow)
+        if not fetched_head:
             return False
-        in_q, in_v = inc
-        db = self._db_head(company, uow=uow)
-        if not db:
-            return True
-        db_q, db_v = db
-        if in_q > db_q:
-            return True
-        if in_q < db_q:
-            return False
-        return in_v > db_v  # mesma data: só processa se versão maior
 
+        ratio_head = self.repository_statements_ratio.get_head(company, uow=uow)
+        if not ratio_head:
+            return True
+
+        return fetched_head > ratio_head
 
     def _save_ratios_batch(
         self,
@@ -542,9 +472,76 @@ class NormalizeUseCase:
 
         return i
 
+    def _create_daily_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DataFrame:
+        date_min = cutoff
+        date_max = pd.Timestamp.now()
+        data_quotes = data.get("quotes", {})
+        data_statements = data.get("statements", {})
+        data_indicators = data.get("indicators", {})
+
+        if data_quotes:
+            mins = []
+            maxs = []
+            for k, dfq in data_quotes.items():
+                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
+                    dts = pd.to_datetime(dfq["date"], errors="coerce")
+                    dts = pd.DatetimeIndex(dts).tz_localize(None)
+                    dts = dts[~dts.isna()]
+                    if len(dts):
+                        mins.append(dts.min())
+                        maxs.append(dts.max())
+            if mins:
+                date_min = min(mins)
+            if maxs:
+                date_max = max(maxs)
+
+        if date_min == cutoff and data_statements:
+            statements = data.get("statements", {}).get("statements")
+            if statements is not None and not statements.empty and "quarter" in statements.columns:
+                dates = pd.to_datetime(statements["quarter"].unique())
+                date_min = dates.min().tz_localize(None)
+                date_max = dates.max().tz_localize(None)
+
+        if date_min == cutoff and data_indicators:
+            mins = []
+            maxs = []
+            for k, dfi in data_indicators.items():
+                if isinstance(dfi, pd.DataFrame) and not dfi.empty:
+                    dts = pd.to_datetime(dfi.index, errors="coerce").tz_localize(None)
+                    dts = dts[~dts.isna()]
+                    if len(dts):
+                        mins.append(dts.min())
+                        maxs.append(dts.max())
+            if mins:
+                date_min = min(mins)
+            if maxs:
+                date_max = max(maxs)
+
+        start = max(date_min, pd.Timestamp(cutoff)) + pd.Timedelta(days=1)
+        end = min(date_max, pd.Timestamp.now()) - pd.Timedelta(days=1)
+        daily_calendar = pd.DataFrame(index=pd.date_range(start, end, freq='D'))
+
+        return daily_calendar
+
+    def _create_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime, granularity:str="month", aggregate_method:str="last") -> pd.DataFrame:
+        cutoff = cutoff or datetime(year=2010, month=12, day=31)
+        allowed_granularities = ['day', 'month', 'quarter', 'year']
+        if granularity not in allowed_granularities:
+            raise ValueError(f"Invalid granularity: {granularity}. Must be one of {allowed_granularities}.")
+        allowed_aggregate_methods = ['last', 'first', 'mean', 'median', 'max', 'min', 'sum', 'std', 'var']
+        if aggregate_method not in allowed_aggregate_methods:
+            raise ValueError(f"Invalid agg_method: {aggregate_method}. Must be one of {allowed_aggregate_methods}.")
+        calendar_frequency_map:dict[str, str] = {'day': 'D', 'month': 'M', 'quarter': 'Q', 'year': 'Y'}
+        calendar = pd.DataFrame()
+
+        daily_calendar = self._create_daily_calendar(data, cutoff)
+
+
+        return calendar
+
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
         cutoff = datetime(year=2010, month=12, day=31)
-        calendar = pd.DataFrame()
+        calendar = self._create_calendar(data, cutoff, granularity="month", aggregate_method="last")
 
         quotes_map: dict[str, pd.DataFrame] = data.get("quotes", {}) or {}
         if quotes_map:

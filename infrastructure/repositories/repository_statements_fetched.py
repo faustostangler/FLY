@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+from datetime import datetime
 
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy import func, Integer
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -79,3 +81,28 @@ class StatementFetchedRepository(
             )
             return [r.to_dto() for r in results]
 
+    def get_head(self, company: str, *, uow: Uow) -> Optional[tuple[datetime, int]]:
+        s = uow.session
+
+        latest_q = (
+            s.query(func.max(StatementFetchedModel.quarter))
+            .filter(StatementFetchedModel.company_name == company)
+            .scalar()
+        )
+        if latest_q is None:
+            return None
+
+        ver_num = func.coalesce(
+            func.nullif(StatementFetchedModel.version, ""), "-1"
+        ).cast(Integer)
+
+        latest_v = (
+            s.query(func.max(ver_num))
+            .filter(
+                StatementFetchedModel.company_name == company,
+                StatementFetchedModel.quarter == latest_q,
+            )
+            .scalar()
+        ) or -1
+
+        return latest_q, int(latest_v)

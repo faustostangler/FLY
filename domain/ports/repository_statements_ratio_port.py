@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from datetime import datetime
+
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 
-from .repository_base_port import RepositoryBasePort
+from domain.ports.repository_base_port import RepositoryBasePort
+from application.ports.uow_port import Uow
 
 
 @runtime_checkable
@@ -15,3 +18,5 @@ class RepositoryStatementRatioPort(RepositoryBasePort[StatementRatioDTO, int], P
     financial statements associated with companies.
     """
 
+    def get_head(self, company_name: str, uow:Uow) -> Optional[Tuple[datetime, int]]:
+        ...
