@@ -561,13 +561,13 @@ class NormalizeUseCase:
 
         # Create resampled calendar if granularity coarser than 'day'
         if granularity == 'D':
-            anchor_calendar = daily_calendar
-            anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
+            df_anchor_calendar = daily_calendar
+            df_anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
         else:
-            anchor_calendar = daily_series.groupby(pd.Grouper(freq=granularity)).size().to_frame(name="trading_days")
-        anchor_calendar.index.name = 'date'
+            df_anchor_calendar = daily_series.groupby(pd.Grouper(freq=granularity)).size().to_frame(name="trading_days")
+        df_anchor_calendar.index.name = 'date'
 
-        return anchor_calendar
+        return df_anchor_calendar
 
     def _infer_granularity(self, idx:pd.Index) -> str:
         """
@@ -625,22 +625,24 @@ class NormalizeUseCase:
     def _resample_series(
         self,
         df_data: pd.DataFrame,
-        anchor_calendar: pd.DataFrame,
+        df_anchor_calendar: pd.DataFrame,
         agg_method: str,
     ) -> pd.DataFrame:
         """
-        Alinha df_data ao anchor_calendar com upsampling_action ou downsampling.
+        Alinha df_data ao df_anchor_calendar com upsampling_action ou downsampling.
 
         Args:
             df_data: DataFrame com índice DatetimeIndex.
-            anchor_calendar: DataFrame com índice date e coluna trading_days.
+            df_anchor_calendar: DataFrame com índice date e coluna trading_days.
             granularity_anchor: Granularidade do anchor ('D', 'B', 'ME', 'QE', 'YE').
             agg_method: Método de agregação padrão ('last', 'mean', etc.).
             data_type: Tipo de dado ('quotes', 'statements', 'indicators').
 
         Returns:
-            pd.DataFrame: DataFrame alinhado ao anchor_calendar.
+            pd.DataFrame: DataFrame alinhado ao df_anchor_calendar.
         """
+        df_data.to_csv("df_data.csv", index=True)
+        df_anchor_calendar.to_csv("df_anchor_calendar.csv", index=True)
         # Fast exit
         if df_data.empty:
             return df_data
@@ -652,7 +654,7 @@ class NormalizeUseCase:
 
         # Detect granularity and sampling
         granularity_order = {'B': 1, 'D': 2, 'MS': 3,'ME': 4, 'QS': 5,'QE': 6, 'YS': 7,'YE': 8} # granularidade: menor significa mais fino, mais diário e detalhado
-        granularity_anchor = pd.infer_freq(anchor_calendar.index) or 'B'
+        granularity_anchor = pd.infer_freq(df_anchor_calendar.index) or 'B'
         granularity_data = self._infer_granularity(df_data.index)
         sampling_anchor = granularity_order[granularity_anchor]  # Default to 'business day'
         sampling_data = granularity_order.get(granularity_data, 1)  # Default to 'business day'
@@ -666,59 +668,35 @@ class NormalizeUseCase:
         # Upsampling, precisa preencher
         if sampling_action == "upsampling":
             df_data = df_data.sort_index()
-        #     df_data = df_data.reindex(daily_index, method='ffill').bfill()
-        #     if granularity_anchor in ['D', 'B']:
-        #         min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
-        #         masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
-        #         if granularity_anchor == 'B':
-        #             masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
-        #         return df_data.reindex(masked_index)
-        #     else:
-        #         # Para ME/QE/YE, reindexar após upsampling
-        #         freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
-        #         periods = df_data.index.to_period(freq_map[granularity_anchor])
-        #         resampled = df_data.groupby(periods).last()  # Usa 'last' para upsampling
-        #         resampled.index = anchor_calendar.index[:len(resampled)]
-        #         return resampled.join(anchor_calendar['trading_days'], how='left')
+            df_data = df_data.reindex(df_data.index.union(df_anchor_calendar.index))
+            df_data = df_data.ffill().bfill()
+            df_data = df_data.reindex(df_anchor_calendar.index).sort_index()
+        # Downsampling, precisa agregar
+        elif sampling_action == "downsampling":
+            df_data = df_data.sort_index()
 
-        # # Downsampling, precisa agregar
-        # df_data = df_data.reindex(daily_index, method='ffill').bfill()  # Preencher gaps
-        # if granularity_anchor in ['D', 'B']:
-        #     min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
-        #     masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
-        #     if granularity_anchor == 'B':
-        #         masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
-        #     return df_data.reindex(masked_index)
+            daily_index = pd.date_range(df_data.index.min(), df_data.index.max(), freq='B')
+            df_data = df_data.reindex(daily_index).ffill().bfill()
+            grouper_freq = granularity_anchor
+            agg_dict = {}
+            for col in df_data.columns:
+                if col in ['open']:
+                    agg_dict[col] = 'first'
+                elif col in ['high']:
+                    agg_dict[col] = 'max'
+                elif col in ['low']:
+                    agg_dict[col] = 'min'
+                elif col in ['close', 'adj_close']:
+                    agg_dict[col] = 'last'
+                elif col in ['volume']:
+                    agg_dict[col] = 'sum'
+                else:
+                    agg_dict[col] = agg_method
 
-        # # Downsampling para ME/QE/YE
-        # freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
-        # freq = freq_map[granularity_anchor]
-        # periods = df_data.index.to_period(freq)
+            df_data = df_data.groupby(pd.Grouper(freq=grouper_freq)).agg(agg_dict)
+            df_data = df_data.reindex(df_anchor_calendar.index)
 
-        # # Agregadores financeiros
-        # agg_dict = {}
-        # if data_type == 'quotes':
-        #     agg_dict = {
-        #         'open': 'first', 'high': 'max', 'low': 'min',
-        #         'close': 'last', 'adj_close': 'last', 'volume': 'sum'
-        #     }
-        #     for col in df_data.columns:
-        #         if col not in agg_dict and col not in ['id', 'company_name', 'ticker', 'currency']:
-        #             agg_dict[col] = agg_method
-        # elif data_type == 'statements':
-        #     for col in df_data.columns:
-        #         if any(flow in col.lower() for flow in ['revenue', 'expense', 'profit', 'cash flow']):
-        #             agg_dict[col] = 'sum' if agg_method == 'sum' else 'last'
-        #         else:
-        #             agg_dict[col] = 'last' if agg_method == 'last' else agg_method
-        # else:  # indicators
-        #     agg_dict = {col: agg_method for col in df_data.columns}
-
-        # resampled = df_data.groupby(periods).agg(agg_dict)
-        # resampled.index = anchor_calendar.index[:len(resampled)]
-        # resampled = resampled.join(anchor_calendar['trading_days'], how='left')
-
-        # return resampled
+        return df_data
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
         cutoff:datetime = datetime(year=2010, month=12, day=31)
@@ -906,37 +884,3 @@ class NormalizeUseCase:
 
         return dtos
 
-    # def _calculate_ratios(self, ratios_df: pd.DataFrame, source_df: pd.DataFrame, indicators_list: list) -> pd.DataFrame:
-    #     # 1 Mapeamento
-    #     account_map_long = {}
-    #     account_map_short = {}
-    #     for col in source_df.columns:
-    #         try:
-    #             account_code = col.split(' - ')[0]
-    #             account_map_long[col] = account_code
-    #             account_map_short[account_code] = col
-    #         finally:
-    #             pass
-
-    #     # 2 temp rename
-    #     calculate_df = source_df.rename(columns=account_map_long).copy()
-
-    #     # 3 Indicators Formulas
-    #     for indicator in indicators_list:
-    #         account_name = indicator["account"]
-    #         description = indicator["description"]
-    #         formula_object = indicator["formula"]
-
-    #         new_col_name = f"{account_name} - {description}"
-    #         try:
-    #             print(account_name)
-    #             if account_name == '22.04':
-    #                 pass
-    #             series_value = formula_object(calculate_df)
-    #             ratios_df[new_col_name] = series_value
-    #             calculate_df[account_name] = series_value
-    #         except KeyError as e:
-    #             # self.logger.log(f"{new_col_name}. {e}.", level="error")
-    #             ratios_df[new_col_name] = np.nan
-
-    #     return ratios_df.copy()
