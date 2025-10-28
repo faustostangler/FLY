@@ -613,12 +613,12 @@ class NormalizeUseCase:
         # Thresholds ajustados por tipo de dado
         # Indicadores podem variar; thresholds mais amplos
         if med <= 7 * d1:
-            return 'day'
+            return 'B'
         if med <= 45 * d1:
-            return 'month'
+            return 'ME'
         if med <= 120 * d1:
-            return 'quarter'
-        return 'year'
+            return 'QE'
+        return 'YE'
 
         # return 'unknown'
 
@@ -629,7 +629,7 @@ class NormalizeUseCase:
         agg_method: str,
     ) -> pd.DataFrame:
         """
-        Alinha df_data ao anchor_calendar com upsampling ou downsampling.
+        Alinha df_data ao anchor_calendar com upsampling_action ou downsampling.
 
         Args:
             df_data: DataFrame com índice DatetimeIndex.
@@ -641,91 +641,84 @@ class NormalizeUseCase:
         Returns:
             pd.DataFrame: DataFrame alinhado ao anchor_calendar.
         """
+        # Fast exit
         if df_data.empty:
             return df_data
 
-        # Garantir índice DatetimeIndex
+        # Check DatetimeIndex
         if not isinstance(df_data.index, pd.DatetimeIndex):
             df_data.index = pd.to_datetime(df_data.index, errors='coerce')
             df_data = df_data.dropna(subset=[df_data.index.name])
 
-        granularity_anchor = pd.infer_freq(anchor_calendar.index)
-
-
-        # Inferir granularidade de df_data
+        # Detect granularity and sampling
+        granularity_order = {'B': 1, 'D': 2, 'MS': 3,'ME': 4, 'QS': 5,'QE': 6, 'YS': 7,'YE': 8} # granularidade: menor significa mais fino, mais diário e detalhado
+        granularity_anchor = pd.infer_freq(anchor_calendar.index) or 'B'
         granularity_data = self._infer_granularity(df_data.index)
-        if granularity_data == 'unknown':
-            # self.logger.log(f"Could not infer granularity for {data_type}; assuming 'day'", level="warning")
-            granularity_data = 'day'
+        sampling_anchor = granularity_order[granularity_anchor]  # Default to 'business day'
+        sampling_data = granularity_order.get(granularity_data, 1)  # Default to 'business day'
+        if sampling_data > sampling_anchor:
+            sampling_action = "upsampling" # dados grossos: precisa preencher com valores intermediários
+        elif sampling_data < sampling_anchor:
+            sampling_action = "downsampling" # dados finos: precisa agregar com valores agrupados
+        else:
+            sampling_action = "same" # apenas reindexar
 
-        # Ordenar granularidades por fineness
-        granularity_order = {'D': 1, 'B': 1, 'ME': 2, 'QE': 3, 'YE': 4}
-        if granularity_anchor not in granularity_order:
-            raise ValueError(f"Invalid anchor granularity: {granularity_anchor}")
+        # Upsampling, precisa preencher
+        if sampling_action == "upsampling":
+            df_data = df_data.sort_index()
+        #     df_data = df_data.reindex(daily_index, method='ffill').bfill()
+        #     if granularity_anchor in ['D', 'B']:
+        #         min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
+        #         masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
+        #         if granularity_anchor == 'B':
+        #             masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
+        #         return df_data.reindex(masked_index)
+        #     else:
+        #         # Para ME/QE/YE, reindexar após upsampling
+        #         freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
+        #         periods = df_data.index.to_period(freq_map[granularity_anchor])
+        #         resampled = df_data.groupby(periods).last()  # Usa 'last' para upsampling
+        #         resampled.index = anchor_calendar.index[:len(resampled)]
+        #         return resampled.join(anchor_calendar['trading_days'], how='left')
 
-        # Índice diário base
-        daily_freq = 'B' if granularity_anchor in ['D', 'B'] else 'D'
-        daily_index = pd.date_range(anchor_calendar.index.min(), anchor_calendar.index.max(), freq=daily_freq)
+        # # Downsampling, precisa agregar
+        # df_data = df_data.reindex(daily_index, method='ffill').bfill()  # Preencher gaps
+        # if granularity_anchor in ['D', 'B']:
+        #     min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
+        #     masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
+        #     if granularity_anchor == 'B':
+        #         masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
+        #     return df_data.reindex(masked_index)
 
-        # Comparar granularidades
-        data_level = granularity_order.get(granularity_data, 1)  # Default to 'day'
-        anchor_level = granularity_order[granularity_anchor]
+        # # Downsampling para ME/QE/YE
+        # freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
+        # freq = freq_map[granularity_anchor]
+        # periods = df_data.index.to_period(freq)
 
-        # Upsampling (data mais grossa que anchor)
-        if data_level > anchor_level:
-            df_data = df_data.reindex(daily_index, method='ffill').bfill()
-            if granularity_anchor in ['D', 'B']:
-                min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
-                masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
-                if granularity_anchor == 'B':
-                    masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
-                return df_data.reindex(masked_index)
-            else:
-                # Para ME/QE/YE, reindexar após upsampling
-                freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
-                periods = df_data.index.to_period(freq_map[granularity_anchor])
-                resampled = df_data.groupby(periods).last()  # Usa 'last' para upsampling
-                resampled.index = anchor_calendar.index[:len(resampled)]
-                return resampled.join(anchor_calendar['trading_days'], how='left')
+        # # Agregadores financeiros
+        # agg_dict = {}
+        # if data_type == 'quotes':
+        #     agg_dict = {
+        #         'open': 'first', 'high': 'max', 'low': 'min',
+        #         'close': 'last', 'adj_close': 'last', 'volume': 'sum'
+        #     }
+        #     for col in df_data.columns:
+        #         if col not in agg_dict and col not in ['id', 'company_name', 'ticker', 'currency']:
+        #             agg_dict[col] = agg_method
+        # elif data_type == 'statements':
+        #     for col in df_data.columns:
+        #         if any(flow in col.lower() for flow in ['revenue', 'expense', 'profit', 'cash flow']):
+        #             agg_dict[col] = 'sum' if agg_method == 'sum' else 'last'
+        #         else:
+        #             agg_dict[col] = 'last' if agg_method == 'last' else agg_method
+        # else:  # indicators
+        #     agg_dict = {col: agg_method for col in df_data.columns}
 
-        # Downsampling ou igualdade
-        df_data = df_data.reindex(daily_index, method='ffill').bfill()  # Preencher gaps
-        if granularity_anchor in ['D', 'B']:
-            min_date, max_date = df_data.dropna(how='all').index.min(), df_data.dropna(how='all').index.max()
-            masked_index = anchor_calendar.index[(anchor_calendar.index >= min_date) & (anchor_calendar.index <= max_date)]
-            if granularity_anchor == 'B':
-                masked_index = masked_index[anchor_calendar.loc[masked_index, 'trading_days'] > 0]
-            return df_data.reindex(masked_index)
+        # resampled = df_data.groupby(periods).agg(agg_dict)
+        # resampled.index = anchor_calendar.index[:len(resampled)]
+        # resampled = resampled.join(anchor_calendar['trading_days'], how='left')
 
-        # Downsampling para ME/QE/YE
-        freq_map = {'ME': 'ME', 'QE': 'QE', 'YE': 'YE'}
-        freq = freq_map[granularity_anchor]
-        periods = df_data.index.to_period(freq)
-
-        # Agregadores financeiros
-        agg_dict = {}
-        if data_type == 'quotes':
-            agg_dict = {
-                'open': 'first', 'high': 'max', 'low': 'min',
-                'close': 'last', 'adj_close': 'last', 'volume': 'sum'
-            }
-            for col in df_data.columns:
-                if col not in agg_dict and col not in ['id', 'company_name', 'ticker', 'currency']:
-                    agg_dict[col] = agg_method
-        elif data_type == 'statements':
-            for col in df_data.columns:
-                if any(flow in col.lower() for flow in ['revenue', 'expense', 'profit', 'cash flow']):
-                    agg_dict[col] = 'sum' if agg_method == 'sum' else 'last'
-                else:
-                    agg_dict[col] = 'last' if agg_method == 'last' else agg_method
-        else:  # indicators
-            agg_dict = {col: agg_method for col in df_data.columns}
-
-        resampled = df_data.groupby(periods).agg(agg_dict)
-        resampled.index = anchor_calendar.index[:len(resampled)]
-        resampled = resampled.join(anchor_calendar['trading_days'], how='left')
-
-        return resampled
+        # return resampled
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
         cutoff:datetime = datetime(year=2010, month=12, day=31)
