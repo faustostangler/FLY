@@ -169,6 +169,9 @@ class NormalizeUseCase:
                                     "statements": statements,
                                     "quotes": quotes,
                                 }
+                                data_snapshot['indicators']['11'].to_csv('indicators.csv', index=True)
+                                data_snapshot['statements']['statements'].to_csv('statements.csv', index=False)
+                                data_snapshot['quotes']['stock_3'].to_csv('quotes.csv', index=False)
 
                                 company_data = self._treat_data(data_snapshot)
                                 df_ratios = self._create_ratios(company_data)
