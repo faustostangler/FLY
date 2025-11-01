@@ -97,18 +97,25 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                companies = []
                 companies_statements = self.repository_statements_fetched.get_unique_by_column(column_name='company_name', uow=bootstrap_uow)
+                companies_tickers = self.repository_stock_quote.get_unique_by_column(column_name='ticker', uow=bootstrap_uow)
                 companies_raw = self.repository_company.get_all(uow=bootstrap_uow)
 
+                valid_companies = []
                 for row in companies_raw:
                     if row.company_name not in companies_statements:
                         continue
                     if not row.ticker_codes:
                         continue
-                    ticker_codes = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
-                    if ticker_codes:
-                        companies.append(row)
+                    tickers = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
+
+                    if not tickers:
+                        continue
+
+                    if not any(t in companies_tickers for t in tickers):
+                        continue
+
+                    valid_companies.append(row)
 
                 # companies = [
                 #     company
@@ -117,158 +124,145 @@ class NormalizeUseCase:
                 #     )
                 # ]
 
-                if companies:
-                    df_company = pd.DataFrame(companies)
+                if valid_companies:
+                    df_company = pd.DataFrame(valid_companies)
 
                     columns = df_company.columns
                     mask = df_company['cvm_code'] == '22179'
                     df = df_company[mask]
-                    pass
 
-                else:
-                    self.logger.log("ERRO companies normalize", level="warning")
-                    raise Exception("Nenhuma companhia encontrada para normalização")
+                    total_companies = len(df)
+
+                    def processor(task: WorkerTaskDTO) -> Optional[dict[str, Any]]:  # noqa: ANN401
+                        company_dto = task.data["company_name"]
+                        len_s = 0
+                        len_q = 0
+                        cache_result: RatiosCacheResultDTO | None = None
+                        metrics_value = 0
+
+                        with self.uow_factory() as uow:
+                            # companies_statements = self.repository_statements_fetched.get_unique_by_column(column_name='company_name', uow=uow)
+                            # companies = self.repository_company.get_all(uow=uow)
+
+                            # valid_companies = []
+                            # for row in companies:
+                            #     if row.company_name not in companies_statements:
+                            #         continue
+                            #     if not row.ticker_codes:
+                            #         continue
+                            #     ticker_codes = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
+                            #     if ticker_codes:
+                            #         valid_companies.append(row)
+                            # success = False
+                            try:
+                                # company_rows = self.repository_company.get_by_column_values(
+                                #     values=[("company_name", company_dto.company_name)],
+                                #     uow=uow,
+                                # )
+                                # company_row: Optional[CompanyDataDTO] = next(
+                                #     (row for row in company_rows if row.company_name == company_dto.company_name),
+                                #     None,
+                                # )
+
+                                # if company_row:
+                                #     ticker_codes = [
+                                #         code
+                                #         for code in (company_row.ticker_codes or [])
+                                #         if isinstance(code, str)
+                                #         and len(code) >= 5
+                                #         and code_parameter.match(code)
+                                #     ]
+
+                                # if ticker_codes and len(ticker_codes[0]) > 4:
+                                quotes = self._load_quotes(ticker_codes=company_dto.ticker_codes, uow=uow)
+                                #     if quotes:
+                                statements = self._load_statements(company_name=company_dto.company_name, uow=uow)
+                                #         if statements:
+                                len_s = len(statements.get("statements", []))
+                                len_q = sum(len(v) for v in quotes.values())
+                                data_snapshot = {
+                                    "indicators": treated_indicators,
+                                    "statements": statements,
+                                    "quotes": quotes,
+                                }
+
+                                company_data = self._treat_data(data_snapshot)
+                                df, cache_result = self.ratios_cache_service.get_or_compute(
+                                    company_name=company_name,
+                                    quotes=company_data.get("quotes"),
+                                    statements=company_data.get("statements"),
+                                    indicators=company_data.get("indicators"),
+                                    compute_fn=lambda: self._create_ratios(company_data),
+                                    code_hash=self._ratios_code_hash,
+                                )
+                                metrics_value = cache_result.entry.size_bytes
+
+                                success = True
+
+                            except Exception as e:  # noqa: BLE001
+                                self.logger.log(
+                                    f"NormalizeUseCase company {company_name} failed: {e}",
+                                    level="error",
+                                )
+                                raise
+                            finally:
+                                progress = {
+                                    "index": task.index,
+                                    "size": total_companies,
+                                    "start_time": start_time,
+                                }
+                                extra_info = {
+                                    "Indicators": len(treated_indicators) or 0,
+                                    "Statements": len_s,
+                                    "Quotes": len_q,
+                                    "Cache": "hit" if cache_result and cache_result.hit else "miss" if cache_result else "skip",
+                                }
+                                ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
+                                self.logger.log(
+                                    f"{' '.join([ticker_str.strip(), company_name]).strip()}",
+                                    level="info",
+                                    progress=progress,
+                                    extra=extra_info,
+                                )
+
+                                if success:
+                                    uow.commit()
+
+                        if not cache_result:
+                            return None
+
+                        return {
+                            "company_name": company_name,
+                            "cache_result": cache_result,
+                            "metrics": metrics_value,
+                        }
+
+                    def on_result(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
+                        nonlocal metrics
+                        if not item:
+                            return
+
+                        cache_results.append(item["cache_result"])
+                        metrics += int(item.get("metrics", 0))
+
+                    tasks = (
+                        (index, {"company_name": company_name})
+                        for index, company_name in enumerate(companies)
+                    )
+
+                    self.worker_pool(
+                        logger=self.logger,
+                        tasks=tasks,
+                        processor=processor,
+                        on_result=on_result,
+                        post_callback=None,
+                        max_workers=self.max_workers,
+                        total_size=total_companies,
+                    )
 
         except Exception as exc:  # noqa: BLE001
             self.logger.log(f"NormalizeUseCase failed: {exc}", level="error")
             raise
-
-
-        # total_companies = len(companies)
-
-        # def processor(task: WorkerTaskDTO) -> Optional[dict[str, Any]]:  # noqa: ANN401
-        #     company_name = task.data["company_name"]
-        #     len_s = 0
-        #     len_q = 0
-        #     cache_result: RatiosCacheResultDTO | None = None
-        #     metrics_value = 0
-
-        #     with self.uow_factory() as uow:
-        #         companies_statements = self.repository_statements_fetched.get_unique_by_column(column_name='company_name', uow=uow)
-        #         companies = self.repository_company.get_all(uow=uow)
-
-        #         valid_companies = []
-        #         for row in companies:
-        #             if row.company_name not in companies_statements:
-        #                 continue
-        #             if not row.ticker_codes:
-        #                 continue
-        #             ticker_codes = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
-        #             if ticker_codes:
-        #                 valid_companies.append(row)
-        #         success = False
-        #         try:
-        #             company_rows = self.repository_company.get_by_column_values(
-        #                 values=[("company_name", company_name)],
-        #                 uow=uow,
-        #             )
-        #             company_row: Optional[CompanyDataDTO] = next(
-        #                 (row for row in company_rows if row.company_name == company_name),
-        #                 None,
-        #             )
-
-        #             if company_row:
-        #                 ticker_codes = [
-        #                     code
-        #                     for code in (company_row.ticker_codes or [])
-        #                     if isinstance(code, str)
-        #                     and len(code) >= 5
-        #                     and code_parameter.match(code)
-        #                 ]
-
-        #             if ticker_codes and len(ticker_codes[0]) > 4:
-        #                 quotes = self._load_quotes(ticker_codes=ticker_codes, uow=uow)
-        #                 if quotes:
-        #                     statements = self._load_statements(company_name=company_name, uow=uow)
-        #                     if statements:
-        #                         len_s = len(statements.get("statements", []))
-        #                         len_q = sum(len(v) for v in quotes.values())
-        #                         data_snapshot = {
-        #                             "indicators": treated_indicators,
-        #                             "statements": statements,
-        #                             "quotes": quotes,
-        #                         }
-
-        #                         company_data = self._treat_data(data_snapshot)
-        #                         df, cache_result = self.ratios_cache_service.get_or_compute(
-        #                             company_name=company_name,
-        #                             quotes=company_data.get("quotes"),
-        #                             statements=company_data.get("statements"),
-        #                             indicators=company_data.get("indicators"),
-        #                             compute_fn=lambda: self._create_ratios(company_data),
-        #                             code_hash=self._ratios_code_hash,
-        #                         )
-        #                         metrics_value = cache_result.entry.size_bytes
-
-        #             success = True
-
-        #         except Exception as e:  # noqa: BLE001
-        #             self.logger.log(
-        #                 f"NormalizeUseCase company {company_name} failed: {e}",
-        #                 level="error",
-        #             )
-        #             raise
-        #         finally:
-        #             progress = {
-        #                 "index": task.index,
-        #                 "size": total_companies,
-        #                 "start_time": start_time,
-        #             }
-        #             extra_info = {
-        #                 "Indicators": len(treated_indicators) or 0,
-        #                 "Statements": len_s,
-        #                 "Quotes": len_q,
-        #                 "Cache": "hit" if cache_result and cache_result.hit else "miss" if cache_result else "skip",
-        #             }
-        #             ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
-        #             self.logger.log(
-        #                 f"{' '.join([ticker_str.strip(), company_name]).strip()}",
-        #                 level="info",
-        #                 progress=progress,
-        #                 extra=extra_info,
-        #             )
-
-        #             if success:
-        #                 uow.commit()
-
-        #     if not cache_result:
-        #         return None
-
-        #     return {
-        #         "company_name": company_name,
-        #         "cache_result": cache_result,
-        #         "metrics": metrics_value,
-        #     }
-
-        # def on_result(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
-        #     nonlocal metrics
-        #     if not item:
-        #         return
-
-        #     cache_results.append(item["cache_result"])
-        #     metrics += int(item.get("metrics", 0))
-
-        # tasks = (
-        #     (index, {"company_name": company_name})
-        #     for index, company_name in enumerate(companies)
-        # )
-
-        # try:
-        #     self.worker_pool(
-        #         logger=self.logger,
-        #         tasks=tasks,
-        #         processor=processor,
-        #         on_result=on_result,
-        #         post_callback=None,
-        #         max_workers=self.max_workers,
-        #         total_size=total_companies,
-        #     )
-        # except Exception as exc:  # noqa: BLE001
-        #     self.logger.log(
-        #         f"NormalizeUseCase processing failed: {exc}",
-        #         level="error",
-        #     )
-        #     raise
 
         results: SyncResultsDTO = SyncResultsDTO(
             items=cache_results,
