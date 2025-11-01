@@ -13,7 +13,7 @@ from typing import (
     runtime_checkable,
 )
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.engine import Row
 
 from application.ports.config_port import ConfigPort
@@ -204,6 +204,29 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
                     distinct=distinct,
                 )
                 )
+
+    def get_distinct_column(
+        self,
+        column_name: str,
+        *,
+        uow: Uow,
+    ) -> List[Any]:
+        """Return all distinct values for a given column.
+
+        Args:
+            column_name (str): Name of the ORM column to project.
+            uow (Uow): Unit of work providing the SQLAlchemy session.
+
+        Returns:
+            List[Any]: Sequence with the distinct values in the requested column.
+        """
+
+        model, _ = self.get_model_class()
+        column = getattr(model, column_name)
+
+        stmt = select(column).distinct()
+        result = uow.session.execute(stmt)
+        return [row[0] for row in result]
 
     def get_all(
         self,
