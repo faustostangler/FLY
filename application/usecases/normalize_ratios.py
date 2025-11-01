@@ -123,6 +123,20 @@ class NormalizeUseCase:
             ticker_codes: List[str] = []
 
             with self.uow_factory() as uow:
+                statements = self.repository_statements_fetched.get_all_by_columns(['company_name'], distinct=True, uow=uow)
+
+                tickers = self.repository_company.get_all_by_columns(['company_name', 'ticker_codes'], uow=uow)
+                companies_tickers = []
+                for row in tickers:
+                    # cada row é ((company_name, tickers_str),)
+                    company_name, tickers_str = row[0]
+                    if not tickers_str:
+                        continue
+                    # divide por vírgula e limpa espaços
+                    tickers = [t.strip().upper() for t in tickers_str.split(",") if len(t.strip()) > 4]
+                    if tickers:
+                        companies_tickers.append((company_name, tickers))
+
                 success = False
                 try:
                     company_rows = self.repository_company.get_by_column_values(

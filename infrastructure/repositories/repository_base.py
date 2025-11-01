@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import (
     Any,
     Generic,
-    Iterator,
     Iterable,
+    Iterator,
     List,
     Protocol,
     Tuple,
@@ -12,8 +12,8 @@ from typing import (
     Union,
     runtime_checkable,
 )
-from sqlalchemy import and_, or_
 
+from sqlalchemy import and_, or_
 from sqlalchemy.engine import Row
 
 from application.ports.config_port import ConfigPort
@@ -106,6 +106,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         uow: Uow, 
         batch_size: int | None = None,
         include_nulls: bool = False,
+        distinct: bool = False,
     ) -> Iterator[Tuple]:
         """Stream distinct values for one or more columns in stable order.
 
@@ -141,6 +142,12 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         if not include_nulls:
             for c in columns:
                 q = q.filter(c.isnot(None))
+
+        if distinct:
+            q = q.distinct()
+
+        # Add order_by for stable, deterministic results (especially with distinct and paging)
+        q = q.order_by(*columns)
 
         def yield_rows(rows):
             if len(columns) == 1:
@@ -179,6 +186,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         uow: Uow,
         include_nulls: bool = False,
         batch_size: int | None = None,
+        distinct: bool = False,
     ) -> List[Tuple]:
         """Lista de tuplas com valores de múltiplas colunas.
 
@@ -188,13 +196,14 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
         if isinstance(column_names, str):
             column_names = [column_names]
         return list(
-            self.iter_existing_by_columns(
-                list(column_names),
-                uow=uow,
-                include_nulls=include_nulls,
-                batch_size=batch_size,
-            )
-        )
+                self.iter_existing_by_columns(
+                    list(column_names),
+                    uow=uow,
+                    include_nulls=include_nulls,
+                    batch_size=batch_size,
+                    distinct=distinct,
+                )
+                )
 
     def get_all(
         self,

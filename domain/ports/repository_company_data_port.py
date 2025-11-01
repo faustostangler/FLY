@@ -35,3 +35,7 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
 
     # # já herdado de RepositoryBasePort: save_all(..., uow)
 
+    def get_viable_companies(
+        self, uow: Uow, company_names: list[str] | None = None
+    ) -> dict[str, list[str]]:
+        ...

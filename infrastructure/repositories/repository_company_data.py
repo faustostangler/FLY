@@ -146,3 +146,49 @@ class RepositoryCompanyData(
         )
 
         return row[0] if row else None
+
+    def get_viable_companies(
+        self, uow: Uow, company_names: list[str] | None = None
+    ) -> dict[str, list[str]]:
+
+        base_sql = """
+        WITH tickers AS (
+          SELECT c.company_name AS company_name,
+                 UPPER(value)   AS ticker
+          FROM company_data c, json_each(c.ticker_codes)
+        ),
+        tickers_filtered AS (
+          SELECT company_name, ticker
+          FROM tickers
+          -- aproxima o seu regex ^[A-Z]{4}\d{1,2}[A-Z]?$
+          WHERE ticker GLOB '[A-Z][A-Z][A-Z][A-Z][0-9][0-9]*[A-Z]?'
+        )
+        SELECT t.company_name AS company_name,
+               GROUP_CONCAT(DISTINCT t.ticker) AS tickers_csv
+        FROM tickers_filtered t
+        WHERE EXISTS (
+            SELECT 1 FROM statements_fetched s
+            WHERE s.company_name = t.company_name
+        )
+        AND EXISTS (
+            SELECT 1 FROM stock_quote q
+            WHERE q.ticker = t.ticker
+        )
+        {name_filter}
+        GROUP BY t.company_name
+        """
+        name_filter = ""
+        params = {}
+        if company_names:
+            name_filter = "AND t.company_name IN :names"
+            params["names"] = tuple(company_names)
+
+        sql = text(base_sql.format(name_filter=name_filter))
+        rows = uow.session.execute(sql, params).mappings().all()
+
+        out: dict[str, list[str]] = {}
+        for r in rows:
+            tickers = [x for x in (r["tickers_csv"] or "").split(",") if x]
+            if tickers:
+                out[r["company_name"]] = tickers
+        return out
