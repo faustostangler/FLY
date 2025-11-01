@@ -4,7 +4,7 @@ from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
-from domain.dtos import RatiosCacheEntryDTO
+from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 
 
 @runtime_checkable

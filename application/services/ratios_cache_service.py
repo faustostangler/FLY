@@ -7,10 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from domain.dtos import (
-    RatiosCacheContextDTO,
-    RatiosCacheResultDTO,
-)
+from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
+from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 
 

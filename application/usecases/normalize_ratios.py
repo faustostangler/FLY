@@ -12,13 +12,11 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from application.services import RatiosCacheService
-from domain.dtos import (
-    CompanyDataDTO,
-    RatiosCacheResultDTO,
-    SyncResultsDTO,
-    WorkerTaskDTO,
-)
+from application.services.ratios_cache_service import RatiosCacheService
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
@@ -171,9 +169,9 @@ class NormalizeUseCase:
 
                     success = True
 
-                except Exception as error:  # noqa: BLE001
+                except Exception as e:  # noqa: BLE001
                     self.logger.log(
-                        f"NormalizeUseCase company {company_name} failed: {error}",
+                        f"NormalizeUseCase company {company_name} failed: {e}",
                         level="error",
                     )
                     raise
@@ -347,8 +345,12 @@ class NormalizeUseCase:
         # if c.empty:
         #     return pd.DataFrame()
 
-        q["date"] = pd.to_datetime(q["date"])
-        q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
+        if "date" in q.columns:
+            q["date"] = pd.to_datetime(q["date"])
+            q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
+        else:
+            q.index = pd.to_datetime(q.index)
+            q = q.sort_index().drop_duplicates()
 
         if c is not None and not c.empty:
             q = q.sort_index().reindex(c.index, method="ffill")
@@ -658,7 +660,7 @@ class NormalizeUseCase:
             for stock_quote, df_stock_quote in data[k].items():
                 df_stock_quote = df_stock_quote.set_index('date')
                 resampled = self._resample_series(df_stock_quote, calendar, agg_method="last")
-                # data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
+                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
 
             k = "statements"
             data_treated[k] = {}

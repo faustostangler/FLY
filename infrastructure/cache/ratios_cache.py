@@ -8,7 +8,7 @@ import pandas as pd
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from domain.dtos import RatiosCacheEntryDTO
+from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 from infrastructure.config.cache import CacheConfig, load_cache_config
 from infrastructure.models.ratios_cache_model import (
@@ -23,6 +23,19 @@ class RatiosCacheAdapter(RatiosCachePort):
     def __init__(self, *, config: CacheConfig | None = None) -> None:
         self._config = config or load_cache_config()
         self._base_dir = Path(self._config.base_dir)
+# =======
+#     TABLE_NAME = "cache"
+
+#     def __init__(
+#         self,
+#         *,
+#         base_dir: Path,
+#         max_cache_size_bytes: int = 1_000_000_000, # create a config entry for cache size and age
+#         max_age_days: int = 30,
+#     ) -> None:
+#         self._base_dir = Path(base_dir)
+#         self._base_dir.mkdir(parents=True, exist_ok=True)
+# >>>>>>> Stashed changes
         self._cache_dir = self._base_dir
         self._max_cache_size_bytes = self._config.max_cache_size_bytes
         self._max_age = self._config.max_age
