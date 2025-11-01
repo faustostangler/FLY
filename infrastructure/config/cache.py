@@ -13,10 +13,10 @@ CACHE_DIR_NAME = "cache"
 CACHE_DB_FILENAME = "fly_cache.db"
 
 # Default table name storing cache metadata
-CACHE_TABLE_NAME = "cache"
+CACHE_TABLE_NAME = "tbl_cache"
 
 # Default maximum on-disk size (in bytes) before eviction kicks in (1 GB)
-MAX_CACHE_SIZE_BYTES = 1_000_000_000
+MAX_CACHE_SIZE_BYTES = 1_000_000
 
 # Default age threshold (in days) before entries are considered stale
 MAX_AGE_DAYS = 30

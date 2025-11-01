@@ -157,7 +157,7 @@ class NormalizeUseCase:
                                 }
 
                                 company_data = self._treat_data(data_snapshot)
-                                _, cache_result = self.ratios_cache_service.get_or_compute(
+                                df, cache_result = self.ratios_cache_service.get_or_compute(
                                     company_name=company_name,
                                     quotes=company_data.get("quotes"),
                                     statements=company_data.get("statements"),
@@ -750,6 +750,10 @@ class NormalizeUseCase:
                 except KeyError:
                     ratios_df[col_out] = np.nan
                     calculate_df[account_name] = np.nan   # persiste para loops
-            
+
+        if isinstance(ratios_df.index, pd.MultiIndex):
+            ratios_df = ratios_df.reset_index(drop=False)  # transforma níveis do índice em colunas
+            ratios_df = ratios_df.set_index("date").sort_index()
+
         return ratios_df.fillna(0)
 

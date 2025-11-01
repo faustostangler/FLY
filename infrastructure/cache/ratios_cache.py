@@ -80,9 +80,9 @@ class RatiosCacheAdapter(RatiosCachePort):
                 self._remove_entry(session, entry)
                 return None
 
-            with session.begin():
-                entry.accessed_at = datetime.now()
-                entry.access_count += 1
+            entry.accessed_at = datetime.now()
+            entry.access_count += 1
+            session.add(entry)  # garante que será persistido
 
             return df, entry.to_dto()
 
@@ -186,5 +186,4 @@ class RatiosCacheAdapter(RatiosCachePort):
                 session.delete(entry)
 
     def _remove_entry(self, session: Session, entry: RatiosCacheEntryModel) -> None:
-        with session.begin():
-            session.delete(entry)
+        session.delete(entry)

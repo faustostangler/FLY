@@ -14,9 +14,7 @@ from infrastructure.factories.datacleaner_factory import datacleaner_factory
 from infrastructure.http.builders import build_http_client
 from infrastructure.repositories.repository_company_data import RepositoryCompanyData
 from infrastructure.repositories.repository_nsd import RepositoryNsd
-from infrastructure.repositories.repository_statements_fetched import (
-    StatementFetchedRepository,
-)
+from infrastructure.repositories.repository_statements_fetched import StatementFetchedRepository
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.repositories.repository_indicators import RepositoryIndicators

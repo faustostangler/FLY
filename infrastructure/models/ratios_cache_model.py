@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from domain.dtos import RatiosCacheEntryDTO
+from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 
 
 class RatiosCacheBase(DeclarativeBase):
