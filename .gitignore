@@ -78,10 +78,13 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Database files
+# Database and cache files
 *.db
 *.csv
 *.db-journal
+/cache/
+*.parquet
+*.pkl
 
 # Binary and Temp directories
 bin/

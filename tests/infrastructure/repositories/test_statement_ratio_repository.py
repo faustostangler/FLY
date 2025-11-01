@@ -47,6 +47,7 @@ def _make_ratio(value: float = 10.0) -> StatementRatioDTO:
     return StatementRatioDTO(
         nsd="123",
         company_name="Example SA",
+        ticker="TEST3",
         date=datetime(2024, 1, 31),
         version="1",
         grupo="G",
