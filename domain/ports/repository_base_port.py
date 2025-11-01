@@ -76,6 +76,13 @@ class RepositoryBasePort(Protocol, Generic[T, K]):
         distinct: bool = False,
     ) -> List[Tuple]: ...
 
+    def get_distinct_column(
+        self,
+        column_name: str,
+        *,
+        uow: Uow,
+    ) -> List[Any]: ...
+
     def get_all(
         self,
         *,
