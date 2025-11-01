@@ -7,6 +7,7 @@ from domain.polices.nsd_policy import NsdPolicy
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from infrastructure.cache.ratios_cache import RatiosCacheAdapter
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
 
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
@@ -15,9 +16,6 @@ from infrastructure.repositories.repository_company_data import RepositoryCompan
 from infrastructure.repositories.repository_nsd import RepositoryNsd
 from infrastructure.repositories.repository_statements_fetched import (
     StatementFetchedRepository,
-)
-from infrastructure.repositories.repository_statements_ratio import (
-    StatementRatioRepository,
 )
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
@@ -55,9 +53,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
-    repository_ratio_statements = StatementRatioRepository(
-        config=config, logger=logger
-    )
+    ratios_cache = RatiosCacheAdapter(base_dir=config.paths.root_dir / "cache")
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -132,7 +128,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         repository_indicators=repository_indicators,
         repository_statements_raw=repository_raw_statements,
         repository_statements_fetched=repository_fetched_statements,
-        repository_statements_ratio=repository_ratio_statements,
+        ratios_cache=ratios_cache,
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
