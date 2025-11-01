@@ -83,6 +83,10 @@ MANIFEST
 *.csv
 *.db-journal
 
+# Cache artifacts
+/cache/
+*.parquet
+
 # Binary and Temp directories
 bin/
 temp/
