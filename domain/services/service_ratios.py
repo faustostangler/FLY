@@ -4,16 +4,13 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import UowFactoryPort
-from application.ports.http_client_port import AffinityHttpClientPort
 from application.usecases.normalize_ratios import NormalizeUseCase
-from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.stock_quote_dto import StockQuoteDTO
+from domain.dtos import RatiosCacheResultDTO, SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
-from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
-from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
+from domain.ports.ratios_cache_port import RatiosCachePort
 
 
 class RatiosService:
@@ -28,7 +25,7 @@ class RatiosService:
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        repository_statements_ratio: RepositoryStatementRatioPort,
+        ratios_cache: RatiosCachePort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -49,7 +46,7 @@ class RatiosService:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
-        self.repository_statements_ratio = repository_statements_ratio
+        self.ratios_cache = ratios_cache
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
@@ -64,7 +61,7 @@ class RatiosService:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
-            repository_statements_ratio=self.repository_statements_ratio,
+            ratios_cache=self.ratios_cache,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
@@ -73,10 +70,10 @@ class RatiosService:
             # max_workers=self.config.worker_pool.max_workers,
         )
 
-    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO:
+    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[RatiosCacheResultDTO]:
         return self.run()
 
-    def run(self) -> SyncResultsDTO[StockQuoteDTO]:
+    def run(self) -> SyncResultsDTO[RatiosCacheResultDTO]:
         """Trigger company synchronization workflow.
 
         Returns:

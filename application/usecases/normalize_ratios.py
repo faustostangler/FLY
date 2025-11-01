@@ -1,9 +1,7 @@
-from calendar import calendar
-import hashlib
 import re
 import time
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -14,17 +12,18 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.statement_ratio_dto import StatementRatioDTO
-from domain.dtos.sync_results_dto import SyncResultsDTO
+from application.services import RatiosCacheService
+from domain.dtos import (
+    CompanyDataDTO,
+    RatiosCacheResultDTO,
+    SyncResultsDTO,
+    WorkerTaskDTO,
+)
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from infrastructure.utils.list_flatenner import ListFlattener
-from infrastructure.utils.save_strategy import SaveStrategy
+from domain.ports.ratios_cache_port import RatiosCachePort
 
 # from infrastructure.helpers.list_flattener import ListFlattener
 
@@ -40,8 +39,8 @@ class NormalizeUseCase:
         repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
-        repository_statements_ratio: RepositoryStatementRatioPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
+        ratios_cache: RatiosCachePort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -63,8 +62,9 @@ class NormalizeUseCase:
         self.repository_company = repository_company
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
-        self.repository_statements_ratio = repository_statements_ratio
         self.repository_statements_fetched = repository_statements_fetched
+        self.ratios_cache_service = RatiosCacheService(cache_port=ratios_cache)
+        self._ratios_code_hash = RatiosCacheService.build_code_hash(self._create_ratios)
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
@@ -78,26 +78,18 @@ class NormalizeUseCase:
         """Run the full synchronization pipeline.
 
         Steps:
-            1. Retrieve company data from the scraper.
-            2. Transform results into ``CompanyDataDTO`` objects.
-            3. Save them into the repository in batches.
+            1. Retrieve company data from the persistence layer.
+            2. Transform results into normalized ``pandas`` data structures.
+            3. Cache the calculated ratios for reuse across runs.
 
         Returns:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
         metrics = 0
-        all_ratios: List[StatementRatioDTO] = []
+        cache_results: List[RatiosCacheResultDTO] = []
         code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
-
-        strategy: SaveStrategy[StatementRatioDTO] = SaveStrategy.from_config(
-            self._save_ratios_batch,
-            threshold=self.config.repository.persistence_threshold,
-            config=self.config,
-            auto_flush=False,
-            uow_factory=self.uow_factory,
-        )
 
         try:
             with self.uow_factory() as bootstrap_uow:
@@ -128,7 +120,8 @@ class NormalizeUseCase:
             company_name = task.data["company_name"]
             len_s = 0
             len_q = 0
-            ratios_dtos: List[StatementRatioDTO] = []
+            cache_result: RatiosCacheResultDTO | None = None
+            metrics_value = 0
             ticker_codes: List[str] = []
 
             with self.uow_factory() as uow:
@@ -157,11 +150,6 @@ class NormalizeUseCase:
                         if quotes:
                             statements = self._load_statements(company_name=company_name, uow=uow)
                             if statements:
-                                # check if need to update
-                                with self.uow_factory() as uow:
-                                    if not self._should_process(company_name, uow=uow):
-                                        return  # sai antes de _treat_data
-
                                 len_s = len(statements.get("statements", []))
                                 len_q = sum(len(v) for v in quotes.values())
                                 data_snapshot = {
@@ -169,17 +157,17 @@ class NormalizeUseCase:
                                     "statements": statements,
                                     "quotes": quotes,
                                 }
-                                data_snapshot['indicators']['11'].to_csv('indicators.csv', index=True)
-                                data_snapshot['statements']['statements'].to_csv('statements.csv', index=False)
-                                data_snapshot['quotes']['stock_3'].to_csv('quotes.csv', index=False)
 
                                 company_data = self._treat_data(data_snapshot)
-                                df_ratios = self._create_ratios(company_data)
-                                ratios_dtos = self._build_ratio_dtos(
-                                    df_ratios=df_ratios,
-                                    company=company_row,
-                                    ticker_codes=ticker_codes,
+                                _, cache_result = self.ratios_cache_service.get_or_compute(
+                                    company_name=company_name,
+                                    quotes=company_data.get("quotes"),
+                                    statements=company_data.get("statements"),
+                                    indicators=company_data.get("indicators"),
+                                    compute_fn=lambda: self._create_ratios(company_data),
+                                    code_hash=self._ratios_code_hash,
                                 )
+                                metrics_value = cache_result.entry.size_bytes
 
                     success = True
 
@@ -199,6 +187,7 @@ class NormalizeUseCase:
                         "Indicators": len(treated_indicators) or 0,
                         "Statements": len_s,
                         "Quotes": len_q,
+                        "Cache": "hit" if cache_result and cache_result.hit else "miss" if cache_result else "skip",
                     }
                     ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
                     self.logger.log(
@@ -211,43 +200,22 @@ class NormalizeUseCase:
                     if success:
                         uow.commit()
 
-            if not ratios_dtos:
+            if not cache_result:
                 return None
 
             return {
                 "company_name": company_name,
-                "ratios": ratios_dtos,
+                "cache_result": cache_result,
+                "metrics": metrics_value,
             }
-
-        local_buffer: list[Any] = []
-        def handle_batch(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
-            if not item:
-                return
-
-            local_buffer.append(item.get("ratios", []))  # mantém bloco de listas
-
-            # Flush imediatamente se atingir o limite e auto_flush estiver ativo
-            if len(local_buffer) >= strategy.threshold:
-                # strategy.handle(item.get("ratios", []))  # enfileira o bloco de 3 dtos
-                strategy.handle_many(local_buffer)
-                strategy.flush()
-                local_buffer.clear()
-            # with self.uow_factory() as uow:
-            #     strategy.handle(item.get("ratios", []))
-            #     # strategy.handle_many(item.get("ratios", []))
-            #     # strategy.flush(uow=uow)
-            #     # uow.commit()
-            #     pass
 
         def on_result(item: Optional[dict[str, Any]]) -> None:  # noqa: ANN401
             nonlocal metrics
-            handle_batch(item)
             if not item:
                 return
 
-            ratios = item.get("ratios", [])
-            all_ratios.extend(ratios)
-            metrics += len(ratios)
+            cache_results.append(item["cache_result"])
+            metrics += int(item.get("metrics", 0))
 
         tasks = (
             (index, {"company_name": company_name})
@@ -270,37 +238,13 @@ class NormalizeUseCase:
                 level="error",
             )
             raise
-        finally:
-            strategy.finalize()
 
         results: SyncResultsDTO = SyncResultsDTO(
-            items=all_ratios,
+            items=cache_results,
             metrics=metrics,
         )
 
         return results
-
-    def _should_process(self, company: str, *, uow: Uow) -> bool:
-        fetched_head = self.repository_statements_fetched.get_head(company, uow=uow)
-        if not fetched_head:
-            return False
-
-        ratio_head = self.repository_statements_ratio.get_head(company, uow=uow)
-        if not ratio_head:
-            return True
-
-        return fetched_head > ratio_head
-
-    def _save_ratios_batch(
-        self,
-        items: List[StatementRatioDTO],
-        *,
-        uow: Uow,
-    ) -> None:
-        if not items:
-            return
-
-        self.repository_statements_ratio.save_all(items, uow=uow)
 
     def _load_indicators(self, uow: Uow) -> dict[str, pd.DataFrame]:
         indicators: dict[str, pd.DataFrame] = {}
@@ -806,84 +750,4 @@ class NormalizeUseCase:
                     calculate_df[account_name] = np.nan   # persiste para loops
             
         return ratios_df.fillna(0)
-
-    def _build_ratio_dtos(
-        self,
-        *,
-        df_ratios: pd.DataFrame,
-        company: Optional[CompanyDataDTO],
-        ticker_codes: List[str],
-    ) -> List[StatementRatioDTO]:
-        if company is None or df_ratios.empty:
-            return []
-        tidy = df_ratios.reset_index()
-        tidy["date"] = pd.to_datetime(tidy["date"], errors="coerce")
-
-        tidy = tidy.dropna(subset=["date"])
-        tidy['nsd'] = tidy['nsd'].astype(str)
-        tidy['company_name'] = tidy['company_name'].astype(str)
-        tidy['version'] = tidy['version'].astype(str)
-
-        context_columns = ["nsd", "company_name", "version"] # quarter, account e value vão ser pivotados
-        melted = tidy.melt(id_vars=["date"] + context_columns, var_name="account_description", value_name="value")
-        if melted.empty:
-            return []
-
-        sep = " - "
-        cols = ["account", "description", "grupo", "quadro"]
-        parts = melted["account_description"].str.split(sep, n=3, expand=True)
-        parts.columns = cols[:parts.shape[1]]
-        for col in parts.columns:
-            parts[col] = parts[col].str.strip()
-        melted = melted.drop(columns=["account_description"]).join(parts)
-        for col in cols:
-            if col not in melted.columns:
-                melted[col] = pd.NA
-        melted[cols] = melted[cols].astype("string")
-        melted = melted[[
-            "company_name", "nsd", "date", "grupo", "quadro", "account", "description", "value", "version",
-        ]]
-        melted["grupo"] = melted["grupo"].replace("", pd.NA)
-        melted["quadro"] = melted["quadro"].replace("", pd.NA)
-        melted["grupo"] = melted["grupo"].fillna("Indicadores")
-        suffix = melted["account"].fillna("").str[:2]
-        melted["quadro"] = melted["quadro"].fillna("Indicador " + suffix)
-        melted["value"] = pd.to_numeric(melted["value"], errors="coerce").fillna(0.0)
-        melted = melted.sort_values(["company_name", "nsd", "date", "account"]).reset_index(drop=True)
-        # melted.to_csv("melted.csv")
-
-        ticker = ticker_codes[0] if ticker_codes else ""
-
-        chunk_size = 100000
-        start_time = time.perf_counter()
-        dtos: list[StatementRatioDTO] = []
-        for start in range(0, len(melted), chunk_size):
-            chunk = melted.iloc[start:start + chunk_size]
-            for company_name, nsd, d, grupo, quadro, account, description, value, version in chunk.itertuples(index=False, name=None):
-                dto = StatementRatioDTO(
-                    nsd=nsd,
-                    company_name=company_name,
-                    ticker=ticker,
-                    date=d,
-                    grupo=grupo,
-                    quadro=quadro,
-                    account=account,
-                    description=description,
-                    value=float(value) if value else 0.00,
-                    version=version,
-                )
-                dtos.append(dto)
-            progress={
-                "index": start + len(chunk) - 1,
-                "size": len(melted),
-                "start_time": start_time,  # noqa: F821 (assumed provided in context)
-            }
-            extra_info = {
-                "Info": "",
-            }
-
-            self.logger.log(f"{ticker}", level="info", progress=progress, extra=extra_info)
-            pass
-
-        return dtos
 
