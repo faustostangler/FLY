@@ -1,196 +1,177 @@
 from __future__ import annotations
 
-import sqlite3
-from datetime import datetime, timedelta
+import os
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.orm import Session, sessionmaker
 
 from domain.dtos import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
+from infrastructure.config.cache import CacheConfig, load_cache_config
+from infrastructure.models.ratios_cache_model import (
+    RatiosCacheBase,
+    RatiosCacheEntryModel,
+)
 
 
 class RatiosCacheAdapter(RatiosCachePort):
-    """SQLite-backed cache storing ratios as parquet files."""
+    """SQLAlchemy-backed cache storing ratios as parquet files."""
 
-    TABLE_NAME = "cache"
-
-    def __init__(
-        self,
-        *,
-        base_dir: Path,
-        max_cache_size_bytes: int = 1_000_000_000,
-        max_age_days: int = 30,
-    ) -> None:
-        self._base_dir = Path(base_dir)
-        self._base_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, *, config: CacheConfig | None = None) -> None:
+        self._config = config or load_cache_config()
+        self._base_dir = Path(self._config.base_dir)
         self._cache_dir = self._base_dir
-        self._db_path = self._base_dir / "fly_cache.db"
-        self._max_cache_size_bytes = max_cache_size_bytes
-        self._max_age = timedelta(days=max_age_days)
+        self._max_cache_size_bytes = self._config.max_cache_size_bytes
+        self._max_age = self._config.max_age
+        self._parquet_compression = self._config.parquet_compression
+
+        if RatiosCacheEntryModel.__tablename__ != self._config.table_name:
+            RatiosCacheEntryModel.__tablename__ = self._config.table_name
+            table = getattr(RatiosCacheEntryModel, "__table__", None)
+            if table is not None:
+                table.name = self._config.table_name
+
+        self._engine = create_engine(
+            self._config.connection_string,
+            connect_args={"check_same_thread": False, "timeout": 60},
+            pool_pre_ping=True,
+            future=True,
+        )
+        self._session_factory = sessionmaker(
+            bind=self._engine,
+            expire_on_commit=False,
+            future=True,
+        )
 
     def initialize(self) -> None:
-        with sqlite3.connect(self._db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
-                    cache_key TEXT PRIMARY KEY,
-                    file_path TEXT NOT NULL,
-                    size_bytes INTEGER NOT NULL,
-                    created_at TEXT NOT NULL,
-                    accessed_at TEXT NOT NULL,
-                    access_count INTEGER DEFAULT 0,
-                    code_hash TEXT NOT NULL
-                )
-                """
-            )
-            try:
-                cursor.execute(
-                    f"ALTER TABLE {self.TABLE_NAME} ADD COLUMN code_hash TEXT"
-                )
-            except sqlite3.OperationalError:
-                pass
-            conn.commit()
+        RatiosCacheBase.metadata.create_all(self._engine)
 
     def load(self, cache_key: str) -> tuple[pd.DataFrame, RatiosCacheEntryDTO] | None:
-        with sqlite3.connect(self._db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                f"SELECT file_path, size_bytes, created_at, accessed_at, access_count, code_hash FROM {self.TABLE_NAME} WHERE cache_key = ?",
-                (cache_key,),
-            )
-            row = cursor.fetchone()
-            if not row:
+        with self._session_factory() as session:
+            entry = session.get(RatiosCacheEntryModel, cache_key)
+            if entry is None:
                 return None
 
-            file_path = Path(row[0])
+            file_path = Path(entry.file_path)
             if not file_path.exists():
-                cursor.execute(
-                    f"DELETE FROM {self.TABLE_NAME} WHERE cache_key = ?",
-                    (cache_key,),
-                )
-                conn.commit()
+                self._remove_entry(session, entry)
                 return None
 
             try:
                 df = pd.read_parquet(file_path)
             except Exception:
                 file_path.unlink(missing_ok=True)
-                cursor.execute(
-                    f"DELETE FROM {self.TABLE_NAME} WHERE cache_key = ?",
-                    (cache_key,),
-                )
-                conn.commit()
+                self._remove_entry(session, entry)
                 return None
 
-            accessed_at = datetime.now()
-            cursor.execute(
-                f"UPDATE {self.TABLE_NAME} SET accessed_at = ?, access_count = access_count + 1 WHERE cache_key = ?",
-                (accessed_at.isoformat(), cache_key),
-            )
-            conn.commit()
+            with session.begin():
+                entry.accessed_at = datetime.now()
+                entry.access_count += 1
 
-            entry = RatiosCacheEntryDTO(
-                cache_key=cache_key,
-                file_path=str(file_path),
-                size_bytes=row[1],
-                created_at=datetime.fromisoformat(row[2]),
-                accessed_at=accessed_at,
-                access_count=row[4] + 1,
-                code_hash=row[5],
-            )
-            return df, entry
+            return df, entry.to_dto()
 
     def store(self, cache_key: str, df: pd.DataFrame, code_hash: str) -> RatiosCacheEntryDTO:
         file_path = self._cache_dir / f"{cache_key}.parquet"
-        df.to_parquet(file_path, compression="zstd")
-        size_bytes = file_path.stat().st_size
+        temp_path = file_path.with_suffix(".parquet.tmp")
+
+        df.to_parquet(temp_path, compression=self._parquet_compression)
+        with temp_path.open("rb+") as handle:
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        size_bytes = temp_path.stat().st_size
         now = datetime.now()
 
-        with sqlite3.connect(self._db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                f"""
-                INSERT INTO {self.TABLE_NAME} (cache_key, file_path, size_bytes, created_at, accessed_at, access_count, code_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(cache_key) DO UPDATE SET
-                    file_path=excluded.file_path,
-                    size_bytes=excluded.size_bytes,
-                    created_at=excluded.created_at,
-                    accessed_at=excluded.accessed_at,
-                    access_count=excluded.access_count,
-                    code_hash=excluded.code_hash
-                """,
-                (
-                    cache_key,
-                    str(file_path),
-                    size_bytes,
-                    now.isoformat(),
-                    now.isoformat(),
-                    1,
-                    code_hash,
-                ),
-            )
-            conn.commit()
-            self._evict_cache_if_needed(conn)
+        entry: RatiosCacheEntryModel | None = None
 
-        return RatiosCacheEntryDTO(
-            cache_key=cache_key,
-            file_path=str(file_path),
-            size_bytes=size_bytes,
-            created_at=now,
-            accessed_at=now,
-            access_count=1,
-            code_hash=code_hash,
-        )
+        try:
+            with self._session_factory.begin() as session:
+                entry = session.get(RatiosCacheEntryModel, cache_key)
+                if entry is None:
+                    entry = RatiosCacheEntryModel(
+                        cache_key=cache_key,
+                        file_path=str(file_path),
+                        size_bytes=size_bytes,
+                        created_at=now,
+                        accessed_at=now,
+                        access_count=1,
+                        code_hash=code_hash,
+                    )
+                    session.add(entry)
+                else:
+                    entry.file_path = str(file_path)
+                    entry.size_bytes = size_bytes
+                    entry.created_at = now
+                    entry.accessed_at = now
+                    entry.access_count = 1
+                    entry.code_hash = code_hash
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+
+        try:
+            temp_path.replace(file_path)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            with self._session_factory.begin() as session:
+                stale_entry = session.get(RatiosCacheEntryModel, cache_key)
+                if stale_entry is not None:
+                    session.delete(stale_entry)
+            raise
+
+        if entry is None:
+            # Defensive guard: SQLAlchemy guarantees assignment above but satisfy type checkers.
+            raise RuntimeError("Failed to persist cache metadata for key '%s'" % cache_key)
+
+        entry_dto = entry.to_dto()
+        self._evict_cache_if_needed()
+        return entry_dto
 
     def invalidate_outdated(self, *, code_hash: str) -> None:
         cutoff = datetime.now() - self._max_age
-        with sqlite3.connect(self._db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                f"SELECT cache_key, file_path, code_hash, accessed_at FROM {self.TABLE_NAME}"
-            )
-            rows = cursor.fetchall()
-            for cache_key, file_path, stored_hash, accessed_at in rows:
-                remove = stored_hash != code_hash
-                if not remove:
-                    try:
-                        last_access = datetime.fromisoformat(accessed_at)
-                    except Exception:
-                        last_access = datetime.min
-                    remove = last_access < cutoff
-                if remove:
-                    Path(file_path).unlink(missing_ok=True)
-                    cursor.execute(
-                        f"DELETE FROM {self.TABLE_NAME} WHERE cache_key = ?",
-                        (cache_key,),
-                    )
-            conn.commit()
-            self._evict_cache_if_needed(conn)
 
-    def _evict_cache_if_needed(self, conn: sqlite3.Connection) -> None:
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT SUM(size_bytes) FROM {self.TABLE_NAME}")
-        total_size = cursor.fetchone()[0] or 0
-        while total_size > self._max_cache_size_bytes:
-            cursor.execute(
-                f"""
-                SELECT cache_key, file_path, size_bytes
-                FROM {self.TABLE_NAME}
-                ORDER BY access_count ASC, created_at ASC
-                LIMIT 1
-                """
+        with self._session_factory.begin() as session:
+            entries = session.scalars(
+                select(RatiosCacheEntryModel).where(
+                    (RatiosCacheEntryModel.code_hash != code_hash)
+                    | (RatiosCacheEntryModel.accessed_at < cutoff)
+                )
+            ).all()
+
+            for entry in entries:
+                Path(entry.file_path).unlink(missing_ok=True)
+                session.delete(entry)
+
+        self._evict_cache_if_needed()
+
+    def _evict_cache_if_needed(self) -> None:
+        with self._session_factory.begin() as session:
+            total_size = session.execute(
+                select(func.coalesce(func.sum(RatiosCacheEntryModel.size_bytes), 0))
+            ).scalar_one()
+
+            if total_size <= self._max_cache_size_bytes:
+                return
+
+            entries = session.scalars(
+                select(RatiosCacheEntryModel)
+                .order_by(
+                    RatiosCacheEntryModel.access_count.asc(),
+                    RatiosCacheEntryModel.created_at.asc(),
+                )
             )
-            row = cursor.fetchone()
-            if not row:
-                break
-            cache_key, file_path, size_bytes = row
-            Path(file_path).unlink(missing_ok=True)
-            cursor.execute(
-                f"DELETE FROM {self.TABLE_NAME} WHERE cache_key = ?",
-                (cache_key,),
-            )
-            conn.commit()
-            total_size -= size_bytes or 0
+
+            for entry in entries:
+                if total_size <= self._max_cache_size_bytes:
+                    break
+
+                Path(entry.file_path).unlink(missing_ok=True)
+                total_size -= entry.size_bytes
+                session.delete(entry)
+
+    def _remove_entry(self, session: Session, entry: RatiosCacheEntryModel) -> None:
+        with session.begin():
+            session.delete(entry)
