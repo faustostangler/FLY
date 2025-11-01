@@ -205,7 +205,7 @@ class RepositoryBase(EngineSetup, RepositoryBasePort[T, K]):
                 )
                 )
 
-    def get_distinct_column(
+    def get_unique_by_column(
         self,
         column_name: str,
         *,
