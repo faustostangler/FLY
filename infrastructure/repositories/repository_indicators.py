@@ -14,7 +14,6 @@ from domain.dtos.indicators_dto import IndicatorsDTO
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from infrastructure.models.indicators_model import IndicatorModel
-from infrastructure.models.statements_ratio_model import StatementRatioModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -72,38 +71,18 @@ class RepositoryIndicators(RepositoryBase[IndicatorsDTO, int], RepositoryIndicat
             raise
 
     def save_ratios_batch(self, ratios: List[StatementRatioDTO], *, uow: Uow) -> None:
-        try:
-            session = uow.session
-            flat_items = ListFlattener.flatten(ratios)
-            valid_items = [i for i in flat_items if i is not None]
+        """Legacy hook retained for backwards compatibility.
 
-            if not valid_items:
-                return
+        Ratio persistence is no longer handled inside this repository. The
+        method logs the invocation and returns without touching the database so
+        that callers can be refactored incrementally.
+        """
 
-            for dto in valid_items:
-                obj = StatementRatioModel.from_dto(dto)
-                data = {c.name: getattr(obj, c.name) for c in StatementRatioModel.__table__.columns}
+        if not ratios:
+            return
 
-                stmt = insert(StatementRatioModel).values(**data)
-                update_dict = {
-                    c.name: getattr(stmt.excluded, c.name)
-                    for c in StatementRatioModel.__table__.columns
-                    if c.name not in {"id", "created_at"}
-                }
-
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "company_id",
-                        "date",
-                        "scope",
-                        "ticker",
-                        "metric_code",
-                        "version",
-                    ],
-                    set_=update_dict,
-                )
-
-                session.execute(stmt)
-        except Exception as e:
-            self.logger.log(f"Error saving ratios: {e}", level="error")
-            raise
+        self.logger.log(
+            "save_ratios_batch called but persistence is disabled",
+            level="debug",
+            extra={"items": len(ListFlattener.flatten(ratios))},
+        )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 import re
 import unicodedata
@@ -18,10 +19,8 @@ from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 
 from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.models.cache_ratios_model import (
-    CacheRatiosBase,
-    CacheRatiosEntryModel,
-)
+from infrastructure.cache.models import CacheBase, CacheEntryModel
+
 
 class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
@@ -29,32 +28,52 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
         self._config = config
         self._logger = logger
-        # Apenas configura engine e session factory. Nenhum I/O aqui.
+
+        cache_db_path = Path(
+            self._config.paths.data_dir / self._config.database.db_cache_filename
+        )
+        cache_db_path.parent.mkdir(parents=True, exist_ok=True)
+
         EngineSetup.__init__(
             self,
-            self._config.database.connection_cache_string,  # nome correto
+            self._config.database.connection_cache_string,
             logger,
+            base=CacheBase,
+            create_schema=False,
         )
+
+        if self._logger:
+            self._logger.log(
+                "CacheRatiosAdapter engine initialized",
+                level="debug",
+                extra={
+                    "dsn": str(self.engine.url),
+                    "base": CacheBase.__name__,
+                    "create_schema": False,
+                },
+            )
 
     def initialize(self) -> None:
         """Cria o schema do cache. Idempotente e explícito."""
-        CacheRatiosBase.metadata.create_all(self.engine)
+
+        self.create_schema()
+        if self._logger:
+            self._logger.log(
+                "CacheRatiosAdapter schema materialized",
+                level="debug",
+                extra={"tables": list(CacheBase.metadata.tables)},
+            )
 
     def load(self, cache_key: str) -> tuple[pd.DataFrame, CacheRatiosEntryDTO] | None:
         with self.Session() as session:  # Session vem do EngineSetup
-            entry = session.get(CacheRatiosEntryModel, cache_key)
+            entry = session.execute(
+                select(CacheEntryModel).where(CacheEntryModel.cache_key == cache_key)
+            ).scalar_one_or_none()
             if entry is None:
                 return None
 
-            file_path = Path(entry.file_path)
-            if not file_path.exists():
-                self._remove_entry(session, entry)
-                return None
-
-            try:
-                df = pd.read_parquet(file_path)
-            except Exception:
-                file_path.unlink(missing_ok=True)
+            df = self._load_payload(entry)
+            if df is None:
                 self._remove_entry(session, entry)
                 return None
 
@@ -74,36 +93,57 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         file_path = self._build_file_path(context=context, company_name=company_name)
         temp_path = file_path.with_suffix(".tmp")
 
-        df.to_parquet(path=temp_path, compression=str(self._config.cache.parquet_compression))  # type: ignore[arg-type]
+        df.to_parquet(
+            path=temp_path,
+            compression=str(self._config.cache.parquet_compression),
+        )  # type: ignore[arg-type]
         with temp_path.open("rb+") as handle:
             handle.flush()
             os.fsync(handle.fileno())
 
         size_bytes = temp_path.stat().st_size
         now = datetime.now()
-        entry: CacheRatiosEntryModel | None = None
+        entry: CacheEntryModel | None = None
 
         try:
             with self.Session.begin() as session:
-                entry = session.get(CacheRatiosEntryModel, context.cache_key)
+                entry = session.execute(
+                    select(CacheEntryModel).where(
+                        CacheEntryModel.cache_key == context.cache_key
+                    )
+                ).scalar_one_or_none()
+                payload_fields = CacheEntryModel.payload_fields_from_entry(
+                    file_path=str(file_path),
+                    payload_blob=None,
+                )
                 if entry is None:
-                    entry = CacheRatiosEntryModel(
+                    entry = CacheEntryModel(
                         cache_key=context.cache_key,
-                        file_path=str(file_path),
+                        logical_key=context.logical_name,
+                        version=str(context.version),
+                        checksum=context.cache_key,
                         size_bytes=size_bytes,
                         created_at=now,
                         accessed_at=now,
                         access_count=1,
                         code_hash=context.code_hash,
+                        is_current=True,
+                        **payload_fields,
                     )
                     session.add(entry)
                 else:
-                    entry.file_path = str(file_path)
+                    entry.logical_key = context.logical_name
+                    entry.version = str(context.version)
+                    entry.checksum = context.cache_key
                     entry.size_bytes = size_bytes
                     entry.created_at = now
                     entry.accessed_at = now
                     entry.access_count = 1
                     entry.code_hash = context.code_hash
+                    entry.is_current = True
+                    for field, value in payload_fields.items():
+                        setattr(entry, field, value)
+                    session.add(entry)
         except Exception:
             temp_path.unlink(missing_ok=True)
             raise
@@ -114,13 +154,21 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         except Exception:
             temp_path.unlink(missing_ok=True)
             with self.Session.begin() as session:
-                stale_entry = session.get(CacheRatiosEntryModel, context.cache_key)
+                stale_entry = session.execute(
+                    select(CacheEntryModel).where(
+                        CacheEntryModel.cache_key == context.cache_key
+                    )
+                ).scalar_one_or_none()
                 if stale_entry is not None:
+                    if stale_entry.payload_path:
+                        Path(stale_entry.payload_path).unlink(missing_ok=True)
                     session.delete(stale_entry)
             raise
 
         if entry is None:
-            raise RuntimeError(f"Failed to persist cache metadata for key '{context.cache_key}'")
+            raise RuntimeError(
+                f"Failed to persist cache metadata for key '{context.cache_key}'"
+            )
 
         entry_dto = entry.to_dto()
         self.invalidate_outdated(code_hash=context.code_hash)
@@ -134,40 +182,63 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         cutoff = datetime.now() - self._config.cache.max_age
         with self.Session.begin() as session:
             entries = session.scalars(
-                select(CacheRatiosEntryModel).where(
-                    (CacheRatiosEntryModel.code_hash != code_hash)
-                    | (CacheRatiosEntryModel.accessed_at < cutoff)
+                select(CacheEntryModel).where(
+                    (CacheEntryModel.code_hash != code_hash)
+                    | (CacheEntryModel.accessed_at < cutoff)
                 )
             ).all()
             for entry in entries:
-                Path(entry.file_path).unlink(missing_ok=True)
+                if entry.payload_path:
+                    Path(entry.payload_path).unlink(missing_ok=True)
                 session.delete(entry)
 
     def _evict_cache_if_needed(self) -> None:
         with self.Session.begin() as session:
             total_size = session.execute(
-                select(func.coalesce(func.sum(CacheRatiosEntryModel.size_bytes), 0))
+                select(func.coalesce(func.sum(CacheEntryModel.size_bytes), 0))
             ).scalar_one()
 
             if total_size <= self._config.cache.max_cache_size_bytes:
                 return
 
             entries = session.scalars(
-                select(CacheRatiosEntryModel)
+                select(CacheEntryModel)
                 .order_by(
-                    CacheRatiosEntryModel.access_count.asc(),
-                    CacheRatiosEntryModel.created_at.asc(),
+                    CacheEntryModel.access_count.asc(),
+                    CacheEntryModel.created_at.asc(),
                 )
             )
             for entry in entries:
                 if total_size <= self._config.cache.max_cache_size_bytes:
                     break
-                Path(entry.file_path).unlink(missing_ok=True)
+                if entry.payload_path:
+                    Path(entry.payload_path).unlink(missing_ok=True)
                 total_size -= entry.size_bytes
                 session.delete(entry)
 
-    def _remove_entry(self, session: Session, entry: CacheRatiosEntryModel) -> None:
+    def _remove_entry(self, session: Session, entry: CacheEntryModel) -> None:
+        if entry.payload_path:
+            Path(entry.payload_path).unlink(missing_ok=True)
         session.delete(entry)
+
+    def _load_payload(self, entry: CacheEntryModel) -> pd.DataFrame | None:
+        if entry.payload_path:
+            file_path = Path(entry.payload_path)
+            if not file_path.exists():
+                return None
+            try:
+                return pd.read_parquet(file_path)
+            except Exception:
+                file_path.unlink(missing_ok=True)
+                return None
+
+        if entry.payload_blob is not None:
+            try:
+                return pd.read_parquet(io.BytesIO(entry.payload_blob))
+            except Exception:
+                return None
+
+        return None
 
     def _build_file_path(
         self,
@@ -177,7 +248,12 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
     ) -> Path:
         safe_company = self._sanitize_company_name(company_name)
         version_segment = f"v{context.version}"
-        target_dir = self._config.paths.cache_dir / context.logical_name / version_segment / safe_company
+        target_dir = (
+            self._config.paths.cache_dir
+            / context.logical_name
+            / version_segment
+            / safe_company
+        )
         target_dir.mkdir(parents=True, exist_ok=True)
         return target_dir / f"{context.cache_key}.parquet"
 

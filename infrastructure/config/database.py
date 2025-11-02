@@ -52,9 +52,7 @@ class DatabaseConfig:
 
     @property
     def connection_cache_string(self) -> str:  # novo
-        # repare: usa paths.cache_dir, não data_dir raiz
-        paths = load_paths()
-        return _sqlite_uri(paths.cache_dir / self.db_cache_filename)
+        return _sqlite_uri(self.data_dir / self.db_cache_filename)
 
 def load_database_config() -> DatabaseConfig:
     """Factory function to load the database configuration.
