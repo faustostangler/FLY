@@ -1,0 +1,68 @@
+"""Use case that refreshes the valid companies projection from source snapshots."""
+
+from __future__ import annotations
+
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.services.valid_companies_batch_updater_service import (
+    ValidCompaniesBatchUpdaterService,
+)
+from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+
+
+class UpdateValidCompaniesProjectionUseCase:
+    """Coordinates the refresh of the valid companies read-model."""
+
+    def __init__(
+        self,
+        *,
+        logger: LoggerPort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
+        repository_stock_quote: RepositoryStockQuotePort,
+        batch_service: ValidCompaniesBatchUpdaterService,
+        uow_factory: UowFactoryPort,
+    ) -> None:
+        self._logger = logger
+        self._repository_company = repository_company
+        self._repository_statements_fetched = repository_statements_fetched
+        self._repository_stock_quote = repository_stock_quote
+        self._batch_service = batch_service
+        self._uow_factory = uow_factory
+
+    def __call__(self) -> list[ValidCompanyReadModelDTO]:
+        return self.run()
+
+    def run(self) -> list[ValidCompanyReadModelDTO]:
+        """Refresh the projection in a single transaction."""
+
+        with self._uow_factory() as uow:
+            companies = self._repository_company.get_all(uow=uow)
+            statement_names = self._repository_statements_fetched.get_unique_by_column(
+                column_name="company_name",
+                uow=uow,
+            )
+            quote_tickers = self._repository_stock_quote.get_unique_by_column(
+                column_name="ticker",
+                uow=uow,
+            )
+
+            projection = self._batch_service.rebuild(
+                uow=uow,
+                companies=companies,
+                statement_company_names=statement_names,
+                quote_tickers=quote_tickers,
+            )
+
+            uow.commit()
+            self._logger.log(
+                f"Valid companies projection refreshed: {len(projection)} items",
+                level="info",
+            )
+
+            return projection
