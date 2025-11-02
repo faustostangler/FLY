@@ -13,17 +13,16 @@ from application.ports.logger_port import LoggerPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.services.ratios_cache_service import RatiosCacheService
-from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
+from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
 
-# from infrastructure.helpers.list_flattener import ListFlattener
 
 
 class NormalizeUseCase:
@@ -34,11 +33,11 @@ class NormalizeUseCase:
         config: ConfigPort,
         logger: LoggerPort,
 
-        repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         ratios_cache: RatiosCachePort,
+        valid_companies_read_port: ValidCompaniesReadPort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -57,7 +56,6 @@ class NormalizeUseCase:
         """
         self.config = config
         self.logger = logger
-        self.repository_company = repository_company
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
@@ -68,6 +66,7 @@ class NormalizeUseCase:
         self.worker_pool = worker_pool
 
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
+        self.valid_companies_read_port = valid_companies_read_port
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -86,7 +85,6 @@ class NormalizeUseCase:
         """
         metrics = 0
         cache_results: List[RatiosCacheResultDTO] = []
-        code_parameter = re.compile(r"^[A-Z]{4}\d{1,2}[A-Z]?$")
         start_time = time.perf_counter()
 
         try:
@@ -97,44 +95,17 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                companies_statements = self.repository_statements_fetched.get_unique_by_column(column_name='company_name', uow=bootstrap_uow)
-                companies_tickers = self.repository_stock_quote.get_unique_by_column(column_name='ticker', uow=bootstrap_uow)
-                companies_raw = self.repository_company.get_all(uow=bootstrap_uow)
-
-                valid_companies = []
-                for row in companies_raw:
-                    if row.company_name not in companies_statements:
-                        continue
-                    if not row.ticker_codes:
-                        continue
-                    tickers = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
-
-                    if not tickers:
-                        continue
-
-                    if not any(t in companies_tickers for t in tickers):
-                        continue
-
-                    valid_companies.append(row)
-
-                # companies = [
-                #     company
-                #     for (company,) in self.repository_company.iter_existing_by_columns(
-                #         "company_name", uow=bootstrap_uow
-                #     )
-                # ]
-
-                self.ratios_cache_service.invalidate_outdated(
-                    code_hash=self._ratios_code_hash,
+                valid_companies: list[ValidCompanyReadModelDTO] = self.valid_companies_read_port.list(
+                    uow=bootstrap_uow,
                 )
 
                 if valid_companies:
-                    df_company = pd.DataFrame(valid_companies)
+                    df_company = pd.DataFrame([item.to_dict() for item in valid_companies])
 
-                    columns = df_company.columns
-                    mask = df_company['cvm_code'] == '10456'
-                    df = df_company[mask]
+                    if df_company.empty:
+                        return SyncResultsDTO(items=[], metrics=0)
 
+                    df = df_company
                     total_companies = len(df)
 
                     def processor(task: WorkerTaskDTO) -> Optional[dict[str, Any]]:  # noqa: ANN401
@@ -145,43 +116,13 @@ class NormalizeUseCase:
                         metrics_value = 0
 
                         with self.uow_factory() as uow:
-                            # companies_statements = self.repository_statements_fetched.get_unique_by_column(column_name='company_name', uow=uow)
-                            # companies = self.repository_company.get_all(uow=uow)
 
-                            # valid_companies = []
-                            # for row in companies:
-                            #     if row.company_name not in companies_statements:
-                            #         continue
-                            #     if not row.ticker_codes:
-                            #         continue
-                            #     ticker_codes = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
-                            #     if ticker_codes:
-                            #         valid_companies.append(row)
                             success = False
                             try:
-                                # company_rows = self.repository_company.get_by_column_values(
-                                #     values=[("company_name", company_dto.company_name)],
-                                #     uow=uow,
-                                # )
-                                # company_row: Optional[CompanyDataDTO] = next(
-                                #     (row for row in company_rows if row.company_name == company_dto.company_name),
-                                #     None,
-                                # )
 
-                                # if company_row:
-                                #     ticker_codes = [
-                                #         code
-                                #         for code in (company_row.ticker_codes or [])
-                                #         if isinstance(code, str)
-                                #         and len(code) >= 5
-                                #         and code_parameter.match(code)
-                                #     ]
 
-                                # if ticker_codes and len(ticker_codes[0]) > 4:
                                 quotes = self._load_quotes(ticker_codes=company_dto.ticker_codes, uow=uow)
-                                #     if quotes:
                                 statements = self._load_statements(company_name=company_dto.company_name, uow=uow)
-                                #         if statements:
                                 len_s = len(statements.get("statements", []))
                                 len_q = sum(len(v) for v in quotes.values())
                                 data_snapshot = {
@@ -325,7 +266,6 @@ class NormalizeUseCase:
         statements.sort_values(["company_name", "quarter", "version_numeric"], inplace=True)
         df = statements.dropna(subset=["quarter"]).reset_index(drop=True)
 
-        # keep latest version only, just in case
         mask = df["version_numeric"] == df.groupby("quarter")["version_numeric"].transform("max")
         df = df[mask].reset_index(drop=True)
 
@@ -357,7 +297,6 @@ class NormalizeUseCase:
         for ticker in ticker_codes:
             rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker)], uow=uow)
             if not rows:
-                # return quotes_df
                 continue
 
             quotes = pd.DataFrame(rows)
@@ -367,8 +306,6 @@ class NormalizeUseCase:
                 quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
             quotes.sort_values(["ticker", "date"], inplace=True)
 
-            # digit = re.search(r'\d+$', ticker).group() if re.search(r'\d+$', ticker) else None 
-            # quotes_df[f"stock_{digit}"] = quotes.dropna(subset=["date"]).reset_index(drop=True)
 
             m = re.search(r'\d+$', ticker)
             digit = m.group() if m else ""
@@ -378,8 +315,6 @@ class NormalizeUseCase:
         return quotes_df
 
     def _treat_quotes(self, q: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-        # if c.empty:
-        #     return pd.DataFrame()
 
         if "date" in q.columns:
             q["date"] = pd.to_datetime(q["date"])
@@ -396,12 +331,9 @@ class NormalizeUseCase:
         return q
 
     def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-        # if c.empty:
-        #     return pd.DataFrame()
         s["quarter"] = pd.to_datetime(s["quarter"])
 
         key_columns = ["company_name", "quarter", "account"]
-        # sep = " - "
         s["account_description"] = s["account"] + " - " + s["description"] + " - " + s["grupo"] + " - " + s["quadro"]
 
         context_columns = ["nsd", "company_name", "version"]
@@ -422,12 +354,9 @@ class NormalizeUseCase:
         s = meta.join(s, how="right")
 
         if c is not None:
-            # reset_multiindex
             s = s.copy()
-            # s.index = s.index.set_names(["quarter", "nsd", "company_name", "version"])
             s = s.reset_index()
 
-            # create date index
             s["quarter"] = pd.to_datetime(s["quarter"])
             s = (
                 s.rename(columns={"quarter": "date"})
@@ -435,19 +364,15 @@ class NormalizeUseCase:
                 .sort_index()
             )
 
-            # reindex ffill bfill
             s = s.reindex(c.index, method="ffill")
             if s.iloc[0].isna().any():
                 s = s.bfill()
 
-            # recreate multiindex
             s = s.set_index(context_columns, append=True).sort_index()
 
         return s
 
     def _treat_indicators(self, i: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-        # if c is None or c.empty: 
-        #     return pd.DataFrame()
         if c is None:
             i["date"] = pd.to_datetime(i["date"])
             i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
@@ -544,7 +469,6 @@ class NormalizeUseCase:
 
         daily_series = pd.Series(1, index=daily_calendar) # Valor 1 em cada trading day
 
-        # Create resampled calendar if granularity coarser than 'day'
         if granularity == 'D':
             df_anchor_calendar = daily_calendar
             df_anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
@@ -570,10 +494,8 @@ class NormalizeUseCase:
                 idx = pd.to_datetime(idx, errors='coerce')
                 idx = idx[~idx.isna()]
                 if len(idx) < 2:
-                    # self.logger.log(f"Índice muito curto para inferir granularidade ({data_type})", level="warning")
                     return 'unknown'
             except Exception as e:
-                # self.logger.log(f"Erro ao converter índice para DatetimeIndex ({data_type}): {e}", level="error")
                 return 'unknown'
 
         inferred_freq = pd.infer_freq(idx)
@@ -586,17 +508,13 @@ class NormalizeUseCase:
         if inferred_freq in freq_map:
             return freq_map[inferred_freq]
 
-        # Fallback: calcula mediana dos deltas
         deltas = np.diff(idx.view("i8"))  # Diferenças em nanossegundos
         if len(deltas) == 0:
-            # self.logger.log(f"Índice muito curto para calcular deltas ({data_type})", level="warning")
             return 'unknown'
 
         med = np.median(deltas)
         d1 = pd.Timedelta(days=1).value  # 1 dia em nanossegundos
 
-        # Thresholds ajustados por tipo de dado
-        # Indicadores podem variar; thresholds mais amplos
         if med <= 7 * d1:
             return 'B'
         if med <= 45 * d1:
@@ -605,7 +523,6 @@ class NormalizeUseCase:
             return 'QE'
         return 'YE'
 
-        # return 'unknown'
 
     def _resample_series(
         self,
@@ -628,16 +545,13 @@ class NormalizeUseCase:
         """
         df_data.to_csv("df_data.csv", index=True)
         df_anchor_calendar.to_csv("df_anchor_calendar.csv", index=True)
-        # Fast exit
         if df_data.empty:
             return df_data
 
-        # Check DatetimeIndex
         if not isinstance(df_data.index, pd.DatetimeIndex):
             df_data.index = pd.to_datetime(df_data.index, errors='coerce')
             df_data = df_data.dropna(subset=[df_data.index.name])
 
-        # Detect granularity and sampling
         granularity_order = {'B': 1, 'D': 2, 'MS': 3,'ME': 4, 'QS': 5,'QE': 6, 'YS': 7,'YE': 8} # granularidade: menor significa mais fino, mais diário e detalhado
         granularity_anchor = pd.infer_freq(df_anchor_calendar.index) or 'B'
         granularity_data = self._infer_granularity(df_data.index)
@@ -650,13 +564,11 @@ class NormalizeUseCase:
         else:
             sampling_action = "same" # apenas reindexar
 
-        # Upsampling, precisa preencher
         if sampling_action == "upsampling":
             df_data = df_data.sort_index()
             df_data = df_data.reindex(df_data.index.union(df_anchor_calendar.index))
             df_data = df_data.ffill().bfill()
             df_data = df_data.reindex(df_anchor_calendar.index).sort_index()
-        # Downsampling, precisa agregar
         elif sampling_action == "downsampling":
             df_data = df_data.sort_index()
 
@@ -720,10 +632,8 @@ class NormalizeUseCase:
         source_df = c['statements']['statements'].copy()
         ratios_df = source_df.copy()
 
-        # preços por classe (fechamento), já reindexados pelo calendário em _treat_quotes
         quotes: dict[str, pd.DataFrame] = c.get("quotes", {}) or {}
 
-        # coleta e ordena chaves stock_* independentemente de quantas existam
         stock_keys = [k for k in quotes.keys() if str(k).startswith('stock_')]
         stock_keys.sort(key=lambda x: int(str(x).split('_', 1)[1]) if '_' in str(x) else float('inf'))
 
@@ -741,12 +651,10 @@ class NormalizeUseCase:
             if dfq is None or dfq.empty:
                 continue
 
-            # filtra colunas relevantes
             dfq = dfq.loc[:, [c for c in dfq.columns if c not in ignore_stock_keys_cols]].copy()
             if dfq.empty:
                 continue
 
-            # renomeia todas as colunas em bloco
             dfq.columns = [f"{code}.{c} - {qkey}" for c in dfq.columns]
             frames.append(dfq)
 
@@ -755,13 +663,9 @@ class NormalizeUseCase:
             source_df = source_df.join(price_df, how='left')
             ratios_df = ratios_df.join(price_df, how="left")
 
-        # mapeia uma vez e congela calculate_df base
-        # account_long_map_old = {c: c.split(" - ")[0] for c in source_df.columns
-        #             if " - " in c and not c.startswith("99.")}
         account_long_map = {c: c.split(" - ")[0] for c in source_df.columns if " - " in c}
         calculate_df = source_df.rename(columns=account_long_map).copy()
 
-        # percorre TODAS as listas mantendo o mesmo calculate_df
         indicator_names = [
             name
             for name in dir(intel)

@@ -12,6 +12,8 @@ from domain.ports.ratios_cache_port import RatiosCachePort
 
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
+from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
 
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
@@ -62,6 +64,8 @@ class Cli:
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         http_client: AffinityHttpClientPort,
+        valid_companies_read_port: ValidCompaniesReadPort,
+        valid_companies_write_port: ValidCompaniesWritePort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -88,6 +92,8 @@ class Cli:
         self.uow_factory = uow_factory
 
         self.byte_formatter = ByteFormatter()
+        self.valid_companies_read_port = valid_companies_read_port
+        self.valid_companies_write_port = valid_companies_write_port
 
     def __call__(self) -> None:
         return self.run()
@@ -198,6 +204,8 @@ class Cli:
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
+            valid_companies_read_port=self.valid_companies_read_port,
+            valid_companies_write_port=self.valid_companies_write_port,
         )
 
         # run the service

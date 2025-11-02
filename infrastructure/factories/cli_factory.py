@@ -18,6 +18,9 @@ from infrastructure.repositories.repository_statements_fetched import StatementF
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.repositories.repository_indicators import RepositoryIndicators
+from infrastructure.repositories.valid_companies_projection_repository import (
+    ValidCompaniesProjectionRepository,
+)
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
 from infrastructure.scrapers.scraper_statements_raw import ScraperStatementRaw
@@ -56,6 +59,11 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
+
+    valid_companies_projection = ValidCompaniesProjectionRepository(
+        config=config,
+        logger=logger,
+    )
 
     # Compose the data-cleaning pipeline used before mapping/persisting
     datacleaner = datacleaner_factory(config, logger)
@@ -136,6 +144,8 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         policy=policy,
         uow_factory=uow_factory,
         http_client=http_client,
+        valid_companies_read_port=valid_companies_projection,
+        valid_companies_write_port=valid_companies_projection,
     )
 
     return cli

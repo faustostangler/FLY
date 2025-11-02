@@ -152,10 +152,15 @@ class RatiosCacheAdapter(RatiosCachePort):
             )
 
         entry_dto = entry.to_dto()
+        self._invalidate_outdated(code_hash=context.code_hash)
         self._evict_cache_if_needed()
         return entry_dto
 
     def invalidate_outdated(self, *, code_hash: str) -> None:
+        self._invalidate_outdated(code_hash=code_hash)
+        self._evict_cache_if_needed()
+
+    def _invalidate_outdated(self, *, code_hash: str) -> None:
         cutoff = datetime.now() - self._max_age
 
         with self._session_factory.begin() as session:
@@ -169,8 +174,6 @@ class RatiosCacheAdapter(RatiosCachePort):
             for entry in entries:
                 Path(entry.file_path).unlink(missing_ok=True)
                 session.delete(entry)
-
-        self._evict_cache_if_needed()
 
     def _evict_cache_if_needed(self) -> None:
         with self._session_factory.begin() as session:
