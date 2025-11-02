@@ -16,7 +16,7 @@ from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.models.company_eligible_model import CompanyEligibleModel
 
 
-class EligibleCompaniesProjectionRepository(
+class RepositoryCompanyEligible(
     RepositoryBase[CompanyEligibleDTO, str],
     CompaniesEligiblePort,
 ):

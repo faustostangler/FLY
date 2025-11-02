@@ -22,8 +22,8 @@ from domain.dtos import (
     WorkerTaskDTO,
 )
 from domain.dtos.stock_quote_dto import StockQuoteDTO
-from infrastructure.repositories.eligible_companies_projection_repository import (
-    EligibleCompaniesProjectionRepository,
+from infrastructure.repositories.repository_company_eligible import (
+    RepositoryCompanyEligible,
 )
 from infrastructure.uow.uow import UowFactory
 
@@ -178,7 +178,7 @@ def config(tmp_path):
 def test_normalize_pipeline_reads_projection(config):
     logger = DummyLogger()
 
-    eligible_repo = EligibleCompaniesProjectionRepository(config=config, logger=logger)
+    eligible_repo = RepositoryCompanyEligible(config=config, logger=logger)
     uow_factory = UowFactory(session_factory=eligible_repo.Session)
 
     companies = [

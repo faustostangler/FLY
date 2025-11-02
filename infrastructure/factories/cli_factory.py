@@ -20,8 +20,8 @@ from infrastructure.repositories.repository_statements_fetched import (
 )
 from infrastructure.repositories.repository_statements_raw import StatementRawRepository
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
-from infrastructure.repositories.eligible_companies_projection_repository import (
-    EligibleCompaniesProjectionRepository,
+from infrastructure.repositories.repository_company_eligible import (
+    RepositoryCompanyEligible,
 )
 from infrastructure.scrapers.scraper_company_data import CompanyDataScraper
 from infrastructure.scrapers.scraper_nsd import NsdScraper
@@ -54,11 +54,11 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_nsd = RepositoryNsd(config=config, logger=logger)
     repository_raw_statements = StatementRawRepository(config=config, logger=logger)
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
-    eligible_companies_projection = EligibleCompaniesProjectionRepository(
+    eligible_companies_projection = RepositoryCompanyEligible(
         config=config,
         logger=logger,
     )
-    eligible_companies_projection.initialize()
+    # eligible_companies_projection.initialize()
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
     ratios_cache = RatiosCacheAdapter(config=config, logger=logger)
