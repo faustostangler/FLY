@@ -54,14 +54,14 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_nsd = RepositoryNsd(config=config, logger=logger)
     repository_raw_statements = StatementRawRepository(config=config, logger=logger)
     repository_fetched_statements = StatementFetchedRepository(config=config, logger=logger)
-    eligible_companies_projection = RepositoryCompanyEligible(
+    companies_eligible = RepositoryCompanyEligible(
         config=config,
         logger=logger,
     )
-    # eligible_companies_projection.initialize()
+    # companies_eligible_.initialize()
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
-    ratios_cache = RatiosCacheAdapter(config=config, logger=logger)
+    cache_ratios = CacheRatiosAdapter(config=config, logger=logger)
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)
@@ -146,7 +146,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         policy=policy,
         uow_factory=uow_factory,
         http_client=http_client,
-        companies_eligible_port=eligible_companies_projection,
+        companies_eligible_port=companies_eligible,
     )
 
     return cli

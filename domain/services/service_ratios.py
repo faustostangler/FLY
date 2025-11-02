@@ -8,11 +8,11 @@ from application.services.eligible_companies_batch_updater_service import (
     EligibleCompaniesBatchUpdaterService,
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.refresh_eligible_companies_projection import (
+from application.usecases.companies_eligible import (
     CompaniesEligibleUseCase,
 )
 from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
-from domain.ports.ratios_cache_port import CacheRatiosPort
+from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import (

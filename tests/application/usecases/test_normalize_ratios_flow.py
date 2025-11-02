@@ -11,7 +11,7 @@ from application.services.eligible_companies_batch_updater_service import (
     EligibleCompaniesBatchUpdaterService,
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.refresh_eligible_companies_projection import (
+from application.usecases.companies_eligible import (
     CompaniesEligibleUseCase,
 )
 from domain.dtos import (
@@ -258,7 +258,7 @@ def test_normalize_pipeline_reads_projection(config):
         worker_pool=SequentialWorkerPool(),
     )
     fake_cache = FakeCacheRatiosService()
-    normalize_usecase.ratios_cache_service = fake_cache
+    normalize_usecase.cache_ratios_service = fake_cache
     normalize_usecase._ratios_code_hash = "fake-code"
 
     results = normalize_usecase.run()

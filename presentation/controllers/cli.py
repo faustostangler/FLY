@@ -5,7 +5,7 @@ from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.ratios_cache_port import CacheRatiosPort
+from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort

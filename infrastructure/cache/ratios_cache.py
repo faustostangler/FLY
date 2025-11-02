@@ -13,17 +13,17 @@ from sqlalchemy.orm import Session
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 
-from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
-from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
-from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
+from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
+from domain.ports.cache_ratios_port import CacheRatiosPort
 
 from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.models.ratios_cache_model import (
-    RatiosCacheBase,
-    RatiosCacheEntryModel,
+from infrastructure.models.cache_ratios_model import (
+    CacheRatiosBase,
+    CacheRatiosEntryModel,
 )
 
-class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
+class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
@@ -32,17 +32,17 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
         # Apenas configura engine e session factory. Nenhum I/O aqui.
         EngineSetup.__init__(
             self,
-            self._config.database.cache_connection_string,  # nome correto
+            self._config.database.connection_cache_string,  # nome correto
             logger,
         )
 
     def initialize(self) -> None:
         """Cria o schema do cache. Idempotente e explícito."""
-        RatiosCacheBase.metadata.create_all(self.engine)
+        CacheRatiosBase.metadata.create_all(self.engine)
 
-    def load(self, cache_key: str) -> tuple[pd.DataFrame, RatiosCacheEntryDTO] | None:
+    def load(self, cache_key: str) -> tuple[pd.DataFrame, CacheRatiosEntryDTO] | None:
         with self.Session() as session:  # Session vem do EngineSetup
-            entry = session.get(RatiosCacheEntryModel, cache_key)
+            entry = session.get(CacheRatiosEntryModel, cache_key)
             if entry is None:
                 return None
 
@@ -67,10 +67,10 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
     def store(
         self,
         *,
-        context: RatiosCacheContextDTO,
+        context: CacheRatiosContextDTO,
         df: pd.DataFrame,
         company_name: str,
-    ) -> RatiosCacheEntryDTO:
+    ) -> CacheRatiosEntryDTO:
         file_path = self._build_file_path(context=context, company_name=company_name)
         temp_path = file_path.with_suffix(".tmp")
 
@@ -81,13 +81,13 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
 
         size_bytes = temp_path.stat().st_size
         now = datetime.now()
-        entry: RatiosCacheEntryModel | None = None
+        entry: CacheRatiosEntryModel | None = None
 
         try:
             with self.Session.begin() as session:
-                entry = session.get(RatiosCacheEntryModel, context.cache_key)
+                entry = session.get(CacheRatiosEntryModel, context.cache_key)
                 if entry is None:
-                    entry = RatiosCacheEntryModel(
+                    entry = CacheRatiosEntryModel(
                         cache_key=context.cache_key,
                         file_path=str(file_path),
                         size_bytes=size_bytes,
@@ -114,7 +114,7 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
         except Exception:
             temp_path.unlink(missing_ok=True)
             with self.Session.begin() as session:
-                stale_entry = session.get(RatiosCacheEntryModel, context.cache_key)
+                stale_entry = session.get(CacheRatiosEntryModel, context.cache_key)
                 if stale_entry is not None:
                     session.delete(stale_entry)
             raise
@@ -134,9 +134,9 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
         cutoff = datetime.now() - self._config.cache.max_age
         with self.Session.begin() as session:
             entries = session.scalars(
-                select(RatiosCacheEntryModel).where(
-                    (RatiosCacheEntryModel.code_hash != code_hash)
-                    | (RatiosCacheEntryModel.accessed_at < cutoff)
+                select(CacheRatiosEntryModel).where(
+                    (CacheRatiosEntryModel.code_hash != code_hash)
+                    | (CacheRatiosEntryModel.accessed_at < cutoff)
                 )
             ).all()
             for entry in entries:
@@ -146,17 +146,17 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
     def _evict_cache_if_needed(self) -> None:
         with self.Session.begin() as session:
             total_size = session.execute(
-                select(func.coalesce(func.sum(RatiosCacheEntryModel.size_bytes), 0))
+                select(func.coalesce(func.sum(CacheRatiosEntryModel.size_bytes), 0))
             ).scalar_one()
 
             if total_size <= self._config.cache.max_cache_size_bytes:
                 return
 
             entries = session.scalars(
-                select(RatiosCacheEntryModel)
+                select(CacheRatiosEntryModel)
                 .order_by(
-                    RatiosCacheEntryModel.access_count.asc(),
-                    RatiosCacheEntryModel.created_at.asc(),
+                    CacheRatiosEntryModel.access_count.asc(),
+                    CacheRatiosEntryModel.created_at.asc(),
                 )
             )
             for entry in entries:
@@ -166,13 +166,13 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
                 total_size -= entry.size_bytes
                 session.delete(entry)
 
-    def _remove_entry(self, session: Session, entry: RatiosCacheEntryModel) -> None:
+    def _remove_entry(self, session: Session, entry: CacheRatiosEntryModel) -> None:
         session.delete(entry)
 
     def _build_file_path(
         self,
         *,
-        context: RatiosCacheContextDTO,
+        context: CacheRatiosContextDTO,
         company_name: str,
     ) -> Path:
         safe_company = self._sanitize_company_name(company_name)
