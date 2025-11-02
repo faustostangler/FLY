@@ -12,12 +12,12 @@ from application.services.eligible_companies_batch_updater_service import (
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
 from application.usecases.refresh_eligible_companies_projection import (
-    RefreshEligibleCompaniesProjectionUseCase,
+    CompaniesEligibleUseCase,
 )
 from domain.dtos import (
     CompanyDataDTO,
-    RatiosCacheEntryDTO,
-    RatiosCacheResultDTO,
+    CacheRatiosEntryDTO,
+    CacheRatiosResultDTO,
     StatementFetchedDTO,
     WorkerTaskDTO,
 )
@@ -91,7 +91,7 @@ class DummyIndicatorsRepository:
         return []
 
 
-class DummyRatiosCachePort:
+class DummyCacheRatiosPort:
     def initialize(self) -> None:
         return None
 
@@ -105,7 +105,7 @@ class DummyRatiosCachePort:
         return None
 
 
-class FakeRatiosCacheService:
+class FakeCacheRatiosService:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
@@ -118,10 +118,10 @@ class FakeRatiosCacheService:
         indicators,
         compute_fn,
         code_hash: str,
-    ) -> tuple[pd.DataFrame, RatiosCacheResultDTO]:
+    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         del quotes, statements, indicators, compute_fn
         self.calls.append(company_name)
-        entry = RatiosCacheEntryDTO(
+        entry = CacheRatiosEntryDTO(
             cache_key=f"{company_name}-cache",
             file_path="/tmp/fake",
             size_bytes=0,
@@ -130,7 +130,7 @@ class FakeRatiosCacheService:
             access_count=1,
             code_hash=code_hash,
         )
-        result = RatiosCacheResultDTO(
+        result = CacheRatiosResultDTO(
             company_name=company_name,
             cache_key=entry.cache_key,
             hit=False,
@@ -233,7 +233,7 @@ def test_normalize_pipeline_reads_projection(config):
         port=eligible_repo,
     )
 
-    update_usecase = RefreshEligibleCompaniesProjectionUseCase(
+    update_usecase = CompaniesEligibleUseCase(
         logger=logger,
         repository_company=company_repo,
         repository_statements_fetched=statement_repo,
@@ -252,12 +252,12 @@ def test_normalize_pipeline_reads_projection(config):
         repository_stock_quote=quote_repo,
         repository_indicators=indicator_repo,
         repository_statements_fetched=statement_repo,
-        ratios_cache=DummyRatiosCachePort(),
-        eligible_companies_port=eligible_repo,
+        cache_ratios=DummyCacheRatiosPort(),
+        companies_eligible_port=eligible_repo,
         uow_factory=uow_factory,
         worker_pool=SequentialWorkerPool(),
     )
-    fake_cache = FakeRatiosCacheService()
+    fake_cache = FakeCacheRatiosService()
     normalize_usecase.ratios_cache_service = fake_cache
     normalize_usecase._ratios_code_hash = "fake-code"
 

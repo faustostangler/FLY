@@ -9,10 +9,10 @@ from application.services.eligible_companies_batch_updater_service import (
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
 from application.usecases.refresh_eligible_companies_projection import (
-    RefreshEligibleCompaniesProjectionUseCase,
+    CompaniesEligibleUseCase,
 )
-from domain.dtos import RatiosCacheResultDTO, SyncResultsDTO
-from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
+from domain.ports.ratios_cache_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import (
@@ -34,11 +34,11 @@ class RatiosService:
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        ratios_cache: RatiosCachePort,
+        cache_ratios: CacheRatiosPort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
-        eligible_companies_port: CompaniesEligiblePort,
+        companies_eligible_port: CompaniesEligiblePort,
     ):
         """Initialize the service with required dependencies.
 
@@ -56,23 +56,23 @@ class RatiosService:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
-        self.ratios_cache = ratios_cache
+        self.cache_ratios = cache_ratios
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
         # self.http_client = http_client
 
-        self._eligible_companies_batch_service = EligibleCompaniesBatchUpdaterService(
+        self._companies_eligible_batch_service = EligibleCompaniesBatchUpdaterService(
             logger=self.logger,
-            port=eligible_companies_port,
+            port=companies_eligible_port,
         )
 
-        self._eligible_companies_refresh_usecase = RefreshEligibleCompaniesProjectionUseCase(
+        self.companies_eligible_usecase = CompaniesEligibleUseCase(
             logger=self.logger,
             repository_company=self.repository_company,
             repository_statements_fetched=self.repository_statements_fetched,
             repository_stock_quote=self.repository_stock_quote,
-            batch_service=self._eligible_companies_batch_service,
+            batch_service=self._companies_eligible_batch_service,
             uow_factory=self.uow_factory,
         )
 
@@ -84,8 +84,8 @@ class RatiosService:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
-            ratios_cache=self.ratios_cache,
-            eligible_companies_port=eligible_companies_port,
+            cache_ratios=self.cache_ratios,
+            companies_eligible_port=companies_eligible_port,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
@@ -94,14 +94,14 @@ class RatiosService:
             # max_workers=self.config.worker_pool.max_workers,
         )
 
-    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[RatiosCacheResultDTO]:
+    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
         return self.run()
 
-    def run(self) -> SyncResultsDTO[RatiosCacheResultDTO]:
+    def run(self) -> SyncResultsDTO[CacheRatiosResultDTO]:
         """Trigger company synchronization workflow.
 
         Returns:
             Any: The result of the synchronization use case execution.
         """
-        self._eligible_companies_refresh_usecase()
+        self.companies_eligible_usecase()
         return self.normalize_usecase()

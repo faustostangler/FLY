@@ -15,7 +15,7 @@ from domain.ports.repository_statements_fetched_port import (
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 
 
-class RefreshEligibleCompaniesProjectionUseCase:
+class CompaniesEligibleUseCase:
     """Coordinates the refresh of the eligible companies read-model."""
 
     def __init__(

@@ -5,7 +5,7 @@ from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.ports.ratios_cache_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
@@ -51,7 +51,7 @@ class Cli:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_raw: RepositoryStatementsRawPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        ratios_cache: RatiosCachePort,
+        cache_ratios: CacheRatiosPort,
         scraper_company_data: ScraperCompanyDataPort,
         scraper_nsd: ScraperNsdPort,
         scraper_statements_raw: ScraperStatementRawPort,
@@ -60,7 +60,7 @@ class Cli:
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         http_client: AffinityHttpClientPort,
-        eligible_companies_port: CompaniesEligiblePort,
+        companies_eligible_port: CompaniesEligiblePort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition
@@ -73,7 +73,7 @@ class Cli:
         self.repository_indicators = repository_indicators
         self.repository_statements_raw = repository_statements_raw
         self.repository_statements_fetched = repository_statements_fetched
-        self.ratios_cache = ratios_cache
+        self.cache_ratios = cache_ratios
 
         self.scraper_company_data = scraper_company_data
         self.scraper_nsd = scraper_nsd
@@ -87,7 +87,7 @@ class Cli:
         self.uow_factory = uow_factory
 
         self.byte_formatter = ByteFormatter()
-        self.eligible_companies_port = eligible_companies_port
+        self.companies_eligible_port = companies_eligible_port
 
     def __call__(self) -> None:
         return self.run()
@@ -194,11 +194,11 @@ class Cli:
             repository_stock_quote=self.repository_stock_quote,
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
-            ratios_cache=self.ratios_cache,
+            cache_ratios=self.cache_ratios,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
-            eligible_companies_port=self.eligible_companies_port,
+            companies_eligible_port=self.companies_eligible_port,
         )
 
         # run the service

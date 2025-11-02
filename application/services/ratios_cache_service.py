@@ -7,18 +7,18 @@ from typing import Any
 
 import pandas as pd
 
-from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
-from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
-from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+from domain.ports.ratios_cache_port import CacheRatiosPort
 
 
-class RatiosCacheService:
+class CacheRatiosService:
     """High-level helper responsible for caching ratios computations."""
 
     def __init__(
         self,
         *,
-        cache_port: RatiosCachePort,
+        cache_port: CacheRatiosPort,
         logical_name: str = "statements_ratio",
         version: int = 1,
     ) -> None:
@@ -43,10 +43,10 @@ class RatiosCacheService:
         indicators: Mapping[str, pd.DataFrame] | None,
         compute_fn: Callable[[], pd.DataFrame],
         code_hash: str,
-    ) -> tuple[pd.DataFrame, RatiosCacheResultDTO]:
+    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         """Return cached ratios or compute and persist them when absent."""
 
-        context = RatiosCacheContextDTO(
+        context = CacheRatiosContextDTO(
             logical_name=self._logical_name,
             version=self._version,
             quotes_hash=self._hash_mapping(quotes),
@@ -59,7 +59,7 @@ class RatiosCacheService:
         cached = self._cache_port.load(cache_key)
         if cached is not None:
             df_cached, entry = cached
-            return df_cached, RatiosCacheResultDTO(
+            return df_cached, CacheRatiosResultDTO(
                 company_name=company_name,
                 cache_key=cache_key,
                 hit=True,
@@ -72,7 +72,7 @@ class RatiosCacheService:
             df=df,
             company_name=company_name,
         )
-        return df, RatiosCacheResultDTO(
+        return df, CacheRatiosResultDTO(
             company_name=company_name,
             cache_key=cache_key,
             hit=False,
@@ -104,7 +104,7 @@ class RatiosCacheService:
     @staticmethod
     def _hash_dataframe(df: pd.DataFrame) -> str:
         if df is None or df.empty:
-            return RatiosCacheService._empty_hash()
+            return CacheRatiosService._empty_hash()
 
         normalized = df.copy()
         normalized = normalized.sort_index()

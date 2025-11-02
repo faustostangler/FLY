@@ -7,7 +7,7 @@ from domain.polices.nsd_policy import NsdPolicy
 
 # from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 # from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from infrastructure.cache import RatiosCacheAdapter
+from infrastructure.cache import CacheRatiosAdapter
 from infrastructure.factories.datacleaner_factory import datacleaner_factory
 
 # from infrastructure.http.affinity_http_client import RequestsAffinityHttpClient
@@ -137,7 +137,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         repository_indicators=repository_indicators,
         repository_statements_raw=repository_raw_statements,
         repository_statements_fetched=repository_fetched_statements,
-        ratios_cache=ratios_cache,
+        cache_ratios=cache_ratios,
         scraper_company_data=scraper_company_data,
         scraper_nsd=scraper_nsd,
         scraper_statements_raw=scraper_statements_raw,
@@ -146,7 +146,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         policy=policy,
         uow_factory=uow_factory,
         http_client=http_client,
-        eligible_companies_port=eligible_companies_projection,
+        companies_eligible_port=eligible_companies_projection,
     )
 
     return cli

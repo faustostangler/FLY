@@ -16,9 +16,12 @@ from application.ports.logger_port import LoggerPort
 from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
-from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.models.ratios_cache_model import (RatiosCacheBase, RatiosCacheEntryModel)
 
+from infrastructure.adapters.engine_setup import EngineSetup
+from infrastructure.models.ratios_cache_model import (
+    RatiosCacheBase,
+    RatiosCacheEntryModel,
+)
 
 class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
@@ -26,21 +29,19 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
         self._config = config
         self._logger = logger
-
+        # Apenas configura engine e session factory. Nenhum I/O aqui.
         EngineSetup.__init__(
             self,
-            self._config.database.connection_cache_string,
+            self._config.database.cache_connection_string,  # nome correto
             logger,
-            metadata=RatiosCacheBase.metadata,
         )
 
-    def initialize(self) -> None:  # pragma: no cover - retained for backwards compatibility
-        """Backwards compatible no-op initializer."""
-        # Tables are created during EngineSetup initialization.
-        return None
+    def initialize(self) -> None:
+        """Cria o schema do cache. Idempotente e explícito."""
+        RatiosCacheBase.metadata.create_all(self.engine)
 
     def load(self, cache_key: str) -> tuple[pd.DataFrame, RatiosCacheEntryDTO] | None:
-        with self.Session() as session:
+        with self.Session() as session:  # Session vem do EngineSetup
             entry = session.get(RatiosCacheEntryModel, cache_key)
             if entry is None:
                 return None
@@ -59,7 +60,7 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
 
             entry.accessed_at = datetime.now()
             entry.access_count += 1
-            session.add(entry)  # garante que será persistido
+            session.add(entry)
 
             return df, entry.to_dto()
 
@@ -80,7 +81,6 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
 
         size_bytes = temp_path.stat().st_size
         now = datetime.now()
-
         entry: RatiosCacheEntryModel | None = None
 
         try:
@@ -120,14 +120,10 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
             raise
 
         if entry is None:
-            # Defensive guard: SQLAlchemy guarantees assignment above but satisfy type checkers.
-            raise RuntimeError(
-                "Failed to persist cache metadata for key '%s'" % context.cache_key
-            )
+            raise RuntimeError(f"Failed to persist cache metadata for key '{context.cache_key}'")
 
         entry_dto = entry.to_dto()
-        self._invalidate_outdated(code_hash=context.code_hash)
-        self._evict_cache_if_needed()
+        self.invalidate_outdated(code_hash=context.code_hash)
         return entry_dto
 
     def invalidate_outdated(self, *, code_hash: str) -> None:
@@ -136,7 +132,6 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
 
     def _invalidate_outdated(self, *, code_hash: str) -> None:
         cutoff = datetime.now() - self._config.cache.max_age
-
         with self.Session.begin() as session:
             entries = session.scalars(
                 select(RatiosCacheEntryModel).where(
@@ -144,7 +139,6 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
                     | (RatiosCacheEntryModel.accessed_at < cutoff)
                 )
             ).all()
-
             for entry in entries:
                 Path(entry.file_path).unlink(missing_ok=True)
                 session.delete(entry)
@@ -165,11 +159,9 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
                     RatiosCacheEntryModel.created_at.asc(),
                 )
             )
-
             for entry in entries:
                 if total_size <= self._config.cache.max_cache_size_bytes:
                     break
-
                 Path(entry.file_path).unlink(missing_ok=True)
                 total_size -= entry.size_bytes
                 session.delete(entry)
@@ -193,6 +185,4 @@ class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
         normalized = unicodedata.normalize("NFKD", company_name)
         ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
         cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
-        if not cleaned:
-            cleaned = "unknown"
-        return cleaned[:120]
+        return cleaned[:120] if cleaned else "unknown"

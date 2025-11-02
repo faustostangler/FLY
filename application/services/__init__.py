@@ -1,5 +1,5 @@
 """Application service layer helpers."""
 
-from application.services.ratios_cache_service import RatiosCacheService
+from application.services.ratios_cache_service import CacheRatiosService
 
-__all__ = ["RatiosCacheService"]
+__all__ = ["CacheRatiosService"]

@@ -5,14 +5,14 @@ from datetime import datetime
 from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
+from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
 
 
-class RatiosCacheBase(DeclarativeBase):
+class CacheRatiosBase(DeclarativeBase):
     """Declarative base dedicated to cache-related ORM models."""
 
 
-class RatiosCacheEntryModel(RatiosCacheBase):
+class CacheRatiosEntryModel(CacheRatiosBase):
     """ORM model representing cached ratios metadata."""
 
     __tablename__ = "cache"
@@ -31,8 +31,8 @@ class RatiosCacheEntryModel(RatiosCacheBase):
     access_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     code_hash: Mapped[str] = mapped_column(String, nullable=False)
 
-    def to_dto(self) -> RatiosCacheEntryDTO:
-        return RatiosCacheEntryDTO(
+    def to_dto(self) -> CacheRatiosEntryDTO:
+        return CacheRatiosEntryDTO(
             cache_key=self.cache_key,
             file_path=self.file_path,
             size_bytes=self.size_bytes,

@@ -12,12 +12,12 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.services.ratios_cache_service import RatiosCacheService
-from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
+from application.services.ratios_cache_service import CacheRatiosService
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.ports.ratios_cache_port import CacheRatiosPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
@@ -37,8 +37,8 @@ class NormalizeUseCase:
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
-        ratios_cache: RatiosCachePort,
-        eligible_companies_port: CompaniesEligiblePort,
+        cache_ratios: CacheRatiosPort,
+        companies_eligible_port: CompaniesEligiblePort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -60,14 +60,14 @@ class NormalizeUseCase:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
-        self.ratios_cache_service = RatiosCacheService(cache_port=ratios_cache)
-        self._ratios_code_hash = RatiosCacheService.build_code_hash(self._create_ratios)
+        self.ratios_cache_service = CacheRatiosService(cache_port=cache_ratios)
+        self._ratios_code_hash = CacheRatiosService.build_code_hash(self._create_ratios)
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
 
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.eligible_companies_port = eligible_companies_port
+        self.companies_eligible_port = companies_eligible_port
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -85,7 +85,7 @@ class NormalizeUseCase:
             including counts and network usage metrics.
         """
         metrics = 0
-        cache_results: List[RatiosCacheResultDTO] = []
+        cache_results: List[CacheRatiosResultDTO] = []
         start_time = time.perf_counter()
 
         try:
@@ -96,7 +96,7 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                eligible_companies: list[CompanyEligibleDTO] = self.eligible_companies_port.list(
+                eligible_companies: list[CompanyEligibleDTO] = self.companies_eligible_port.list(
                     uow=bootstrap_uow,
                 )
 
@@ -113,7 +113,7 @@ class NormalizeUseCase:
                         company_dto = task.data["company_name"]
                         len_s = 0
                         len_q = 0
-                        cache_result: RatiosCacheResultDTO | None = None
+                        cache_result: CacheRatiosResultDTO | None = None
                         metrics_value = 0
 
                         with self.uow_factory() as uow:
