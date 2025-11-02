@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from sqlalchemy import MetaData, create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from application.ports.logger_port import LoggerPort
 from infrastructure.models import BaseModel
 
 
-class EngineSetup:
+class EngineSetup():
     """Reusable mixin for adapters that need SQLAlchemy engine setup."""
 
     def __init__(
@@ -15,7 +15,9 @@ class EngineSetup:
         connection_string: str,
         logger: LoggerPort | None,
         *,
-        metadata: MetaData | None = None,
+        # metadata: MetaData | None = None,
+        orm_base: type[DeclarativeBase] | None = None,
+        create_schema: bool = True,
     ) -> None:
         """Initialize engine, session factory and schema.
 
@@ -27,7 +29,7 @@ class EngineSetup:
         """
 
         self.logger = logger
-        self._metadata = metadata or BaseModel.metadata
+        # self._metadata = metadata or BaseModel.metadata
 
         # Create SQLAlchemy engine for SQLite with thread-safe settings
         self.engine = create_engine(
@@ -59,6 +61,11 @@ class EngineSetup:
         )
 
         # Automatically create all tables defined in the SQLAlchemy models
-        self._metadata.create_all(self.engine)
+        # cria apenas as tabelas pertencentes à base recebida
+        if create_schema:
+            base = orm_base or BaseModel          # <- fallback somente aqui
+            base.metadata.create_all(self.engine) # <- cria só o metadata passado
+
+        # self._metadata.create_all(self.engine)
 
         # self.logger.log(f"Create Instance Base Class {self.__class__.__name__}", level="info")

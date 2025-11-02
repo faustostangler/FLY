@@ -1,10 +1,12 @@
+# infrastructure/cache/ratios_cache.py
 from __future__ import annotations
 
 import os
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional, Tuple
 
 import pandas as pd
 from sqlalchemy import func, select
@@ -18,46 +20,64 @@ from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 
 from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.models.cache_ratios_model import (
-    CacheRatiosBase,
-    CacheRatiosEntryModel,
-)
+from infrastructure.models.cache_ratios_model import CacheBase, CacheEntry
+
 
 class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
-    """SQLAlchemy-backed cache storing ratios as parquet files."""
+    """
+    Adaptador de cache para DataFrames de índices/ratios.
+
+    Camada: Infraestrutura.
+    Depende de: EngineSetup (injeção da base do cache), pandas, SQLAlchemy.
+    Armazena payloads em Parquet; metadados no SQLite dedicado ao cache.
+    """
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
         self._config = config
         self._logger = logger
-        # Apenas configura engine e session factory. Nenhum I/O aqui.
+
+        # Conexão isolada do cache. NUNCA a mesma do fly.
+        # Usa a base declarativa exclusiva do cache para limitar o schema.
         EngineSetup.__init__(
             self,
-            self._config.database.connection_cache_string,  # nome correto
-            logger,
+            connection_string=self._config.database.connection_cache_string,
+            logger=logger,
+            orm_base=CacheBase,
+            create_schema=True,  # materializa apenas o metadata do cache
         )
 
-    def initialize(self) -> None:
-        """Cria o schema do cache. Idempotente e explícito."""
-        CacheRatiosBase.metadata.create_all(self.engine)
+        # Log defensivo para auditoria
+        # if self._logger:
+        #     self._logger.log(
+        #         f"CacheRatiosAdapter schema materialized | tables=['tbl_cache']",
+        #         level="debug",
+        #     )
 
-    def load(self, cache_key: str) -> tuple[pd.DataFrame, CacheRatiosEntryDTO] | None:
-        with self.Session() as session:  # Session vem do EngineSetup
-            entry = session.get(CacheRatiosEntryModel, cache_key)
+    # ---------- API de porta (CacheRatiosPort) ----------
+
+    def load(self, cache_key: str) -> Optional[Tuple[pd.DataFrame, CacheRatiosEntryDTO]]:
+        """
+        Busca o entry pelo cache_key. Se o arquivo não existir ou estiver ilegível,
+        remove o metadado órfão e retorna None.
+        """
+        with self.Session() as session:
+            entry = session.get(CacheEntry, cache_key)
             if entry is None:
                 return None
 
             file_path = Path(entry.file_path)
             if not file_path.exists():
-                self._remove_entry(session, entry)
+                self._delete_entry_and_file(session, entry, unlink_file=False)
                 return None
 
             try:
                 df = pd.read_parquet(file_path)
             except Exception:
-                file_path.unlink(missing_ok=True)
-                self._remove_entry(session, entry)
+                # Arquivo corrompido. Limpa ambos.
+                self._delete_entry_and_file(session, entry, unlink_file=True)
                 return None
 
+            # Telemetria de acesso
             entry.accessed_at = datetime.now()
             entry.access_count += 1
             session.add(entry)
@@ -71,23 +91,28 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         df: pd.DataFrame,
         company_name: str,
     ) -> CacheRatiosEntryDTO:
+        """
+        Persiste o DataFrame em Parquet com flush/fsync atômico e grava metadados.
+        Atualiza acessos e executa políticas de invalidação/evicção.
+        """
         file_path = self._build_file_path(context=context, company_name=company_name)
         temp_path = file_path.with_suffix(".tmp")
 
-        df.to_parquet(path=temp_path, compression=str(self._config.cache.parquet_compression))  # type: ignore[arg-type]
+        # Escrita atômica do payload
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(temp_path, compression=str(self._config.cache.parquet_compression))  # type: ignore[arg-type]
         with temp_path.open("rb+") as handle:
             handle.flush()
             os.fsync(handle.fileno())
 
         size_bytes = temp_path.stat().st_size
         now = datetime.now()
-        entry: CacheRatiosEntryModel | None = None
 
         try:
             with self.Session.begin() as session:
-                entry = session.get(CacheRatiosEntryModel, context.cache_key)
+                entry = session.get(CacheEntry, context.cache_key)
                 if entry is None:
-                    entry = CacheRatiosEntryModel(
+                    entry = CacheEntry(
                         cache_key=context.cache_key,
                         file_path=str(file_path),
                         size_bytes=size_bytes,
@@ -108,77 +133,85 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
             temp_path.unlink(missing_ok=True)
             raise
 
+        # Move atômico depois do metadado persistido
         try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
             temp_path.replace(file_path)
         except Exception:
             temp_path.unlink(missing_ok=True)
+            # rollback lógico do metadado
             with self.Session.begin() as session:
-                stale_entry = session.get(CacheRatiosEntryModel, context.cache_key)
-                if stale_entry is not None:
-                    session.delete(stale_entry)
+                stale = session.get(CacheEntry, context.cache_key)
+                if stale is not None:
+                    session.delete(stale)
             raise
 
-        if entry is None:
-            raise RuntimeError(f"Failed to persist cache metadata for key '{context.cache_key}'")
+        # Pós-condições
+        entry_dto = CacheRatiosEntryDTO(
+            cache_key=context.cache_key,
+            file_path=str(file_path),
+            size_bytes=size_bytes,
+            created_at=now,
+            accessed_at=now,
+            access_count=1,
+            code_hash=context.code_hash,
+        )
 
-        entry_dto = entry.to_dto()
+        # Políticas
         self.invalidate_outdated(code_hash=context.code_hash)
+        self._evict_cache_if_needed()
+
         return entry_dto
 
     def invalidate_outdated(self, *, code_hash: str) -> None:
-        self._invalidate_outdated(code_hash=code_hash)
-        self._evict_cache_if_needed()
-
-    def _invalidate_outdated(self, *, code_hash: str) -> None:
-        cutoff = datetime.now() - self._config.cache.max_age
+        """
+        Remove entradas antigas por versão de código ou por idade máxima.
+        """
+        cutoff: datetime = datetime.now() - self._as_timedelta(self._config.cache.max_age)
         with self.Session.begin() as session:
-            entries = session.scalars(
-                select(CacheRatiosEntryModel).where(
-                    (CacheRatiosEntryModel.code_hash != code_hash)
-                    | (CacheRatiosEntryModel.accessed_at < cutoff)
+            rows = session.scalars(
+                select(CacheEntry).where(
+                    (CacheEntry.code_hash != code_hash) | (CacheEntry.accessed_at < cutoff)
                 )
             ).all()
-            for entry in entries:
-                Path(entry.file_path).unlink(missing_ok=True)
-                session.delete(entry)
+            for row in rows:
+                Path(row.file_path).unlink(missing_ok=True)
+                session.delete(row)
+
+    # ---------- Internals ----------
 
     def _evict_cache_if_needed(self) -> None:
         with self.Session.begin() as session:
-            total_size = session.execute(
-                select(func.coalesce(func.sum(CacheRatiosEntryModel.size_bytes), 0))
-            ).scalar_one()
-
-            if total_size <= self._config.cache.max_cache_size_bytes:
+            total_size = session.execute(select(func.coalesce(func.sum(CacheEntry.size_bytes), 0))).scalar_one()
+            budget = int(self._config.cache.max_cache_size_bytes)
+            if total_size <= budget:
                 return
 
-            entries = session.scalars(
-                select(CacheRatiosEntryModel)
-                .order_by(
-                    CacheRatiosEntryModel.access_count.asc(),
-                    CacheRatiosEntryModel.created_at.asc(),
+            # LFU + FIFO: menos acessado primeiro; em empate, mais antigo primeiro
+            victims = session.scalars(
+                select(CacheEntry).order_by(
+                    CacheEntry.access_count.asc(),
+                    CacheEntry.created_at.asc(),
                 )
             )
-            for entry in entries:
-                if total_size <= self._config.cache.max_cache_size_bytes:
+            for v in victims:
+                if total_size <= budget:
                     break
-                Path(entry.file_path).unlink(missing_ok=True)
-                total_size -= entry.size_bytes
-                session.delete(entry)
+                Path(v.file_path).unlink(missing_ok=True)
+                total_size -= v.size_bytes
+                session.delete(v)
 
-    def _remove_entry(self, session: Session, entry: CacheRatiosEntryModel) -> None:
+    def _delete_entry_and_file(self, session: Session, entry: CacheEntry, *, unlink_file: bool) -> None:
+        if unlink_file:
+            Path(entry.file_path).unlink(missing_ok=True)
         session.delete(entry)
 
-    def _build_file_path(
-        self,
-        *,
-        context: CacheRatiosContextDTO,
-        company_name: str,
-    ) -> Path:
+    def _build_file_path(self, *, context: CacheRatiosContextDTO, company_name: str) -> Path:
+        """
+        Constrói caminho estável: <cache_dir>/<logical_name>/v<version>/<company>/<cache_key>.parquet
+        """
         safe_company = self._sanitize_company_name(company_name)
         version_segment = f"v{context.version}"
         target_dir = self._config.paths.cache_dir / context.logical_name / version_segment / safe_company
-        target_dir.mkdir(parents=True, exist_ok=True)
         return target_dir / f"{context.cache_key}.parquet"
 
     def _sanitize_company_name(self, company_name: str) -> str:
@@ -186,3 +219,12 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
         cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
         return cleaned[:120] if cleaned else "unknown"
+
+    def _as_timedelta(self, value) -> timedelta:
+        """
+        Aceita tanto timedelta quanto uma duration-like de config.
+        """
+        if isinstance(value, timedelta):
+            return value
+        # fallback simples: minutos
+        return timedelta(minutes=int(value))
