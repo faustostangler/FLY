@@ -11,10 +11,8 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.indicators_dto import IndicatorsDTO
-from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from infrastructure.models.indicators_model import IndicatorModel
-from infrastructure.models.statements_ratio_model import StatementRatioModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.utils.list_flatenner import ListFlattener
 
@@ -71,39 +69,3 @@ class RepositoryIndicators(RepositoryBase[IndicatorsDTO, int], RepositoryIndicat
             self.logger.log(f"Error saving NSD data: {e}", level="error")
             raise
 
-    def save_ratios_batch(self, ratios: List[StatementRatioDTO], *, uow: Uow) -> None:
-        try:
-            session = uow.session
-            flat_items = ListFlattener.flatten(ratios)
-            valid_items = [i for i in flat_items if i is not None]
-
-            if not valid_items:
-                return
-
-            for dto in valid_items:
-                obj = StatementRatioModel.from_dto(dto)
-                data = {c.name: getattr(obj, c.name) for c in StatementRatioModel.__table__.columns}
-
-                stmt = insert(StatementRatioModel).values(**data)
-                update_dict = {
-                    c.name: getattr(stmt.excluded, c.name)
-                    for c in StatementRatioModel.__table__.columns
-                    if c.name not in {"id", "created_at"}
-                }
-
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[
-                        "company_id",
-                        "date",
-                        "scope",
-                        "ticker",
-                        "metric_code",
-                        "version",
-                    ],
-                    set_=update_dict,
-                )
-
-                session.execute(stmt)
-        except Exception as e:
-            self.logger.log(f"Error saving ratios: {e}", level="error")
-            raise
