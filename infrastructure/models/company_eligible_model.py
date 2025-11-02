@@ -6,7 +6,7 @@ from sqlalchemy import JSON, Column, Index, Integer, String
 
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 
-from .base_model import BaseModel
+from infrastructure.models.base_model import BaseModel
 
 
 class CompanyEligibleModel(BaseModel):
