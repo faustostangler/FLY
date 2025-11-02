@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from infrastructure.config.cache import CacheConfig
+from infrastructure.config.cache import CachePolicy
 from infrastructure.config.database import DatabaseConfig
 from infrastructure.config.domain import DomainConfig
 from infrastructure.config.exchange_api import ExchangeApiConfig
@@ -12,7 +12,7 @@ from infrastructure.config.scraping import ScrapingConfig
 from infrastructure.config.worker_pool import WorkerPoolConfig
 
 __all__ = [
-    "CacheConfig", "DatabaseConfig", "DomainConfig", "ExchangeApiConfig", "FlyConfig",
+    "CachePolicy", "DatabaseConfig", "DomainConfig", "ExchangeApiConfig", "FlyConfig",
     "LoggerConfig", "PathConfig", "RepositoryConfig", "ScrapingConfig",
     "WorkerPoolConfig"
 ]

@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from pathlib import Path
-
-from infrastructure.config.paths import load_paths
 
 # # Default folder name created under the project root for cached artifacts
 # CACHE_DIR_NAME = "cache"
 
 # # Default SQLite database filename used to persist cache metadata
-# CACHE_DB_FILENAME = "fly_cache.db"
+# DB_CACHE_FILENAME = "fly_cache.db"
 
 # # Default table name storing cache metadata
 # CACHE_TABLE_NAME = "tbl_cache"
@@ -30,7 +27,7 @@ class CachePolicy:
     """Configuration describing how the ratios cache behaves and where it lives."""
 
     # base_dir: Path
-    # db_filename: str = field(default=CACHE_DB_FILENAME)
+    # db_filename: str = field(default=DB_CACHE_FILENAME)
     # table_name: str = field(default=CACHE_TABLE_NAME)
     # connection_string: str = field(init=False)
     max_cache_size_bytes: int = field(default=MAX_CACHE_SIZE_BYTES)

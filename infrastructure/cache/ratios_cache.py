@@ -30,7 +30,7 @@ class RatiosCacheAdapter(RatiosCachePort):
         self._parquet_compression = config.cache.parquet_compression
 
         self._engine = create_engine(
-            config.database.cache_connection_string,
+            config.database.connection_cache_string,
             connect_args={"check_same_thread": False, "timeout": 60},
             pool_pre_ping=True,
             future=True,
