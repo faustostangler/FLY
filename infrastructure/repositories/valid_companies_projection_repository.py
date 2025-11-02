@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Sequence, Tuple
 
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
@@ -13,20 +13,37 @@ from application.ports.uow_port import Uow
 from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
 from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
 from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
-from infrastructure.adapters.engine_setup import EngineSetup
+from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.models.valid_company_read_model import ValidCompanyReadModel
 
 
 class ValidCompaniesProjectionRepository(
-    EngineSetup,
+    RepositoryBase[ValidCompanyReadModelDTO, str],
     ValidCompaniesReadPort,
     ValidCompaniesWritePort,
 ):
     """SQLite-backed repository for the valid companies projection."""
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort) -> None:
-        super().__init__(config.database.connection_string, logger)
+        super().__init__(config, logger)
+        self._config = config
         self._logger = logger
+
+    def get_model_class(self) -> Tuple[type, tuple]:
+        """Return the ORM model class and primary key tuple used by this repository.
+
+        Returns:
+            Tuple[type, tuple]: A tuple of (model class, primary key columns).
+        """
+        # Provide the bound model and its primary key columns
+        return ValidCompanyReadModel, (ValidCompanyReadModel.id,)
+
+    # # Se o seu RepositoryBase também pede mapeamento DTO<->Model, exponha:
+    # def to_model(self, dto: ValidCompanyReadModelDTO) -> ValidCompanyReadModel:  # opcional, se o base chamar
+    #     return ValidCompanyReadModel.from_dto(dto)
+
+    # def to_dto(self, model: ValidCompanyReadModel) -> ValidCompanyReadModelDTO:  # opcional, se o base chamar
+    #     return model.to_dto()
 
     def list(
         self,

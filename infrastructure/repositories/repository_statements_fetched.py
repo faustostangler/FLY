@@ -31,8 +31,8 @@ class StatementFetchedRepository(
     ) -> None:
         """Initialize repository with ``config`` and ``logger``."""
         super().__init__(config, logger)
-        self.config = config
-        self.logger = logger
+        self._config = config
+        self._logger = logger
 
     def get_model_class(self) -> Tuple[type, tuple]:
         """Return the SQLAlchemy ORM model class managed by this repository.

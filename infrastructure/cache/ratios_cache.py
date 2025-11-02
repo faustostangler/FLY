@@ -23,14 +23,11 @@ class RatiosCacheAdapter(RatiosCachePort):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
+        self._config = config
         self._logger = logger
-        self._cache_dir = config.paths.cache_dir
-        self._max_cache_size_bytes = config.cache.max_cache_size_bytes
-        self._max_age = config.cache.max_age
-        self._parquet_compression = config.cache.parquet_compression
 
         self._engine = create_engine(
-            config.database.connection_cache_string,
+            self._config.database.connection_cache_string,
             connect_args={"check_same_thread": False, "timeout": 60},
             pool_pre_ping=True,
             future=True,
@@ -79,7 +76,7 @@ class RatiosCacheAdapter(RatiosCachePort):
         file_path = self._build_file_path(context=context, company_name=company_name)
         temp_path = file_path.with_suffix(".tmp")
 
-        df.to_parquet(path=temp_path, compression=str(self._parquet_compression))  # type: ignore[arg-type]
+        df.to_parquet(path=temp_path, compression=str(self._config.cache.parquet_compression))  # type: ignore[arg-type]
         with temp_path.open("rb+") as handle:
             handle.flush()
             os.fsync(handle.fileno())
@@ -141,7 +138,7 @@ class RatiosCacheAdapter(RatiosCachePort):
         self._evict_cache_if_needed()
 
     def _invalidate_outdated(self, *, code_hash: str) -> None:
-        cutoff = datetime.now() - self._max_age
+        cutoff = datetime.now() - self._config.cache.max_age
 
         with self._session_factory.begin() as session:
             entries = session.scalars(
@@ -161,7 +158,7 @@ class RatiosCacheAdapter(RatiosCachePort):
                 select(func.coalesce(func.sum(RatiosCacheEntryModel.size_bytes), 0))
             ).scalar_one()
 
-            if total_size <= self._max_cache_size_bytes:
+            if total_size <= self._config.cache.max_cache_size_bytes:
                 return
 
             entries = session.scalars(
@@ -173,7 +170,7 @@ class RatiosCacheAdapter(RatiosCachePort):
             )
 
             for entry in entries:
-                if total_size <= self._max_cache_size_bytes:
+                if total_size <= self._config.cache.max_cache_size_bytes:
                     break
 
                 Path(entry.file_path).unlink(missing_ok=True)
@@ -191,7 +188,7 @@ class RatiosCacheAdapter(RatiosCachePort):
     ) -> Path:
         safe_company = self._sanitize_company_name(company_name)
         version_segment = f"v{context.version}"
-        target_dir = self._cache_dir / context.logical_name / version_segment / safe_company
+        target_dir = self._config.paths.cache_dir / context.logical_name / version_segment / safe_company
         target_dir.mkdir(parents=True, exist_ok=True)
         return target_dir / f"{context.cache_key}.parquet"
 
