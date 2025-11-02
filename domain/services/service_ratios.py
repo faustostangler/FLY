@@ -2,23 +2,25 @@ from typing import Any
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from application.services.valid_companies_batch_updater_service import (
+    ValidCompaniesBatchUpdaterService,
+)
 from application.usecases.normalize_ratios import NormalizeUseCase
 from application.usecases.update_valid_companies_projection import (
     UpdateValidCompaniesProjectionUseCase,
 )
 from domain.dtos import RatiosCacheResultDTO, SyncResultsDTO
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
 from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
-from application.services.valid_companies_batch_updater_service import (
-    ValidCompaniesBatchUpdaterService,
-)
 
 
 class RatiosService:

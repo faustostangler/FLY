@@ -4,8 +4,8 @@ from sqlalchemy import Float, ForeignKey, Index, Integer, String, UniqueConstrai
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
-from infrastructure.models.statements_base_model import BaseStatementModel
 from infrastructure.models.base_model import BaseModel, _YMDDate
+from infrastructure.models.statements_base_model import BaseStatementModel
 
 
 class StatementRatioModel(BaseModel):

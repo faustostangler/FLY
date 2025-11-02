@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-
 from typing import Optional, Protocol, Tuple, runtime_checkable
 
-from domain.dtos.statement_ratio_dto import StatementRatioDTO
-
-from domain.ports.repository_base_port import RepositoryBasePort
 from application.ports.uow_port import Uow
+from domain.dtos.statement_ratio_dto import StatementRatioDTO
+from domain.ports.repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable

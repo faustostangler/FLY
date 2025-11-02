@@ -10,19 +10,20 @@ from dateutil.relativedelta import relativedelta
 import domain.utils.intel as intel
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from application.ports.worker_pool_port import WorkerPoolPort
 from application.ports.uow_port import Uow, UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
 from application.services.ratios_cache_service import RatiosCacheService
 from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.ratios_cache_port import RatiosCachePort
-from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
 from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
-
+from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.ports.ratios_cache_port import RatiosCachePort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
 
 
 class NormalizeUseCase:

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple, Optional
 from datetime import datetime
+from typing import List, Optional, Tuple
 
+from sqlalchemy import Integer, func
 from sqlalchemy.dialects.sqlite import insert
-from sqlalchemy import func, Integer
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort

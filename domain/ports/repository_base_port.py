@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import (
     Any,
     Generic,
-    Iterator,
     Iterable,
+    Iterator,
     List,
     Protocol,
     Tuple,
@@ -12,6 +12,7 @@ from typing import (
     Union,
     runtime_checkable,
 )
+
 from sqlalchemy import and_, or_
 
 from application.ports.uow_port import Uow

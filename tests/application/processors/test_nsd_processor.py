@@ -1,25 +1,24 @@
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Mapping, Sequence, cast
 from unittest.mock import MagicMock
 
-import sys
-
 ROOT_DIR = Path(__file__).resolve().parents[3]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 # <<<<<<< codex/fix-unrealistic-time-progression-logs-0j1j18
-from application.processors.nsd_processor import NsdProcessor, _NsdTxnAggregator
 # =======
 # import application.processors.nsd_processor as nsd_module
 # from application.processors.nsd_processor import NsdProcessor, _StageTimeline
 # >>>>>>> 2025-09-09-Fetch-Adjustments
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
+from application.processors.nsd_processor import NsdProcessor, _NsdTxnAggregator
 from domain.dtos.nsd_dto import NsdDTO
 from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO

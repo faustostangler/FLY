@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 from infrastructure.config.paths import load_paths
 

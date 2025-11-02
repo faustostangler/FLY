@@ -20,6 +20,7 @@ from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from infrastructure.adapters.datacleaner_adapter import DataCleaner
 
+
 def _to_int_code(x: Any) -> Optional[int]:
     if isinstance(x, int):
         return x

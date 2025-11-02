@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import (
     Any,
     List,
+    Protocol,
     Sequence,
     Type,
     TypeGuard,
@@ -16,10 +17,8 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    Protocol,
     runtime_checkable,
 )
-
 
 T = TypeVar("T", bound="DataclassProtocol")
 

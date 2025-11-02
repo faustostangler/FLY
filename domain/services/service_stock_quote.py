@@ -1,13 +1,13 @@
 from typing import Any
 
 from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from application.ports.worker_pool_port import WorkerPoolPort
-from application.ports.uow_port import UowFactoryPort
 from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
 from application.usecases.sync_stock_quote import SyncStockQuoteUseCase
-from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.stock_quote_dto import StockQuoteDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort

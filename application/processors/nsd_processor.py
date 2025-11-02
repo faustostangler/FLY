@@ -23,7 +23,6 @@ from domain.ports.repository_statements_raw_port import RepositoryStatementsRawP
 from domain.ports.scraper_base_port import SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.id_generator import IdGenerator
 from infrastructure.utils.list_flatenner import ListFlattener

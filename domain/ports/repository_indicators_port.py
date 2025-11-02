@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import List, Protocol, runtime_checkable
 
+from application.ports.uow_port import Uow
+
 # from application.ports.uow_port import Uow
 from domain.dtos.indicators_dto import IndicatorsDTO
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
 from domain.ports.repository_base_port import RepositoryBasePort
-from application.ports.uow_port import Uow
 
 
 @runtime_checkable

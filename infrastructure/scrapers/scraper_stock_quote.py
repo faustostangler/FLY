@@ -1,26 +1,26 @@
 # infrastructure/adapters/scraper_stock_quote.py
 from __future__ import annotations
-import calendar
-from datetime import datetime, date
-import time
-import pandas as pd
-from typing import Iterable, Optional, List, Tuple, cast
 
+import calendar
+import time
+from datetime import date, datetime
+from typing import Iterable, List, Optional, Tuple, cast
+
+import pandas as pd
 import requests
 import yfinance as yf  # dependência de infraestrutura
 
 from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.ports.http_client_port import AffinityHttpClientPort
 from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-
 from infrastructure.utils.byte_formatter import ByteFormatter
 from infrastructure.utils.save_strategy import SaveStrategy
 

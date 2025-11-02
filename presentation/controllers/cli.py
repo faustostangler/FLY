@@ -1,32 +1,29 @@
 from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
 from domain.ports.ratios_cache_port import RatiosCachePort
-
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
-from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
-
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-
+from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
+from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
-from domain.services.service_stock_quote import StockQuoteService
 from domain.services.service_ratios import RatiosService
-
-
-from application.ports.http_client_port import AffinityHttpClientPort
+from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter

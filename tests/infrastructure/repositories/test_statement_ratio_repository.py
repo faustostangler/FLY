@@ -8,11 +8,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
+from infrastructure.models import (
+    company_data_model,  # noqa: F401
+    nsd_model,  # noqa: F401
+)
 from infrastructure.repositories.repository_statements_ratio import (
     StatementRatioRepository,
 )
-from infrastructure.models import company_data_model  # noqa: F401
-from infrastructure.models import nsd_model  # noqa: F401
 from infrastructure.uow.uow import UowFactory
 
 

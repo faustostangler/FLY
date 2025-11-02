@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional, Protocol, runtime_checkable
 
-from typing import Protocol, runtime_checkable, Optional
-
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
-
-from domain.ports.repository_base_port import RepositoryBasePort
 from application.ports.uow_port import Uow
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.ports.repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable

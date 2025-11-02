@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import List, Set, Tuple, TypeVar
 
-from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy import func
+from sqlalchemy.dialects.sqlite import insert
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort

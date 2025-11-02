@@ -1,17 +1,18 @@
 # infrastructure/repositories/repository_ratios.py
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
 import time
+from typing import List, Optional, Tuple
+
 from pandas import Timestamp
-from sqlalchemy import and_, or_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.sqlite import insert
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.statement_ratio_dto import StatementRatioDTO
-from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort 
+from domain.ports.repository_statements_ratio_port import RepositoryStatementRatioPort
 from infrastructure.models.statements_ratio_model import StatementRatioModel
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.utils.list_flatenner import ListFlattener

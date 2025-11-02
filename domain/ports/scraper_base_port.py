@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Union, Tuple, Iterable, Generic, List, Optional, Protocol, TypeVar, runtime_checkable
+from typing import (
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 from application.ports.uow_port import Uow
 

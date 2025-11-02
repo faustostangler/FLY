@@ -118,8 +118,9 @@ class Average(Formula):
             raise KeyError(f"Missing account: {e}")
 
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def _get(df, key, ohlc:str="close"):
     if isinstance(key, Formula):

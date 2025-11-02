@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Column, Index, Integer, JSON, String
+from sqlalchemy import JSON, Column, Index, Integer, String
 
 from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
+
 from .base_model import BaseModel
 
 

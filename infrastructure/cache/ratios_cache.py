@@ -10,10 +10,10 @@ import pandas as pd
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 from infrastructure.config.cache import CacheConfig, load_cache_config
-from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from infrastructure.models.ratios_cache_model import (
     RatiosCacheBase,
     RatiosCacheEntryModel,
