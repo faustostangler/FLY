@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .paths import load_paths
+from legacy.infrastructure.config.paths import load_paths
 
 LOG_FILENAME = "fly_logger.log"  # Nome do arquivo de log padrão
 LEVEL = "INFO"  # Nível de log padrão

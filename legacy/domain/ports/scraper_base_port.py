@@ -7,7 +7,7 @@ from typing import Callable, Generic, List, Optional, TypeVar
 
 from domain.dto import ExecutionResultDTO
 
-from .metrics_collector_port import MetricsCollectorPort
+from legacy.domain.ports.metrics_collector_port import MetricsCollectorPort
 
 T = TypeVar("T")
 

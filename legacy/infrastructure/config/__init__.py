@@ -1,6 +1,6 @@
 """Public interface for infrastructure configuration adapters."""
 
-from .adapter import ConfigAdapter
+from legacy.infrastructure.config.adapter import ConfigAdapter
 
 # Backward-compatible alias expected by some tests
 Config = ConfigAdapter

@@ -5,7 +5,7 @@ from typing import List, Protocol, runtime_checkable
 from application.ports.uow_port import Uow
 from domain.dtos.statement_raw_dto import StatementRawDTO
 
-from .repository_base_port import RepositoryBasePort
+from domain.ports.repository_base_port import RepositoryBasePort
 
 
 @runtime_checkable

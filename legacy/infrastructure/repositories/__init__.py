@@ -1,9 +1,15 @@
 """Persistence layer repositories."""
 
-from .repository_company import SqlAlchemyRepositoryCompanyData
-from .repository_nsd import SqlAlchemyNsdRepository
-from .fetched_statement_repository import SqlAlchemyStatementFetchedRepository
-from .raw_statement_repository import SqlAlchemyStatementRawRepository
+from legacy.infrastructure.repositories.repository_company import (
+    SqlAlchemyRepositoryCompanyData,
+)
+from legacy.infrastructure.repositories.repository_nsd import SqlAlchemyNsdRepository
+from legacy.infrastructure.repositories.fetched_statement_repository import (
+    SqlAlchemyStatementFetchedRepository,
+)
+from legacy.infrastructure.repositories.raw_statement_repository import (
+    SqlAlchemyStatementRawRepository,
+)
 
 __all__ = [
     "SqlAlchemyRepositoryCompanyData",

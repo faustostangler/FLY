@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from .raw_company_data_dto import CompanyDataRawDTO
+from legacy.domain.dto.raw_company_data_dto import CompanyDataRawDTO
 
 
 @dataclass(frozen=True, kw_only=True)

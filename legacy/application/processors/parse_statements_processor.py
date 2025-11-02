@@ -17,7 +17,7 @@ from domain.ports import (
     WorkerPoolPort,
 )
 
-from .base_processor import BaseProcessor
+from legacy.application.processors.base_processor import BaseProcessor
 
 
 class ParseStatementsProcessor(BaseProcessor):

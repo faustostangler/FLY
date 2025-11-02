@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Optional
 
-from .statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -81,7 +81,7 @@ class StatementRawDTO:
         Returns:
             StatementFetchedDTO: The fetched statement with structured fields.
         """
-        from .statement_fetched_dto import StatementFetchedDTO
+        from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 
         # Extract account and description from the target line
         parts = target_line.split(" - ", 1)

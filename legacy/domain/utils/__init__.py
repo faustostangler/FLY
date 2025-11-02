@@ -1,10 +1,14 @@
 """Domain utility helpers."""
 
-from .criteria_node import CriteriaNode
-from .finance_utils import safe_divide
-from .math_utils import find_missing_quarters, parse_quarter, quarter_index
-from .statement_hash import compute_hash
-from .version_utils import filter_latest_versions
+from legacy.domain.utils.criteria_node import CriteriaNode
+from legacy.domain.utils.finance_utils import safe_divide
+from legacy.domain.utils.math_utils import (
+    find_missing_quarters,
+    parse_quarter,
+    quarter_index,
+)
+from legacy.domain.utils.statement_hash import compute_hash
+from legacy.domain.utils.version_utils import filter_latest_versions
 
 __all__ = [
     "parse_quarter",

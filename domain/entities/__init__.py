@@ -1,5 +1,5 @@
 """Domain entities package."""
 
-from .eligible_company import EligibleCompany
+from domain.entities.eligible_company import EligibleCompany
 
 __all__ = ["EligibleCompany"]

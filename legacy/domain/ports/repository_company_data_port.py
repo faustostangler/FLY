@@ -6,7 +6,7 @@ from abc import abstractmethod
 
 from domain.dto.company_data_dto import CompanyDataDTO
 
-from .repository_base_port import RepositoryBasePort
+from legacy.domain.ports.repository_base_port import RepositoryBasePort
 
 
 class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int]):

@@ -1,14 +1,16 @@
-from .company_data_exchange_scraper import CompanyDataScraper
-from .company_data_processors import (
+from legacy.infrastructure.scrapers.company_data_exchange_scraper import (
+    CompanyDataScraper,
+)
+from legacy.infrastructure.scrapers.company_data_processors import (
     CompanyDataDetailProcessor,
     CompanyDataMerger,
     DetailFetcher,
     EntryCleaner,
 )
-from .scraper_nsd import NsdScraper
-from .requests_raw_statement_scraper import (
-    StatementsRawcraper,  # alias for backward compatibility
+from legacy.infrastructure.scrapers.scraper_nsd import NsdScraper
+from legacy.infrastructure.scrapers.requests_raw_statement_scraper import (
     RequestsStatementsRawcraper,
+    StatementsRawcraper,  # alias for backward compatibility
 )
 
 __all__ = [

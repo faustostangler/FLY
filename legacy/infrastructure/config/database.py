@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
 
-from .paths import load_paths
+from legacy.infrastructure.config.paths import load_paths
 
 DB_FILENAME = "fly.db"
 TABLES = {

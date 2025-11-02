@@ -1,3 +1,3 @@
-from .logger_adapter import Logger
+from infrastructure.logging.logger_adapter import Logger
 
 __all__ = ["Logger"]

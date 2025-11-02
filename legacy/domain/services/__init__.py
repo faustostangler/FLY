@@ -1,5 +1,7 @@
 """Domain service exports."""
 
-from .statement_classification_service import StatementClassificationService
+from legacy.domain.services.statement_classification_service import (
+    StatementClassificationService,
+)
 
 __all__ = ["StatementClassificationService"]

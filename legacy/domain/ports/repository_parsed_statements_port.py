@@ -4,7 +4,7 @@ from typing import List
 
 from domain.dto import StatementFetchedDTO
 
-from .repository_base_port import RepositoryBasePort
+from legacy.domain.ports.repository_base_port import RepositoryBasePort
 
 
 class RepositoryStatementFetchedPort(RepositoryBasePort[StatementFetchedDTO, int]):

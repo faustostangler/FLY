@@ -6,7 +6,7 @@ from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator, String
 
-from .base_model import BaseModel
+from legacy.infrastructure.models.base_model import BaseModel
 
 
 class _YMDDate(TypeDecorator):

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.statement_fetched_dto import StatementFetchedDTO
 
-from .abstract_statement_model import BaseStatementModel
+from legacy.infrastructure.models.abstract_statement_model import BaseStatementModel
 
 
 class StatementFetchedModel(BaseStatementModel):

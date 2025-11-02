@@ -1,10 +1,12 @@
 """SQLAlchemy ORM models used for persistence."""
 
-from .base_model import BaseModel
-from .company_data_model import CompanyDataModel
-from .nsd_model import NSDModel
-from .fetched_statement_model import StatementFetchedModel
-from .raw_statement_model import StatementRawModel
+from legacy.infrastructure.models.base_model import BaseModel
+from legacy.infrastructure.models.company_data_model import CompanyDataModel
+from legacy.infrastructure.models.nsd_model import NSDModel
+from legacy.infrastructure.models.fetched_statement_model import (
+    StatementFetchedModel,
+)
+from legacy.infrastructure.models.raw_statement_model import StatementRawModel
 
 __all__ = [
     "BaseModel",

@@ -6,7 +6,7 @@ from typing import Any, Callable, Iterable, List, Optional, Protocol, Tuple, Typ
 
 from domain.dto import ExecutionResultDTO, WorkerTaskDTO
 
-from .logger_port import LoggerPort
+from legacy.domain.ports.logger_port import LoggerPort
 
 T = WorkerTaskDTO
 R = TypeVar("R")

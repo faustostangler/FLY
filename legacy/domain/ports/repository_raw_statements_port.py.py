@@ -4,7 +4,7 @@ from typing import List
 
 from domain.dto import StatementRawDTO
 
-from .repository_base_port import RepositoryBasePort
+from legacy.domain.ports.repository_base_port import RepositoryBasePort
 
 
 class RepositoryStatementRawPort(RepositoryBasePort[StatementRawDTO, int]):

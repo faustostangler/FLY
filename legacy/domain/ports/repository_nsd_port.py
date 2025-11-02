@@ -7,7 +7,7 @@ from typing import List, Set
 
 from domain.dto.nsd_dto import NsdDTO
 
-from .repository_base_port import RepositoryBasePort
+from legacy.domain.ports.repository_base_port import RepositoryBasePort
 
 
 class RepositoryNsdPort(RepositoryBasePort[NsdDTO, int]):

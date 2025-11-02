@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, List, TypeVar
 
-from .metrics_dto import MetricsDTO
+from legacy.domain.dto.metrics_dto import MetricsDTO
 
 R = TypeVar("R")
 

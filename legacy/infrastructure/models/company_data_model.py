@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from domain.dto.company_data_dto import CompanyDataDTO
 from domain.dto.raw_company_data_dto import CodeDTO, CompanyDataRawDTO
 
-from .base_model import BaseModel
+from legacy.infrastructure.models.base_model import BaseModel
 
 
 class CompanyDataModel(BaseModel):

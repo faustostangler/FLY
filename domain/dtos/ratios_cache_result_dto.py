@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .ratios_cache_entry_dto import RatiosCacheEntryDTO
+from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -13,7 +13,7 @@ from infrastructure.transformers import (
     MathStatementTransformerAdapter,
 )
 
-from .base_processor import BaseProcessor
+from legacy.application.processors.base_processor import BaseProcessor
 
 
 class TransformStatementsProcessor(BaseProcessor):

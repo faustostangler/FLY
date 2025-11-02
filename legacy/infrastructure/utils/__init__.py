@@ -1,6 +1,11 @@
 """Collection of helper functions used across the infrastructure layer."""
 
-from .normalization import cleandate, clean_dict_fields, clean_number, clean_text
+from legacy.infrastructure.utils.normalization import (
+    clean_dict_fields,
+    clean_number,
+    clean_text,
+    cleandate,
+)
 
 __all__ = [
     "clean_text",

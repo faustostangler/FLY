@@ -19,7 +19,7 @@ from domain.ports import (
 )
 from domain.ports.scraper_ports import StatementsRawcraperPort
 
-from .base_processor import BaseProcessor
+from legacy.application.processors.base_processor import BaseProcessor
 
 
 LoadPayload: TypeAlias = Tuple[

@@ -8,7 +8,7 @@ from typing import List
 
 from domain.dto.statement_raw_dto import StatementRawDTO
 
-from .math_utils import parse_quarter
+from legacy.domain.utils.math_utils import parse_quarter
 
 
 def compute_hash(raw_dtos: List[StatementRawDTO]) -> str:
