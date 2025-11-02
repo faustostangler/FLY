@@ -1,13 +1,13 @@
-"""Use case that refreshes the valid companies projection from source snapshots."""
+"""Use case that refreshes the eligible companies projection from source snapshots."""
 
 from __future__ import annotations
 
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
-from application.services.valid_companies_batch_updater_service import (
-    ValidCompaniesBatchUpdaterService,
+from application.services.eligible_companies_batch_updater_service import (
+    EligibleCompaniesBatchUpdaterService,
 )
-from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
+from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
@@ -15,8 +15,8 @@ from domain.ports.repository_statements_fetched_port import (
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 
 
-class UpdateValidCompaniesProjectionUseCase:
-    """Coordinates the refresh of the valid companies read-model."""
+class RefreshEligibleCompaniesProjectionUseCase:
+    """Coordinates the refresh of the eligible companies read-model."""
 
     def __init__(
         self,
@@ -25,7 +25,7 @@ class UpdateValidCompaniesProjectionUseCase:
         repository_company: RepositoryCompanyDataPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         repository_stock_quote: RepositoryStockQuotePort,
-        batch_service: ValidCompaniesBatchUpdaterService,
+        batch_service: EligibleCompaniesBatchUpdaterService,
         uow_factory: UowFactoryPort,
     ) -> None:
         self._logger = logger
@@ -35,10 +35,10 @@ class UpdateValidCompaniesProjectionUseCase:
         self._batch_service = batch_service
         self._uow_factory = uow_factory
 
-    def __call__(self) -> list[ValidCompanyReadModelDTO]:
+    def __call__(self) -> list[EligibleCompanyReadModelDTO]:
         return self.run()
 
-    def run(self) -> list[ValidCompanyReadModelDTO]:
+    def run(self) -> list[EligibleCompanyReadModelDTO]:
         """Refresh the projection in a single transaction."""
 
         with self._uow_factory() as uow:
@@ -61,7 +61,7 @@ class UpdateValidCompaniesProjectionUseCase:
 
             uow.commit()
             self._logger.log(
-                f"Valid companies projection refreshed: {len(projection)} items",
+                f"Eligible companies projection refreshed: {len(projection)} items",
                 level="info",
             )
 

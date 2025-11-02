@@ -1,4 +1,4 @@
-"""Domain entity representing a valid company for ratios processing."""
+"""Domain entity representing an eligible company for ratios processing."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Tuple
 
 
 @dataclass(frozen=True)
-class ValidCompany:
-    """Immutable representation of a company deemed valid for processing."""
+class EligibleCompany:
+    """Immutable representation of a company deemed eligible for processing."""
 
     company_name: str
     cvm_code: str | None

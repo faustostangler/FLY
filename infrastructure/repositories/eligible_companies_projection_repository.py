@@ -1,4 +1,4 @@
-"""Repository implementing the valid companies read/write ports."""
+"""Repository implementing the eligible companies read/write ports."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ from sqlalchemy.orm import Session
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
-from domain.ports.valid_companies_port import ValidCompaniesPort
+from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.ports.eligible_companies_port import EligibleCompaniesPort
 from infrastructure.repositories.repository_base import RepositoryBase
-from infrastructure.models.valid_company_read_model import ValidCompanyReadModel
+from infrastructure.models.eligible_company_read_model import EligibleCompanyReadModel
 
 
-class ValidCompaniesProjectionRepository(
-    RepositoryBase[ValidCompanyReadModelDTO, str],
-    ValidCompaniesPort,
+class EligibleCompaniesProjectionRepository(
+    RepositoryBase[EligibleCompanyReadModelDTO, str],
+    EligibleCompaniesPort,
 ):
-    """SQLite-backed repository for the valid companies projection."""
+    """SQLite-backed repository for the eligible companies projection."""
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort) -> None:
         super().__init__(config, logger)
@@ -34,13 +34,13 @@ class ValidCompaniesProjectionRepository(
             Tuple[type, tuple]: A tuple of (model class, primary key columns).
         """
         # Provide the bound model and its primary key columns
-        return ValidCompanyReadModel, (ValidCompanyReadModel.id,)
+        return EligibleCompanyReadModel, (EligibleCompanyReadModel.cvm_code,)
 
     # # Se o seu RepositoryBase também pede mapeamento DTO<->Model, exponha:
-    # def to_model(self, dto: ValidCompanyReadModelDTO) -> ValidCompanyReadModel:  # opcional, se o base chamar
-    #     return ValidCompanyReadModel.from_dto(dto)
+    # def to_model(self, dto: EligibleCompanyReadModelDTO) -> EligibleCompanyReadModel:  # opcional, se o base chamar
+    #     return EligibleCompanyReadModel.from_dto(dto)
 
-    # def to_dto(self, model: ValidCompanyReadModel) -> ValidCompanyReadModelDTO:  # opcional, se o base chamar
+    # def to_dto(self, model: EligibleCompanyReadModel) -> EligibleCompanyReadModelDTO:  # opcional, se o base chamar
     #     return model.to_dto()
 
     def list(
@@ -50,44 +50,44 @@ class ValidCompaniesProjectionRepository(
         cvm_code: str | None = None,
         company_name: str | None = None,
         segment: str | None = None,
-    ) -> list[ValidCompanyReadModelDTO]:
+    ) -> list[EligibleCompanyReadModelDTO]:
         session: Session = uow.session
-        query = session.query(ValidCompanyReadModel)
+        query = session.query(EligibleCompanyReadModel)
 
         if cvm_code:
-            query = query.filter(ValidCompanyReadModel.cvm_code == cvm_code)
+            query = query.filter(EligibleCompanyReadModel.cvm_code == cvm_code)
 
         if company_name:
             like = f"%{company_name}%"
-            query = query.filter(ValidCompanyReadModel.company_name.ilike(like))
+            query = query.filter(EligibleCompanyReadModel.company_name.ilike(like))
 
         if segment:
             like = f"%{segment}%"
             query = query.filter(
-                (ValidCompanyReadModel.company_segment.ilike(like))
-                | (ValidCompanyReadModel.industry_segment.ilike(like))
+                (EligibleCompanyReadModel.company_segment.ilike(like))
+                | (EligibleCompanyReadModel.industry_segment.ilike(like))
             )
 
-        query = query.order_by(ValidCompanyReadModel.company_name)
+        query = query.order_by(EligibleCompanyReadModel.company_name)
         rows = query.all()
 
         return [row.to_dto() for row in rows]
 
     def replace_all(
         self,
-        items: Sequence[ValidCompanyReadModelDTO],
+        items: Sequence[EligibleCompanyReadModelDTO],
         *,
         uow: Uow,
     ) -> None:
         session: Session = uow.session
 
-        session.execute(delete(ValidCompanyReadModel))
+        session.execute(delete(EligibleCompanyReadModel))
 
         if items:
-            objects = [ValidCompanyReadModel.from_dto(item) for item in items]
+            objects = [EligibleCompanyReadModel.from_dto(item) for item in items]
             session.bulk_save_objects(objects)
 
         self._logger.log(
-            f"Projection read_valid_companies replaced with {len(items)} rows",
+            f"Projection proj_eligible_companies replaced with {len(items)} rows",
             level="debug",
         )

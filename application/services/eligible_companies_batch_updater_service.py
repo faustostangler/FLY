@@ -1,4 +1,4 @@
-"""Application service responsible for rebuilding the valid companies projection."""
+"""Application service responsible for rebuilding the eligible companies projection."""
 
 from __future__ import annotations
 
@@ -7,20 +7,20 @@ from typing import Collection, Iterable, Sequence
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
-from domain.entities import ValidCompany
-from domain.ports.valid_companies_port import ValidCompaniesPort
+from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.entities import EligibleCompany
+from domain.ports.eligible_companies_port import EligibleCompaniesPort
 from domain.services.valid_company_rules import decide_valid_company
 
 
-class ValidCompaniesBatchUpdaterService:
+class EligibleCompaniesBatchUpdaterService:
     """Coordinates transformation from raw snapshots into the read-model DTOs."""
 
     def __init__(
         self,
         *,
         logger: LoggerPort,
-        port: ValidCompaniesPort,
+        port: EligibleCompaniesPort,
     ) -> None:
         self._logger = logger
         self._port = port
@@ -32,13 +32,13 @@ class ValidCompaniesBatchUpdaterService:
         companies: Sequence[CompanyDataDTO],
         statement_company_names: Collection[str],
         quote_tickers: Iterable[str],
-    ) -> list[ValidCompanyReadModelDTO]:
-        """Recompute the valid companies projection and persist it."""
+    ) -> list[EligibleCompanyReadModelDTO]:
+        """Recompute the eligible companies projection and persist it."""
 
         statement_set = {name for name in statement_company_names if name}
         quote_set = {str(t).strip().upper() for t in quote_tickers if t}
 
-        projection: list[ValidCompanyReadModelDTO] = []
+        projection: list[EligibleCompanyReadModelDTO] = []
         seen_names: set[str] = set()
 
         for company in companies:
@@ -59,7 +59,7 @@ class ValidCompaniesBatchUpdaterService:
             if not is_valid:
                 continue
 
-            entity = ValidCompany(
+            entity = EligibleCompany(
                 company_name=name,
                 cvm_code=company.cvm_code,
                 ticker_codes=normalized_tickers,
@@ -71,11 +71,11 @@ class ValidCompaniesBatchUpdaterService:
                 company_segment=company.company_segment,
             )
 
-            projection.append(ValidCompanyReadModelDTO.from_entity(entity))
+            projection.append(EligibleCompanyReadModelDTO.from_entity(entity))
 
         self._port.replace_all(projection, uow=uow)
         self._logger.log(
-            f"Valid companies projection updated with {len(projection)} entries",
+            f"Eligible companies projection updated with {len(projection)} entries",
             level="info",
         )
 
