@@ -15,7 +15,7 @@ from application.ports.worker_pool_port import WorkerPoolPort
 from application.services.ratios_cache_service import RatiosCacheService
 from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -23,7 +23,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.eligible_companies_port import EligibleCompaniesPort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 
 
 class NormalizeUseCase:
@@ -38,7 +38,7 @@ class NormalizeUseCase:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         ratios_cache: RatiosCachePort,
-        eligible_companies_port: EligibleCompaniesPort,
+        eligible_companies_port: CompaniesEligiblePort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -96,7 +96,7 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                eligible_companies: list[EligibleCompanyReadModelDTO] = self.eligible_companies_port.list(
+                eligible_companies: list[CompanyEligibleDTO] = self.eligible_companies_port.list(
                     uow=bootstrap_uow,
                 )
 

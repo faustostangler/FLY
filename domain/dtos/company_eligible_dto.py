@@ -9,7 +9,7 @@ from domain.entities import EligibleCompany
 
 
 @dataclass(frozen=True)
-class EligibleCompanyReadModelDTO:
+class CompanyEligibleDTO:
     """Data transfer object for the eligible companies projection."""
 
     company_name: str
@@ -24,8 +24,8 @@ class EligibleCompanyReadModelDTO:
     company_segment: str | None = None
 
     @staticmethod
-    def from_entity(entity: EligibleCompany) -> "EligibleCompanyReadModelDTO":
-        return EligibleCompanyReadModelDTO(
+    def from_entity(entity: EligibleCompany) -> "CompanyEligibleDTO":
+        return CompanyEligibleDTO(
             company_name=entity.company_name,
             cvm_code=entity.cvm_code,
             ticker_codes=entity.ticker_codes,

@@ -18,7 +18,7 @@ from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-from domain.ports.eligible_companies_port import EligibleCompaniesPort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_ratios import RatiosService
@@ -60,7 +60,7 @@ class Cli:
         policy: NsdPolicyPort,
         uow_factory: UowFactoryPort,
         http_client: AffinityHttpClientPort,
-        eligible_companies_port: EligibleCompaniesPort,
+        eligible_companies_port: CompaniesEligiblePort,
     ) -> None:
         """Initialize the CLI with injected ports."""
         # Store injected dependencies for later composition

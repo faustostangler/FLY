@@ -19,7 +19,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.eligible_companies_port import EligibleCompaniesPort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 
 
 class RatiosService:
@@ -38,7 +38,7 @@ class RatiosService:
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
-        eligible_companies_port: EligibleCompaniesPort,
+        eligible_companies_port: CompaniesEligiblePort,
     ):
         """Initialize the service with required dependencies.
 

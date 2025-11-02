@@ -7,7 +7,7 @@ from application.ports.uow_port import UowFactoryPort
 from application.services.eligible_companies_batch_updater_service import (
     EligibleCompaniesBatchUpdaterService,
 )
-from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
@@ -35,10 +35,10 @@ class RefreshEligibleCompaniesProjectionUseCase:
         self._batch_service = batch_service
         self._uow_factory = uow_factory
 
-    def __call__(self) -> list[EligibleCompanyReadModelDTO]:
+    def __call__(self) -> list[CompanyEligibleDTO]:
         return self.run()
 
-    def run(self) -> list[EligibleCompanyReadModelDTO]:
+    def run(self) -> list[CompanyEligibleDTO]:
         """Refresh the projection in a single transaction."""
 
         with self._uow_factory() as uow:

@@ -7,9 +7,9 @@ from typing import Collection, Iterable, Sequence
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.entities import EligibleCompany
-from domain.ports.eligible_companies_port import EligibleCompaniesPort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.valid_company_rules import decide_valid_company
 
 
@@ -20,7 +20,7 @@ class EligibleCompaniesBatchUpdaterService:
         self,
         *,
         logger: LoggerPort,
-        port: EligibleCompaniesPort,
+        port: CompaniesEligiblePort,
     ) -> None:
         self._logger = logger
         self._port = port
@@ -32,13 +32,13 @@ class EligibleCompaniesBatchUpdaterService:
         companies: Sequence[CompanyDataDTO],
         statement_company_names: Collection[str],
         quote_tickers: Iterable[str],
-    ) -> list[EligibleCompanyReadModelDTO]:
+    ) -> list[CompanyEligibleDTO]:
         """Recompute the eligible companies projection and persist it."""
 
         statement_set = {name for name in statement_company_names if name}
         quote_set = {str(t).strip().upper() for t in quote_tickers if t}
 
-        projection: list[EligibleCompanyReadModelDTO] = []
+        projection: list[CompanyEligibleDTO] = []
         seen_names: set[str] = set()
 
         for company in companies:
@@ -71,7 +71,7 @@ class EligibleCompaniesBatchUpdaterService:
                 company_segment=company.company_segment,
             )
 
-            projection.append(EligibleCompanyReadModelDTO.from_entity(entity))
+            projection.append(CompanyEligibleDTO.from_entity(entity))
 
         self._port.replace_all(projection, uow=uow)
         self._logger.log(

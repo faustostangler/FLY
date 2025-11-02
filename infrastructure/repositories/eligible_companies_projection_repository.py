@@ -10,15 +10,15 @@ from sqlalchemy.orm import Session
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
-from domain.ports.eligible_companies_port import EligibleCompaniesPort
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from infrastructure.repositories.repository_base import RepositoryBase
-from infrastructure.models.eligible_company_read_model import EligibleCompanyReadModel
+from infrastructure.models.company_eligible_model import CompanyEligibleModel
 
 
 class EligibleCompaniesProjectionRepository(
-    RepositoryBase[EligibleCompanyReadModelDTO, str],
-    EligibleCompaniesPort,
+    RepositoryBase[CompanyEligibleDTO, str],
+    CompaniesEligiblePort,
 ):
     """SQLite-backed repository for the eligible companies projection."""
 
@@ -34,13 +34,13 @@ class EligibleCompaniesProjectionRepository(
             Tuple[type, tuple]: A tuple of (model class, primary key columns).
         """
         # Provide the bound model and its primary key columns
-        return EligibleCompanyReadModel, (EligibleCompanyReadModel.cvm_code,)
+        return CompanyEligibleModel, (CompanyEligibleModel.cvm_code,)
 
     # # Se o seu RepositoryBase também pede mapeamento DTO<->Model, exponha:
-    # def to_model(self, dto: EligibleCompanyReadModelDTO) -> EligibleCompanyReadModel:  # opcional, se o base chamar
-    #     return EligibleCompanyReadModel.from_dto(dto)
+    # def to_model(self, dto: CompanyEligibleDTO) -> CompanyEligibleModel:  # opcional, se o base chamar
+    #     return CompanyEligibleModel.from_dto(dto)
 
-    # def to_dto(self, model: EligibleCompanyReadModel) -> EligibleCompanyReadModelDTO:  # opcional, se o base chamar
+    # def to_dto(self, model: CompanyEligibleModel) -> CompanyEligibleDTO:  # opcional, se o base chamar
     #     return model.to_dto()
 
     def list(
@@ -50,41 +50,41 @@ class EligibleCompaniesProjectionRepository(
         cvm_code: str | None = None,
         company_name: str | None = None,
         segment: str | None = None,
-    ) -> list[EligibleCompanyReadModelDTO]:
+    ) -> list[CompanyEligibleDTO]:
         session: Session = uow.session
-        query = session.query(EligibleCompanyReadModel)
+        query = session.query(CompanyEligibleModel)
 
         if cvm_code:
-            query = query.filter(EligibleCompanyReadModel.cvm_code == cvm_code)
+            query = query.filter(CompanyEligibleModel.cvm_code == cvm_code)
 
         if company_name:
             like = f"%{company_name}%"
-            query = query.filter(EligibleCompanyReadModel.company_name.ilike(like))
+            query = query.filter(CompanyEligibleModel.company_name.ilike(like))
 
         if segment:
             like = f"%{segment}%"
             query = query.filter(
-                (EligibleCompanyReadModel.company_segment.ilike(like))
-                | (EligibleCompanyReadModel.industry_segment.ilike(like))
+                (CompanyEligibleModel.company_segment.ilike(like))
+                | (CompanyEligibleModel.industry_segment.ilike(like))
             )
 
-        query = query.order_by(EligibleCompanyReadModel.company_name)
+        query = query.order_by(CompanyEligibleModel.company_name)
         rows = query.all()
 
         return [row.to_dto() for row in rows]
 
     def replace_all(
         self,
-        items: Sequence[EligibleCompanyReadModelDTO],
+        items: Sequence[CompanyEligibleDTO],
         *,
         uow: Uow,
     ) -> None:
         session: Session = uow.session
 
-        session.execute(delete(EligibleCompanyReadModel))
+        session.execute(delete(CompanyEligibleModel))
 
         if items:
-            objects = [EligibleCompanyReadModel.from_dto(item) for item in items]
+            objects = [CompanyEligibleModel.from_dto(item) for item in items]
             session.bulk_save_objects(objects)
 
         self._logger.log(

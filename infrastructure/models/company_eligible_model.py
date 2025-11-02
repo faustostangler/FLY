@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from sqlalchemy import JSON, Column, Index, Integer, String
 
-from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 
 from .base_model import BaseModel
 
 
-class EligibleCompanyReadModel(BaseModel):
+class CompanyEligibleModel(BaseModel):
     """ORM mapping for the ``proj_eligible_companies`` table."""
 
     __tablename__ = "proj_eligible_companies"
@@ -32,7 +32,7 @@ class EligibleCompanyReadModel(BaseModel):
     )
 
     @classmethod
-    def from_dto(cls, dto: EligibleCompanyReadModelDTO) -> "EligibleCompanyReadModel":
+    def from_dto(cls, dto: CompanyEligibleDTO) -> "CompanyEligibleModel":
         return cls(
             company_name=dto.company_name,
             cvm_code=dto.cvm_code,
@@ -45,9 +45,9 @@ class EligibleCompanyReadModel(BaseModel):
             reason=dto.reason,
         )
 
-    def to_dto(self) -> EligibleCompanyReadModelDTO:
+    def to_dto(self) -> CompanyEligibleDTO:
         tickers = tuple(self.ticker_codes or [])
-        return EligibleCompanyReadModelDTO(
+        return CompanyEligibleDTO(
             company_name=self.company_name,
             cvm_code=self.cvm_code,
             trading_name=self.trading_name,
