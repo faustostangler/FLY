@@ -1,18 +1,18 @@
-"""SQLAlchemy model for the valid companies read projection."""
+"""SQLAlchemy model for the eligible companies read projection."""
 
 from __future__ import annotations
 
 from sqlalchemy import JSON, Column, Index, Integer, String
 
-from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
+from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
 
 from .base_model import BaseModel
 
 
-class ValidCompanyReadModel(BaseModel):
-    """ORM mapping for the ``read_valid_companies`` table."""
+class EligibleCompanyReadModel(BaseModel):
+    """ORM mapping for the ``proj_eligible_companies`` table."""
 
-    __tablename__ = "read_valid_companies"
+    __tablename__ = "proj_eligible_companies"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     company_name = Column(String, nullable=False, unique=True)
@@ -26,13 +26,13 @@ class ValidCompanyReadModel(BaseModel):
     reason = Column(String, nullable=False)
 
     __table_args__ = (
-        Index("ix_read_valid_companies_company_name", "company_name"),
-        Index("ix_read_valid_companies_cvm_code", "cvm_code"),
-        Index("ix_read_valid_companies_segment", "company_segment"),
+        Index("ix_proj_eligible_companies_company_name", "company_name"),
+        Index("ix_proj_eligible_companies_cvm_code", "cvm_code"),
+        Index("ix_proj_eligible_companies_segment", "company_segment"),
     )
 
     @classmethod
-    def from_dto(cls, dto: ValidCompanyReadModelDTO) -> "ValidCompanyReadModel":
+    def from_dto(cls, dto: EligibleCompanyReadModelDTO) -> "EligibleCompanyReadModel":
         return cls(
             company_name=dto.company_name,
             cvm_code=dto.cvm_code,
@@ -45,9 +45,9 @@ class ValidCompanyReadModel(BaseModel):
             reason=dto.reason,
         )
 
-    def to_dto(self) -> ValidCompanyReadModelDTO:
+    def to_dto(self) -> EligibleCompanyReadModelDTO:
         tickers = tuple(self.ticker_codes or [])
-        return ValidCompanyReadModelDTO(
+        return EligibleCompanyReadModelDTO(
             company_name=self.company_name,
             cvm_code=self.cvm_code,
             trading_name=self.trading_name,

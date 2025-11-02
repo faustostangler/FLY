@@ -7,12 +7,12 @@ from typing import Iterable, Sequence
 import pandas as pd
 import pytest
 
-from application.services.valid_companies_batch_updater_service import (
-    ValidCompaniesBatchUpdaterService,
+from application.services.eligible_companies_batch_updater_service import (
+    EligibleCompaniesBatchUpdaterService,
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.update_valid_companies_projection import (
-    UpdateValidCompaniesProjectionUseCase,
+from application.usecases.refresh_eligible_companies_projection import (
+    RefreshEligibleCompaniesProjectionUseCase,
 )
 from domain.dtos import (
     CompanyDataDTO,
@@ -22,8 +22,8 @@ from domain.dtos import (
     WorkerTaskDTO,
 )
 from domain.dtos.stock_quote_dto import StockQuoteDTO
-from infrastructure.repositories.valid_companies_projection_repository import (
-    ValidCompaniesProjectionRepository,
+from infrastructure.repositories.eligible_companies_projection_repository import (
+    EligibleCompaniesProjectionRepository,
 )
 from infrastructure.uow.uow import UowFactory
 
@@ -167,7 +167,7 @@ class SequentialWorkerPool:
 
 @pytest.fixture()
 def config(tmp_path):
-    db_path = tmp_path / "valid_companies.db"
+    db_path = tmp_path / "eligible_companies.db"
     return SimpleNamespace(
         database=SimpleNamespace(connection_string=f"sqlite:///{db_path}"),
         worker_pool=SimpleNamespace(max_workers=1),
@@ -178,8 +178,8 @@ def config(tmp_path):
 def test_normalize_pipeline_reads_projection(config):
     logger = DummyLogger()
 
-    valid_repo = ValidCompaniesProjectionRepository(config=config, logger=logger)
-    uow_factory = UowFactory(session_factory=valid_repo.Session)
+    eligible_repo = EligibleCompaniesProjectionRepository(config=config, logger=logger)
+    uow_factory = UowFactory(session_factory=eligible_repo.Session)
 
     companies = [
         CompanyDataDTO(
@@ -228,12 +228,12 @@ def test_normalize_pipeline_reads_projection(config):
     quote_repo = InMemoryStockQuoteRepository(quotes)
     indicator_repo = DummyIndicatorsRepository()
 
-    batch_service = ValidCompaniesBatchUpdaterService(
+    batch_service = EligibleCompaniesBatchUpdaterService(
         logger=logger,
-        port=valid_repo,
+        port=eligible_repo,
     )
 
-    update_usecase = UpdateValidCompaniesProjectionUseCase(
+    update_usecase = RefreshEligibleCompaniesProjectionUseCase(
         logger=logger,
         repository_company=company_repo,
         repository_statements_fetched=statement_repo,
@@ -253,7 +253,7 @@ def test_normalize_pipeline_reads_projection(config):
         repository_indicators=indicator_repo,
         repository_statements_fetched=statement_repo,
         ratios_cache=DummyRatiosCachePort(),
-        valid_companies_port=valid_repo,
+        eligible_companies_port=eligible_repo,
         uow_factory=uow_factory,
         worker_pool=SequentialWorkerPool(),
     )

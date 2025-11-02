@@ -4,12 +4,12 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.services.valid_companies_batch_updater_service import (
-    ValidCompaniesBatchUpdaterService,
+from application.services.eligible_companies_batch_updater_service import (
+    EligibleCompaniesBatchUpdaterService,
 )
 from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.update_valid_companies_projection import (
-    UpdateValidCompaniesProjectionUseCase,
+from application.usecases.refresh_eligible_companies_projection import (
+    RefreshEligibleCompaniesProjectionUseCase,
 )
 from domain.dtos import RatiosCacheResultDTO, SyncResultsDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
@@ -19,7 +19,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.valid_companies_port import ValidCompaniesPort
+from domain.ports.eligible_companies_port import EligibleCompaniesPort
 
 
 class RatiosService:
@@ -38,7 +38,7 @@ class RatiosService:
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
-        valid_companies_port: ValidCompaniesPort,
+        eligible_companies_port: EligibleCompaniesPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -62,17 +62,17 @@ class RatiosService:
         self.worker_pool = worker_pool
         # self.http_client = http_client
 
-        self._valid_companies_batch_service = ValidCompaniesBatchUpdaterService(
+        self._eligible_companies_batch_service = EligibleCompaniesBatchUpdaterService(
             logger=self.logger,
-            port=valid_companies_port,
+            port=eligible_companies_port,
         )
 
-        self._valid_companies_update_usecase = UpdateValidCompaniesProjectionUseCase(
+        self._eligible_companies_refresh_usecase = RefreshEligibleCompaniesProjectionUseCase(
             logger=self.logger,
             repository_company=self.repository_company,
             repository_statements_fetched=self.repository_statements_fetched,
             repository_stock_quote=self.repository_stock_quote,
-            batch_service=self._valid_companies_batch_service,
+            batch_service=self._eligible_companies_batch_service,
             uow_factory=self.uow_factory,
         )
 
@@ -85,7 +85,7 @@ class RatiosService:
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
             ratios_cache=self.ratios_cache,
-            valid_companies_port=valid_companies_port,
+            eligible_companies_port=eligible_companies_port,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
@@ -103,5 +103,5 @@ class RatiosService:
         Returns:
             Any: The result of the synchronization use case execution.
         """
-        self._valid_companies_update_usecase()
+        self._eligible_companies_refresh_usecase()
         return self.normalize_usecase()

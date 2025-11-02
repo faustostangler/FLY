@@ -13,7 +13,7 @@ from .ratios_cache_result_dto import RatiosCacheResultDTO
 from .statement_fetched_dto import StatementFetchedDTO
 from .statement_raw_dto import StatementRawDTO
 from .sync_results_dto import SyncResultsDTO
-from .valid_company_read_model_dto import ValidCompanyReadModelDTO
+from .eligible_company_read_model_dto import EligibleCompanyReadModelDTO
 from .worker_task_dto import WorkerTaskDTO
 
 __all__ = [
@@ -29,5 +29,5 @@ __all__ = [
     "SyncResultsDTO",
     "WorkerTaskDTO",
     "RatiosCacheContextDTO",
-    "ValidCompanyReadModelDTO",
+    "EligibleCompanyReadModelDTO",
 ]

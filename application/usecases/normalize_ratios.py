@@ -15,7 +15,7 @@ from application.ports.worker_pool_port import WorkerPoolPort
 from application.services.ratios_cache_service import RatiosCacheService
 from domain.dtos.ratios_cache_result_dto import RatiosCacheResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
+from domain.dtos.eligible_company_read_model_dto import EligibleCompanyReadModelDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -23,7 +23,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.valid_companies_port import ValidCompaniesPort
+from domain.ports.eligible_companies_port import EligibleCompaniesPort
 
 
 class NormalizeUseCase:
@@ -38,7 +38,7 @@ class NormalizeUseCase:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         ratios_cache: RatiosCachePort,
-        valid_companies_port: ValidCompaniesPort,
+        eligible_companies_port: EligibleCompaniesPort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -67,7 +67,7 @@ class NormalizeUseCase:
         self.worker_pool = worker_pool
 
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.valid_companies_port = valid_companies_port
+        self.eligible_companies_port = eligible_companies_port
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -96,12 +96,12 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                valid_companies: list[ValidCompanyReadModelDTO] = self.valid_companies_port.list(
+                eligible_companies: list[EligibleCompanyReadModelDTO] = self.eligible_companies_port.list(
                     uow=bootstrap_uow,
                 )
 
-                if valid_companies:
-                    df_company = pd.DataFrame([item.to_dict() for item in valid_companies])
+                if eligible_companies:
+                    df_company = pd.DataFrame([item.to_dict() for item in eligible_companies])
 
                     if df_company.empty:
                         return SyncResultsDTO(items=[], metrics=0)

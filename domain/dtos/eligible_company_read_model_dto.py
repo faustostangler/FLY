@@ -1,16 +1,16 @@
-"""DTO representing the valid company read-model projection."""
+"""DTO representing the eligible company read-model projection."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
-from domain.entities import ValidCompany
+from domain.entities import EligibleCompany
 
 
 @dataclass(frozen=True)
-class ValidCompanyReadModelDTO:
-    """Data transfer object for the valid companies projection."""
+class EligibleCompanyReadModelDTO:
+    """Data transfer object for the eligible companies projection."""
 
     company_name: str
     cvm_code: str | None
@@ -24,8 +24,8 @@ class ValidCompanyReadModelDTO:
     company_segment: str | None = None
 
     @staticmethod
-    def from_entity(entity: ValidCompany) -> "ValidCompanyReadModelDTO":
-        return ValidCompanyReadModelDTO(
+    def from_entity(entity: EligibleCompany) -> "EligibleCompanyReadModelDTO":
+        return EligibleCompanyReadModelDTO(
             company_name=entity.company_name,
             cvm_code=entity.cvm_code,
             ticker_codes=entity.ticker_codes,

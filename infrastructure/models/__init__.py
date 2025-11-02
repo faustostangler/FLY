@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from .base_model import BaseModel
-from .valid_company_read_model import ValidCompanyReadModel
+from .eligible_company_read_model import EligibleCompanyReadModel
 
 __all__ = [
     "BaseModel",
-    "ValidCompanyReadModel",
+    "EligibleCompanyReadModel",
 ]
