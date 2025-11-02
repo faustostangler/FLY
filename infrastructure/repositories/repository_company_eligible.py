@@ -88,6 +88,6 @@ class RepositoryCompanyEligible(
             session.bulk_save_objects(objects)
 
         self._logger.log(
-            f"Projection proj_eligible_companies replaced with {len(items)} rows",
+            f"Projection tbl_company_eligible replaced with {len(items)} rows",
             level="debug",
         )

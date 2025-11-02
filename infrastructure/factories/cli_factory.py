@@ -62,7 +62,6 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
     ratios_cache = RatiosCacheAdapter(config=config, logger=logger)
-    ratios_cache.initialize()
 
     # Unit of Work
     uow_factory = UowFactory(session_factory=repository_nsd.Session)

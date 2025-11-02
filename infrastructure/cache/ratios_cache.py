@@ -7,8 +7,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from sqlalchemy import create_engine, func, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
@@ -16,34 +16,31 @@ from application.ports.logger_port import LoggerPort
 from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
+from infrastructure.adapters.engine_setup import EngineSetup
 from infrastructure.models.ratios_cache_model import (RatiosCacheBase, RatiosCacheEntryModel)
 
 
-class RatiosCacheAdapter(RatiosCachePort):
+class RatiosCacheAdapter(RatiosCachePort, EngineSetup):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
 
     def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
         self._config = config
         self._logger = logger
 
-        self._engine = create_engine(
+        EngineSetup.__init__(
+            self,
             self._config.database.connection_cache_string,
-            connect_args={"check_same_thread": False, "timeout": 60},
-            pool_pre_ping=True,
-            future=True,
+            logger,
+            metadata=RatiosCacheBase.metadata,
         )
 
-        self._session_factory = sessionmaker(
-            bind=self._engine,
-            expire_on_commit=False,
-            future=True,
-        )
-
-    def initialize(self) -> None:
-        RatiosCacheBase.metadata.create_all(self._engine)
+    def initialize(self) -> None:  # pragma: no cover - retained for backwards compatibility
+        """Backwards compatible no-op initializer."""
+        # Tables are created during EngineSetup initialization.
+        return None
 
     def load(self, cache_key: str) -> tuple[pd.DataFrame, RatiosCacheEntryDTO] | None:
-        with self._session_factory() as session:
+        with self.Session() as session:
             entry = session.get(RatiosCacheEntryModel, cache_key)
             if entry is None:
                 return None
@@ -87,7 +84,7 @@ class RatiosCacheAdapter(RatiosCachePort):
         entry: RatiosCacheEntryModel | None = None
 
         try:
-            with self._session_factory.begin() as session:
+            with self.Session.begin() as session:
                 entry = session.get(RatiosCacheEntryModel, context.cache_key)
                 if entry is None:
                     entry = RatiosCacheEntryModel(
@@ -116,7 +113,7 @@ class RatiosCacheAdapter(RatiosCachePort):
             temp_path.replace(file_path)
         except Exception:
             temp_path.unlink(missing_ok=True)
-            with self._session_factory.begin() as session:
+            with self.Session.begin() as session:
                 stale_entry = session.get(RatiosCacheEntryModel, context.cache_key)
                 if stale_entry is not None:
                     session.delete(stale_entry)
@@ -140,7 +137,7 @@ class RatiosCacheAdapter(RatiosCachePort):
     def _invalidate_outdated(self, *, code_hash: str) -> None:
         cutoff = datetime.now() - self._config.cache.max_age
 
-        with self._session_factory.begin() as session:
+        with self.Session.begin() as session:
             entries = session.scalars(
                 select(RatiosCacheEntryModel).where(
                     (RatiosCacheEntryModel.code_hash != code_hash)
@@ -153,7 +150,7 @@ class RatiosCacheAdapter(RatiosCachePort):
                 session.delete(entry)
 
     def _evict_cache_if_needed(self) -> None:
-        with self._session_factory.begin() as session:
+        with self.Session.begin() as session:
             total_size = session.execute(
                 select(func.coalesce(func.sum(RatiosCacheEntryModel.size_bytes), 0))
             ).scalar_one()

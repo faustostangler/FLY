@@ -10,9 +10,9 @@ from .base_model import BaseModel
 
 
 class CompanyEligibleModel(BaseModel):
-    """ORM mapping for the ``proj_eligible_companies`` table."""
+    """ORM mapping for the ``tbl_company_eligible`` table."""
 
-    __tablename__ = "proj_eligible_companies"
+    __tablename__ = "tbl_company_eligible"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     company_name = Column(String, nullable=False, unique=True)
@@ -26,9 +26,9 @@ class CompanyEligibleModel(BaseModel):
     reason = Column(String, nullable=False)
 
     __table_args__ = (
-        Index("ix_proj_eligible_companies_company_name", "company_name"),
-        Index("ix_proj_eligible_companies_cvm_code", "cvm_code"),
-        Index("ix_proj_eligible_companies_segment", "company_segment"),
+        Index("ix_tbl_company_eligible_company_name", "company_name"),
+        Index("ix_tbl_company_eligible_cvm_code", "cvm_code"),
+        Index("ix_tbl_company_eligible_segment", "company_segment"),
     )
 
     @classmethod
