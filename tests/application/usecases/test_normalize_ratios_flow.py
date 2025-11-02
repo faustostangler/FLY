@@ -230,7 +230,7 @@ def test_normalize_pipeline_reads_projection(config):
 
     batch_service = ValidCompaniesBatchUpdaterService(
         logger=logger,
-        write_port=valid_repo,
+        port=valid_repo,
     )
 
     update_usecase = UpdateValidCompaniesProjectionUseCase(
@@ -253,7 +253,7 @@ def test_normalize_pipeline_reads_projection(config):
         repository_indicators=indicator_repo,
         repository_statements_fetched=statement_repo,
         ratios_cache=DummyRatiosCachePort(),
-        valid_companies_read_port=valid_repo,
+        valid_companies_port=valid_repo,
         uow_factory=uow_factory,
         worker_pool=SequentialWorkerPool(),
     )

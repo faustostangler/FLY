@@ -9,7 +9,7 @@ from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
 from domain.entities import ValidCompany
-from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
+from domain.ports.valid_companies_port import ValidCompaniesPort
 from domain.services.valid_company_rules import decide_valid_company
 
 
@@ -20,10 +20,10 @@ class ValidCompaniesBatchUpdaterService:
         self,
         *,
         logger: LoggerPort,
-        write_port: ValidCompaniesWritePort,
+        port: ValidCompaniesPort,
     ) -> None:
         self._logger = logger
-        self._write_port = write_port
+        self._port = port
 
     def rebuild(
         self,
@@ -73,7 +73,7 @@ class ValidCompaniesBatchUpdaterService:
 
             projection.append(ValidCompanyReadModelDTO.from_entity(entity))
 
-        self._write_port.replace_all(projection, uow=uow)
+        self._port.replace_all(projection, uow=uow)
         self._logger.log(
             f"Valid companies projection updated with {len(projection)} entries",
             level="info",

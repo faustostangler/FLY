@@ -11,16 +11,14 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.valid_company_read_model_dto import ValidCompanyReadModelDTO
-from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
-from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
+from domain.ports.valid_companies_port import ValidCompaniesPort
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.models.valid_company_read_model import ValidCompanyReadModel
 
 
 class ValidCompaniesProjectionRepository(
     RepositoryBase[ValidCompanyReadModelDTO, str],
-    ValidCompaniesReadPort,
-    ValidCompaniesWritePort,
+    ValidCompaniesPort,
 ):
     """SQLite-backed repository for the valid companies projection."""
 
