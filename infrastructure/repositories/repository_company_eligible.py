@@ -87,7 +87,7 @@ class RepositoryCompanyEligible(
             objects = [CompanyEligibleModel.from_dto(item) for item in items]
             session.bulk_save_objects(objects)
 
-        self._logger.log(
-            f"Projection tbl_company_eligible replaced with {len(items)} rows",
-            level="debug",
-        )
+        # self._logger.log(
+        #     f"Projection tbl_company_eligible replaced with {len(items)} rows",
+        #     level="debug",
+        # )

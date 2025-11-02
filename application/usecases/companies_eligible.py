@@ -52,7 +52,7 @@ class CompaniesEligibleUseCase:
                 uow=uow,
             )
 
-            projection = self._batch_service.rebuild(
+            eligible_companies = self._batch_service.rebuild(
                 uow=uow,
                 companies=companies,
                 statement_company_names=statement_names,
@@ -60,9 +60,9 @@ class CompaniesEligibleUseCase:
             )
 
             uow.commit()
-            self._logger.log(
-                f"Eligible companies projection refreshed: {len(projection)} items",
-                level="info",
-            )
+            # self._logger.log(
+            #     f"Eligible companies projection refreshed: {len(eligible_companies)} items",
+            #     level="info",
+            # )
 
-            return projection
+            return eligible_companies

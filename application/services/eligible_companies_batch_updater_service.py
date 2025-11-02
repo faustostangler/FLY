@@ -101,9 +101,9 @@ class EligibleCompaniesBatchUpdaterService:
             projection.append(CompanyEligibleDTO.from_entity(entity))
 
         self._port.replace_all(projection, uow=uow)
-        self._logger.log(
-            f"Eligible companies projection updated with {len(projection)} entries",
-            level="info",
-        )
+        # self._logger.log(
+        #     f"Eligible companies projection updated with {len(projection)} entries",
+        #     level="info",
+        # )
 
         return projection

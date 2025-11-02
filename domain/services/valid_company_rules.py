@@ -56,9 +56,9 @@ def decide_valid_company(
         return False, tuple(), "no_valid_tickers"
 
     available_set = {str(t).strip().upper() for t in available_quote_tickers if t}
-    intersection = tuple(t for t in normalized if t in available_set)
+    valid_tickers = tuple(t for t in normalized if t in available_set)
 
-    if not intersection:
+    if not valid_tickers:
         return False, tuple(), "no_quotes_available"
 
-    return True, intersection, "statements_and_quotes"
+    return True, valid_tickers, "statements_and_quotes"
