@@ -128,7 +128,7 @@ class NormalizeUseCase:
                     df_company = pd.DataFrame(valid_companies)
 
                     columns = df_company.columns
-                    mask = df_company['cvm_code'] == '22179'
+                    mask = df_company['cvm_code'] == '10456'
                     df = df_company[mask]
 
                     total_companies = len(df)
@@ -153,7 +153,7 @@ class NormalizeUseCase:
                             #     ticker_codes = [t.strip().upper() for t in row.ticker_codes if len(t) > 4]
                             #     if ticker_codes:
                             #         valid_companies.append(row)
-                            # success = False
+                            success = False
                             try:
                                 # company_rows = self.repository_company.get_by_column_values(
                                 #     values=[("company_name", company_dto.company_name)],
@@ -188,7 +188,7 @@ class NormalizeUseCase:
 
                                 company_data = self._treat_data(data_snapshot)
                                 df, cache_result = self.ratios_cache_service.get_or_compute(
-                                    company_name=company_name,
+                                    company_name=company_dto.company_name,
                                     quotes=company_data.get("quotes"),
                                     statements=company_data.get("statements"),
                                     indicators=company_data.get("indicators"),
@@ -201,7 +201,7 @@ class NormalizeUseCase:
 
                             except Exception as e:  # noqa: BLE001
                                 self.logger.log(
-                                    f"NormalizeUseCase company {company_name} failed: {e}",
+                                    f"NormalizeUseCase company {company_dto.company_name} failed: {e}",
                                     level="error",
                                 )
                                 raise
@@ -217,9 +217,9 @@ class NormalizeUseCase:
                                     "Quotes": len_q,
                                     "Cache": "hit" if cache_result and cache_result.hit else "miss" if cache_result else "skip",
                                 }
-                                ticker_str = " ".join(ticker_codes).strip() if ticker_codes else ""
+                                ticker_str = " ".join(company_dto.ticker_codes).strip() if company_dto.ticker_codes else ""
                                 self.logger.log(
-                                    f"{' '.join([ticker_str.strip(), company_name]).strip()}",
+                                    f"{' '.join([ticker_str.strip(), company_dto.company_name]).strip()}",
                                     level="info",
                                     progress=progress,
                                     extra=extra_info,
@@ -232,7 +232,7 @@ class NormalizeUseCase:
                             return None
 
                         return {
-                            "company_name": company_name,
+                            "company_name": company_dto.company_name,
                             "cache_result": cache_result,
                             "metrics": metrics_value,
                         }
@@ -247,7 +247,7 @@ class NormalizeUseCase:
 
                     tasks = (
                         (index, {"company_name": company_name})
-                        for index, company_name in enumerate(companies)
+                        for index, company_name in enumerate(df.itertuples())
                     )
 
                     self.worker_pool(
@@ -340,6 +340,11 @@ class NormalizeUseCase:
             statements_df['statements'] = _build_set(df_con0, has_other and has_con, df_other)
         else:
             statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
+
+        if has_con:
+            statements_df['df_consolidadas'] = _build_set(df_con0, has_other and has_con, df_other)
+        if has_ind:
+            statements_df['df_individuais'] = _build_set(df_ind0, has_other and has_ind, df_other)
 
         return statements_df
 
