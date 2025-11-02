@@ -143,8 +143,7 @@ def cli_factory(config: ConfigPort, logger: LoggerPort) -> Cli:
         policy=policy,
         uow_factory=uow_factory,
         http_client=http_client,
-        valid_companies_read_port=valid_companies_projection,
-        valid_companies_write_port=valid_companies_projection,
+        valid_companies_port=valid_companies_projection,
     )
 
     return cli

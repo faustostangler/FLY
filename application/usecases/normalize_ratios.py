@@ -23,7 +23,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
+from domain.ports.valid_companies_port import ValidCompaniesPort
 
 
 class NormalizeUseCase:
@@ -38,7 +38,7 @@ class NormalizeUseCase:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         ratios_cache: RatiosCachePort,
-        valid_companies_read_port: ValidCompaniesReadPort,
+        valid_companies_port: ValidCompaniesPort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -67,7 +67,7 @@ class NormalizeUseCase:
         self.worker_pool = worker_pool
 
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.valid_companies_read_port = valid_companies_read_port
+        self.valid_companies_port = valid_companies_port
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -96,7 +96,7 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                valid_companies: list[ValidCompanyReadModelDTO] = self.valid_companies_read_port.list(
+                valid_companies: list[ValidCompanyReadModelDTO] = self.valid_companies_port.list(
                     uow=bootstrap_uow,
                 )
 

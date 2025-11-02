@@ -19,8 +19,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.valid_companies_read_port import ValidCompaniesReadPort
-from domain.ports.valid_companies_write_port import ValidCompaniesWritePort
+from domain.ports.valid_companies_port import ValidCompaniesPort
 
 
 class RatiosService:
@@ -39,8 +38,7 @@ class RatiosService:
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
-        valid_companies_read_port: ValidCompaniesReadPort,
-        valid_companies_write_port: ValidCompaniesWritePort,
+        valid_companies_port: ValidCompaniesPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -66,7 +64,7 @@ class RatiosService:
 
         self._valid_companies_batch_service = ValidCompaniesBatchUpdaterService(
             logger=self.logger,
-            write_port=valid_companies_write_port,
+            port=valid_companies_port,
         )
 
         self._valid_companies_update_usecase = UpdateValidCompaniesProjectionUseCase(
@@ -87,7 +85,7 @@ class RatiosService:
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
             ratios_cache=self.ratios_cache,
-            valid_companies_read_port=valid_companies_read_port,
+            valid_companies_port=valid_companies_port,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
