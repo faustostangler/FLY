@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
 from infrastructure.config.cache import CacheConfig, load_cache_config
+from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from infrastructure.models.ratios_cache_model import (
     RatiosCacheBase,
     RatiosCacheEntryModel,
@@ -86,9 +89,15 @@ class RatiosCacheAdapter(RatiosCachePort):
 
             return df, entry.to_dto()
 
-    def store(self, cache_key: str, df: pd.DataFrame, code_hash: str) -> RatiosCacheEntryDTO:
-        file_path = self._cache_dir / f"{cache_key}.parquet"
-        temp_path = file_path.with_suffix(".parquet.tmp")
+    def store(
+        self,
+        *,
+        context: RatiosCacheContextDTO,
+        df: pd.DataFrame,
+        company_name: str,
+    ) -> RatiosCacheEntryDTO:
+        file_path = self._build_file_path(context=context, company_name=company_name)
+        temp_path = file_path.with_suffix(".tmp")
 
         df.to_parquet(temp_path, compression=self._parquet_compression)
         with temp_path.open("rb+") as handle:
@@ -102,16 +111,16 @@ class RatiosCacheAdapter(RatiosCachePort):
 
         try:
             with self._session_factory.begin() as session:
-                entry = session.get(RatiosCacheEntryModel, cache_key)
+                entry = session.get(RatiosCacheEntryModel, context.cache_key)
                 if entry is None:
                     entry = RatiosCacheEntryModel(
-                        cache_key=cache_key,
+                        cache_key=context.cache_key,
                         file_path=str(file_path),
                         size_bytes=size_bytes,
                         created_at=now,
                         accessed_at=now,
                         access_count=1,
-                        code_hash=code_hash,
+                        code_hash=context.code_hash,
                     )
                     session.add(entry)
                 else:
@@ -120,24 +129,27 @@ class RatiosCacheAdapter(RatiosCachePort):
                     entry.created_at = now
                     entry.accessed_at = now
                     entry.access_count = 1
-                    entry.code_hash = code_hash
+                    entry.code_hash = context.code_hash
         except Exception:
             temp_path.unlink(missing_ok=True)
             raise
 
         try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             temp_path.replace(file_path)
         except Exception:
             temp_path.unlink(missing_ok=True)
             with self._session_factory.begin() as session:
-                stale_entry = session.get(RatiosCacheEntryModel, cache_key)
+                stale_entry = session.get(RatiosCacheEntryModel, context.cache_key)
                 if stale_entry is not None:
                     session.delete(stale_entry)
             raise
 
         if entry is None:
             # Defensive guard: SQLAlchemy guarantees assignment above but satisfy type checkers.
-            raise RuntimeError("Failed to persist cache metadata for key '%s'" % cache_key)
+            raise RuntimeError(
+                "Failed to persist cache metadata for key '%s'" % context.cache_key
+            )
 
         entry_dto = entry.to_dto()
         self._evict_cache_if_needed()
@@ -187,3 +199,23 @@ class RatiosCacheAdapter(RatiosCachePort):
 
     def _remove_entry(self, session: Session, entry: RatiosCacheEntryModel) -> None:
         session.delete(entry)
+
+    def _build_file_path(
+        self,
+        *,
+        context: RatiosCacheContextDTO,
+        company_name: str,
+    ) -> Path:
+        safe_company = self._sanitize_company_name(company_name)
+        version_segment = f"v{context.version}"
+        target_dir = self._cache_dir / context.logical_name / version_segment / safe_company
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return target_dir / f"{context.cache_key}.parquet"
+
+    def _sanitize_company_name(self, company_name: str) -> str:
+        normalized = unicodedata.normalize("NFKD", company_name)
+        ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+        cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
+        if not cleaned:
+            cleaned = "unknown"
+        return cleaned[:120]

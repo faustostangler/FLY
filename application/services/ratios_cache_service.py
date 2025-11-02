@@ -66,15 +66,23 @@ class RatiosCacheService:
                 entry=entry,
             )
 
-        self._cache_port.invalidate_outdated(code_hash=code_hash)
         df = compute_fn()
-        entry = self._cache_port.store(cache_key, df, code_hash)
+        entry = self._cache_port.store(
+            context=context,
+            df=df,
+            company_name=company_name,
+        )
         return df, RatiosCacheResultDTO(
             company_name=company_name,
             cache_key=cache_key,
             hit=False,
             entry=entry,
         )
+
+    def invalidate_outdated(self, *, code_hash: str) -> None:
+        """Trigger a single sweep to remove outdated cache artifacts."""
+
+        self._cache_port.invalidate_outdated(code_hash=code_hash)
 
     def _hash_mapping(self, data: Mapping[str, pd.DataFrame] | None) -> str:
         if not data:

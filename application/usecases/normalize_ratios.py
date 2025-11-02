@@ -124,6 +124,10 @@ class NormalizeUseCase:
                 #     )
                 # ]
 
+                self.ratios_cache_service.invalidate_outdated(
+                    code_hash=self._ratios_code_hash,
+                )
+
                 if valid_companies:
                     df_company = pd.DataFrame(valid_companies)
 
