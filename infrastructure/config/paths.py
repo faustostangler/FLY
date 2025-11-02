@@ -24,6 +24,9 @@ class PathConfig:
         root_dir (Path): Project root directory (one level above the package root).
     """
 
+    # Computed absolute path to the project root directory
+    root_dir: Path = field(default_factory=lambda: Path.cwd())
+
     # Computed path to the temp directory under the project root
     temp_dir: Path = field(init=False)
 
@@ -36,20 +39,16 @@ class PathConfig:
     # Computed path to the data directory under the project root
     cache_dir: Path = field(init=False)
 
-    # Computed absolute path to the project root directory
-    root_dir: Path = field(init=False)
-
     def __post_init__(self) -> None:
         """Resolve paths from the project root and ensure required folders exist."""
         # Resolve the project root (package/__file__/.../ -> project root)
         root = Path(__file__).resolve().parent.parent.parent
 
         # Assign resolved root and derived subdirectories
-        object.__setattr__(self, "root_dir", root)
         object.__setattr__(self, "temp_dir", root / TEMP_DIR)
-        object.__setattr__(self, "log_dir", root / LOG_DIR)
-        object.__setattr__(self, "data_dir", root / DATA_DIR)
-        object.__setattr__(self, "cache_dir", root / DATA_DIR / CACHE_DIR)
+        object.__setattr__(self, "log_dir", self.root_dir / LOG_DIR)
+        object.__setattr__(self, "data_dir", self.root_dir / DATA_DIR)
+        object.__setattr__(self, "cache_dir", self.data_dir / CACHE_DIR)
 
         # Ensure all non-root directories exist (idempotent)
         for fld in fields(self):

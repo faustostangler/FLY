@@ -2,13 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from infrastructure.config.cache import CacheConfig, load_cache_config
+from infrastructure.config.cache import CachePolicy
 from infrastructure.config.database import DatabaseConfig, load_database_config
 from infrastructure.config.domain import DomainConfig, load_domain_config
-from infrastructure.config.exchange_api import (
-    ExchangeApiConfig,
-    load_exchange_api_config,
-)
+from infrastructure.config.exchange_api import ExchangeApiConfig, load_exchange_api_config
 from infrastructure.config.fly_settings import FlyConfig, load_fly_config
 from infrastructure.config.logger import LoggerConfig, load_logger_config
 from infrastructure.config.paths import PathConfig, load_paths
@@ -58,5 +55,5 @@ class ConfigAdapter:
     statements: StatementsConfig = field(default_factory=load_statements_config)
 
     # Ratios cache configuration (paths, eviction thresholds)
-    cache: CacheConfig = field(default_factory=load_cache_config)
+    cache: CachePolicy = CachePolicy()
 

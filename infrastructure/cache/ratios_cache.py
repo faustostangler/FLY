@@ -10,52 +10,32 @@ import pandas as pd
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+
 from domain.dtos.ratios_cache_context_dto import RatiosCacheContextDTO
 from domain.dtos.ratios_cache_entry_dto import RatiosCacheEntryDTO
 from domain.ports.ratios_cache_port import RatiosCachePort
-from infrastructure.config.cache import CacheConfig, load_cache_config
-from infrastructure.models.ratios_cache_model import (
-    RatiosCacheBase,
-    RatiosCacheEntryModel,
-)
+from infrastructure.models.ratios_cache_model import (RatiosCacheBase, RatiosCacheEntryModel)
 
 
 class RatiosCacheAdapter(RatiosCachePort):
     """SQLAlchemy-backed cache storing ratios as parquet files."""
 
-    def __init__(self, *, config: CacheConfig | None = None) -> None:
-        self._config = config or load_cache_config()
-        self._base_dir = Path(self._config.base_dir)
-# =======
-#     TABLE_NAME = "cache"
-
-#     def __init__(
-#         self,
-#         *,
-#         base_dir: Path,
-#         max_cache_size_bytes: int = 1_000_000_000, # create a config entry for cache size and age
-#         max_age_days: int = 30,
-#     ) -> None:
-#         self._base_dir = Path(base_dir)
-#         self._base_dir.mkdir(parents=True, exist_ok=True)
-# >>>>>>> Stashed changes
-        self._cache_dir = self._base_dir
-        self._max_cache_size_bytes = self._config.max_cache_size_bytes
-        self._max_age = self._config.max_age
-        self._parquet_compression = self._config.parquet_compression
-
-        if RatiosCacheEntryModel.__tablename__ != self._config.table_name:
-            RatiosCacheEntryModel.__tablename__ = self._config.table_name
-            table = getattr(RatiosCacheEntryModel, "__table__", None)
-            if table is not None:
-                table.name = self._config.table_name
+    def __init__(self, *, config: ConfigPort, logger: LoggerPort | None) -> None:
+        self._logger = logger
+        self._cache_dir = config.paths.cache_dir
+        self._max_cache_size_bytes = config.cache.max_cache_size_bytes
+        self._max_age = config.cache.max_age
+        self._parquet_compression = config.cache.parquet_compression
 
         self._engine = create_engine(
-            self._config.connection_string,
+            config.database.cache_connection_string,
             connect_args={"check_same_thread": False, "timeout": 60},
             pool_pre_ping=True,
             future=True,
         )
+
         self._session_factory = sessionmaker(
             bind=self._engine,
             expire_on_commit=False,
@@ -99,7 +79,7 @@ class RatiosCacheAdapter(RatiosCachePort):
         file_path = self._build_file_path(context=context, company_name=company_name)
         temp_path = file_path.with_suffix(".tmp")
 
-        df.to_parquet(temp_path, compression=self._parquet_compression)
+        df.to_parquet(path=temp_path, compression=str(self._parquet_compression))  # type: ignore[arg-type]
         with temp_path.open("rb+") as handle:
             handle.flush()
             os.fsync(handle.fileno())
