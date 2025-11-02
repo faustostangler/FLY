@@ -7,7 +7,7 @@ from pathlib import Path
 TEMP_DIR = "temp"
 LOG_DIR = "logs"
 DATA_DIR = "data"
-
+CACHE_DIR = "cache"
 
 @dataclass(frozen=True)
 class PathConfig:
@@ -33,6 +33,9 @@ class PathConfig:
     # Computed path to the data directory under the project root
     data_dir: Path = field(init=False)
 
+    # Computed path to the data directory under the project root
+    cache_dir: Path = field(init=False)
+
     # Computed absolute path to the project root directory
     root_dir: Path = field(init=False)
 
@@ -46,6 +49,7 @@ class PathConfig:
         object.__setattr__(self, "temp_dir", root / TEMP_DIR)
         object.__setattr__(self, "log_dir", root / LOG_DIR)
         object.__setattr__(self, "data_dir", root / DATA_DIR)
+        object.__setattr__(self, "cache_dir", root / DATA_DIR / CACHE_DIR)
 
         # Ensure all non-root directories exist (idempotent)
         for fld in fields(self):
