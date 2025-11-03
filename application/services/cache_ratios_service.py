@@ -29,37 +29,38 @@ class CacheRatiosService:
         self._cache_port.initialize()
 
     @staticmethod
-    def build_code_hash(
-        func: Callable[..., Any],
-        *,
-        extra_modules: Iterable[ModuleType] = (),
-    ) -> str:
+    def build_code_hash(items: Iterable[Any]) -> str:
+        """
+        Calcula um hash SHA-256 determinístico a partir de uma lista de objetos
+        (funções, módulos, classes ou qualquer outro Python object).
+
+        Args:
+            items: iterável de objetos a serem inspecionados.
+
+        Returns:
+            str: hash SHA-256 hexdigest.
+        """
         parts: list[str] = []
 
-        # 1) fonte da função principal de cálculo
-        try:
-            parts.append(inspect.getsource(func))
-        except OSError:
-            # fallback mínimo para nunca quebrar
-            parts.append(repr(func))
-
-        # 2) fontes dos módulos auxiliares (ex.: intel.py)
-        for mod in extra_modules:
+        for obj in items:
             try:
-                parts.append(inspect.getsource(mod))
-            except OSError:
-                # fallback: tenta pelo caminho do arquivo
-                src_file = inspect.getsourcefile(mod)
-                if src_file:
-                    try:
-                        with open(src_file, "r", encoding="utf-8") as fh:
-                            parts.append(fh.read())
-                    except Exception:
-                        parts.append(repr(sorted(vars(mod).keys())))
-                else:
-                    parts.append(repr(sorted(vars(mod).keys())))
+                # tenta obter o source code
+                src = inspect.getsource(obj)
+            except (OSError, TypeError):
+                try:
+                    # se for módulo, tenta ler o arquivo
+                    if isinstance(obj, ModuleType) and hasattr(obj, "__file__"):
+                        with open(obj.__file__, "r", encoding="utf-8") as f:
+                            src = f.read()
+                    else:
+                        # fallback: repr das chaves conhecidas
+                        src = repr(sorted(vars(obj).keys()))
+                except Exception:
+                    src = repr(obj)
 
-        payload = "\n\n/*====HASH-SEGMENT====*/\n\n".join(parts).encode("utf-8")
+            parts.append(src)
+
+        payload = "\n/*--SEGMENT--*/\n".join(parts).encode("utf-8")
         return hashlib.sha256(payload).hexdigest()
 
     def get_or_compute(
