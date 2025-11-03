@@ -131,8 +131,8 @@ class NormalizeUseCase:
                                     "statements": statements,
                                     "quotes": quotes,
                                 }
-
-                                company_data = self._treat_data(data_snapshot)
+                                # allowed_aggregate_methods = ['last', 'first', 'mean', 'median', 'max', 'min', 'sum', 'std', 'var']
+                                company_data = self._treat_data(data_snapshot, aggregate_method='last')
                                 df, cache_result = self.cache_ratios_service.get_or_compute(
                                     company_name=company_dto.company_name,
                                     quotes=company_data.get("quotes"),
@@ -158,10 +158,10 @@ class NormalizeUseCase:
                                     "start_time": start_time,
                                 }
                                 extra_info = {
-                                    "Indicators": len(treated_indicators) or 0,
-                                    "Statements": len_s,
-                                    "Quotes": len_q,
-                                    "Cache": "hit" if cache_result and cache_result.hit else "miss" if cache_result else "skip",
+                                    # "Indicators": len(treated_indicators) or 0,
+                                    # "Statements": len_s,
+                                    # "Quotes": len_q,
+                                    "Cache": "hit" if cache_result and cache_result.hit else "create" if cache_result else "skip",
                                 }
                                 ticker_str = " ".join(company_dto.ticker_codes).strip() if company_dto.ticker_codes else ""
                                 self.logger.log(
@@ -461,7 +461,7 @@ class NormalizeUseCase:
             raise ValueError(f"Invalid granularity: {granularity}. Must be one of {allowed_granularities}.")
         allowed_aggregate_methods = ['last', 'first', 'mean', 'median', 'max', 'min', 'sum', 'std', 'var']
         if aggregate_method not in allowed_aggregate_methods:
-            raise ValueError(f"Invalid agg_method: {aggregate_method}. Must be one of {allowed_aggregate_methods}.")
+            raise ValueError(f"Invalid aggregate_method: {aggregate_method}. Must be one of {allowed_aggregate_methods}.")
 
         daily_calendar = self._get_stock_calendar(data, cutoff)
         if daily_calendar.empty:
@@ -529,7 +529,7 @@ class NormalizeUseCase:
         self,
         df_data: pd.DataFrame,
         df_anchor_calendar: pd.DataFrame,
-        agg_method: str,
+        aggregate_method: str,
     ) -> pd.DataFrame:
         """
         Alinha df_data ao df_anchor_calendar com upsampling_action ou downsampling.
@@ -538,7 +538,7 @@ class NormalizeUseCase:
             df_data: DataFrame com índice DatetimeIndex.
             df_anchor_calendar: DataFrame com índice date e coluna trading_days.
             granularity_anchor: Granularidade do anchor ('D', 'B', 'ME', 'QE', 'YE').
-            agg_method: Método de agregação padrão ('last', 'mean', etc.).
+            aggregate_method: Método de agregação padrão ('last', 'mean', etc.).
             data_type: Tipo de dado ('quotes', 'statements', 'indicators').
 
         Returns:
@@ -589,18 +589,18 @@ class NormalizeUseCase:
                 elif col in ['volume']:
                     agg_dict[col] = 'sum'
                 else:
-                    agg_dict[col] = agg_method
+                    agg_dict[col] = aggregate_method
 
             df_data = df_data.groupby(pd.Grouper(freq=grouper_freq)).agg(agg_dict)
             df_data = df_data.reindex(df_anchor_calendar.index)
 
         return df_data
 
-    def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]]) -> dict[str, dict[str, pd.DataFrame]]:
+    def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]], aggregate_method:str="last") -> dict[str, dict[str, pd.DataFrame]]:
         cutoff:datetime = datetime(year=2010, month=12, day=31)
         g_map:dict[str, str] = {'day': 'D', 'month': 'ME', 'quarter': 'QE', 'year': 'Y'}
         granularity = g_map['month']
-        calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method="last")
+        calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method=aggregate_method)
 
         data_treated = {}
         for k, d in data.items():
@@ -608,7 +608,7 @@ class NormalizeUseCase:
             data_treated[k] = {}
             for stock_quote, df_stock_quote in data[k].items():
                 df_stock_quote = df_stock_quote.set_index('date')
-                resampled = self._resample_series(df_stock_quote, calendar, agg_method="last")
+                resampled = self._resample_series(df_stock_quote, calendar, aggregate_method=aggregate_method)
                 data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
 
             k = "statements"

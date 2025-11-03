@@ -103,5 +103,5 @@ class RatiosService:
         Returns:
             Any: The result of the synchronization use case execution.
         """
-        self.companies_eligible_usecase()
+        # eligible_companies = self.companies_eligible_usecase()
         return self.normalize_usecase()
