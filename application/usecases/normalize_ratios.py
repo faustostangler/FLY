@@ -1,7 +1,7 @@
 import re
 import time
 from datetime import datetime, timedelta
-from typing import Any, List, Optional
+from typing import Any, cast, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from application.services.cache_ratios_service import CacheRatiosService
 from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from infrastructure.models.company_eligible_model import CompanyEligibleModel
 from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -105,7 +106,7 @@ class NormalizeUseCase:
                 }
 
                 def processor(task: WorkerTaskDTO) -> Optional[dict[str, Any]]:  # noqa: ANN401
-                    company_dto = task.data["company_name"]
+                    company_dto = task.data["company_dto"]
                     len_s = 0
                     len_q = 0
                     cache_result: CacheRatiosResultDTO | None = None
@@ -186,9 +187,10 @@ class NormalizeUseCase:
                     cache_results.append(item["cache_result"])
                     metrics += int(item.get("metrics", 0))
 
+                records = cast(list[dict[str, Any]], companies.to_dict(orient="records"))
                 tasks = (
-                    (index, {"company_name": company_name})
-                    for index, company_name in enumerate(df.itertuples())
+                    (index, {"company_dto": CompanyEligibleModel(**record).to_dto()},)
+                    for index, record in enumerate(records)
                 )
 
                 self.worker_pool(
