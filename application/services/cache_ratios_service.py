@@ -20,8 +20,8 @@ class CacheRatiosService:
         self,
         *,
         cache_port: CacheRatiosPort,
-        logical_name: str = "tbl_statements_ratio",
-        version: int = 1,
+        logical_name: str = "ratios",
+        version: str = '1',
     ) -> None:
         self._cache_port = cache_port
         self._logical_name = logical_name
@@ -73,7 +73,6 @@ class CacheRatiosService:
         code_hash: str,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         """Return cached ratios or compute and persist them when absent"""
-
         context = CacheRatiosContextDTO(
             logical_name=self._logical_name,
             version=self._version,
@@ -82,7 +81,6 @@ class CacheRatiosService:
             indicators_hash=self._hash_mapping(indicators),
             code_hash=code_hash,
         )
-        # print(code_hash)
         cache_key = context.cache_key
 
         cached = self._cache_port.load(cache_key)

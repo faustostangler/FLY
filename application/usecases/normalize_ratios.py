@@ -60,8 +60,12 @@ class NormalizeUseCase:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
-        self.cache_ratios_service = CacheRatiosService(cache_port=cache_ratios)
-        self._ratios_code_hash = CacheRatiosService.build_code_hash(self._create_ratios, extra_modules=[intel],)
+        self.cache_ratios_service = CacheRatiosService(
+                cache_port=cache_ratios,
+                logical_name=self.config.fly_settings.app_name,
+                version=self.config.fly_settings.version
+                )
+        self._ratios_code_hash = CacheRatiosService.build_code_hash([self._create_ratios, intel,])
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
@@ -599,7 +603,7 @@ class NormalizeUseCase:
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]], aggregate_method:str="last") -> dict[str, dict[str, pd.DataFrame]]:
         cutoff:datetime = datetime(year=2010, month=12, day=31)
         g_map:dict[str, str] = {'day': 'D', 'month': 'ME', 'quarter': 'QE', 'year': 'Y'}
-        granularity = g_map['month']
+        granularity = g_map['day']
         calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method=aggregate_method)
 
         data_treated = {}

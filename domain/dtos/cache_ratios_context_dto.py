@@ -9,7 +9,7 @@ class CacheRatiosContextDTO:
     """Hashes describing the inputs used to compute ratios for caching."""
 
     logical_name: str
-    version: int
+    version: str
     quotes_hash: str
     statements_hash: str
     indicators_hash: str
