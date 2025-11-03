@@ -116,8 +116,6 @@ class NormalizeUseCase:
 
                         success = False
                         try:
-
-
                             quotes = self._load_quotes(ticker_codes=company_dto.ticker_codes, uow=uow)
                             statements = self._load_statements(company_name=company_dto.company_name, uow=uow)
                             len_s = len(statements.get("statements", []))

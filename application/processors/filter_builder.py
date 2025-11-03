@@ -8,10 +8,12 @@ from domain.utils.specs import And, Or, Not, Cmp, StrMatch, NullCheck, ListAny, 
 class FilterBuilder:
     '''
     Operadores aceitos pelo FilterBuilder (um por linha):
+
     # Lógicos (estrutura da árvore)
     and → todas as condições verdadeiras.
     or → pelo menos uma condição verdadeira.
     not → inverte o resultado do filtro interno.
+
     # Comparativos numéricos ou de data (folhas Cmp)
     == ou eq → igual a.
     != ou ne → diferente de.
@@ -22,16 +24,19 @@ class FilterBuilder:
     in → valor está dentro de uma lista.
     nin → valor não está dentro de uma lista.
     between → valor entre dois limites (inclusive).
+
     # Textuais (folhas StrMatch)
     contains → texto contém o padrão.
     startswith → texto começa com o padrão.
     endswith → texto termina com o padrão.
     regex → casa com expressão regular.
     modificadores opcionais: case (sensível a maiúsculas), na (como tratar nulos).
+    
     # Listas ou colunas JSON (folhas ListAny)
     contains → elemento exato existe na lista.
     in → algum item da lista pertence ao conjunto informado.
     overlap → há interseção entre listas.
+    
     # Nulos (folhas NullCheck)
     valor None → é nulo (isnull).
     valor "isnull" → é nulo.

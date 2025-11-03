@@ -229,7 +229,7 @@ class Cli:
 
         filters = {
              "and": [
-                {"company_name": {"contains": "PETR", "case": False}},
+                {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
             ]
         }
 

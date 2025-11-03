@@ -164,7 +164,7 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
 
     def invalidate_outdated(self, *, code_hash: str) -> None:
         """
-        Remove entradas antigas por versão de código ou por idade máxima.
+        Remove entradas antigas por versão de código (code_hash) ou por idade máxima.
         """
         cutoff: datetime = datetime.now() - self._as_timedelta(self._config.cache.max_age)
         with self.Session.begin() as session:
