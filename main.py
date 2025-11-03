@@ -1,4 +1,6 @@
 from __future__ import annotations
+import setup_env
+
 
 from infrastructure.config.config_adapter import ConfigAdapter
 from infrastructure.factories.cli_factory import cli_factory
@@ -14,6 +16,8 @@ def main() -> None:
         3. Build controller
         4. Run controller
     """
+    setup_env.run()
+
     # Load configuration
     config = ConfigAdapter()
 

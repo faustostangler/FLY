@@ -76,7 +76,7 @@ class NormalizeUseCase:
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run(companies=kwds.get("companies"))
 
-    def run(self, companies:List[str] | None = []) -> SyncResultsDTO:
+    def run(self, companies:pd.DataFrame) -> SyncResultsDTO:
         """Run the full synchronization pipeline.
 
         Steps:
@@ -92,21 +92,12 @@ class NormalizeUseCase:
         cache_results: List[CacheRatiosResultDTO] = []
         start_time = time.perf_counter()
 
+        if companies.empty:
+            return SyncResultsDTO(items=[], metrics=0)
+        total_companies = len(companies)
+
         try:
             with self.uow_factory() as bootstrap_uow:
-                if cvm_codes:
-                    companies_eligible: list[CompanyEligibleDTO] = self.companies_eligible_port.list(
-                        uow=bootstrap_uow,
-                    )
-                    companies = [c for c in companies_eligible if c.cvm_code in set(cvm_codes)]
-                else:
-                    return SyncResultsDTO(items=[], metrics=0)
-
-                df_company = pd.DataFrame([item.to_dict() for item in companies])
-
-                df = df_company
-                total_companies = len(df)
-
                 indicators = self._load_indicators(uow=bootstrap_uow)
                 treated_indicators = {
                     indicator: self._treat_indicators(indicator_df)

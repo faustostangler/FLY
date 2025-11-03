@@ -202,4 +202,35 @@ class Cli:
         )
 
         # run the service
-        return ratios_service()
+        # filters: Dicionário de filtros (ex: {'company_name': {'contains': 'GERDAU'}}).
+        #             Se None, processa todas as empresas elegíveis.
+        #             cada folha da árvore é uma condição concreta sobre uma coluna (Cmp, StrMatch, NullCheck, ListAny).
+        #             {
+        #         "and": [
+        #             {"status": "ATIVO"},
+        #             {
+        #             "or": [
+        #                 {
+        #                 "and": [
+        #                     {"has_bdr": True},
+        #                     {"market": {"in": ["NM"]}}
+        #                 ]
+        #                 },
+        #                 {"listing_date": {">=": "2020-01-01"}}
+        #             ]
+        #             },
+        #             {"market": {"in": ["NM", "N2"]}}
+        #         ]
+        #         }
+        #         Essa estrutura representa:
+        #         (status == "ATIVO") 
+        #         AND ( (has_bdr == True AND market in ["NM"]) OR (listing_date >= "2020-01-01") )
+        #         AND (market in ["NM", "N2"])
+
+        filters = {
+             "and": [
+                {"company_name": {"contains": "PETR", "case": False}},
+            ]
+        }
+
+        return ratios_service(filters=filters)
