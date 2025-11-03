@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Collection, Iterable, Sequence
+import time
 
 from application.ports.logger_port import LoggerPort
 from domain.dtos.company_data_dto import CompanyDataDTO
@@ -35,7 +36,8 @@ class EligibleCompaniesBatchUpdaterService:
         projection: list[CompanyEligibleDTO] = []
         seen_names: set[str] = set()
 
-        for company in companies:
+        start_time = time.perf_counter()
+        for i, company in enumerate(companies):
             name = (company.company_name or "").strip()
             if not name:
                 continue
@@ -43,6 +45,21 @@ class EligibleCompaniesBatchUpdaterService:
             if name in seen_names:
                 continue
             seen_names.add(name)
+
+            # progress = {
+            #     "index": i,
+            #     "size": len(companies),
+            #     "start_time": start_time,
+            # }
+            # extra_info = {
+            #     "company_name": name,
+            # }
+            # self._logger.log(
+            #     f"{company.cvm_code}, {company.company_name}",
+            #     level="info",
+            #     progress=progress,
+            #     extra=extra_info,
+            # )
 
             is_valid, normalized_tickers, reason = decide_valid_company(
                 has_statements=name in statement_set,

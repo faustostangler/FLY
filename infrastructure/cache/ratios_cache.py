@@ -209,9 +209,9 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         """
         Constrói caminho estável: <cache_dir>/<logical_name>/v<version>/<company>/<cache_key>.parquet
         """
-        safe_company = self._sanitize_company_name(company_name)
-        version_segment = f"v{context.version}"
-        target_dir = self._config.paths.cache_dir / context.logical_name / version_segment / safe_company
+        # safe_company = self._sanitize_company_name(company_name)
+        # version_segment = f"v{context.version}"
+        target_dir = self._config.paths.cache_dir # / context.logical_name / version_segment / safe_company
         return target_dir / f"{context.cache_key}.parquet"
 
     def _sanitize_company_name(self, company_name: str) -> str:
