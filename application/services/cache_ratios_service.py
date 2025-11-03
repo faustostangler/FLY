@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import inspect
-from collections.abc import Callable, Mapping
-from typing import Any
+from collections.abc import Mapping
+from types import ModuleType
+from typing import Any, Callable, Iterable
 
 import pandas as pd
 
@@ -19,7 +20,7 @@ class CacheRatiosService:
         self,
         *,
         cache_port: CacheRatiosPort,
-        logical_name: str = "statements_ratio",
+        logical_name: str = "tbl_statements_ratio",
         version: int = 1,
     ) -> None:
         self._cache_port = cache_port
@@ -28,11 +29,38 @@ class CacheRatiosService:
         self._cache_port.initialize()
 
     @staticmethod
-    def build_code_hash(func: Callable[..., Any]) -> str:
-        """Return a deterministic hash for the provided callable."""
+    def build_code_hash(
+        func: Callable[..., Any],
+        *,
+        extra_modules: Iterable[ModuleType] = (),
+    ) -> str:
+        parts: list[str] = []
 
-        source = inspect.getsource(func)
-        return hashlib.sha256(source.encode()).hexdigest()
+        # 1) fonte da função principal de cálculo
+        try:
+            parts.append(inspect.getsource(func))
+        except OSError:
+            # fallback mínimo para nunca quebrar
+            parts.append(repr(func))
+
+        # 2) fontes dos módulos auxiliares (ex.: intel.py)
+        for mod in extra_modules:
+            try:
+                parts.append(inspect.getsource(mod))
+            except OSError:
+                # fallback: tenta pelo caminho do arquivo
+                src_file = inspect.getsourcefile(mod)
+                if src_file:
+                    try:
+                        with open(src_file, "r", encoding="utf-8") as fh:
+                            parts.append(fh.read())
+                    except Exception:
+                        parts.append(repr(sorted(vars(mod).keys())))
+                else:
+                    parts.append(repr(sorted(vars(mod).keys())))
+
+        payload = "\n\n/*====HASH-SEGMENT====*/\n\n".join(parts).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
 
     def get_or_compute(
         self,
@@ -44,7 +72,7 @@ class CacheRatiosService:
         compute_fn: Callable[[], pd.DataFrame],
         code_hash: str,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
-        """Return cached ratios or compute and persist them when absent."""
+        """Return cached ratios or compute and persist them when absent"""
 
         context = CacheRatiosContextDTO(
             logical_name=self._logical_name,
@@ -54,6 +82,7 @@ class CacheRatiosService:
             indicators_hash=self._hash_mapping(indicators),
             code_hash=code_hash,
         )
+        # print(code_hash)
         cache_key = context.cache_key
 
         cached = self._cache_port.load(cache_key)

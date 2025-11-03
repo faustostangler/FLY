@@ -61,7 +61,7 @@ class NormalizeUseCase:
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
         self.cache_ratios_service = CacheRatiosService(cache_port=cache_ratios)
-        self._ratios_code_hash = CacheRatiosService.build_code_hash(self._create_ratios)
+        self._ratios_code_hash = CacheRatiosService.build_code_hash(self._create_ratios, extra_modules=[intel],)
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
@@ -161,7 +161,7 @@ class NormalizeUseCase:
                                     # "Indicators": len(treated_indicators) or 0,
                                     # "Statements": len_s,
                                     # "Quotes": len_q,
-                                    "Cache": "hit" if cache_result and cache_result.hit else "create" if cache_result else "skip",
+                                    "Cache": "hit" if cache_result and cache_result.hit else "cache" if cache_result else "skip",
                                 }
                                 ticker_str = " ".join(company_dto.ticker_codes).strip() if company_dto.ticker_codes else ""
                                 self.logger.log(
@@ -630,6 +630,7 @@ class NormalizeUseCase:
         return data_treated
 
     def _create_ratios(self, c: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
+        ''' Description'''
         source_df = c['statements']['statements'].copy()
         ratios_df = source_df.copy()
 
