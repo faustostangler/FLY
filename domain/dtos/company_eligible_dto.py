@@ -56,9 +56,14 @@ class CompanyEligibleDTO:
     listing_date: datetime | None = None
 
     reason: str | None = None
+    projection_version: str | None = None
 
     @staticmethod
-    def from_entity(entity: EligibleCompany) -> "CompanyEligibleDTO":
+    def from_entity(
+        entity: EligibleCompany,
+        *,
+        projection_version: str | None = None,
+    ) -> "CompanyEligibleDTO":
         return CompanyEligibleDTO(
             id=entity.id,
             company_name=entity.company_name,
@@ -96,6 +101,7 @@ class CompanyEligibleDTO:
             date_quotation=entity.date_quotation,
             last_date=entity.last_date,
             listing_date=entity.listing_date,
+            projection_version=projection_version,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -141,4 +147,5 @@ class CompanyEligibleDTO:
             "last_date": self.last_date,
             "listing_date": self.listing_date,
             "reason": self.reason,
+            "projection_version": self.projection_version,
         }

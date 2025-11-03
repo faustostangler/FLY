@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Boolean, Column, Index, Integer, String
+from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Index, Integer, String
 
 from domain.dtos.company_data_dto import CodeDTO
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
@@ -19,7 +21,7 @@ class CompanyEligibleModel(BaseModel):
     cvm_code = Column(String, nullable=True)
     issuing_company = Column(String, nullable=True)
     trading_name = Column(String, nullable=True)
-    company_name = Column(String, nullable=False, unique=True)
+    company_name = Column(String, nullable=False)
     cnpj = Column(String, nullable=True)
 
     ticker_codes = Column(JSON, nullable=False, default=list)
@@ -58,9 +60,17 @@ class CompanyEligibleModel(BaseModel):
     listing_date = Column(_YMDDate, nullable=True)
 
     reason = Column(String, nullable=True)
+    projection_version = Column(String, nullable=False, index=True)
+    is_current = Column(Boolean, nullable=False, default=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        Index("ix_tbl_company_eligible_company_name", "company_name"),
+        Index(
+            "ix_tbl_company_eligible_company_version",
+            "company_name",
+            "projection_version",
+            unique=True,
+        ),
         Index("ix_tbl_company_eligible_cvm_code", "cvm_code"),
         Index("ix_tbl_company_eligible_segment", "company_segment"),
     )
@@ -79,7 +89,12 @@ class CompanyEligibleModel(BaseModel):
         return tuple(CodeDTO(code=item.get("code"), isin=item.get("isin")) for item in raw)
 
     @classmethod
-    def from_dto(cls, dto: CompanyEligibleDTO) -> "CompanyEligibleModel":
+    def from_dto(
+        cls,
+        dto: CompanyEligibleDTO,
+        *,
+        is_current: bool = False,
+    ) -> "CompanyEligibleModel":
         return cls(
             id=dto.id,
             company_name=dto.company_name,
@@ -117,6 +132,8 @@ class CompanyEligibleModel(BaseModel):
             last_date=dto.last_date,
             listing_date=dto.listing_date,
             reason=dto.reason,
+            projection_version=dto.projection_version or "",
+            is_current=is_current,
         )
 
     def to_dto(self) -> CompanyEligibleDTO:
@@ -157,4 +174,5 @@ class CompanyEligibleModel(BaseModel):
             last_date=self.last_date,
             listing_date=self.listing_date,
             reason=self.reason,
+            projection_version=self.projection_version,
         )

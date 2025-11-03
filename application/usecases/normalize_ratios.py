@@ -23,7 +23,7 @@ from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.ports.eligible_companies_read_port import EligibleCompaniesReadPort
 
 
 class NormalizeUseCase:
@@ -38,7 +38,7 @@ class NormalizeUseCase:
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
         cache_ratios: CacheRatiosPort,
-        companies_eligible_port: CompaniesEligiblePort,
+        eligible_companies_read_port: EligibleCompaniesReadPort,
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
@@ -67,7 +67,7 @@ class NormalizeUseCase:
         self.worker_pool = worker_pool
 
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.companies_eligible_port = companies_eligible_port
+        self._eligible_companies_read_port = eligible_companies_read_port
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run()
@@ -96,8 +96,21 @@ class NormalizeUseCase:
                     for indicator, indicator_df in indicators.items()
                 }
 
-                eligible_companies: list[CompanyEligibleDTO] = self.companies_eligible_port.list(
-                    uow=bootstrap_uow,
+                projection_summary = self._eligible_companies_read_port.get_current(
+                    uow=bootstrap_uow
+                )
+
+                if not projection_summary:
+                    self.logger.log(
+                        "NormalizeUseCase skipped: no eligible projection available",
+                        level="warning",
+                    )
+                    return SyncResultsDTO(items=[], metrics=0)
+
+                eligible_companies: list[CompanyEligibleDTO] = (
+                    self._eligible_companies_read_port.list_current_companies(
+                        uow=bootstrap_uow
+                    )
                 )
 
                 if eligible_companies:
@@ -205,6 +218,12 @@ class NormalizeUseCase:
                         max_workers=self.max_workers,
                         total_size=total_companies,
                     )
+                else:
+                    self.logger.log(
+                        "NormalizeUseCase skipped: eligible projection is empty",
+                        level="info",
+                    )
+                    return SyncResultsDTO(items=[], metrics=0)
 
         except Exception as exc:  # noqa: BLE001
             self.logger.log(f"NormalizeUseCase failed: {exc}", level="error")
@@ -214,6 +233,8 @@ class NormalizeUseCase:
             items=cache_results,
             metrics=metrics,
         )
+
+        self.cache_ratios_service.invalidate_outdated(code_hash=self._ratios_code_hash)
 
         return results
 

@@ -5,11 +5,9 @@ from __future__ import annotations
 from typing import Collection, Iterable, Sequence
 
 from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.entities import EligibleCompany
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.valid_company_rules import decide_valid_company
 
 
@@ -20,15 +18,11 @@ class EligibleCompaniesBatchUpdaterService:
         self,
         *,
         logger: LoggerPort,
-        port: CompaniesEligiblePort,
     ) -> None:
         self._logger = logger
-        self._port = port
 
-    def rebuild(
+    def build_projection(
         self,
-        *,
-        uow: Uow,
         companies: Sequence[CompanyDataDTO],
         statement_company_names: Collection[str],
         quote_tickers: Iterable[str],
@@ -99,11 +93,5 @@ class EligibleCompaniesBatchUpdaterService:
             )
 
             projection.append(CompanyEligibleDTO.from_entity(entity))
-
-        self._port.replace_all(projection, uow=uow)
-        # self._logger.log(
-        #     f"Eligible companies projection updated with {len(projection)} entries",
-        #     level="info",
-        # )
 
         return projection

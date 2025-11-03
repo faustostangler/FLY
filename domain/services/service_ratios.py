@@ -4,22 +4,15 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.services.eligible_companies_batch_updater_service import (
-    EligibleCompaniesBatchUpdaterService,
-)
 from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.companies_eligible import (
-    CompaniesEligibleUseCase,
-)
 from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.ports.eligible_companies_read_port import EligibleCompaniesReadPort
 
 
 class RatiosService:
@@ -30,7 +23,6 @@ class RatiosService:
         config: ConfigPort,
         logger: LoggerPort,
 
-        repository_company: RepositoryCompanyDataPort,
         repository_stock_quote: RepositoryStockQuotePort,
         repository_indicators: RepositoryIndicatorsPort,
         repository_statements_fetched: RepositoryStatementFetchedPort,
@@ -38,7 +30,7 @@ class RatiosService:
 
         uow_factory: UowFactoryPort,
         worker_pool: WorkerPoolPort,
-        companies_eligible_port: CompaniesEligiblePort,
+        eligible_companies_read_port: EligibleCompaniesReadPort,
     ):
         """Initialize the service with required dependencies.
 
@@ -52,7 +44,6 @@ class RatiosService:
         self.logger = logger
         self.config = config
 
-        self.repository_company = repository_company
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
@@ -60,21 +51,6 @@ class RatiosService:
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
-        # self.http_client = http_client
-
-        self._companies_eligible_batch_service = EligibleCompaniesBatchUpdaterService(
-            logger=self.logger,
-            port=companies_eligible_port,
-        )
-
-        self.companies_eligible_usecase = CompaniesEligibleUseCase(
-            logger=self.logger,
-            repository_company=self.repository_company,
-            repository_statements_fetched=self.repository_statements_fetched,
-            repository_stock_quote=self.repository_stock_quote,
-            batch_service=self._companies_eligible_batch_service,
-            uow_factory=self.uow_factory,
-        )
 
         # Initialize the use case responsible for company synchronization
         self.normalize_usecase = NormalizeUseCase(
@@ -85,7 +61,7 @@ class RatiosService:
             repository_indicators=self.repository_indicators,
             repository_statements_fetched=self.repository_statements_fetched,
             cache_ratios=self.cache_ratios,
-            companies_eligible_port=companies_eligible_port,
+            eligible_companies_read_port=eligible_companies_read_port,
 
             uow_factory=self.uow_factory,
             worker_pool=self.worker_pool,
@@ -103,5 +79,4 @@ class RatiosService:
         Returns:
             Any: The result of the synchronization use case execution.
         """
-        self.companies_eligible_usecase()
         return self.normalize_usecase()

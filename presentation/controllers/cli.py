@@ -1,205 +1,164 @@
-from application.ports.config_port import ConfigPort
-from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import UowFactoryPort
-from application.ports.worker_pool_port import WorkerPoolPort
-from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
-from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
-from domain.ports.scraper_nsd_port import ScraperNsdPort
-from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-from domain.services.service_company_data import CompanyDataService
-from domain.services.service_nsd import NsdService
-from domain.services.service_ratios import RatiosService
-from domain.services.service_stock_quote import StockQuoteService
+"""CLI controller orchestrating the high level data pipeline."""
 
-# from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
+from __future__ import annotations
+
+import time
+from datetime import datetime
+
+from application.services.eligible_companies_service import EligibleCompaniesService
+from application.usecases.statements_sync import StatementsUseCase
+from domain.services.service_ratios import RatiosService
+from domain.dtos import SyncResultsDTO
+from domain.dtos.eligible_companies_command_dto import EligibleCompaniesCommandDTO
+from domain.dtos.eligible_companies_result_dto import EligibleCompaniesResultDTO
+from domain.dtos.statements_sync_item_dto import StatementsSyncItemDTO
 from infrastructure.utils.byte_formatter import ByteFormatter
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
 
 
 class Cli:
-    """CLI façade that coordinates domain services.
-
-    This class is intentionally minimal: it composes dependencies and
-    triggers the high-level workflows without embedding domain logic.
-
-    Args:
-        config (ConfigPort): Read-only application configuration.
-        logger (LoggerPort): Logging abstraction for structured events.
-        repository_company (RepositoryCompanyDataPort): Persistence port for company data.
-        scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
-    """
+    """Thin presentation layer that orchestrates the sequential pipeline."""
 
     def __init__(
         self,
+        *,
         config: ConfigPort,
         logger: LoggerPort,
-        repository_company: RepositoryCompanyDataPort,
-        repository_nsd: RepositoryNsdPort,
-        repository_stock_quote: RepositoryStockQuotePort,
-        repository_indicators: RepositoryIndicatorsPort,
-        repository_statements_raw: RepositoryStatementsRawPort,
-        repository_statements_fetched: RepositoryStatementFetchedPort,
-        cache_ratios: CacheRatiosPort,
-        scraper_company_data: ScraperCompanyDataPort,
-        scraper_nsd: ScraperNsdPort,
-        scraper_statements_raw: ScraperStatementRawPort,
-        scraper_stock_quote: ScraperStockQuotePort,
-        worker_pool: WorkerPoolPort,
-        policy: NsdPolicyPort,
-        uow_factory: UowFactoryPort,
-        http_client: AffinityHttpClientPort,
-        companies_eligible_port: CompaniesEligiblePort,
+        statements_use_case: StatementsUseCase,
+        eligible_companies_service: EligibleCompaniesService,
+        ratios_service: RatiosService,
     ) -> None:
-        """Initialize the CLI with injected ports."""
-        # Store injected dependencies for later composition
-        self.config = config
-        self.logger = logger
-
-        self.repository_company = repository_company
-        self.repository_nsd = repository_nsd
-        self.repository_stock_quote = repository_stock_quote
-        self.repository_indicators = repository_indicators
-        self.repository_statements_raw = repository_statements_raw
-        self.repository_statements_fetched = repository_statements_fetched
-        self.cache_ratios = cache_ratios
-
-        self.scraper_company_data = scraper_company_data
-        self.scraper_nsd = scraper_nsd
-        self.scraper_statements_raw = scraper_statements_raw
-        self.scraper_stock_quote = scraper_stock_quote
-
-        self.worker_pool = worker_pool
-        self.http_client = http_client
-
-        self.policy = policy
-        self.uow_factory = uow_factory
-
-        self.byte_formatter = ByteFormatter()
-        self.companies_eligible_port = companies_eligible_port
+        self._config = config
+        self._logger = logger
+        self._statements_use_case = statements_use_case
+        self._eligible_companies_service = eligible_companies_service
+        self._ratios_service = ratios_service
+        self._formatter = ByteFormatter()
 
     def __call__(self) -> None:
-        return self.run()
+        self.run()
 
     def run(self) -> None:
-        """Execute the top-level application workflow."""
-        # Emit lifecycle start event
-        self.logger.log("Start FLY", level="info")
-        metrics: int = 0
+        """Execute statements -> eligible -> ratios pipeline."""
 
-        # # Kick off the company data pipeline
-        # company_results: SyncResultsDTO = self._company_service()
-        # if company_results:
-        #     metrics += company_results.metrics
-        #     self.logger.log(f"Company Download: {self.byte_formatter.format_bytes(company_results.metrics)}")
+        self._logger.log("Start FLY", level="info")
+        total_metrics = 0
+        ratios_result: SyncResultsDTO | None = None
 
-        # # Get NSD and stataments pipeline from B3
-        # statements_results: SyncResultsDTO = self._statements_service()
-        # if statements_results:
-        #     metrics += statements_results.metrics
-        #     self.logger.log(f"Statements Download: {self.byte_formatter.format_bytes(statements_results.metrics)}")
+        try:
+            statements_result = self._run_statements_phase()
+            total_metrics += statements_result.metrics
+        except Exception as exc:  # noqa: BLE001
+            self._logger.log(
+                "Statements phase failed",
+                level="error",
+                extra={"error": str(exc)},
+            )
+            raise
 
-        # # Get Stock Value for companies
-        # stock_quote_results: SyncResultsDTO = self._stock_quote_service()
-        # if stock_quote_results:
-        #     metrics += stock_quote_results.metrics
-        #     self.logger.log(f"Stock Quotes Download: {self.byte_formatter.format_bytes(stock_quote_results.metrics)}")
+        try:
+            eligible_result = self._run_eligible_phase(statements_result)
+        except Exception as exc:  # noqa: BLE001
+            self._logger.log(
+                "Eligible companies phase failed",
+                level="error",
+                extra={"error": str(exc)},
+            )
+            raise
 
-        # Ratios Service
-        ratios_results: SyncResultsDTO = self._ratios_service()
-        if ratios_results:
-            metrics += ratios_results.metrics
-            self.logger.log(f"Ratios Download: {self.byte_formatter.format_bytes(ratios_results.metrics)}")
+        if eligible_result.eligible_count == 0:
+            self._logger.log(
+                "Eligible companies projection is empty; skipping ratios phase",
+                level="warning",
+            )
+            return
 
-        if metrics > 0:
-            self.logger.log(f"Total Download: {self.byte_formatter.format_bytes(metrics)}")
+        try:
+            ratios_result = self._run_ratios_phase()
+            total_metrics += ratios_result.metrics
+        except Exception as exc:  # noqa: BLE001
+            self._logger.log(
+                "Ratios normalization failed",
+                level="error",
+                extra={"error": str(exc)},
+            )
+            raise
 
-        return None
+        if total_metrics > 0:
+            self._logger.log(
+                f"Total Download: {self._formatter.format_bytes(total_metrics)}",
+                level="info",
+            )
 
-    def _company_service(self) -> SyncResultsDTO:
-        """Build and execute the company data synchronization flow."""
-        # Alias injected dependencies for readability
-        repository_company = self.repository_company
-        scraper_company_data = self.scraper_company_data
-
-        # Compose the service with explicit dependencies
-        company_service = CompanyDataService(
-            config=self.config,
-            logger=self.logger,
-            repository_company=repository_company,
-            scraper_company_data=scraper_company_data,
-            uow_factory=self.uow_factory,
+    # Internal helpers ---------------------------------------------------------
+    def _run_statements_phase(self) -> SyncResultsDTO[StatementsSyncItemDTO]:
+        start = time.perf_counter()
+        result = self._statements_use_case.run()
+        duration = time.perf_counter() - start
+        self._logger.log(
+            "Statements phase completed",
+            level="info",
+            extra={
+                "duration_seconds": round(duration, 3),
+                "metrics_bytes": self._formatter.format_bytes(result.metrics),
+            },
         )
+        return result
 
-        # Run the synchronization step
-        return company_service()
-
-    def _statements_service(self) -> SyncResultsDTO:
-        """ """
-
-        nsd_service = NsdService(
-            config=self.config,
-            logger=self.logger,
-            repository_company=self.repository_company,
-            repository_nsd=self.repository_nsd,
-            repository_statements_raw=self.repository_statements_raw,
-            repository_statements_fetched=self.repository_statements_fetched,
-            scraper_company_data=self.scraper_company_data,
-            scraper_nsd=self.scraper_nsd,
-            scraper_statements_raw=self.scraper_statements_raw,
-            worker_pool=self.worker_pool,
-            policy=self.policy,  # porta para política composta
-            financial_normalizer=self.financial_normalizer,  # serviço de domínio puro
-            ratios_calculator=self.ratios_calculator,  # serviço de domínio puro
-            uow_factory=self.uow_factory,
+    def _run_eligible_phase(
+        self,
+        statements_result: SyncResultsDTO[StatementsSyncItemDTO],
+    ) -> EligibleCompaniesResultDTO:
+        start = time.perf_counter()
+        command = self._build_command(statements_result)
+        result = self._eligible_companies_service.run(command)
+        duration = time.perf_counter() - start
+        self._logger.log(
+            "Eligible companies phase completed",
+            level="info",
+            extra={
+                "duration_seconds": round(duration, 3),
+                "eligible": result.eligible_count,
+                "evaluated": result.evaluated_count,
+                "version": result.version,
+            },
         )
+        return result
 
-        # Run the synchronization step
-        return nsd_service()
+    def _run_ratios_phase(self) -> SyncResultsDTO:
+        start = time.perf_counter()
+        result = self._ratios_service.run()
+        duration = time.perf_counter() - start
+        if result.items:
+            self._logger.log(
+                "Ratios phase completed",
+                level="info",
+                extra={
+                    "duration_seconds": round(duration, 3),
+                    "cache_entries": len(result.items),
+                    "metrics_bytes": self._formatter.format_bytes(result.metrics),
+                },
+            )
+        else:
+            self._logger.log(
+                "Ratios phase skipped",
+                level="warning",
+                extra={"duration_seconds": round(duration, 3)},
+            )
+        return result
 
-    def _stock_quote_service(self) -> SyncResultsDTO:
-        """ """
-        stock_quote_service = StockQuoteService(
-            config=self.config,
-            logger=self.logger,
-            repository_company=self.repository_company,
-            repository_stock_quote=self.repository_stock_quote,
-            scraper_stock_quote=self.scraper_stock_quote,
-            # worker_pool=self.worker_pool,
-            uow_factory=self.uow_factory,
-            # http_client=self.http_client,
+    def _build_command(
+        self,
+        statements_result: SyncResultsDTO[StatementsSyncItemDTO],
+    ) -> EligibleCompaniesCommandDTO:
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        version = f"{self._config.fly_settings.version}:{timestamp}"
+        rule_params = {
+            "recency_year": getattr(self._config.domain, "recency_year", None),
+            "raw_count": next((item.count for item in statements_result.items if item.source == "raw"), 0),
+        }
+        return EligibleCompaniesCommandDTO(
+            version=version,
+            rule_params={k: v for k, v in rule_params.items() if v is not None},
         )
-
-        # run the service
-        return stock_quote_service()
-
-    def _ratios_service(self) -> SyncResultsDTO:
-        """ """
-        ratios_service = RatiosService(
-            config=self.config,
-            logger=self.logger,
-
-            repository_company=self.repository_company,
-            repository_stock_quote=self.repository_stock_quote,
-            repository_indicators=self.repository_indicators,
-            repository_statements_fetched=self.repository_statements_fetched,
-            cache_ratios=self.cache_ratios,
-
-            uow_factory=self.uow_factory,
-            worker_pool=self.worker_pool,
-            companies_eligible_port=self.companies_eligible_port,
-        )
-
-        # run the service
-        return ratios_service()

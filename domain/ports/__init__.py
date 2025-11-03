@@ -17,10 +17,13 @@ from domain.ports.repository_statements_raw_port import RepositoryStatementsRawP
 from domain.ports.scraper_base_port import ScraperBasePort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+from domain.ports.eligible_companies_read_port import EligibleCompaniesReadPort
+from domain.ports.eligible_companies_write_port import EligibleCompaniesWritePort
 
 __all__ = ["CliPort","RepositoryCompanyDataPort", "ConfigPort", "DataCleanerPort",
            "AffinityHttpClientPort", "LoggerPort",
            "RepositoryBasePort", "RepositoryNsdPort",
            "RepositoryStatementsRawPort", "RepositoryStatementFetchedPort",
            "ScraperBasePort", "ScraperCompanyDataPort",
-           "ScraperStatementRawPort", "MetricsCollectorPort", "WorkerPoolPort"]
+           "ScraperStatementRawPort", "MetricsCollectorPort", "WorkerPoolPort",
+           "EligibleCompaniesReadPort", "EligibleCompaniesWritePort"]

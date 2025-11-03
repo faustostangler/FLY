@@ -14,7 +14,10 @@ from domain.dtos.statement_fetched_dto import StatementFetchedDTO
 from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.dtos.eligible_companies_command_dto import EligibleCompaniesCommandDTO
+from domain.dtos.eligible_companies_result_dto import EligibleCompaniesResultDTO
 from domain.dtos.worker_task_dto import WorkerTaskDTO
+from domain.dtos.statements_sync_item_dto import StatementsSyncItemDTO
 
 __all__ = [
     "CodeDTO",
@@ -30,4 +33,7 @@ __all__ = [
     "WorkerTaskDTO",
     "CacheRatiosContextDTO",
     "CompanyEligibleDTO",
+    "EligibleCompaniesCommandDTO",
+    "EligibleCompaniesResultDTO",
+    "StatementsSyncItemDTO",
 ]
