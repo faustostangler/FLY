@@ -1,10 +1,10 @@
 <template>
   <section class="plotly-viewer">
-    <div v-if="isLoading" class="loading" role="status" aria-live="polite">
+    <div v-if="isLoading" role="status" aria-live="polite">
       Carregando gráfico...
     </div>
 
-    <div v-else-if="error" class="error" role="alert">
+    <div v-else-if="error" role="alert">
       {{ error }}
     </div>
 
@@ -39,7 +39,7 @@ const error = computed(() => store.error)
 
 onMounted(() => {
   if (!store.chart) {
-    store.fetchChartData()
+    store.loadChart()
   }
 })
 </script>

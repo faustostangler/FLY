@@ -1,6 +1,6 @@
 <template>
   <section class="chart-selector">
-    <label for="chartType">Tipo de gráfico</label>
+    <label for="chartType">Tipo de gráfico:</label>
     <input
       id="chartType"
       v-model="localType"
@@ -8,9 +8,8 @@
       @keyup.enter="apply"
       aria-label="Tipo de gráfico"
     />
-
     <button type="button" @click="apply">
-      Carregar gráfico
+      Carregar
     </button>
   </section>
 </template>
@@ -26,13 +25,14 @@ const router = useRouter()
 
 const localType = ref(route.query.type || store.params.type)
 
-// sincroniza rota -> campo
+// se mudar a query na URL, atualiza o campo e a store
 watch(
   () => route.query.type,
   (value) => {
     if (value && value !== localType.value) {
       localType.value = value
-      store.updateParams({ type: value })
+      store.setType(value)
+      store.loadChart()
     }
   }
 )
@@ -40,9 +40,10 @@ watch(
 async function apply() {
   const type = localType.value || 'test'
 
-  // atualiza query string
+  // sincroniza com a URL
   router.replace({ query: { ...route.query, type } })
 
-  await store.updateParams({ type })
+  store.setType(type)
+  await store.loadChart()
 }
 </script>

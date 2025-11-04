@@ -12,20 +12,18 @@ export const useChartStore = defineStore('chart', {
   }),
 
   actions: {
-    async updateParams(newParams) {
-      this.params = { ...this.params, ...newParams }
-      await this.fetchChartData()
+    setType(type) {
+      this.params.type = type || 'test'
     },
 
-    async fetchChartData() {
+    async loadChart() {
       this.isLoading = true
       this.error = null
       try {
-        const response = await fetchChart(this.params.type)
-        this.chart = response
+        this.chart = await fetchChart(this.params.type)
       } catch (err) {
-        this.error = 'Erro ao carregar gráfico'
         console.error(err)
+        this.error = 'Falha ao carregar gráfico'
       } finally {
         this.isLoading = false
       }

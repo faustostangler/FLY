@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, List
 
 from application.ports.uow_port import Uow
 
@@ -14,3 +14,11 @@ class RepositoryStockQuotePort(RepositoryBasePort[StockQuoteDTO, int], Protocol)
     """
     """
     def get_last_date(self, *, ticker: str, uow: Uow):...
+
+    def get_history(
+        self,
+        *,
+        ticker: str,
+        limit: int | None,
+        uow: Uow,
+    ) -> List[StockQuoteDTO]: ...

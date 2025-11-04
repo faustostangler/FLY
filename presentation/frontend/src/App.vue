@@ -6,6 +6,15 @@
 </script>
 
 <!--
+<template>
+  <router-view />
+</template>
+
+<script setup>
+</script>
+-->
+
+<!--
 <script setup>
 import HelloWorld from './components/HelloWorld.vue'
 </script>

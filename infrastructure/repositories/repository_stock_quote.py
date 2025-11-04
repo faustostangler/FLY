@@ -78,3 +78,25 @@ class RepositoryStockQuote(RepositoryBase[StockQuoteDTO, int], RepositoryStockQu
             .filter(model.ticker == ticker)
             .scalar()
         )
+
+    def get_history(
+        self,
+        *,
+        ticker: str,
+        limit: int | None,
+        uow: Uow,
+    ) -> list[StockQuoteDTO]:
+        session = uow.session
+        model, _ = self.get_model_class()
+
+        query = (
+            session
+            .query(model)
+            .filter(model.ticker == ticker)
+            .order_by(model.date.asc())
+        )
+        if limit is not None:
+            query = query.limit(limit)
+
+        rows = query.all()
+        return [row.to_dto() for row in rows]
