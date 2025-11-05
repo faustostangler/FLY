@@ -13,11 +13,11 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.services.cache_ratios_service import CacheRatiosService
-from application.dto.cache_ratios_result_dto import CacheRatiosResultDTO
-from application.dto.sync_results_dto import SyncResultsDTO
-from application.dto.company_eligible_dto import CompanyEligibleDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from infrastructure.models.company_eligible_model import CompanyEligibleModel
-from application.dto.worker_task_dto import WorkerTaskDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
 from domain.ports.repository_statements_fetched_port import (

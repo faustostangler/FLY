@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import pandas as pd
 
-from application.dto.cache_ratios_entry_dto import CacheRatiosEntryDTO
+from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
 
 if TYPE_CHECKING:
-    from application.dto.cache_ratios_context_dto import CacheRatiosContextDTO
+    from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
 
 
 @runtime_checkable

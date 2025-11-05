@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.nsd_dto import NsdDTO
-from infrastructure.models.base_model import ORMBaseModel
+from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.repository_nsd import SqlAlchemyNsdRepository
 from tests.conftest import DummyConfig, DummyLogger
 
@@ -15,8 +15,8 @@ def test_save_all_upserts(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    ORMBaseModel.metadata.drop_all(engine)
-    ORMBaseModel.metadata.create_all(engine)
+    BaseModel.metadata.drop_all(engine)
+    BaseModel.metadata.create_all(engine)
 
     first = [NsdDTO.from_dict({"nsd": 1, "company_name": "ACME"})]
     repo.save_all(first)

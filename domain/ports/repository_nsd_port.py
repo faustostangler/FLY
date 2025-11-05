@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Protocol, Set, runtime_checkable
 
 from application.ports.uow_port import Uow
-from application.dto import NsdDTO
+from domain.dtos import NsdDTO
 
 from .repository_base_port import RepositoryBasePort
 

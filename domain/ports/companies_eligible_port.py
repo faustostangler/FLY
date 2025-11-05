@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Sequence
 from application.ports.uow_port import Uow
-from application.dto.company_eligible_dto import CompanyEligibleDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 
 
 class CompaniesEligiblePort(ABC):

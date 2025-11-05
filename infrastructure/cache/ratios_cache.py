@@ -15,8 +15,8 @@ from sqlalchemy.orm import Session
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 
-from application.dto.cache_ratios_context_dto import CacheRatiosContextDTO
-from application.dto.cache_ratios_entry_dto import CacheRatiosEntryDTO
+from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
+from domain.dtos.cache_ratios_entry_dto import CacheRatiosEntryDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 
 from infrastructure.adapters.engine_setup import EngineSetup

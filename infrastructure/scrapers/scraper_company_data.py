@@ -15,9 +15,9 @@ from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.processors.company_detail_processor import CompanyDataDetailProcessor
 from application.processors.entry_cleaner import EntryCleaner
-from application.dto.company_data_dto import CompanyDataDTO
-from application.dto.fetch_results_dto import FetchResultDTO
-from application.dto.worker_task_dto import WorkerTaskDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.fetch_results_dto import FetchResultDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.datacleaner_port import DataCleanerPort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort

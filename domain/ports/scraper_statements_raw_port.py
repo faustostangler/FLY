@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Protocol, runtime_checkable
 
-from application.dto import WorkerTaskDTO
+from domain.dtos import WorkerTaskDTO
 
 # from domain.ports import ConfigPort
 

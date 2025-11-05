@@ -8,11 +8,11 @@ from typing import List, Optional
 from sqlalchemy import Boolean, DateTime, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from application.dto.company_data_dto import CodeDTO, CompanyDataDTO
-from infrastructure.models.base_model import ORMBaseModel
+from domain.dtos.company_data_dto import CodeDTO, CompanyDataDTO
+from infrastructure.models.base_model import BaseModel
 
 
-class CompanyDataModel(ORMBaseModel):
+class CompanyDataModel(BaseModel):
     """SQLAlchemy ORM model for the ``tbl_company`` table.
 
     This model maps normalized company master data into a single table and

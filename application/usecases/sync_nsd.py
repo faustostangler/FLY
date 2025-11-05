@@ -7,7 +7,7 @@ from typing import Callable, Iterable, Iterator, List, Optional, cast
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
-from application.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_nsd_port import ScraperNsdPort
@@ -173,7 +173,7 @@ class SyncNSDUseCase:
     #     }
     #     missing = names - existing_companies
     #     if missing:
-    #         from application.dto.company_data_dto import CompanyDataDTO
+    #         from domain.dtos.company_data_dto import CompanyDataDTO
 
     #         to_create = [
     #             CompanyDataDTO(

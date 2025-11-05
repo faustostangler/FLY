@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from sqlalchemy import JSON, Boolean, Column, Index, Integer, String
 
-from application.dto.company_data_dto import CodeDTO
-from application.dto.company_eligible_dto import CompanyEligibleDTO
+from domain.dtos.company_data_dto import CodeDTO
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 
-from infrastructure.models.base_model import ORMBaseModel, _YMDDate
+from infrastructure.models.base_model import BaseModel, _YMDDate
 
 
-class CompanyEligibleModel(ORMBaseModel):
+class CompanyEligibleModel(BaseModel):
     """ORM mapping for the ``tbl_company_eligible`` table."""
 
     __tablename__ = "tbl_company_eligible"

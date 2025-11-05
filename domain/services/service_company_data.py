@@ -4,7 +4,7 @@ from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.usecases import SyncCompanyDataUseCase
-from application.dto.sync_results_dto import SyncResultsDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
 

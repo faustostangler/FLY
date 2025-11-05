@@ -16,8 +16,8 @@ from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.dto.stock_quote_dto import StockQuoteDTO
-from application.dto.worker_task_dto import WorkerTaskDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort

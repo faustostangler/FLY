@@ -5,8 +5,8 @@
 # from datetime import date, datetime
 # from typing import Protocol, Sequence, Tuple, Iterable, Dict
 
-# from application.dto.nsd_dto import NsdDTO
-# from application.dto.statement_raw_dto import StatementRawDTO
+# from domain.dtos.nsd_dto import NsdDTO
+# from domain.dtos.statement_raw_dto import StatementRawDTO
 
 
 # # ----------------- Tipos de retorno explícitos -----------------

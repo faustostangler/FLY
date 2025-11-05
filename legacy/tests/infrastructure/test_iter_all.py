@@ -10,7 +10,7 @@ from sqlalchemy.orm import (
     Session as SASession,
 )
 
-from infrastructure.models.base_model import ORMBaseModel
+from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
 )
@@ -23,7 +23,7 @@ class DummyDTO:
     name: str
 
 
-class DummyModel(ORMBaseModel):
+class DummyModel(BaseModel):
     __tablename__ = "dummy_model"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
@@ -49,7 +49,7 @@ class CompositeDTO:
     value: str
 
 
-class CompositeModel(ORMBaseModel):
+class CompositeModel(BaseModel):
     __tablename__ = "composite_model"
 
     part1: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -72,8 +72,8 @@ class CompositeRepository(SqlAlchemyRepositoryBase[CompositeDTO, tuple[int, int]
 def _setup_repo(repo, engine, SessionLocal):
     repo.engine = engine
     repo.Session = SessionLocal
-    ORMBaseModel.metadata.drop_all(engine)
-    ORMBaseModel.metadata.create_all(engine)
+    BaseModel.metadata.drop_all(engine)
+    BaseModel.metadata.create_all(engine)
 
 
 def test_iter_all_simple_pk(SessionLocal, engine):

@@ -7,7 +7,7 @@ from sqlalchemy.dialects.sqlite import insert
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from application.dto.company_data_dto import CompanyDataDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.repository_base import RepositoryBase

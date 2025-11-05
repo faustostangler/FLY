@@ -19,10 +19,10 @@ if str(ROOT_DIR) not in sys.path:
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.processors.nsd_processor import NsdProcessor, _NsdTxnAggregator
-from application.dto.nsd_dto import NsdDTO
-from application.dto.statement_fetched_dto import StatementFetchedDTO
-from application.dto.statement_raw_dto import StatementRawDTO
-from application.dto.worker_task_dto import WorkerTaskDTO
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from infrastructure.utils.byte_formatter import ByteFormatter
 
 

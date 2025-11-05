@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import String, TypeDecorator
 
 
-class ORMBaseModel(DeclarativeBase):
+class BaseModel(DeclarativeBase):
     """Abstract base class for all SQLAlchemy ORM models.
 
     Inherit from this class to define database tables.

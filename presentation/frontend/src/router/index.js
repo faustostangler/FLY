@@ -4,11 +4,10 @@ import HomeView from '../views/HomeView.vue'
 const routes = [
   {
     path: '/',
-    name: 'dashboard',
-    component: DashboardView,
+    name: 'home',
+    component: HomeView,
   },
-],
-
+]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

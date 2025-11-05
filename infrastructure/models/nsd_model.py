@@ -6,11 +6,11 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from application.dto.nsd_dto import NsdDTO
-from infrastructure.models.base_model import ORMBaseModel
+from domain.dtos.nsd_dto import NsdDTO
+from infrastructure.models.base_model import BaseModel
 
 
-class NSDModel(ORMBaseModel):
+class NSDModel(BaseModel):
     """ORM model for the tbl_nsd table."""
 
     __tablename__ = "tbl_nsd"

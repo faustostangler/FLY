@@ -8,7 +8,7 @@ from typing import Tuple, TYPE_CHECKING
 
 
 if TYPE_CHECKING:  # pragma: no cover - used for type checkers only
-    from application.dto.company_data_dto import CodeDTO
+    from domain.dtos.company_data_dto import CodeDTO
 
 
 @dataclass(frozen=True)

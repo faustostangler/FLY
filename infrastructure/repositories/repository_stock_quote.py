@@ -10,7 +10,7 @@ from sqlalchemy.dialects.sqlite import insert
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from application.dto.stock_quote_dto import StockQuoteDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from infrastructure.models.stock_quote_model import StockQuoteModel
 from infrastructure.repositories.repository_base import RepositoryBase

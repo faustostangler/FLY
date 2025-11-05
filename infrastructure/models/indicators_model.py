@@ -14,14 +14,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from application.dto.indicators_dto import IndicatorsDTO
+from domain.dtos.indicators_dto import IndicatorsDTO
 from infrastructure.models.base_model import (
-    ORMBaseModel,
+    BaseModel,
     _YMDDate,
 )
 
 
-class IndicatorModel(ORMBaseModel):
+class IndicatorModel(BaseModel):
     __tablename__ = "tbl_indicators"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

@@ -10,7 +10,7 @@ from sqlalchemy.dialects.sqlite import insert
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from application.dto.statement_raw_dto import StatementRawDTO
+from domain.dtos.statement_raw_dto import StatementRawDTO
 from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
 from infrastructure.models.statements_raw_model import StatementRawModel
 from infrastructure.repositories.repository_base import RepositoryBase

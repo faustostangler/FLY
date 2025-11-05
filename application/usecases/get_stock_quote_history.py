@@ -2,7 +2,7 @@ from typing import List
 
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
-from application.dto.stock_quote_dto import StockQuoteDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 
 

@@ -14,14 +14,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from application.dto.stock_quote_dto import StockQuoteDTO
+from domain.dtos.stock_quote_dto import StockQuoteDTO
 from infrastructure.models.base_model import (
-    ORMBaseModel,
+    BaseModel,
     _YMDDate,
 )
 
 
-class StockQuoteModel(ORMBaseModel):
+class StockQuoteModel(BaseModel):
     __tablename__ = "tbl_stock_quote"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

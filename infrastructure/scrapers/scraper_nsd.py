@@ -14,7 +14,7 @@ from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
 from application.ports.uow_port import Uow
 from application.ports.worker_pool_port import WorkerPoolPort
-from application.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from domain.ports.scraper_base_port import ExistingItem, SaveCallback
 from domain.ports.scraper_nsd_port import ScraperNsdPort

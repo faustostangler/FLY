@@ -9,7 +9,7 @@ from sqlalchemy.dialects.sqlite import insert
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from application.dto.nsd_dto import NsdDTO
+from domain.dtos.nsd_dto import NsdDTO
 from domain.ports.repository_nsd_port import RepositoryNsdPort
 from infrastructure.models.nsd_model import NSDModel
 from infrastructure.repositories.repository_base import RepositoryBase

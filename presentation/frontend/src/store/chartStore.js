@@ -1,34 +1,32 @@
-// src/stores/chartStore.js
 import { defineStore } from 'pinia'
 import { fetchChart } from '../services/apiService'
 
 export const useChartStore = defineStore('chart', {
   state: () => ({
-    selectedType: 'line',
+    params: {
+      type: 'test',
+    },
     chart: null,
     isLoading: false,
     error: null,
   }),
 
   actions: {
-    async loadChart(type) {
-      const chartType = type || this.selectedType
+    setType(type) {
+      this.params.type = type || 'test'
+    },
+
+    async loadChart() {
       this.isLoading = true
       this.error = null
-
       try {
-        const data = await fetchChart(chartType)
-        this.chart = data
-        this.selectedType = chartType
+        this.chart = await fetchChart(this.params.type)
       } catch (err) {
-        this.error = err?.message || 'Erro ao carregar gráfico'
+        console.error(err)
+        this.error = 'Falha ao carregar gráfico'
       } finally {
         this.isLoading = false
       }
-    },
-
-    setType(type) {
-      this.selectedType = type
     },
   },
 })

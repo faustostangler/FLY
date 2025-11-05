@@ -6,7 +6,7 @@ from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator, String
 
-from .base_model import BaseModel as ORMBaseModel
+from .base_model import BaseModel
 
 
 class _YMDDate(TypeDecorator):
@@ -31,7 +31,7 @@ class _YMDDate(TypeDecorator):
 
 
 
-class BaseStatementModel(ORMBaseModel):
+class BaseStatementModel(BaseModel):
     """Base ORM model for raw and fetched statement rows."""
 
     __abstract__ = True

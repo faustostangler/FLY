@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from application.dto.company_data_dto import CompanyDataDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.scraper_base_port import ScraperBasePort
 
 

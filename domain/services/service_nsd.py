@@ -9,10 +9,10 @@ from application.ports.uow_port import Uow, UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
 from application.processors.nsd_processor import NsdProcessor
 from application.usecases.sync_nsd import SyncNSDUseCase
-from application.dto.company_data_dto import CompanyDataDTO
-from application.dto.nsd_dto import NsdDTO
-from application.dto.sync_results_dto import SyncResultsDTO
-from application.dto.worker_task_dto import WorkerTaskDTO
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.dtos.nsd_dto import NsdDTO
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.worker_task_dto import WorkerTaskDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort

@@ -3,7 +3,7 @@ from dataclasses import replace
 from sqlalchemy import text
 
 from domain.dto.statement_fetched_dto import StatementFetchedDTO
-from infrastructure.models.base_model import ORMBaseModel
+from infrastructure.models.base_model import BaseModel
 from infrastructure.repositories.fetched_statement_repository import (
     SqlAlchemyStatementFetchedRepository,
 )
@@ -19,7 +19,7 @@ def test_replace_and_exists(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    ORMBaseModel.metadata.create_all(engine)
+    BaseModel.metadata.create_all(engine)
 
     dto = StatementFetchedDTO(
         nsd="1",
@@ -73,8 +73,8 @@ def test_save_all_upserts(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    ORMBaseModel.metadata.drop_all(engine)
-    ORMBaseModel.metadata.create_all(engine)
+    BaseModel.metadata.drop_all(engine)
+    BaseModel.metadata.create_all(engine)
 
     base = StatementFetchedDTO(
         nsd="1",
