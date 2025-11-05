@@ -1,33 +1,34 @@
+// src/stores/chartStore.js
 import { defineStore } from 'pinia'
 import { fetchChart } from '../services/apiService'
-import { ref, reactive, computed } from 'vue'
 
 export const useChartStore = defineStore('chart', {
   state: () => ({
-    params: {
-      type: 'test',
-    },
+    selectedType: 'line',
     chart: null,
     isLoading: false,
     error: null,
   }),
 
   actions: {
-    setType(type) {
-      this.params.type = type || 'test'
-    },
-
-    async loadChart() {
+    async loadChart(type) {
+      const chartType = type || this.selectedType
       this.isLoading = true
       this.error = null
+
       try {
-        this.chart = await fetchChart(this.params.type)
+        const data = await fetchChart(chartType)
+        this.chart = data
+        this.selectedType = chartType
       } catch (err) {
-        console.error(err)
-        this.error = 'Falha ao carregar gráfico'
+        this.error = err?.message || 'Erro ao carregar gráfico'
       } finally {
         this.isLoading = false
       }
+    },
+
+    setType(type) {
+      this.selectedType = type
     },
   },
 })

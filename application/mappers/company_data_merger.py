@@ -6,7 +6,7 @@ from application.mappers.company_data_mapper import CompanyDataMapper
 
 # from domain.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
-from domain.dtos.company_data_dto import (
+from application.dto.company_data_dto import (
     CompanyDataDetailDTO,
     CompanyDataDTO,
     CompanyDataListingDTO,

@@ -3,7 +3,7 @@ from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from domain.dtos.sync_results_dto import SyncResultsDTO
+from application.dto.sync_results_dto import SyncResultsDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort

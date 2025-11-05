@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.statement_raw_dto import StatementRawDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from infrastructure.models.base_model import ORMBaseModel
 from infrastructure.repositories.raw_statement_repository import (
     SqlAlchemyStatementRawRepository,
 )

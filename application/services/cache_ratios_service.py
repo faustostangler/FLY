@@ -8,8 +8,8 @@ from typing import Any, Callable, Iterable
 
 import pandas as pd
 
-from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
-from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+from application.dto.cache_ratios_context_dto import CacheRatiosContextDTO
+from application.dto.cache_ratios_result_dto import CacheRatiosResultDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 
 

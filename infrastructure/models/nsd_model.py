@@ -6,8 +6,8 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dtos.nsd_dto import NsdDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from application.dto.nsd_dto import NsdDTO
+from infrastructure.models.base_model import ORMBaseModel
 
 
 class NSDModel(ORMBaseModel):

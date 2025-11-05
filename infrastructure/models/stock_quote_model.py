@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dtos.stock_quote_dto import StockQuoteDTO
+from application.dto.stock_quote_dto import StockQuoteDTO
 from infrastructure.models.base_model import (
     ORMBaseModel,
     _YMDDate,

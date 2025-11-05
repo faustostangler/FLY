@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from domain.dtos.indicators_dto import IndicatorsDTO
+from application.dto.indicators_dto import IndicatorsDTO
 from domain.ports.repository_base_port import RepositoryBasePort
 
 

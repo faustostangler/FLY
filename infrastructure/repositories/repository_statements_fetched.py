@@ -11,7 +11,7 @@ from sqlalchemy.dialects.sqlite import insert
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from application.dto.statement_fetched_dto import StatementFetchedDTO
 from domain.ports.repository_statements_fetched_port import (
     RepositoryStatementFetchedPort,
 )

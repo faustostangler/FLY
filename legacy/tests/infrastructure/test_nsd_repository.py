@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.nsd_dto import NsdDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from infrastructure.models.base_model import ORMBaseModel
 from infrastructure.repositories.repository_nsd import SqlAlchemyNsdRepository
 from tests.conftest import DummyConfig, DummyLogger
 

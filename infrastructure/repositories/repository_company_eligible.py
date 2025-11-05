@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from application.dto.company_eligible_dto import CompanyEligibleDTO
 from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from infrastructure.repositories.repository_base import RepositoryBase
 from infrastructure.models.company_eligible_model import CompanyEligibleModel

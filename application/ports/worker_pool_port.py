@@ -12,7 +12,7 @@ from typing import (
     runtime_checkable,
 )
 
-from domain.dtos import WorkerTaskDTO
+from application.dto import WorkerTaskDTO
 
 from application.ports.logger_port import LoggerPort
 

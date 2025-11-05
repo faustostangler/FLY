@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
-from domain.dtos.statement_raw_dto import StatementRawDTO
+from application.dto.statement_fetched_dto import StatementFetchedDTO
+from application.dto.statement_raw_dto import StatementRawDTO
 from domain.ports.datacleaner_port import DataCleanerPort
 
 

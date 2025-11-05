@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from domain.dtos.company_data_dto import (
+from application.dto.company_data_dto import (
     CompanyDataDetailDTO,
     CompanyDataDTO,
     CompanyDataListingDTO,

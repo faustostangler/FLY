@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.company_data_dto import CompanyDataDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from infrastructure.models.base_model import ORMBaseModel
 from infrastructure.repositories.repository_company import (
     SqlAlchemyRepositoryCompanyData,
 )

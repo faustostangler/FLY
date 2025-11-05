@@ -3,7 +3,7 @@ from dataclasses import replace
 from sqlalchemy import text
 
 from domain.dto.statement_fetched_dto import StatementFetchedDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from infrastructure.models.base_model import ORMBaseModel
 from infrastructure.repositories.fetched_statement_repository import (
     SqlAlchemyStatementFetchedRepository,
 )

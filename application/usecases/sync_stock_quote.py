@@ -6,8 +6,8 @@ from dateutil.relativedelta import relativedelta
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from domain.dtos.stock_quote_dto import StockQuoteDTO
-from domain.dtos.sync_results_dto import SyncResultsDTO
+from application.dto.stock_quote_dto import StockQuoteDTO
+from application.dto.sync_results_dto import SyncResultsDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
@@ -163,9 +163,9 @@ class SyncStockQuoteUseCase:
 # from application.ports.logger_port import LoggerPort
 # from application.ports.uow_port import Uow, UowFactoryPort
 # from application.ports.http_client_port import AffinityHttpClientPort
-# from domain.dtos.stock_quote_dto import StockQuoteDTO
-# from domain.dtos.sync_results_dto import SyncResultsDTO
-# from domain.dtos.worker_task_dto import WorkerTaskDTO
+# from application.dto.stock_quote_dto import StockQuoteDTO
+# from application.dto.sync_results_dto import SyncResultsDTO
+# from application.dto.worker_task_dto import WorkerTaskDTO
 # from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 # from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 # from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort

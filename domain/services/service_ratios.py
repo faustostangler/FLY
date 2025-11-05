@@ -15,8 +15,8 @@ from application.usecases.normalize_ratios import NormalizeUseCase
 from application.usecases.companies_eligible import (
     CompaniesEligibleUseCase,
 )
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
-from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
+from application.dto.company_eligible_dto import CompanyEligibleDTO
+from application.dto import CacheRatiosResultDTO, SyncResultsDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort

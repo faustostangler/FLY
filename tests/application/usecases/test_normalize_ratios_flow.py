@@ -14,14 +14,14 @@ from application.usecases.normalize_ratios import NormalizeUseCase
 from application.usecases.companies_eligible import (
     CompaniesEligibleUseCase,
 )
-from domain.dtos import (
+from application.dto import (
     CompanyDataDTO,
     CacheRatiosEntryDTO,
     CacheRatiosResultDTO,
     StatementFetchedDTO,
     WorkerTaskDTO,
 )
-from domain.dtos.stock_quote_dto import StockQuoteDTO
+from application.dto.stock_quote_dto import StockQuoteDTO
 from infrastructure.repositories.repository_company_eligible import (
     RepositoryCompanyEligible,
 )

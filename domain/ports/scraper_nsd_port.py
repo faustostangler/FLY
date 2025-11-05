@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Iterable, List, Optional
 
-from domain.dtos.nsd_dto import NsdDTO
+from application.dto.nsd_dto import NsdDTO
 from domain.ports.scraper_base_port import ScraperBasePort
 
 # T = TypeVar("T")

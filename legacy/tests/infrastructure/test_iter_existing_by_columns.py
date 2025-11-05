@@ -7,7 +7,7 @@ from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, sessionmaker
 from sqlalchemy.orm import Session as SASession
 
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from infrastructure.models.base_model import ORMBaseModel
 from infrastructure.repositories.sqlalchemy_repository_base import (
     SqlAlchemyRepositoryBase,
 )

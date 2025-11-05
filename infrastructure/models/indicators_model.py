@@ -14,7 +14,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dtos.indicators_dto import IndicatorsDTO
+from application.dto.indicators_dto import IndicatorsDTO
 from infrastructure.models.base_model import (
     ORMBaseModel,
     _YMDDate,

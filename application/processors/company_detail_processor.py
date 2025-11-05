@@ -4,7 +4,7 @@ from typing import Dict, Optional, cast
 
 from application.mappers.company_data_merger import CompanyDataMerger
 from application.processors.entry_cleaner import EntryCleaner
-from domain.dtos.company_data_dto import (
+from application.dto.company_data_dto import (
     CompanyDataDetailDTO,
     CompanyDataDTO,
     CompanyDataListingDTO,

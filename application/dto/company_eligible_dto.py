@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
-from domain.dtos.company_data_dto import CodeDTO
+from application.dto.company_data_dto import CodeDTO
 from domain.entities import EligibleCompany
 
 

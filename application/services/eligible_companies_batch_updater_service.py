@@ -7,8 +7,8 @@ import time
 
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from application.dto.company_data_dto import CompanyDataDTO
+from application.dto.company_eligible_dto import CompanyEligibleDTO
 from domain.entities import EligibleCompany
 from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.valid_company_rules import decide_valid_company

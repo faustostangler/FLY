@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, Protocol, runtime_checkable
 
 from application.ports.uow_port import Uow
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
+from application.dto.statement_fetched_dto import StatementFetchedDTO
 from domain.ports.repository_base_port import RepositoryBasePort
 
 

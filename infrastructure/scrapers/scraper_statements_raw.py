@@ -10,9 +10,9 @@ from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.metrics_collector_port import MetricsCollectorPort
-from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos.statement_raw_dto import StatementRawDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
+from application.dto.nsd_dto import NsdDTO
+from application.dto.statement_raw_dto import StatementRawDTO
+from application.dto.worker_task_dto import WorkerTaskDTO
 from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
 
 

@@ -8,8 +8,8 @@ from typing import List, Optional
 from sqlalchemy import Boolean, DateTime, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from domain.dtos.company_data_dto import CodeDTO, CompanyDataDTO
-from infrastructure.models.base_model import BaseModel as ORMBaseModel
+from application.dto.company_data_dto import CodeDTO, CompanyDataDTO
+from infrastructure.models.base_model import ORMBaseModel
 
 
 class CompanyDataModel(ORMBaseModel):

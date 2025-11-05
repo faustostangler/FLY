@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from application.ports.logger_port import LoggerPort
-from infrastructure.models import BaseModel as ORMBaseModel
+from infrastructure.models import ORMBaseModel
 
 
 class EngineSetup():

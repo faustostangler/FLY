@@ -8,11 +8,11 @@ from typing import Any, Iterable, Iterator, Mapping, Optional, Sequence, TypeVar
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow, UowFactoryPort
-from domain.dtos.company_data_dto import CompanyDataDTO
-from domain.dtos.nsd_dto import NsdDTO
-from domain.dtos.statement_fetched_dto import StatementFetchedDTO
-from domain.dtos.statement_raw_dto import StatementRawDTO
-from domain.dtos.worker_task_dto import WorkerTaskDTO
+from application.dto.company_data_dto import CompanyDataDTO
+from application.dto.nsd_dto import NsdDTO
+from application.dto.statement_fetched_dto import StatementFetchedDTO
+from application.dto.statement_raw_dto import StatementRawDTO
+from application.dto.worker_task_dto import WorkerTaskDTO
 from domain.polices.nsd_policy import NsdPolicyPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_nsd_port import RepositoryNsdPort

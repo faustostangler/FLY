@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from sqlalchemy import JSON, Boolean, Column, Index, Integer, String
 
-from domain.dtos.company_data_dto import CodeDTO
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from application.dto.company_data_dto import CodeDTO
+from application.dto.company_eligible_dto import CompanyEligibleDTO
 
-from infrastructure.models.base_model import BaseModel as ORMBaseModel, _YMDDate
+from infrastructure.models.base_model import ORMBaseModel, _YMDDate
 
 
 class CompanyEligibleModel(ORMBaseModel):
