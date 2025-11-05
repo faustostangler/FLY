@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.statement_raw_dto import StatementRawDTO
-from infrastructure.models.base_model import BaseModel
+from infrastructure.models.base_model import BaseModel as ORMBaseModel
 from infrastructure.repositories.raw_statement_repository import (
     SqlAlchemyStatementRawRepository,
 )
@@ -17,8 +17,8 @@ def test_save_all_upserts(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    BaseModel.metadata.drop_all(engine)
-    BaseModel.metadata.create_all(engine)
+    ORMBaseModel.metadata.drop_all(engine)
+    ORMBaseModel.metadata.create_all(engine)
 
     base = {
         "nsd": 1,

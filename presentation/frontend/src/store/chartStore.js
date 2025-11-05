@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { fetchChart } from '../services/apiService'
+import { ref, reactive, computed } from 'vue'
 
 export const useChartStore = defineStore('chart', {
   state: () => ({

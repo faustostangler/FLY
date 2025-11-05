@@ -7,10 +7,10 @@ from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.nsd_dto import NsdDTO
-from infrastructure.models.base_model import BaseModel
+from infrastructure.models.base_model import BaseModel as ORMBaseModel
 
 
-class NSDModel(BaseModel):
+class NSDModel(ORMBaseModel):
     """ORM model for the tbl_nsd table."""
 
     __tablename__ = "tbl_nsd"

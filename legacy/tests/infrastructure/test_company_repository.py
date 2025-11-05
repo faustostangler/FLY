@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
 from domain.dto.company_data_dto import CompanyDataDTO
-from infrastructure.models.base_model import BaseModel
+from infrastructure.models.base_model import BaseModel as ORMBaseModel
 from infrastructure.repositories.repository_company import (
     SqlAlchemyRepositoryCompanyData,
 )
@@ -18,7 +18,7 @@ def test_save_all(SessionLocal, engine):
     # use shared engine
     repo.engine = engine
     repo.Session = SessionLocal
-    BaseModel.metadata.create_all(engine)
+    ORMBaseModel.metadata.create_all(engine)
 
     companies = [
         CompanyDataDTO.from_dict({"issuing_company": "AAA", "company_name": "Alpha"}),
@@ -40,8 +40,8 @@ def test_save_all_json_string(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    BaseModel.metadata.drop_all(engine)
-    BaseModel.metadata.create_all(engine)
+    ORMBaseModel.metadata.drop_all(engine)
+    ORMBaseModel.metadata.create_all(engine)
 
     json_codes = '[{"code": "AAA", "isin": "123"}]'
     companies = [
@@ -71,8 +71,8 @@ def test_save_all_upserts(SessionLocal, engine):
     )
     repo.engine = engine
     repo.Session = SessionLocal
-    BaseModel.metadata.drop_all(engine)
-    BaseModel.metadata.create_all(engine)
+    ORMBaseModel.metadata.drop_all(engine)
+    ORMBaseModel.metadata.create_all(engine)
 
     first = [
         CompanyDataDTO.from_dict(

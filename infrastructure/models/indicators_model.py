@@ -16,12 +16,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.indicators_dto import IndicatorsDTO
 from infrastructure.models.base_model import (
-    BaseModel,
+    ORMBaseModel,
     _YMDDate,
 )
 
 
-class IndicatorModel(BaseModel):
+class IndicatorModel(ORMBaseModel):
     __tablename__ = "tbl_indicators"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

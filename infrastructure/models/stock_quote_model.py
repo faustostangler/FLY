@@ -16,12 +16,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dtos.stock_quote_dto import StockQuoteDTO
 from infrastructure.models.base_model import (
-    BaseModel,
+    ORMBaseModel,
     _YMDDate,
 )
 
 
-class StockQuoteModel(BaseModel):
+class StockQuoteModel(ORMBaseModel):
     __tablename__ = "tbl_stock_quote"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

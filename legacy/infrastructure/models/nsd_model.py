@@ -8,10 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from domain.dto.nsd_dto import NsdDTO
 
-from .base_model import BaseModel
+from .base_model import BaseModel as ORMBaseModel
 
 
-class NSDModel(BaseModel):
+class NSDModel(ORMBaseModel):
     """ORM model for the tbl_nsd table."""
 
     __tablename__ = "tbl_nsd"

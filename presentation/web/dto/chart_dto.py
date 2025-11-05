@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel as ORMBaseModel
 from typing import Any, Dict, List
 
-class ChartDTO(BaseModel):
+class ChartDTO(ORMBaseModel):
     title: str
     layout: Dict[str, Any]
     data: List[Dict[str, Any]]

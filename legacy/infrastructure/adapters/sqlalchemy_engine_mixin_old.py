@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from domain.ports import LoggerPort
-from infrastructure.models import BaseModel
+from infrastructure.models import BaseModel as ORMBaseModel
 
 
 class SqlAlchemyEngineMixin:
@@ -46,6 +46,6 @@ class SqlAlchemyEngineMixin:
         )
 
         # Automatically create all tables defined in the SQLAlchemy models
-        BaseModel.metadata.create_all(self.engine)
+        ORMBaseModel.metadata.create_all(self.engine)
 
         # self.logger.log(f"Create Instance Base Class {self.__class__.__name__}", level="info")

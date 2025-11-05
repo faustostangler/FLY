@@ -6,12 +6,12 @@ from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.models.base_model import (
-    BaseModel,
+    ORMBaseModel,
     _YMDDate,  # mesmo formato de data
 )
 
 
-class BaseStatementModel(BaseModel):
+class BaseStatementModel(ORMBaseModel):
     """Base ORM model for raw and fetched statement rows."""
 
     __abstract__ = True
