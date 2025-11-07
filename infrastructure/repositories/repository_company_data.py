@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
+from sqlalchemy import and_, func, not_, or_, text
 from sqlalchemy.dialects.sqlite import insert
 
 from application.ports.config_port import ConfigPort
@@ -9,6 +10,14 @@ from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.value_objects.company_filters import (
+    CompanyFilterClause,
+    CompanyFilterCondition,
+    CompanyFilterQuery,
+    CompanyField,
+    ComparisonOperator,
+    LogicalOperator,
+)
 from infrastructure.models.company_data_model import CompanyDataModel
 from infrastructure.repositories.repository_base import RepositoryBase
 
@@ -192,3 +201,183 @@ class RepositoryCompanyData(
             if tickers:
                 out[r["company_name"]] = tickers
         return out
+
+    # ------------------------------------------------------------------
+    # Query builder support
+    # ------------------------------------------------------------------
+    def search(
+        self,
+        query: CompanyFilterQuery,
+        *,
+        uow: Uow,
+        limit: int | None = None,
+    ) -> list[CompanyDataDTO]:
+        """Run a structured search against the company catalog."""
+
+        model, _ = self.get_model_class()
+        session = uow.session
+
+        stmt = session.query(model)
+
+        boolean_expression = self._build_boolean_expression(query.clauses, model)
+        if boolean_expression is not None:
+            stmt = stmt.filter(boolean_expression)
+
+        stmt = stmt.order_by(model.company_name.asc())
+
+        if limit is None:
+            limit = 200
+        if limit:
+            stmt = stmt.limit(limit)
+
+        rows = stmt.all()
+        return [row.to_dto() for row in rows]
+
+    # Helpers -----------------------------------------------------------------
+    def _build_boolean_expression(
+        self, clauses: list[CompanyFilterClause], model
+    ) -> Optional[object]:
+        if not clauses:
+            return None
+
+        must_clauses: list[object] = []
+        should_clauses: list[object] = []
+        negative_clauses: list[object] = []
+
+        for clause in clauses:
+            if clause.is_group():
+                expression = self._build_boolean_expression(clause.group.clauses, model)
+            else:
+                expression = self._build_condition_expression(clause.condition, model)
+
+            if expression is None:
+                continue
+
+            if clause.logical == LogicalOperator.AND:
+                must_clauses.append(expression)
+            elif clause.logical == LogicalOperator.OR:
+                should_clauses.append(expression)
+            elif clause.logical == LogicalOperator.NOT:
+                negative_clauses.append(expression)
+
+        return self._combine_boolean_expressions(
+            must_clauses, should_clauses, negative_clauses
+        )
+
+    def _combine_boolean_expressions(
+        self,
+        must_clauses: list[object],
+        should_clauses: list[object],
+        negative_clauses: list[object],
+    ) -> Optional[object]:
+        expression: Optional[object] = None
+
+        if must_clauses:
+            expression = and_(*must_clauses)
+
+        if should_clauses:
+            should_expr = (
+                should_clauses[0]
+                if len(should_clauses) == 1
+                else or_(*should_clauses)
+            )
+            expression = (
+                should_expr
+                if expression is None
+                else and_(expression, should_expr)
+            )
+
+        if negative_clauses:
+            negatives = [not_(expr) for expr in negative_clauses]
+            negative_expr = (
+                negatives[0] if len(negatives) == 1 else and_(*negatives)
+            )
+            expression = (
+                negative_expr
+                if expression is None
+                else and_(expression, negative_expr)
+            )
+
+        return expression
+
+    def _build_condition_expression(
+        self, condition: CompanyFilterCondition, model
+    ) -> Optional[object]:
+        if condition is None:
+            return None
+
+        if not condition.values and condition.operator not in (
+            ComparisonOperator.CONTAINS,
+            ComparisonOperator.STARTS_WITH,
+        ):
+            return None
+
+        column = self._map_field(condition.field, model)
+        if column is None:
+            return None
+
+        values = [v for v in condition.values if v is not None]
+
+        if condition.field == CompanyField.TICKER:
+            return self._build_ticker_expression(condition, column)
+
+        if condition.operator == ComparisonOperator.CONTAINS:
+            return self._string_expression(column, values, mode="contains")
+
+        if condition.operator == ComparisonOperator.STARTS_WITH:
+            return self._string_expression(column, values, mode="starts_with")
+
+        if condition.operator == ComparisonOperator.EQUALS:
+            if len(values) == 1:
+                value = values[0]
+                return func.lower(column) == value.lower()
+            lowered = [v.lower() for v in values]
+            return func.lower(column).in_(lowered)
+
+        if condition.operator == ComparisonOperator.IN:
+            lowered = [v.lower() for v in values]
+            return func.lower(column).in_(lowered)
+
+        return None
+
+    def _string_expression(self, column, values: list[str], *, mode: str):
+        expressions = []
+        for value in values or [""]:
+            pattern = value.lower()
+            if mode == "contains":
+                like_pattern = f"%{pattern}%"
+            else:
+                like_pattern = f"{pattern}%"
+            expressions.append(func.lower(column).like(like_pattern))
+        return or_(*expressions) if expressions else None
+
+    def _build_ticker_expression(
+        self,
+        condition: CompanyFilterCondition,
+        column,
+    ) -> Optional[object]:
+        values = [v for v in condition.values if v]
+        if not values:
+            return None
+
+        normalized_column = func.replace(func.coalesce(column, ""), " ", "")
+        expressions = []
+        for value in values:
+            token = value.strip().upper()
+            like_pattern = f"%{token}%"
+            expressions.append(func.upper(normalized_column).like(like_pattern))
+        return or_(*expressions) if expressions else None
+
+    def _map_field(self, field: CompanyField, model):
+        mapping = {
+            CompanyField.SECTOR: model.industry_sector,
+            CompanyField.SUBSECTOR: model.industry_subsector,
+            CompanyField.SEGMENT: model.industry_segment,
+            CompanyField.COMPANY_NAME: model.company_name,
+            CompanyField.TRADING_NAME: model.trading_name,
+            CompanyField.TICKER: model.ticker_codes,
+            CompanyField.INSTITUTION_PREFERRED: model.institution_preferred,
+            CompanyField.INSTITUTION_COMMON: model.institution_common,
+            CompanyField.MARKET: model.market,
+        }
+        return mapping.get(field)

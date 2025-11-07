@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from presentation.backend.routers.charts import router as charts_router
+from presentation.backend.routers.companies import router as companies_router
 
 
 def create_app() -> FastAPI:
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
 
     # Camada de apresentação: apenas inclui routers finos
     app.include_router(charts_router)
+    app.include_router(companies_router)
 
     return app
 
