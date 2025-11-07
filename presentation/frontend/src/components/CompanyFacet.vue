@@ -2,7 +2,7 @@
   <section class="company-facet">
     <header class="company-facet__header">
       <h3>{{ label }}</h3>
-      <select v-model="localLogical" @change="emitChange" aria-label="Operador lógico">
+      <select v-model="localLogical" aria-label="Operador lógico">
         <option v-for="option in logicalOptions" :key="option" :value="option">
           {{ option }}
         </option>
@@ -25,6 +25,11 @@
         </label>
       </li>
     </ul>
+    <div v-if="options.length" class="company-facet__footer">
+      <button type="button" class="company-facet__commit" @click="commit">
+        Enviar para consulta
+      </button>
+    </div>
   </section>
 </template>
 
@@ -40,7 +45,7 @@ const props = defineProps({
   multiple: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['change'])
+const emit = defineEmits(['change', 'commit'])
 
 const logicalOptions = ['AND', 'OR', 'NOT']
 const localLogical = ref(props.logical || 'AND')
@@ -65,18 +70,6 @@ watch(
   }
 )
 
-watch(
-  () => props.options,
-  (options) => {
-    const normalized = new Set(options)
-    const filtered = selected.value.filter((value) => normalized.has(value))
-    if (filtered.length !== selected.value.length) {
-      selected.value = filtered
-      emitChange()
-    }
-  }
-)
-
 function isSelected(option) {
   return selected.value.includes(option)
 }
@@ -92,10 +85,10 @@ function toggle(option) {
   } else {
     selected.value = exists ? [] : [option]
   }
-  emitChange()
+  emitDraftChange()
 }
 
-function emitChange() {
+function emitDraftChange() {
   emit('change', {
     field: props.field,
     logical: localLogical.value,
@@ -103,7 +96,27 @@ function emitChange() {
   })
 }
 
-watch(localLogical, () => emitChange())
+function commit() {
+  emit('commit', {
+    field: props.field,
+    logical: localLogical.value,
+    values: [...selected.value],
+  })
+}
+
+watch(localLogical, () => emitDraftChange())
+
+watch(
+  () => props.options,
+  (options) => {
+    const normalized = new Set(options)
+    const filtered = selected.value.filter((value) => normalized.has(value))
+    if (filtered.length !== selected.value.length) {
+      selected.value = filtered
+      emitDraftChange()
+    }
+  }
+)
 </script>
 
 <style scoped>
@@ -156,5 +169,27 @@ watch(localLogical, () => emitChange())
 .company-facet__empty {
   font-size: 0.85rem;
   color: #64748b;
+}
+
+.company-facet__footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.company-facet__commit {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--vt-c-primary, #2563eb);
+  background-color: var(--vt-c-primary, #2563eb);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.company-facet__commit:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
 }
 </style>

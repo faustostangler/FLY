@@ -544,7 +544,6 @@ export const useCompanyStore = defineStore('companyStore', {
 
       this.filterQuery = { clauses: filteredClauses }
       this.queryText = this.serializeQuery(this.filterQuery)
-      this.loadCompanies()
     },
 
     setQueryText(text) {

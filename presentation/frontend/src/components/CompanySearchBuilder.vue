@@ -6,7 +6,6 @@
         <button type="button" class="ghost" @click="clearFilters">
           Limpar filtros
         </button>
-        <button type="button" @click="reload">Buscar</button>
       </div>
     </header>
 
@@ -19,7 +18,7 @@
         placeholder="AND sector IN (Energia, Financeiro)"
       ></textarea>
       <div class="company-search__query-actions">
-        <button type="button" @click="applyQuery">Aplicar consulta</button>
+        <button type="button" @click="applyQuery">Pesquisar</button>
         <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
       </div>
     </div>
@@ -31,10 +30,11 @@
         :field="facet.field"
         :label="facet.label"
         :options="facetOptions(facet.field)"
-        :logical="clauseLogical(facet.field)"
-        :values="clauseValues(facet.field)"
+        :logical="facetLogical(facet.field)"
+        :values="facetValues(facet.field)"
         :multiple="facet.multiple !== false"
-        @change="onFacetChange"
+        @change="onFacetDraftChange"
+        @commit="onFacetCommit"
       />
     </div>
 
@@ -91,6 +91,7 @@ const store = useCompanyStore()
 
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
+const draftFacets = ref({})
 
 const queryTextModel = computed({
   get: () => store.queryText,
@@ -139,16 +140,45 @@ function facetOptions(field) {
   return facets.value[field] || []
 }
 
-function clauseLogical(field) {
+function facetLogical(field) {
+  const draft = draftFacets.value[field]
+  if (draft && draft.logical) {
+    return draft.logical
+  }
   return store.clauseByField[field]?.logical || 'AND'
 }
 
-function clauseValues(field) {
+function facetValues(field) {
+  const draft = draftFacets.value[field]
+  if (draft && Array.isArray(draft.values)) {
+    return draft.values
+  }
   return store.clauseByField[field]?.condition?.values || []
 }
 
-function onFacetChange({ field, logical, values }) {
-  store.setFacetSelection(field, logical, values)
+function onFacetDraftChange({ field, logical, values }) {
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: logical || 'AND',
+      values: Array.isArray(values) ? [...values] : [],
+    },
+  }
+}
+
+function onFacetCommit({ field, logical, values }) {
+  const finalLogical = logical || 'AND'
+  const finalValues = Array.isArray(values) ? [...values] : []
+
+  store.setFacetSelection(field, finalLogical, finalValues)
+
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: finalLogical,
+      values: [],
+    },
+  }
 }
 
 function applyQuery() {
@@ -163,6 +193,7 @@ function applyQuery() {
 function clearFilters() {
   store.resetFilters()
   parseError.value = ''
+  draftFacets.value = {}
 }
 
 function reload() {
