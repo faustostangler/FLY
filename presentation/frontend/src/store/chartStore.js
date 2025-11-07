@@ -4,7 +4,7 @@ import { fetchChart } from '../services/apiService'
 export const useChartStore = defineStore('chart', {
   state: () => ({
     params: {
-      type: 'test',
+      type: 'PETR4',
     },
     chart: null,
     isLoading: false,
@@ -13,7 +13,7 @@ export const useChartStore = defineStore('chart', {
 
   actions: {
     setType(type) {
-      this.params.type = type || 'test'
+      this.params.type = type || 'PETR4'
     },
 
     async loadChart() {
@@ -21,7 +21,6 @@ export const useChartStore = defineStore('chart', {
       this.error = null
       try {
         this.chart = await fetchChart(this.params.type)
-        console.log('Chart DTO recebido:', this.chart)   // <--- ADICIONE ISTO
       } catch (err) {
         console.error(err)
         this.error = 'Falha ao carregar gráfico'
