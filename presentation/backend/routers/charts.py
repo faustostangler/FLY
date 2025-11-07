@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from application.usecases.get_stock_quote_series import GetStockQuoteSeriesUseCase
-from presentation.backend.dependencies.stock_quote_dependencies import 
+from presentation.backend.dependencies.stock_quote_dependencies import get_stock_quote_usecase
 from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
 
 router = APIRouter(

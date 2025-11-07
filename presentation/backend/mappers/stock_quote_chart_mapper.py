@@ -1,7 +1,7 @@
 from typing import List
 
 from domain.dtos.stock_quote_dto import StockQuoteDTO
-from presentation.web.dto.chart_dto import ChartDTO
+from presentation.backend.dto.chart_dto import ChartDTO
 
 
 def stock_quotes_to_price_chart(quotes: List[StockQuoteDTO]) -> ChartDTO:
