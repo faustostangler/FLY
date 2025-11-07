@@ -61,7 +61,11 @@
         <li v-for="item in selectedSummaries" :key="item.key">
           <h4>{{ item.companyName }}</h4>
           <div class="company-search__tags">
-            <span class="tag">{{ item.ticker }}</span>
+            <span class="tag">
+              <a v-bind:href="`http://localhost:5173/?type=${item.ticker}`">
+                {{ item.ticker }}
+              </a>
+            </span>
             <span v-if="item.market" class="tag tag--outline">{{ item.market }}</span>
           </div>
           <p v-if="item.tradingName" class="muted">{{ item.tradingName }}</p>

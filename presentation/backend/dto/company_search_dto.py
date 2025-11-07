@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class CompanyFilterConditionDTO(BaseModel):
@@ -16,9 +16,9 @@ class CompanyFilterClauseDTO(BaseModel):
     condition: Optional[CompanyFilterConditionDTO] = None
     group: Optional["CompanyFilterQueryDTO"] = None
 
-    @root_validator
-    def check_structure(cls, values):  # noqa: D417
-        condition, group = values.get("condition"), values.get("group")
+    @model_validator(mode="after")
+    def check_structure(self):
+        condition, group = self.condition, self.group
         if condition is None and group is None:
             raise ValueError(
                 "Each clause must provide either a condition or a nested group"
@@ -27,7 +27,7 @@ class CompanyFilterClauseDTO(BaseModel):
             raise ValueError(
                 "A clause cannot define both a condition and a nested group"
             )
-        return values
+        return self
 
 
 class CompanyFilterQueryDTO(BaseModel):

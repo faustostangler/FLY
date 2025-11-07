@@ -160,7 +160,7 @@ class RepositoryCompanyData(
         self, uow: Uow, company_names: list[str] | None = None
     ) -> dict[str, list[str]]:
 
-        base_sql = """
+        base_sql = r"""
         WITH tickers AS (
           SELECT c.company_name AS company_name,
                  UPPER(value)   AS ticker

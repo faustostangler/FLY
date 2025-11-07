@@ -5,7 +5,7 @@ from dataclasses import asdict
 from dataclasses import asdict
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 
 from application.usecases.search_companies import SearchCompaniesUseCase
 from domain.value_objects.company_filters import (
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/companies", tags=["companies"])
 
 @router.post("/search", response_model=CompanySearchResponseDTO)
 async def search_companies(
-    filters: CompanyFilterQueryDTO | None = None,
+    filters: CompanyFilterQueryDTO = Body(default_factory=CompanyFilterQueryDTO),
     use_case: SearchCompaniesUseCase = Depends(get_company_search_usecase),
 ) -> CompanySearchResponseDTO:
     query = _map_to_domain(filters)
