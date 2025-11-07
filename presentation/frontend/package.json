@@ -12,6 +12,7 @@
     "axios": "^1.13.1",
     "pinia": "^3.0.3",
     "plotly.js": "^3.2.0",
+    "plotly.js-dist-min": "^3.2.0",
     "uuid": "^13.0.0",
     "vue": "^3.5.22",
     "vue-router": "^4.6.3",

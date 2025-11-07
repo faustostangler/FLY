@@ -34,13 +34,13 @@ header {
   flex-direction: column;     /* um box embaixo do outro */
   gap: 20px;                  /* espaçamento entre boxes */
   padding: 40px;
-  background-color: rgba(222, 255, 252, 0.423);
+  background-color: rgba(45, 180, 169, 0.423);
 }
 
 .component-box {
-  border: 10px solid rgba(87, 3, 245, 0.25);
+  border: 10px solid rgba(0, 217, 255, 0.25);
   border-radius: 12px;
-  background-color: white;
+  background-color: rgb(255, 255, 255);
   padding: 20px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }

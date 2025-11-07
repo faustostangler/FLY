@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { VuePlotly } from 'vue3-plotly'
 
 const app = createApp(App)
 
@@ -11,6 +12,10 @@ app.use(createPinia())
 
 // registra o roteador
 app.use(router)
+
+// Ploply component
+app.component('VuePlotly', VuePlotly)
+
 
 // monta na div com id="app" do index.html
 app.mount('#app')

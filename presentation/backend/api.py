@@ -1,7 +1,6 @@
 # presentation/backend/api.py
-from __future__ import annotations
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from presentation.backend.routers.charts import router as charts_router
 
@@ -10,6 +9,15 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="FLY Web API",
         version="0.1.0",
+    )
+
+    # CORS para permitir o frontend do Vite (http://localhost:5173)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Camada de apresentação: apenas inclui routers finos

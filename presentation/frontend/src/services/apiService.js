@@ -5,6 +5,6 @@ const api = axios.create({
 })
 
 export async function fetchChart(type) {
-  const res = await api.get(`/api/charts/${encodeURIComponent(type)}`)
+  const res = await api.get(`/charts/${encodeURIComponent(type)}`)
   return res.data
 }
