@@ -5,6 +5,7 @@ from typing import Protocol, runtime_checkable
 from application.ports.uow_port import Uow
 from domain.dtos.company_data_dto import CompanyDataDTO
 from domain.ports.repository_base_port import RepositoryBasePort
+from domain.value_objects.company_filters import CompanyFilterQuery
 
 
 @runtime_checkable
@@ -39,3 +40,12 @@ class RepositoryCompanyDataPort(RepositoryBasePort[CompanyDataDTO, int], Protoco
         self, uow: Uow, company_names: list[str] | None = None
     ) -> dict[str, list[str]]:
         ...
+
+    def search(
+        self,
+        query: CompanyFilterQuery,
+        *,
+        uow: Uow,
+        limit: int | None = None,
+    ) -> list[CompanyDataDTO]:
+        """Return companies matching the structured filter query."""
