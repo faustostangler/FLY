@@ -8,10 +8,4 @@
 
 <script setup>
 import ChartSelector from '../components/ChartSelector.vue'
-import PlotlyViewer from '../components/PlotlyViewer.vue'
-import { computed } from 'vue'
-import { useChartStore } from '../store/chartStore'
-
-const store = useChartStore()
-const title = computed(() => store.chart?.title || 'Charts FLY')
 </script>

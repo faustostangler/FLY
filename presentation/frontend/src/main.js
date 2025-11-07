@@ -1,11 +1,16 @@
+// src/main.js
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-import { VuePlotly } from 'vue3-plotly'   // <- AQUI: import nomeado
 
 const app = createApp(App)
+
+// registra o gerenciador de estado global
 app.use(createPinia())
+
+// registra o roteador
 app.use(router)
-app.component('VuePlotly', VuePlotly)    // <- registra o componente
+
+// monta na div com id="app" do index.html
 app.mount('#app')

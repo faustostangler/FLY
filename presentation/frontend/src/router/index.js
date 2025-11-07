@@ -1,5 +1,7 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import ChartView from '../views/ChartView.vue'
 
 const routes = [
   {
@@ -7,10 +9,15 @@ const routes = [
     name: 'home',
     component: HomeView,
   },
+  {
+    path: '/chart',
+    name: 'chart',
+    component: ChartView,
+  },
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes,
 })
 
