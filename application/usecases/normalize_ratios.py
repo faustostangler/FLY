@@ -61,11 +61,14 @@ class NormalizeUseCase:
         self.repository_stock_quote = repository_stock_quote
         self.repository_indicators = repository_indicators
         self.repository_statements_fetched = repository_statements_fetched
+        fly_settings = getattr(self.config, "fly_settings", None)
+        logical_name = getattr(fly_settings, "app_name", "fly")
+        version = getattr(fly_settings, "version", "0")
         self.cache_ratios_service = CacheRatiosService(
-                cache_port=cache_ratios,
-                logical_name=self.config.fly_settings.app_name,
-                version=self.config.fly_settings.version
-                )
+            cache_port=cache_ratios,
+            logical_name=logical_name,
+            version=version,
+        )
         self._ratios_code_hash = CacheRatiosService.build_code_hash([self._create_ratios, intel,])
 
         self.uow_factory = uow_factory
@@ -77,7 +80,7 @@ class NormalizeUseCase:
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run(companies=kwds.get("companies"))
 
-    def run(self, companies:pd.DataFrame) -> SyncResultsDTO:
+    def run(self, companies: pd.DataFrame | None = None) -> SyncResultsDTO:
         """Run the full synchronization pipeline.
 
         Steps:
@@ -89,6 +92,13 @@ class NormalizeUseCase:
             SyncCompanyDataResultDTO: Summary of the synchronization process,
             including counts and network usage metrics.
         """
+        if companies is None:
+            with self.uow_factory() as preload_uow:
+                dtos = self.companies_eligible_port.list(uow=preload_uow)
+            if not dtos:
+                return SyncResultsDTO(items=[], metrics=0)
+            companies = pd.DataFrame([dto.to_dict() for dto in dtos])
+
         metrics = 0
         cache_results: List[CacheRatiosResultDTO] = []
         start_time = time.perf_counter()
@@ -186,20 +196,19 @@ class NormalizeUseCase:
                     metrics += int(item.get("metrics", 0))
 
                 records = cast(list[dict[str, Any]], companies.to_dict(orient="records"))
-                tasks = (
-                    (index, {"company_dto": CompanyEligibleModel(**record).to_dto()},)
-                    for index, record in enumerate(records)
-                )
-
-                self.worker_pool(
-                    logger=self.logger,
-                    tasks=tasks,
-                    processor=processor,
-                    on_result=on_result,
-                    post_callback=None,
-                    max_workers=self.max_workers,
-                    total_size=total_companies,
-                )
+                dto_records = [
+                    CompanyEligibleModel(**record).to_dto()
+                    for record in records
+                ]
+                for index, dto in enumerate(dto_records):
+                    task = WorkerTaskDTO(
+                        index=index,
+                        data={"company_dto": dto},
+                        worker_id="sequential",
+                        total_size=total_companies,
+                    )
+                    result = processor(task)
+                    on_result(result)
 
         except Exception as exc:  # noqa: BLE001
             self.logger.log(f"NormalizeUseCase failed: {exc}", level="error")
@@ -489,12 +498,18 @@ class NormalizeUseCase:
             try:
                 idx = pd.to_datetime(idx, errors='coerce')
                 idx = idx[~idx.isna()]
-                if len(idx) < 2:
+                if len(idx) < 3:
                     return 'unknown'
-            except Exception as e:
+            except Exception:
                 return 'unknown'
 
-        inferred_freq = pd.infer_freq(idx)
+        if len(idx) < 3:
+            return 'unknown'
+
+        try:
+            inferred_freq = pd.infer_freq(idx)
+        except ValueError:
+            inferred_freq = None
         freq_map = {
             'D': 'day', 'B': 'business days',  # Diária (calendário ou business)
             'ME': 'month', 'MS': 'month',  # Mensal (end ou start)
@@ -549,7 +564,11 @@ class NormalizeUseCase:
             df_data = df_data.dropna(subset=[df_data.index.name])
 
         granularity_order = {'B': 1, 'D': 2, 'MS': 3,'ME': 4, 'QS': 5,'QE': 6, 'YS': 7,'YE': 8} # granularidade: menor significa mais fino, mais diário e detalhado
-        granularity_anchor = pd.infer_freq(df_anchor_calendar.index) or 'B'
+        try:
+            inferred_anchor = pd.infer_freq(df_anchor_calendar.index)
+        except ValueError:
+            inferred_anchor = None
+        granularity_anchor = inferred_anchor or 'B'
         granularity_data = self._infer_granularity(df_data.index)
         sampling_anchor = granularity_order[granularity_anchor]  # Default to 'business day'
         sampling_data = granularity_order.get(granularity_data, 1)  # Default to 'business day'

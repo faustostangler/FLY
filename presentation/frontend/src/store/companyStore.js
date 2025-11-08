@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { COMPANY_FILTER_FIELDS } from '../config/companyFilterFields'
 import { searchCompanies } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
@@ -29,29 +30,35 @@ const OPERATOR_ALIASES = {
   PREFIX: 'STARTS_WITH',
 }
 
-const FIELD_ALIASES = {
-  sector: 'sector',
-  setor: 'sector',
-  subsector: 'subsector',
-  subsetor: 'subsector',
-  segment: 'segment',
-  segmento: 'segment',
-  company_name: 'company_name',
-  companhia: 'company_name',
-  company: 'company_name',
-  trading_name: 'trading_name',
-  trading: 'trading_name',
-  nome_pregao: 'trading_name',
-  ticker: 'ticker',
-  codigo: 'ticker',
-  code: 'ticker',
-  institution_preferred: 'institution_preferred',
-  instituicao_preferencial: 'institution_preferred',
-  institution_common: 'institution_common',
-  instituicao_ordinaria: 'institution_common',
-  market: 'market',
-  mercado: 'market',
-}
+const FIELD_ALIASES = COMPANY_FILTER_FIELDS.reduce(
+  (aliases, fieldConfig) => {
+    aliases[fieldConfig.field] = fieldConfig.field
+    return aliases
+  },
+  {
+    sector: 'industry_sector',
+    setor: 'industry_sector',
+    subsector: 'industry_subsector',
+    subsetor: 'industry_subsector',
+    segment: 'industry_segment',
+    segmento: 'industry_segment',
+    company: 'company_name',
+    companhia: 'company_name',
+    trading: 'trading_name',
+    nome_pregao: 'trading_name',
+    ticker: 'code',
+    codigo: 'code',
+    institution_preferential: 'institution_preferred',
+    instituicao_preferencial: 'institution_preferred',
+    instituicao_preferencia: 'institution_preferred',
+    institution_preferred: 'institution_preferred',
+    institution_common: 'institution_common',
+    instituicao_ordinaria: 'institution_common',
+    cvm: 'cvm_code',
+    cvm_code: 'cvm_code',
+    mercado: 'market',
+  }
+)
 
 class ParseError extends Error {
   constructor(message) {
@@ -69,7 +76,7 @@ function normalizeLogical(value) {
 function normalizeOperator(value) {
   if (!value) return DEFAULT_OPERATOR
   const key = String(value).toUpperCase()
-  return OPERATOR_ALIASES[key] || null
+  return OPERATOR_ALIASES[key] || DEFAULT_OPERATOR
 }
 
 function normalizeField(value) {

@@ -27,7 +27,7 @@
         id="queryText"
         v-model="queryTextModel"
         rows="2"
-        placeholder="AND sector IN (Energia, Financeiro)"
+        placeholder="AND industry_sector IN (Energia, Financeiro)"
       ></textarea>
       <div class="company-search__query-actions">
         <button type="button" class="ghost" @click="clearFilters">Limpar busca</button>

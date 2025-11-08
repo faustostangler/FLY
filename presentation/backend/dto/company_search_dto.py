@@ -41,10 +41,10 @@ class CompanySearchResultDTO(BaseModel):
     company_name: str
     trading_name: Optional[str] = None
     tickers: List[str] = Field(default_factory=list)
-    sector: Optional[str] = None
-    subsector: Optional[str] = None
-    segment: Optional[str] = None
     market: Optional[str] = None
+    industry_sector: Optional[str] = None
+    industry_subsector: Optional[str] = None
+    industry_segment: Optional[str] = None
     institution_common: Optional[str] = None
     institution_preferred: Optional[str] = None
 
