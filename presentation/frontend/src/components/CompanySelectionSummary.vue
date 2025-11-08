@@ -34,30 +34,7 @@ import { useCompanyStore } from '../store/companyStore'
 
 const store = useCompanyStore()
 
-const selectedSummaries = computed(() => {
-  const index = new Map()
-  for (const company of store.companies || []) {
-    const companyName = company.company_name || ''
-    for (const ticker of company.tickers || []) {
-      if (!ticker) continue
-      const key = `${companyName}::${ticker}`
-      index.set(key, {
-        key,
-        companyName,
-        ticker,
-        tradingName: company.trading_name || '',
-        sector: company.sector || '',
-        subsector: company.subsector || '',
-        segment: company.segment || '',
-        market: company.market || '',
-      })
-    }
-  }
-
-  return (store.selectedItems || [])
-    .map((value) => index.get(value))
-    .filter(Boolean)
-})
+const selectedSummaries = computed(() => store.selectedSummaries || [])
 </script>
 
 <style scoped>
