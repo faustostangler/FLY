@@ -3,7 +3,7 @@
     <label :for="selectId">Seleção de companhias e tickers</label>
     <select
       :id="selectId"
-      <!-- multiple -->
+      multiple
       :size="computedSize"
       :disabled="disabled || !groupedOptions.length"
       v-model="localValue"
