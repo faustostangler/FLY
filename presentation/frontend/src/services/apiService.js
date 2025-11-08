@@ -6,7 +6,10 @@ const api = axios.create({
 
 export async function fetchChart(params) {
   const payload = params || {}
-  const type = String(payload.type || '').trim() || 'PETR4'
+  const type = String(payload.type || '').trim()
+  if (!type) {
+    throw new Error('Ticker inválido para carregar o gráfico')
+  }
   const selection = Array.isArray(payload.selection) ? payload.selection : []
 
   const query = {}

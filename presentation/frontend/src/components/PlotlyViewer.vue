@@ -22,13 +22,13 @@
     </div>
 
     <p v-else>
-      Nenhum gráfico carregado.
+      Selecione uma companhia para visualizar o gráfico.
     </p>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useChartStore } from '../store/chartStore'
 
 const store = useChartStore()
@@ -36,10 +36,4 @@ const store = useChartStore()
 const chart = computed(() => store.chart)
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
-
-onMounted(() => {
-  if (!store.chart) {
-    store.loadChart()
-  }
-})
 </script>

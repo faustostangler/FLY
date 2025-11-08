@@ -39,6 +39,7 @@
 import { computed } from 'vue'
 import { useCompanyStore } from '../store/companyStore'
 import { useChartStore } from '../store/chartStore'
+import { extractTicker } from '../utils/tickers'
 
 const companyStore = useCompanyStore()
 const chartStore = useChartStore()
@@ -80,9 +81,11 @@ async function onTickerClick(item) {
   }
 
   const selection = [item.value]
+  const ticker = extractTicker(item.value)
 
   companyStore.setSelectedItems(selection)
-  chartStore.setSelection(selection)
+  chartStore.setType(ticker)
+  chartStore.setSelection([])
   await chartStore.loadChart()
 }
 </script>
