@@ -11,7 +11,13 @@
         <h4>{{ item.companyName }}</h4>
 
         <div class="company-search__tags">
-          <span class="tag">{{ item.ticker }}</span>
+          <button
+            type="button"
+            class="tag tag--clickable"
+            @click="onTickerClick(item)"
+          >
+            {{ item.ticker }}
+          </button>
           <span v-if="item.market" class="tag tag--outline">{{ item.market }}</span>
         </div>
 
@@ -31,14 +37,19 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
 
-const store = useCompanyStore()
+const companyStore = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
 
 const selectedSummaries = computed(() => {
   const index = new Map()
 
-  for (const company of store.companies || []) {
+  for (const company of companyStore.companies || []) {
     const companyName = company.company_name || ''
 
     for (const ticker of company.tickers || []) {
@@ -59,10 +70,48 @@ const selectedSummaries = computed(() => {
     }
   }
 
-  return (store.selectedItems || [])
+  return (companyStore.selectedItems || [])
     .map((value) => index.get(value))
     .filter(Boolean)
 })
+
+async function onTickerClick(item) {
+  if (!item || !item.key) {
+    return
+  }
+
+  const selection = [item.key]
+  const currentSelection = companyStore.selectedItems || []
+  const alreadySelected =
+    currentSelection.length === 1 && currentSelection[0] === item.key
+
+  if (!alreadySelected) {
+    companyStore.setSelectedItems(selection)
+  }
+
+  const nextQuery = {
+    ...route.query,
+    selection: item.key,
+  }
+
+  try {
+    if (route.query.selection !== item.key) {
+      await router.replace({ query: nextQuery })
+    }
+  } catch (error) {
+    console.error(error)
+  }
+
+  const previousSelection = chartStore.params.selection || []
+  const chartNeedsUpdate =
+    previousSelection.length !== 1 || previousSelection[0] !== item.key
+
+  chartStore.setSelection(selection)
+
+  if (chartNeedsUpdate || !chartStore.chart) {
+    await chartStore.loadChart()
+  }
+}
 </script>
 
 <style scoped>
@@ -106,6 +155,16 @@ const selectedSummaries = computed(() => {
   background: transparent;
   color: #0f172a;
   border: 1px solid #0f172a;
+}
+
+.tag--clickable {
+  cursor: pointer;
+  border: none;
+}
+
+.tag--clickable:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
 }
 
 .muted {

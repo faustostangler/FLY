@@ -4,8 +4,19 @@ const api = axios.create({
   baseURL: 'http://localhost:8000',
 })
 
-export async function fetchChart(type) {
-  const res = await api.get(`/charts/${encodeURIComponent(type)}`)
+export async function fetchChart(params) {
+  const payload = params || {}
+  const type = String(payload.type || '').trim() || 'PETR4'
+  const selection = Array.isArray(payload.selection) ? payload.selection : []
+
+  const query = {}
+  if (selection.length) {
+    query.selection = selection.join(',')
+  }
+
+  const res = await api.get(`/charts/${encodeURIComponent(type)}`, {
+    params: query,
+  })
   return res.data
 }
 

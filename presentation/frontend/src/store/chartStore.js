@@ -1,10 +1,32 @@
 import { defineStore } from 'pinia'
 import { fetchChart } from '../services/apiService'
 
+function normalizeType(value) {
+  const normalized = String(value || '').trim()
+  return normalized || 'PETR4'
+}
+
+function normalizeSelection(values) {
+  if (!Array.isArray(values)) {
+    return []
+  }
+  return values
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length)
+}
+
+function areSelectionsEqual(a = [], b = []) {
+  if (a.length !== b.length) {
+    return false
+  }
+  return a.every((value, index) => value === b[index])
+}
+
 export const useChartStore = defineStore('chart', {
   state: () => ({
     params: {
       type: 'PETR4',
+      selection: [],
     },
     chart: null,
     isLoading: false,
@@ -13,17 +35,28 @@ export const useChartStore = defineStore('chart', {
 
   actions: {
     setType(type) {
-      this.params.type = type || 'PETR4'
+      this.params.type = normalizeType(type)
+    },
+
+    setSelection(selection) {
+      const normalized = normalizeSelection(selection)
+      if (areSelectionsEqual(normalized, this.params.selection)) {
+        return
+      }
+      this.params = {
+        ...this.params,
+        selection: normalized,
+      }
     },
 
     async loadChart() {
       this.isLoading = true
       this.error = null
       try {
-        this.chart = await fetchChart(this.params.type)
+        this.chart = await fetchChart({ ...this.params })
       } catch (err) {
         console.error(err)
-        this.error = 'Falha ao carregar gráfico'
+        this.error = err?.message || 'Falha ao carregar gráfico'
       } finally {
         this.isLoading = false
       }

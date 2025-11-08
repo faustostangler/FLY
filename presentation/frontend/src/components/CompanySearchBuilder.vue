@@ -62,13 +62,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
 import CompanyFacet from './CompanyFacet.vue'
 import CompanyResultSelect from './CompanyResultSelect.vue'
 
 const store = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
+let isSyncingSelection = false
 
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
@@ -90,8 +96,39 @@ const error = computed(() => store.error)
 
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
-  set: (values) => store.setSelectedItems(values),
+  set: (values) => {
+    onSelectionChange(values)
+  },
 })
+
+function normalizeSelection(values) {
+  if (!Array.isArray(values)) {
+    return []
+  }
+  return values
+    .map((value) => String(value || '').trim())
+    .filter((value) => value.length)
+}
+
+function parseSelectionParam(rawValue) {
+  if (!rawValue) {
+    return []
+  }
+
+  const values = Array.isArray(rawValue) ? rawValue : [rawValue]
+
+  return values
+    .flatMap((entry) => String(entry || '').split(','))
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length)
+}
+
+function selectionsAreEqual(a = [], b = []) {
+  if (a.length !== b.length) {
+    return false
+  }
+  return a.every((value, index) => value === b[index])
+}
 
 function facetOptions(field) {
   return facets.value[field] || []
@@ -156,6 +193,107 @@ function clearFilters() {
 function reload() {
   store.loadCompanies()
 }
+
+async function onSelectionChange(values) {
+  if (isSyncingSelection) {
+    return
+  }
+
+  isSyncingSelection = true
+
+  try {
+    const normalized = normalizeSelection(values)
+    const current = store.selectedItems || []
+    const chartSelection = chartStore.params.selection || []
+    const querySelection = parseSelectionParam(route.query.selection)
+
+    if (!selectionsAreEqual(normalized, current)) {
+      store.setSelectedItems(normalized)
+    }
+
+    const selectionParam = normalized.join(',')
+    const nextQuery = {
+      ...route.query,
+      selection: selectionParam || undefined,
+    }
+
+    if (!selectionsAreEqual(normalized, querySelection)) {
+      try {
+        await router.replace({ query: nextQuery })
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    const selectionChanged = !selectionsAreEqual(normalized, chartSelection)
+    chartStore.setSelection(normalized)
+
+    if (selectionChanged || !chartStore.chart) {
+      await chartStore.loadChart()
+    }
+  } finally {
+    isSyncingSelection = false
+  }
+}
+
+onMounted(async () => {
+  const initialSelection = parseSelectionParam(route.query.selection)
+  const current = store.selectedItems || []
+  const chartSelection = chartStore.params.selection || []
+
+  if (!selectionsAreEqual(initialSelection, current)) {
+    store.setSelectedItems(initialSelection)
+  }
+
+  const selectionChanged = !selectionsAreEqual(initialSelection, chartSelection)
+  if (selectionChanged) {
+    chartStore.setSelection(initialSelection)
+    await chartStore.loadChart()
+  }
+})
+
+watch(
+  () => store.selectedItems,
+  (values) => {
+    if (isSyncingSelection) {
+      return
+    }
+
+    const normalized = normalizeSelection(values)
+    const querySelection = parseSelectionParam(route.query.selection)
+    const chartSelection = chartStore.params.selection || []
+
+    const needsQuerySync = !selectionsAreEqual(normalized, querySelection)
+    const needsChartSync = !selectionsAreEqual(normalized, chartSelection)
+
+    if (needsQuerySync || needsChartSync) {
+      onSelectionChange(normalized)
+    }
+  },
+  { deep: true },
+)
+
+watch(
+  () => route.query.selection,
+  async (value) => {
+    if (isSyncingSelection) {
+      return
+    }
+
+    const parsed = parseSelectionParam(value)
+    const companySelection = store.selectedItems || []
+    const chartSelection = chartStore.params.selection || []
+
+    if (!selectionsAreEqual(parsed, companySelection)) {
+      store.setSelectedItems(parsed)
+    }
+
+    if (!selectionsAreEqual(parsed, chartSelection)) {
+      chartStore.setSelection(parsed)
+      await chartStore.loadChart()
+    }
+  },
+)
 
 onMounted(() => {
   if (!store.companies.length) {
