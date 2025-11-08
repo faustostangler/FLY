@@ -61,11 +61,14 @@
         <li v-for="item in selectedSummaries" :key="item.key">
           <h4>{{ item.companyName }}</h4>
           <div class="company-search__tags">
-            <span class="tag">
-              <a v-bind:href="`http://localhost:5173/?type=${item.ticker}`">
-                {{ item.ticker }}
-              </a>
-            </span>
+            <button
+              type="button"
+              class="tag"
+              :class="{ 'tag--active': isActiveTicker(item.ticker) }"
+              @click="selectTicker(item.ticker)"
+            >
+              {{ item.ticker }}
+            </button>
             <span v-if="item.market" class="tag tag--outline">{{ item.market }}</span>
           </div>
           <p v-if="item.tradingName" class="muted">{{ item.tradingName }}</p>
@@ -82,12 +85,17 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
 import CompanyFacet from './CompanyFacet.vue'
 import CompanyResultSelect from './CompanyResultSelect.vue'
 
 const store = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
 
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
@@ -105,6 +113,7 @@ const total = computed(() => store.total)
 const facets = computed(() => store.facets || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
+const selectedTicker = computed(() => store.selectedTicker)
 
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
@@ -163,10 +172,33 @@ function applyQuery() {
 function clearFilters() {
   store.resetFilters()
   parseError.value = ''
+  const nextQuery = { ...route.query }
+  delete nextQuery.type
+  router.replace({ query: nextQuery })
 }
 
 function reload() {
   store.loadCompanies()
+}
+
+function selectTicker(ticker) {
+  if (!ticker) {
+    return
+  }
+  const value = String(ticker)
+  if (store.selectedTicker !== value) {
+    store.setSelectedTicker(value)
+  }
+  chartStore.loadChartByTicker(value)
+
+  const currentType = typeof route.query.type === 'string' ? route.query.type : undefined
+  if (currentType !== value) {
+    router.replace({ query: { ...route.query, type: value } })
+  }
+}
+
+function isActiveTicker(ticker) {
+  return selectedTicker.value === ticker
 }
 
 onMounted(() => {
@@ -287,17 +319,35 @@ onMounted(() => {
 }
 
 .tag {
+  display: inline-flex;
+  align-items: center;
   background: #0f172a;
   color: #fff;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.8rem;
+  gap: 0.25rem;
+}
+
+button.tag {
+  border: none;
+  cursor: pointer;
+}
+
+button.tag:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
 }
 
 .tag--outline {
   background: transparent;
   color: #0f172a;
   border: 1px solid #0f172a;
+}
+
+.tag--active {
+  background: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .muted {

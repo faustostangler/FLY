@@ -28,18 +28,77 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useChartStore } from '../store/chartStore'
+import { useCompanyStore } from '../store/companyStore'
 
-const store = useChartStore()
+const chartStore = useChartStore()
+const companyStore = useCompanyStore()
+const route = useRoute()
+const router = useRouter()
 
-const chart = computed(() => store.chart)
-const isLoading = computed(() => store.isLoading)
-const error = computed(() => store.error)
+const chart = computed(() => chartStore.chart)
+const isLoading = computed(() => chartStore.isLoading)
+const error = computed(() => chartStore.error)
+const selectedTicker = computed(() => companyStore.selectedTicker)
+
+function ensureTickerQuery(ticker) {
+  if (!ticker) return
+  const currentType = typeof route.query.type === 'string' ? route.query.type : undefined
+  if (currentType === ticker) {
+    return
+  }
+  router.replace({ query: { ...route.query, type: ticker } })
+}
+
+watch(
+  selectedTicker,
+  (ticker) => {
+    if (!ticker) {
+      return
+    }
+    ensureTickerQuery(ticker)
+    chartStore.loadChartByTicker(ticker)
+  },
+)
+
+watch(
+  () => route.query.type,
+  (value) => {
+    const ticker = typeof value === 'string' ? value : ''
+    if (ticker && ticker !== selectedTicker.value) {
+      companyStore.setSelectedTicker(ticker)
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
-  if (!store.chart) {
-    store.loadChart()
+  const queryTicker = typeof route.query.type === 'string' ? route.query.type : ''
+  if (queryTicker) {
+    if (queryTicker !== selectedTicker.value) {
+      companyStore.setSelectedTicker(queryTicker)
+    } else if (!chartStore.chart) {
+      chartStore.loadChartByTicker(queryTicker)
+    }
+    return
   }
+
+  const fallbackTicker =
+    selectedTicker.value ||
+    chartStore.params.type ||
+    'PETR4'
+
+  if (!fallbackTicker) {
+    return
+  }
+
+  if (fallbackTicker !== selectedTicker.value) {
+    companyStore.setSelectedTicker(fallbackTicker)
+  } else if (!chartStore.chart) {
+    chartStore.loadChartByTicker(fallbackTicker)
+  }
+  ensureTickerQuery(fallbackTicker)
 })
 </script>
