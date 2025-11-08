@@ -500,6 +500,7 @@ export const useCompanyStore = defineStore('companyStore', {
     total: 0,
     facets: {},
     selectedItems: [],
+    selectedTicker: '',
     isLoading: false,
     error: null,
   }),
@@ -567,6 +568,7 @@ export const useCompanyStore = defineStore('companyStore', {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
       this.selectedItems = []
+      this.selectedTicker = ''
       this.loadCompanies()
     },
 
@@ -575,6 +577,10 @@ export const useCompanyStore = defineStore('companyStore', {
         ? values.map((value) => String(value)).filter((value) => value.length)
         : []
       this.selectedItems = normalized
+    },
+
+    setSelectedTicker(ticker) {
+      this.selectedTicker = ticker ? String(ticker) : ''
     },
 
     async loadCompanies() {
