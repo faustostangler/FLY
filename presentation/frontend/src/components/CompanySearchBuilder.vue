@@ -6,24 +6,13 @@
         <button type="button" class="ghost" @click="clearFilters">
           Limpar filtros
         </button>
+        <button type="button" @click="reload">Buscar</button>
       </div>
     </header>
 
-    <div class="company-search__query">
-      <label for="queryText">Consulta estruturada</label>
-      <textarea
-        id="queryText"
-        v-model="queryTextModel"
-        rows="2"
-        placeholder="AND sector IN (Energia, Financeiro)"
-      ></textarea>
-      <div class="company-search__query-actions">
-        <button type="button" @click="applyQuery">Pesquisar</button>
-        <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
-      </div>
-    </div>
+    <section class="company-search__facets" aria-labelledby="filters-heading">
+      <h2 id="filters-heading">Filtros</h2>
 
-    <div class="company-search__facets">
       <CompanyFacet
         v-for="facet in facetConfigs"
         :key="facet.field"
@@ -36,6 +25,20 @@
         @change="onFacetDraftChange"
         @commit="onFacetCommit"
       />
+    </section>
+
+    <div class="company-search__query">
+      <label for="queryText">Consulta estruturada</label>
+      <textarea
+        id="queryText"
+        v-model="queryTextModel"
+        rows="2"
+        placeholder="AND sector IN (Energia, Financeiro)"
+      ></textarea>
+      <div class="company-search__query-actions">
+        <button type="button" @click="applyQuery">Aplicar consulta</button>
+        <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
+      </div>
     </div>
 
     <div class="company-search__results">
@@ -54,28 +57,6 @@
       <p v-if="!companies.length && !isLoading" class="muted">
         Nenhuma companhia encontrada com os filtros atuais.
       </p>
-      <p v-else-if="!selectedSummaries.length" class="muted">
-        Use o menu para escolher uma ou mais combinações de companhia e ticker.
-      </p>
-      <ul v-else class="company-search__selection">
-        <li v-for="item in selectedSummaries" :key="item.key">
-          <h4>{{ item.companyName }}</h4>
-          <div class="company-search__tags">
-            <span class="tag">
-              <a v-bind:href="`http://localhost:5173/?type=${item.ticker}`">
-                {{ item.ticker }}
-              </a>
-            </span>
-            <span v-if="item.market" class="tag tag--outline">{{ item.market }}</span>
-          </div>
-          <p v-if="item.tradingName" class="muted">{{ item.tradingName }}</p>
-          <p class="muted">
-            <span v-if="item.sector">Setor: {{ item.sector }} · </span>
-            <span v-if="item.subsector">Subsetor: {{ item.subsector }} · </span>
-            <span v-if="item.segment">Segmento: {{ item.segment }}</span>
-          </p>
-        </li>
-      </ul>
     </div>
   </section>
 </template>
@@ -110,30 +91,6 @@ const error = computed(() => store.error)
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
   set: (values) => store.setSelectedItems(values),
-})
-
-const selectedSummaries = computed(() => {
-  const index = new Map()
-  for (const company of store.companies || []) {
-    const companyName = company.company_name || ''
-    for (const ticker of company.tickers || []) {
-      if (!ticker) continue
-      const key = `${companyName}::${ticker}`
-      index.set(key, {
-        key,
-        companyName,
-        ticker,
-        tradingName: company.trading_name || '',
-        sector: company.sector || '',
-        subsector: company.subsector || '',
-        segment: company.segment || '',
-        market: company.market || '',
-      })
-    }
-  }
-  return (store.selectedItems || [])
-    .map((value) => index.get(value))
-    .filter(Boolean)
 })
 
 function facetOptions(field) {
@@ -246,6 +203,10 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.company-search__actions button:not(.ghost) {
+  background: #2563eb;
+}
+
 .company-search__query label {
   display: block;
   font-weight: 600;
@@ -283,52 +244,15 @@ onMounted(() => {
   gap: 1rem;
 }
 
+.company-search__facets > h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .company-search__results header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-.company-search__selection {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.company-search__selection li {
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-}
-
-.company-search__selection h4 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.company-search__tags {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0.5rem 0;
-}
-
-.tag {
-  background: #0f172a;
-  color: #fff;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-}
-
-.tag--outline {
-  background: transparent;
-  color: #0f172a;
-  border: 1px solid #0f172a;
 }
 
 .muted {
