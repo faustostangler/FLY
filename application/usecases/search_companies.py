@@ -1,113 +1,98 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, Iterable, List
 
-from application.ports.logger_port import LoggerPort
+from application.dtos.company_search_dto import (
+    CompanySearchResponseDTO,
+    CompanySearchResultDTO,
+)
 from application.ports.uow_port import UowFactoryPort
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-from domain.value_objects.company_filters import CompanyFilterQuery
+from domain.dtos.company_data_dto import CompanyDataDTO
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.value_objects.company_filters import CompanyFilterQuery, CompanyField
 
 
-@dataclass(frozen=True)
-class CompanySearchResultItem:
-    company_name: str
-    trading_name: str | None
-    tickers: list[str]
-    market: str | None
-    industry_sector: str | None
-    industry_subsector: str | None
-    industry_segment: str | None
-    institution_common: str | None
-    institution_preferred: str | None
+DEFAULT_LIMIT = 200
 
 
-@dataclass(frozen=True)
-class CompanySearchResult:
-    items: list[CompanySearchResultItem]
-    total: int
-    facets: Dict[str, List[str]]
-
-
+@dataclass
 class SearchCompaniesUseCase:
-    def __init__(
-        self,
-        *,
-        repository: CompaniesEligiblePort,
-        uow_factory: UowFactoryPort,
-        logger: LoggerPort | None = None,
-    ) -> None:
-        self._repository = repository
-        self._uow_factory = uow_factory
-        self._logger = logger
+    repository: RepositoryCompanyDataPort
+    uow_factory: UowFactoryPort
 
     def __call__(
         self,
         query: CompanyFilterQuery | None = None,
-    ) -> CompanySearchResult:
+        *,
+        limit: int | None = None,
+    ) -> CompanySearchResponseDTO:
         query = query or CompanyFilterQuery()
-        return self.run(query=query)
-
-    def run(self, *, query: CompanyFilterQuery) -> CompanySearchResult:
-        with self._uow_factory() as uow:
-            dtos: list[CompanyEligibleDTO] = self._repository.search(
+        with self.uow_factory() as uow:
+            dtos: List[CompanyDataDTO] = self.repository.search(
+                query,
                 uow=uow,
-                query=query,
+                limit=limit or DEFAULT_LIMIT,
             )
 
-        items = [self._to_item(dto) for dto in dtos]
+        items = [self._to_result(dto) for dto in dtos]
         facets = self._build_facets(items)
+        return CompanySearchResponseDTO(items=items, total=len(items), facets=facets)
 
-        if self._logger is not None:
-            self._logger.log(
-                f"SearchCompaniesUseCase returned {len(items)} items",
-                level="debug",
-            )
-
-        return CompanySearchResult(
-            items=items,
-            total=len(items),
-            facets=facets,
-        )
-
-    def _to_item(self, dto: CompanyEligibleDTO) -> CompanySearchResultItem:
-        tickers = [ticker for ticker in (dto.ticker_codes or ()) if ticker]
-
-        return CompanySearchResultItem(
+    def _to_result(self, dto: CompanyDataDTO) -> CompanySearchResultDTO:
+        return CompanySearchResultDTO(
             company_name=dto.company_name or "",
             trading_name=dto.trading_name,
-            tickers=tickers,
+            tickers=list(dto.ticker_codes or []),
+            sector=dto.industry_sector,
+            subsector=dto.industry_subsector,
+            segment=dto.industry_segment,
             market=dto.market,
-            industry_sector=dto.industry_sector
-            or getattr(dto, "company_sector", None),
-            industry_subsector=dto.industry_subsector
-            or getattr(dto, "company_subsector", None),
-            industry_segment=dto.industry_segment
-            or getattr(dto, "company_segment", None),
             institution_common=dto.institution_common,
             institution_preferred=dto.institution_preferred,
         )
 
     def _build_facets(
         self,
-        items: list[CompanySearchResultItem],
+        items: Iterable[CompanySearchResultDTO],
     ) -> Dict[str, List[str]]:
-        facets: Dict[str, set[str]] = {
-            "industry_sector": set(),
-            "industry_subsector": set(),
-            "industry_segment": set(),
-            "market": set(),
+        buckets: Dict[str, set[str]] = {
+            CompanyField.SECTOR.value: set(),
+            CompanyField.SUBSECTOR.value: set(),
+            CompanyField.SEGMENT.value: set(),
+            CompanyField.COMPANY_NAME.value: set(),
+            CompanyField.TRADING_NAME.value: set(),
+            CompanyField.TICKER.value: set(),
+            CompanyField.INSTITUTION_COMMON.value: set(),
+            CompanyField.INSTITUTION_PREFERRED.value: set(),
+            CompanyField.MARKET.value: set(),
         }
 
         for item in items:
-            if item.industry_sector:
-                facets["industry_sector"].add(item.industry_sector)
-            if item.industry_subsector:
-                facets["industry_subsector"].add(item.industry_subsector)
-            if item.industry_segment:
-                facets["industry_segment"].add(item.industry_segment)
+            if item.company_name:
+                buckets[CompanyField.COMPANY_NAME.value].add(item.company_name)
+            if item.trading_name:
+                buckets[CompanyField.TRADING_NAME.value].add(item.trading_name)
+            for ticker in item.tickers:
+                if ticker:
+                    buckets[CompanyField.TICKER.value].add(ticker)
+            if item.sector:
+                buckets[CompanyField.SECTOR.value].add(item.sector)
+            if item.subsector:
+                buckets[CompanyField.SUBSECTOR.value].add(item.subsector)
+            if item.segment:
+                buckets[CompanyField.SEGMENT.value].add(item.segment)
             if item.market:
-                facets["market"].add(item.market)
+                buckets[CompanyField.MARKET.value].add(item.market)
+            if item.institution_common:
+                buckets[CompanyField.INSTITUTION_COMMON.value].add(item.institution_common)
+            if item.institution_preferred:
+                buckets[CompanyField.INSTITUTION_PREFERRED.value].add(
+                    item.institution_preferred
+                )
 
-        return {key: sorted(values) for key, values in facets.items()}
+        return {
+            key: sorted({v for v in values if v})
+            for key, values in buckets.items()
+            if values
+        }
