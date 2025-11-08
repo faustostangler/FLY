@@ -9,10 +9,9 @@
 
       <section class="home__charts-results" aria-labelledby="chart-results-heading">
         <h2 id="chart-results-heading">Resultados</h2>
-        <h3>Preço</h3>
 
         <ChartSelector />
-        <PlotlyViewer />
+        <PlotlyViewer title="Preço" />
       </section>
     </section>
   </main>
@@ -45,7 +44,7 @@ const title = ref('Dashboard de indicadores')
 .home__charts-results {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-top: 1rem;
 }
 
