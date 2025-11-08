@@ -95,10 +95,12 @@ class SearchCompaniesUseCase:
         return filters
 
     def _to_item(self, dto: CompanyEligibleDTO) -> CompanySearchResultItem:
+        tickers = [ticker for ticker in (dto.ticker_codes or ()) if ticker]
+
         return CompanySearchResultItem(
             company_name=dto.company_name or "",
             trading_name=dto.trading_name,
-            tickers=list(dto.ticker_codes),
+            tickers=tickers,
             sector=getattr(dto, "industry_sector", None)
             or getattr(dto, "company_sector", None),
             subsector=getattr(dto, "industry_subsector", None)

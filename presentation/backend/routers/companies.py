@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from dataclasses import asdict
-from dataclasses import asdict
-
 from fastapi import APIRouter, Depends, Body
 
 from application.usecases.search_companies import SearchCompaniesUseCase
