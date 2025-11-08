@@ -138,3 +138,5 @@ data/
 
 .coverage
 
+
+presentation/frontend/node_modules/
