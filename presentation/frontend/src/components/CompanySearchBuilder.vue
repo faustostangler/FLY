@@ -67,6 +67,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
 import { useChartStore } from '../store/chartStore'
+import { extractTickers } from '../utils/tickers'
 import CompanyFacet from './CompanyFacet.vue'
 import CompanyResultSelect from './CompanyResultSelect.vue'
 
@@ -194,6 +195,27 @@ function reload() {
   store.loadCompanies()
 }
 
+async function syncChartWithSelection(selectionValues, { forceLoad = false } = {}) {
+  const tickers = extractTickers(selectionValues)
+  const [primaryTicker, ...comparisonTickers] = tickers
+  const currentType = chartStore.params.type || ''
+  const currentSelection = chartStore.params.selection || []
+
+  const typeChanged = primaryTicker !== currentType
+  const selectionChanged = !selectionsAreEqual(comparisonTickers, currentSelection)
+
+  if (typeChanged) {
+    chartStore.setType(primaryTicker)
+  }
+  if (selectionChanged) {
+    chartStore.setSelection(comparisonTickers)
+  }
+
+  if (forceLoad || typeChanged || selectionChanged) {
+    await chartStore.loadChart()
+  }
+}
+
 async function onSelectionChange(values) {
   if (isSyncingSelection) {
     return
@@ -205,8 +227,9 @@ async function onSelectionChange(values) {
     const normalized = normalizeSelection(values)
     const current = store.selectedItems || []
     const querySelection = parseSelectionParam(route.query.selection)
+    const selectionChanged = !selectionsAreEqual(normalized, current)
 
-    if (!selectionsAreEqual(normalized, current)) {
+    if (selectionChanged) {
       store.setSelectedItems(normalized)
     }
 
@@ -224,8 +247,7 @@ async function onSelectionChange(values) {
       }
     }
 
-    chartStore.setSelection(normalized)
-    await chartStore.loadChart()
+    await syncChartWithSelection(normalized, { forceLoad: selectionChanged })
   } finally {
     isSyncingSelection = false
   }
@@ -233,37 +255,39 @@ async function onSelectionChange(values) {
 
 onMounted(async () => {
   const initialSelection = parseSelectionParam(route.query.selection)
-  const current = store.selectedItems || []
-  const chartSelection = chartStore.params.selection || []
 
-  if (!selectionsAreEqual(initialSelection, current)) {
-    store.setSelectedItems(initialSelection)
+  isSyncingSelection = true
+  try {
+    const current = store.selectedItems || []
+    if (!selectionsAreEqual(initialSelection, current)) {
+      store.setSelectedItems(initialSelection)
+    }
+  } finally {
+    isSyncingSelection = false
   }
 
-  const selectionChanged = !selectionsAreEqual(initialSelection, chartSelection)
-  if (selectionChanged) {
-    chartStore.setSelection(initialSelection)
-    await chartStore.loadChart()
-  }
+  const normalizedSelection = store.selectedItems || initialSelection
+  await syncChartWithSelection(normalizedSelection, { forceLoad: true })
 })
 
 watch(
   () => store.selectedItems,
-  (values) => {
+  async (values) => {
     if (isSyncingSelection) {
       return
     }
 
     const normalized = normalizeSelection(values)
     const querySelection = parseSelectionParam(route.query.selection)
-    const chartSelection = chartStore.params.selection || []
 
     const needsQuerySync = !selectionsAreEqual(normalized, querySelection)
-    const needsChartSync = !selectionsAreEqual(normalized, chartSelection)
 
-    if (needsQuerySync || needsChartSync) {
-      onSelectionChange(normalized)
+    if (needsQuerySync) {
+      await onSelectionChange(normalized)
+      return
     }
+
+    await syncChartWithSelection(normalized)
   },
   { deep: true },
 )
@@ -275,17 +299,18 @@ watch(
       return
     }
 
-    const parsed = parseSelectionParam(value)
-    const companySelection = store.selectedItems || []
-    const chartSelection = chartStore.params.selection || []
+    isSyncingSelection = true
+    try {
+      const parsed = parseSelectionParam(value)
+      const companySelection = store.selectedItems || []
 
-    if (!selectionsAreEqual(parsed, companySelection)) {
-      store.setSelectedItems(parsed)
-    }
+      if (!selectionsAreEqual(parsed, companySelection)) {
+        store.setSelectedItems(parsed)
+      }
 
-    if (!selectionsAreEqual(parsed, chartSelection)) {
-      chartStore.setSelection(parsed)
-      await chartStore.loadChart()
+      await syncChartWithSelection(parsed)
+    } finally {
+      isSyncingSelection = false
     }
   },
 )

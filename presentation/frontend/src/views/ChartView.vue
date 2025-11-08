@@ -1,10 +1,9 @@
 <!-- src/views/ChartView.vue -->
 <template>
   <section class="chart-view">
-    <!-- 1) Selector de tipo de gráfico / símbolo -->
+    <!-- 1) Cabeçalho -->
     <header class="chart-header">
       <h1>Gráfico</h1>
-      <ChartSelector />
     </header>
 
     <!-- 2) Estado de loading -->
@@ -17,12 +16,17 @@
       {{ error }}
     </div>
 
-    <!-- 4) Nenhum dado ainda -->
+    <!-- 4) Nenhum ticker selecionado -->
+    <div v-else-if="!hasTicker">
+      Escolha uma companhia para visualizar o gráfico.
+    </div>
+
+    <!-- 5) Nenhum dado ainda -->
     <div v-else-if="!chart">
       Nenhum gráfico carregado ainda.
     </div>
 
-    <!-- 5) Gráfico Plotly -->
+    <!-- 6) Gráfico Plotly -->
     <div v-else class="chart-container">
       <VuePlotly
         :data="chart.data"
@@ -42,7 +46,6 @@
 import { onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChartStore } from '../store/chartStore'
-import ChartSelector from '../components/ChartSelector.vue'
 
 const store = useChartStore()
 const { chart, isLoading, error, params } = storeToRefs(store)
@@ -54,10 +57,12 @@ const plotConfig = computed(() => ({
   // aqui você pode ajustar interações do Plotly se quiser
 }))
 
+const hasTicker = computed(() => !!(params.value?.type || '').trim())
+
 // Quando a view carregar pela primeira vez, garante um gráfico inicial
 onMounted(async () => {
-  // só carrega se ainda não tiver gráfico
-  if (!chart.value) {
+  // só carrega se houver um ticker definido e ainda não tiver gráfico
+  if (hasTicker.value && !chart.value) {
     await store.loadChart()
   }
 })

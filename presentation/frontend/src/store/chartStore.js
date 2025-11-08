@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import { fetchChart } from '../services/apiService'
 
 function normalizeType(value) {
-  const normalized = String(value || '').trim()
-  return normalized || 'PETR4'
+  return String(value || '').trim()
 }
 
 function normalizeSelection(values) {
@@ -25,7 +24,7 @@ function areSelectionsEqual(a = [], b = []) {
 export const useChartStore = defineStore('chart', {
   state: () => ({
     params: {
-      type: 'PETR4',
+      type: '',
       selection: [],
     },
     chart: null,
@@ -50,10 +49,22 @@ export const useChartStore = defineStore('chart', {
     },
 
     async loadChart() {
+      const type = normalizeType(this.params.type)
+      if (!type) {
+        this.chart = null
+        this.error = null
+        this.isLoading = false
+        return
+      }
+
       this.isLoading = true
       this.error = null
       try {
-        this.chart = await fetchChart({ ...this.params })
+        const payload = {
+          ...this.params,
+          type,
+        }
+        this.chart = await fetchChart(payload)
       } catch (err) {
         console.error(err)
         this.error = err?.message || 'Falha ao carregar gráfico'
