@@ -7,7 +7,7 @@
     </p>
 
     <ul v-else class="company-search__selection">
-      <li v-for="item in selectedSummaries" :key="item.key">
+      <li v-for="item in selectedSummaries" :key="item.value">
         <h4>{{ item.companyName }}</h4>
 
         <div class="company-search__tags">
@@ -37,14 +37,11 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useCompanyStore } from '../store/companyStore'
 import { useChartStore } from '../store/chartStore'
 
 const companyStore = useCompanyStore()
 const chartStore = useChartStore()
-const route = useRoute()
-const router = useRouter()
 
 const selectedSummaries = computed(() => {
   const index = new Map()
@@ -55,18 +52,20 @@ const selectedSummaries = computed(() => {
     for (const ticker of company.tickers || []) {
       if (!ticker) continue
 
-      const key = `${companyName}::${ticker}`
+      const value = `${companyName}::${ticker}`
 
-      index.set(key, {
-        key,
-        companyName,
-        ticker,
-        tradingName: company.trading_name || '',
-        sector: company.sector || '',
-        subsector: company.subsector || '',
-        segment: company.segment || '',
-        market: company.market || '',
-      })
+      if (!index.has(value)) {
+        index.set(value, {
+          value,
+          companyName,
+          ticker,
+          tradingName: company.trading_name || '',
+          sector: company.sector || '',
+          subsector: company.subsector || '',
+          segment: company.segment || '',
+          market: company.market || '',
+        })
+      }
     }
   }
 
@@ -76,41 +75,15 @@ const selectedSummaries = computed(() => {
 })
 
 async function onTickerClick(item) {
-  if (!item || !item.key) {
+  if (!item?.value) {
     return
   }
 
-  const selection = [item.key]
-  const currentSelection = companyStore.selectedItems || []
-  const alreadySelected =
-    currentSelection.length === 1 && currentSelection[0] === item.key
+  const selection = [item.value]
 
-  if (!alreadySelected) {
-    companyStore.setSelectedItems(selection)
-  }
-
-  const nextQuery = {
-    ...route.query,
-    selection: item.key,
-  }
-
-  try {
-    if (route.query.selection !== item.key) {
-      await router.replace({ query: nextQuery })
-    }
-  } catch (error) {
-    console.error(error)
-  }
-
-  const previousSelection = chartStore.params.selection || []
-  const chartNeedsUpdate =
-    previousSelection.length !== 1 || previousSelection[0] !== item.key
-
+  companyStore.setSelectedItems(selection)
   chartStore.setSelection(selection)
-
-  if (chartNeedsUpdate || !chartStore.chart) {
-    await chartStore.loadChart()
-  }
+  await chartStore.loadChart()
 }
 </script>
 

@@ -204,7 +204,6 @@ async function onSelectionChange(values) {
   try {
     const normalized = normalizeSelection(values)
     const current = store.selectedItems || []
-    const chartSelection = chartStore.params.selection || []
     const querySelection = parseSelectionParam(route.query.selection)
 
     if (!selectionsAreEqual(normalized, current)) {
@@ -225,12 +224,8 @@ async function onSelectionChange(values) {
       }
     }
 
-    const selectionChanged = !selectionsAreEqual(normalized, chartSelection)
     chartStore.setSelection(normalized)
-
-    if (selectionChanged || !chartStore.chart) {
-      await chartStore.loadChart()
-    }
+    await chartStore.loadChart()
   } finally {
     isSyncingSelection = false
   }
