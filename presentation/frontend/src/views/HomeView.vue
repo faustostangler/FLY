@@ -14,7 +14,6 @@
         <h2 id="chart-results-heading">Resultados</h2>
         <h3>Preço</h3>
 
-        <ChartSelector />
         <PlotlyViewer />
       </section>
     </section>
@@ -23,7 +22,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import ChartSelector from '../components/ChartSelector.vue'
 import PlotlyViewer from '../components/PlotlyViewer.vue'
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
