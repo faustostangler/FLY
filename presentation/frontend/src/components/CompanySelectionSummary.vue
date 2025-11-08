@@ -26,9 +26,9 @@
         </p>
 
         <p class="muted">
-          <span v-if="item.sector">Setor: {{ item.sector }} · </span>
-          <span v-if="item.subsector">Subsetor: {{ item.subsector }} · </span>
-          <span v-if="item.segment">Segmento: {{ item.segment }}</span>
+          <span v-if="item.industrySector">Setor: {{ item.industrySector }} · </span>
+          <span v-if="item.industrySubsector">Subsetor: {{ item.industrySubsector }} · </span>
+          <span v-if="item.industrySegment">Segmento: {{ item.industrySegment }}</span>
         </p>
       </li>
     </ul>
@@ -61,9 +61,9 @@ const selectedSummaries = computed(() => {
           companyName,
           ticker,
           tradingName: company.trading_name || '',
-          sector: company.sector || '',
-          subsector: company.subsector || '',
-          segment: company.segment || '',
+          industrySector: company.industry_sector || '',
+          industrySubsector: company.industry_subsector || '',
+          industrySegment: company.industry_segment || '',
           market: company.market || '',
         })
       }
