@@ -10,15 +10,39 @@ from typing import List
 class CompanyField(str, Enum):
     """Enumeration of filterable company attributes."""
 
-    SECTOR = "sector"
-    SUBSECTOR = "subsector"
-    SEGMENT = "segment"
     COMPANY_NAME = "company_name"
     TRADING_NAME = "trading_name"
-    TICKER = "ticker"
-    INSTITUTION_PREFERRED = "institution_preferred"
-    INSTITUTION_COMMON = "institution_common"
+    ISSUING_COMPANY = "issuing_company"
+    CNPJ = "cnpj"
+    CVM_CODE = "cvm_code"
+
     MARKET = "market"
+    INDUSTRY_SECTOR = "industry_sector"
+    SECTOR = "industry_sector"  # legacy alias
+    INDUSTRY_SUBSECTOR = "industry_subsector"
+    SUBSECTOR = "industry_subsector"  # legacy alias
+    INDUSTRY_SEGMENT = "industry_segment"
+    SEGMENT = "industry_segment"  # legacy alias
+    INDUSTRY_CLASSIFICATION = "industry_classification"
+    INDUSTRY_CLASSIFICATION_ENG = "industry_classification_eng"
+
+    COMPANY_CATEGORY = "company_category"
+    COMPANY_TYPE = "company_type"
+    LISTING_SEGMENT = "listing_segment"
+    REGISTRAR = "registrar"
+
+    INSTITUTION_COMMON = "institution_common"
+    INSTITUTION_PREFERRED = "institution_preferred"
+
+    STATUS = "status"
+    MARKET_INDICATOR = "market_indicator"
+    CODE = "code"
+    TICKER = "code"  # legacy alias
+
+    HAS_BDR = "has_bdr"
+    TYPE_BDR = "type_bdr"
+    HAS_QUOTATION = "has_quotation"
+    HAS_EMISSIONS = "has_emissions"
 
 
 class ComparisonOperator(str, Enum):

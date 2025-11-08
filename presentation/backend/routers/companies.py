@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from dataclasses import asdict
-from dataclasses import asdict
-
 from fastapi import APIRouter, Depends, Body
 
 from application.usecases.search_companies import SearchCompaniesUseCase
@@ -90,12 +87,29 @@ def _map_logical(value: str | None) -> LogicalOperator | None:
         return None
 
 
+def _normalize_field_name(raw_value: str) -> str | None:
+    if not raw_value:
+        return None
+    normalized = raw_value.strip()
+    if not normalized:
+        return None
+
+    aliases = {
+        "sector": "industry_sector",
+        "subsector": "industry_subsector",
+        "segment": "industry_segment",
+        "ticker": "code",
+    }
+    key = normalized.lower()
+    return aliases.get(key, normalized)
+
+
 def _map_condition(
     condition_dto: CompanyFilterConditionDTO | None,
 ) -> CompanyFilterCondition | None:
     if condition_dto is None:
         return None
-    field_value = (condition_dto.field or "").strip()
+    field_value = _normalize_field_name(condition_dto.field or "")
     if not field_value:
         return None
     try:
