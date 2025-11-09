@@ -14,10 +14,13 @@
         :key="facet.field"
         :field="facet.field"
         :label="facet.label"
-        :options="facetOptions(facet.field)"
+        :options="facetOptions(facet)"
         :logical="facetLogical(facet.field)"
+        :operator="facetOperator(facet.field)"
         :values="facetValues(facet.field)"
         :multiple="facet.multiple !== false"
+        :type="facet.type || 'text'"
+        :searchable="Boolean(facet.searchable)"
         @change="onFacetDraftChange"
         @commit="onFacetCommit"
       />
@@ -129,8 +132,63 @@ function selectionsAreEqual(a = [], b = []) {
   return a.every((value, index) => value === b[index])
 }
 
-function facetOptions(field) {
-  return facets.value[field] || []
+function booleanLabel(value) {
+  if (value === 'true') return 'Sim'
+  if (value === 'false') return 'Não'
+  return value
+}
+
+function facetOptions(facet) {
+  const field = facet.field
+  const dynamic = facets.value[field] || []
+
+  if (facet.type === 'boolean') {
+    const base = Array.isArray(facet.options) ? facet.options : []
+    const normalized = []
+    const seen = new Set()
+
+    const pushOption = (rawValue, rawLabel) => {
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        return
+      }
+      const stringValue = String(rawValue).toLowerCase()
+      if (!stringValue) return
+      if (seen.has(stringValue)) return
+      seen.add(stringValue)
+      const label = rawLabel ?? booleanLabel(stringValue)
+      normalized.push({ value: stringValue, label })
+    }
+
+    for (const option of base) {
+      if (option && typeof option === 'object') {
+        pushOption(option.value ?? option.label ?? '', option.label)
+      } else {
+        pushOption(option, undefined)
+      }
+    }
+
+    for (const option of dynamic) {
+      if (option && typeof option === 'object') {
+        pushOption(option.value ?? option.label ?? '', option.label)
+      } else if (typeof option === 'boolean') {
+        pushOption(option ? 'true' : 'false', undefined)
+      } else {
+        pushOption(option, undefined)
+      }
+    }
+
+    return normalized
+  }
+
+  if (facet.type === 'date-range') {
+    return facet.options || []
+  }
+
+  if (dynamic.length) {
+    return dynamic
+  }
+
+  return facet.options || []
 }
 
 function facetLogical(field) {
@@ -141,6 +199,14 @@ function facetLogical(field) {
   return store.clauseByField[field]?.logical || 'AND'
 }
 
+function facetOperator(field) {
+  const draft = draftFacets.value[field]
+  if (draft && draft.operator) {
+    return draft.operator
+  }
+  return store.clauseByField[field]?.condition?.operator || ''
+}
+
 function facetValues(field) {
   const draft = draftFacets.value[field]
   if (draft && Array.isArray(draft.values)) {
@@ -149,26 +215,29 @@ function facetValues(field) {
   return store.clauseByField[field]?.condition?.values || []
 }
 
-function onFacetDraftChange({ field, logical, values }) {
+function onFacetDraftChange({ field, logical, values, operator }) {
   draftFacets.value = {
     ...draftFacets.value,
     [field]: {
       logical: logical || 'AND',
+      operator: operator || '',
       values: Array.isArray(values) ? [...values] : [],
     },
   }
 }
 
-function onFacetCommit({ field, logical, values }) {
+function onFacetCommit({ field, logical, values, operator }) {
   const finalLogical = logical || 'AND'
   const finalValues = Array.isArray(values) ? [...values] : []
+  const finalOperator = operator || DEFAULT_OPERATOR
 
-  store.setFacetSelection(field, finalLogical, finalValues)
+  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
 
   draftFacets.value = {
     ...draftFacets.value,
     [field]: {
       logical: finalLogical,
+      operator: finalOperator,
       values: [],
     },
   }
