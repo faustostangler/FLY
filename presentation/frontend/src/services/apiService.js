@@ -23,8 +23,9 @@ export async function fetchChart(params) {
   return res.data
 }
 
-export async function searchCompanies(filterQuery) {
-  const res = await api.post('/companies/search', filterQuery || { clauses: [] })
+export async function searchCompanies(payload) {
+  const body = payload && typeof payload === 'object' ? payload : {}
+  const res = await api.post('/companies/search', body)
   return res.data
 }
 

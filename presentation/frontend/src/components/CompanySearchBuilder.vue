@@ -14,12 +14,13 @@
         :label="facet.label"
         :options="facetOptions(facet)"
         :logical="facetLogical(facet.field)"
-        :operator="facetOperator(facet.field)"
-        :values="facetValues(facet.field)"
+        :operator="facetOperator(facet)"
+        :values="structuredFilters[facet.field] || []"
         :multiple="facet.multiple !== false"
         :type="facet.type || 'text'"
         :searchable="Boolean(facet.searchable)"
-        @change="onFacetDraftChange"
+        :model-value="facetModelValue(facet.field)"
+        @update:modelValue="(values) => onFacetSelectionChange(facet.field, values)"
         @commit="onFacetCommit"
       />
     </section>
@@ -28,19 +29,19 @@
       <label for="queryText">Consulta estruturada</label>
       <textarea
         id="queryText"
-        v-model="queryTextModel"
-        rows="2"
-        placeholder="AND sector IN (Energia, Financeiro)"
+        :value="queryText"
+        rows="3"
+        readonly
+        placeholder="Nenhum filtro estruturado definido"
       ></textarea>
-      <div class="company-search__query-actions">
       <div class="company-search__actions">
-        <button type="button" @click="applyQuery">Buscar</button>
+        <button type="button" @click="onEnviarParaConsulta">
+          Enviar seleção das facetas para consulta
+        </button>
+        <button type="button" @click="onPesquisar">Pesquisar</button>
         <button type="button" class="ghost" @click="clearFilters">
           Limpar filtros
         </button>
-      </div>
-        <!-- <button type="button" @click="reload">Buscar</button> -->
-        <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
       </div>
     </div>
 
@@ -65,7 +66,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
@@ -80,23 +81,14 @@ const route = useRoute()
 const router = useRouter()
 let isSyncingSelection = false
 
-const DEFAULT_OPERATOR = 'IN'
-
 const facetConfigs = COMPANY_FACETS
-const parseError = ref('')
-const draftFacets = ref({})
-
-const queryTextModel = computed({
-  get: () => store.queryText,
-  set: (value) => {
-    parseError.value = ''
-    store.setQueryText(value)
-  },
-})
 
 const companies = computed(() => store.companies)
 const total = computed(() => store.total)
 const facets = computed(() => store.facets || {})
+const cascadeFilters = computed(() => store.cascadeFilters || {})
+const structuredFilters = computed(() => store.structuredFilters || {})
+const queryText = computed(() => store.queryText || '')
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
@@ -195,75 +187,65 @@ function facetOptions(facet) {
   return facet.options || []
 }
 
+const CASCADE_FIELDS = ['industry_sector', 'industry_subsector', 'industry_segment']
+
+function isCascadeField(field) {
+  return CASCADE_FIELDS.includes(field)
+}
+
+function facetModelValue(field) {
+  if (isCascadeField(field)) {
+    return cascadeFilters.value[field] || []
+  }
+  return structuredFilters.value[field] || []
+}
+
 function facetLogical(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.logical) {
-    return draft.logical
-  }
-  return store.clauseByField[field]?.logical || 'AND'
+  return 'AND'
 }
 
-function facetOperator(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.operator) {
-    return draft.operator
+function facetOperator(facet) {
+  if (!facet) return 'IN'
+  if (facet.type === 'date-range') {
+    return 'BETWEEN'
   }
-  return store.clauseByField[field]?.condition?.operator || ''
+  if (facet.type === 'boolean') {
+    return 'EQUALS'
+  }
+  return facet.multiple === false ? 'EQUALS' : 'IN'
 }
 
-function facetValues(field) {
-  const draft = draftFacets.value[field]
-  if (draft && Array.isArray(draft.values)) {
-    return draft.values
-  }
-  return store.clauseByField[field]?.condition?.values || []
-}
-
-function onFacetDraftChange({ field, logical, values, operator }) {
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: logical || 'AND',
-      operator: operator || '',
-      values: Array.isArray(values) ? [...values] : [],
-    },
-  }
-}
-
-async function onFacetCommit({ field, logical, values, operator }) {
-  const finalLogical = logical || 'AND'
-  const finalValues = Array.isArray(values) ? [...values] : []
-  const finalOperator = operator || DEFAULT_OPERATOR
-
-  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
-
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: finalLogical,
-      operator: finalOperator,
-      values: [],
-    },
-  }
-}
-
-function applyQuery() {
-  const result = store.applyQueryText()
-  if (!result.ok) {
-    parseError.value = result.message || 'Não foi possível interpretar a consulta.'
+function onFacetSelectionChange(field, values) {
+  if (isCascadeField(field)) {
+    store.setCascadeFacetSelection(field, values)
     return
   }
-  parseError.value = ''
+
+  store.setStructuredFilter(field, values)
+}
+
+function onFacetCommit(payload = {}) {
+  const { field, values } = payload
+  if (!field) {
+    return
+  }
+  store.setStructuredFilter(field, values)
+}
+
+function onEnviarParaConsulta() {
+  store.applyCascadeToStructured()
+}
+
+function onPesquisar() {
+  store.executeStructuredQuery()
 }
 
 function clearFilters() {
-  store.resetFilters()
-  parseError.value = ''
-  draftFacets.value = {}
+  store.resetAllFilters()
 }
 
 function reload() {
-  store.loadCompanies()
+  store.loadCascadeResults()
 }
 
 async function syncChartWithSelection(selectionValues, { forceLoad = false } = {}) {
@@ -389,116 +371,84 @@ watch(
 onMounted(() => {
   if (!store.companies.length) {
     reload()
-  }
-  if (!Object.keys(store.facets || {}).length) {
-    store.loadFacets()
+  } else if (!Object.keys(store.facets || {}).length) {
+    store.loadCascadeResults()
   }
 })
 </script>
 
 <style scoped>
 .company-search {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--vt-c-divider-light, #e2e8f0);
-  border-radius: 12px;
-  background-color: var(--vt-c-bg-mute, #f8fafc);
+  display: grid;
+  gap: 32px;
 }
 
-.company-search__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.company-search__actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.company-search__actions button {
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
-  border: none;
-  background: #0f172a;
-  color: #fff;
-  cursor: pointer;
-}
-
-.company-search__actions .ghost {
-  background: transparent;
-  border: 1px solid #0f172a;
-  color: #0f172a;
-}
-
-.company-search__actions button:not(.ghost) {
-  background: #2563eb;
-}
-
-.company-search__query label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.company-search__query textarea {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid #cbd5f5;
-  padding: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  resize: vertical;
-}
-
-.company-search__query-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.company-search__query-actions button {
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
+.company-search__header h2 {
+  margin: 0;
 }
 
 .company-search__facets {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  gap: 24px;
 }
 
-.company-search__facets > h2 {
-  grid-column: 1 / -1;
+.company-search__facets h2 {
   margin: 0;
+  font-size: 1.2rem;
+}
+
+.company-search__facets > *:not(h2) {
+  display: grid;
+  gap: 16px;
+}
+
+.company-search__query {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.company-search__query textarea {
+  min-height: 96px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #d9d9d9);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  background-color: #fafafa;
+}
+
+.company-search__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.company-search__actions button {
+  padding: 10px 16px;
+}
+
+.company-search__results {
+  display: grid;
+  gap: 12px;
 }
 
 .company-search__results header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.muted {
-  color: #64748b;
-  margin: 0.1rem 0 0;
+  gap: 16px;
 }
 
 .company-search__status {
-  color: #2563eb;
-  font-size: 0.9rem;
+  color: #888;
 }
 
 .company-search__error {
-  color: #dc2626;
-  font-size: 0.9rem;
+  color: #d00;
+}
+
+.muted {
+  color: #777;
 }
 </style>
