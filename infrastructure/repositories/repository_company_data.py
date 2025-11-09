@@ -24,6 +24,8 @@ from infrastructure.repositories.repository_base import RepositoryBase
 # from infrastructure.uils.list_flattener import ListFlattener
 
 
+DEFAULT_LIMIT = 200
+
 class RepositoryCompanyData(
     RepositoryBase[CompanyDataDTO, int],
     RepositoryCompanyDataPort):
@@ -225,8 +227,8 @@ class RepositoryCompanyData(
 
         stmt = stmt.order_by(model.company_name.asc())
 
-        if limit is None:
-            limit = 200
+        # if limit is None:
+        #     limit = DEFAULT_LIMIT
         if limit:
             stmt = stmt.limit(limit)
 

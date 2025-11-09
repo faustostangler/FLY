@@ -25,6 +25,7 @@ from domain.value_objects.company_filters import (
 from infrastructure.models.company_eligible_model import CompanyEligibleModel
 from infrastructure.repositories.repository_base import RepositoryBase
 
+DEFAULT_LIMIT = 200
 
 STRING_FIELDS: set[CompanyField] = {
     CompanyField.ISSUING_COMPANY,
@@ -146,8 +147,8 @@ class RepositoryCompanyEligible(
 
         stmt = stmt.order_by(model.company_name.asc())
 
-        if limit is None:
-            limit = 200
+        # if limit is None:
+        #     limit = DEFAULT_LIMIT
         if limit:
             stmt = stmt.limit(limit)
 

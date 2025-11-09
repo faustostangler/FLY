@@ -1,5 +1,8 @@
 export const COMPANY_FACETS = [
   // --- Campos textuais SINGLE -----------------------------------------------------
+  { field: 'industry_sector', label: 'Setor', type: 'text', multiple: true, searchable: true },
+  { field: 'industry_subsector', label: 'Subsetor', type: 'text', multiple: true, searchable: true },
+  { field: 'industry_segment', label: 'Segmento', type: 'text', multiple: true, searchable: true },
   { field: 'company_name', label: 'Companhia', type: 'text', multiple: true, searchable: true },
   { field: 'trading_name', label: 'Nome de Pregão', type: 'text', multiple: true, searchable: true },
   { field: 'issuing_company', label: 'Código', type: 'text', multiple: true, searchable: true },
@@ -8,9 +11,6 @@ export const COMPANY_FACETS = [
   // { field: 'website', label: 'Website', type: 'text', multiple: true, searchable: true },
  
   // --- Campos textuais MULTIPLE  -----------------------------------------------------
-  { field: 'industry_sector', label: 'Setor', type: 'text', multiple: true, searchable: true },
-  { field: 'industry_subsector', label: 'Subsetor', type: 'text', multiple: true, searchable: true },
-  { field: 'industry_segment', label: 'Segmento', type: 'text', multiple: true, searchable: true },
   // { field: 'company_segment', label: 'Segmento da Companhia', type: 'text', multiple: true, searchable: true },
   // { field: 'company_segment_eng', label: 'Segmento da Companhia (EN)', type: 'text', multiple: true, searchable: true },
   // { field: 'activity', label: 'Atividade', type: 'text', multiple: true, searchable: true },

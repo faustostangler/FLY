@@ -30,7 +30,7 @@ class SearchCompaniesUseCase:
             dtos: List[CompanyEligibleDTO] = self.repository.search(
                 query,
                 uow=uow,
-                limit=limit or DEFAULT_LIMIT,
+                limit=limit # or DEFAULT_LIMIT,
             )
 
         items = [self._to_result(dto) for dto in dtos]
