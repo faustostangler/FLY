@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, Sequence, Tuple
+from typing import Generator, Optional, Sequence, Tuple
 
 from sqlalchemy import and_, delete, func, not_, or_
 from sqlalchemy.orm import Session
@@ -124,6 +124,22 @@ class RepositoryCompanyEligible(
         rows = query.all()
 
         return [row.to_dto() for row in rows]
+
+    def iter_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> Generator[CompanyEligibleDTO, None, None]:
+        session: Session = uow.session
+        size = batch_size or 1000
+        query = session.query(CompanyEligibleModel).order_by(
+            CompanyEligibleModel.company_name
+        )
+        query = query.yield_per(size)
+
+        for row in query:
+            yield row.to_dto()
 
     # ------------------------------------------------------------------
     # Query builder support

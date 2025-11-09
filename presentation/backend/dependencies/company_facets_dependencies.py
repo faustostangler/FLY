@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from application.usecases.search_companies import SearchCompaniesUseCase
+from application.usecases.get_company_facets import GetCompanyFacetsUseCase
 from domain.ports.repository_company_eligible_port import (
     RepositoryCompanyEligiblePort,
 )
@@ -12,7 +12,7 @@ from infrastructure.repositories.repository_company_eligible import (
 from infrastructure.uow.uow import UowFactory
 
 
-def get_company_search_usecase() -> SearchCompaniesUseCase:
+def get_company_facets_usecase() -> GetCompanyFacetsUseCase:
     config = ConfigAdapter()
     logger = Logger(config)
     repository: RepositoryCompanyEligiblePort = RepositoryCompanyEligible(
@@ -20,7 +20,7 @@ def get_company_search_usecase() -> SearchCompaniesUseCase:
         logger=logger,
     )
     uow_factory = UowFactory(session_factory=repository.Session)
-    return SearchCompaniesUseCase(
+    return GetCompanyFacetsUseCase(
         repository=repository,
         uow_factory=uow_factory,
         logger=logger,

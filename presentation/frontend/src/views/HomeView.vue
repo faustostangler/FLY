@@ -21,12 +21,18 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useCompanyStore } from '../store/companyStore'
 import PlotlyViewer from '../components/PlotlyViewer.vue'
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
 
 const title = ref('Dashboard de Indicadores')
+const store = useCompanyStore()
+
+onMounted(async () => {
+  await Promise.all([store.loadFacets(), store.loadCompanies()])
+})
 </script>
 
 <style scoped>

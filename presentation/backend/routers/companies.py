@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from dataclasses import asdict
-from dataclasses import asdict
-
 from fastapi import APIRouter, Depends, Body
 
+from application.usecases.get_company_facets import GetCompanyFacetsUseCase
 from application.usecases.search_companies import SearchCompaniesUseCase
 from domain.value_objects.company_filters import (
     CompanyFilterClause,
@@ -16,12 +14,16 @@ from domain.value_objects.company_filters import (
     ComparisonOperator,
     LogicalOperator,
 )
+from presentation.backend.dependencies.company_facets_dependencies import (
+    get_company_facets_usecase,
+)
 from presentation.backend.dependencies.company_search_dependencies import (
     get_company_search_usecase,
 )
 from presentation.backend.dto.company_search_dto import (
     CompanyFilterConditionDTO,
     CompanyFilterQueryDTO,
+    CompanyFacetsResponseDTO,
     CompanySearchResponseDTO,
 )
 
@@ -37,6 +39,14 @@ async def search_companies(
     query = _map_to_domain(filters)
     result = use_case(query=query)
     return CompanySearchResponseDTO(**asdict(result))
+
+
+@router.get("/facets", response_model=CompanyFacetsResponseDTO)
+async def get_company_facets(
+    use_case: GetCompanyFacetsUseCase = Depends(get_company_facets_usecase),
+) -> CompanyFacetsResponseDTO:
+    result = use_case()
+    return CompanyFacetsResponseDTO(**asdict(result))
 
 
 def _map_to_domain(dto: CompanyFilterQueryDTO | None) -> CompanyFilterQuery:

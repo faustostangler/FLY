@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Generator, Sequence
 from application.ports.uow_port import Uow
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 
@@ -21,6 +21,15 @@ class CompaniesEligiblePort(ABC):
         segment: str | None = None,
     ) -> list[CompanyEligibleDTO]:
         """Return all eligible companies matching the given filters."""
+
+    @abstractmethod
+    def iter_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> Generator[CompanyEligibleDTO, None, None]:
+        """Yield eligible companies lazily in batches."""
 
     # === Write operations ===
     @abstractmethod

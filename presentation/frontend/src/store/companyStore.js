@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { searchCompanies } from '../services/apiService'
+import { searchCompanies, getCompanyFacets } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -559,10 +559,17 @@ export const useCompanyStore = defineStore('companyStore', {
     queryText: '',
     companies: [],
     total: 0,
-    facets: {},
+    facetsAll: {
+      industry_sector: [],
+      industry_subsector: [],
+      industry_segment: [],
+      market: [],
+    },
     selectedItems: [],
-    isLoading: false,
-    error: null,
+    isLoadingCompanies: false,
+    isLoadingFacets: false,
+    errorCompanies: null,
+    errorFacets: null,
   }),
 
   getters: {
@@ -639,22 +646,41 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     async loadCompanies() {
-      this.isLoading = true
-      this.error = null
+      this.isLoadingCompanies = true
+      this.errorCompanies = null
       try {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
-        this.facets = payload.facets || {}
         this._pruneSelection()
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
         }
       } catch (err) {
         console.error(err)
-        this.error = 'Falha ao carregar companhias'
+        this.errorCompanies = 'Falha ao carregar companhias'
       } finally {
-        this.isLoading = false
+        this.isLoadingCompanies = false
+      }
+    },
+
+    async loadFacets() {
+      this.isLoadingFacets = true
+      this.errorFacets = null
+      try {
+        const payload = await getCompanyFacets()
+        const facets = payload?.facets || {}
+        this.facetsAll = {
+          industry_sector: facets.industry_sector || [],
+          industry_subsector: facets.industry_subsector || [],
+          industry_segment: facets.industry_segment || [],
+          market: facets.market || [],
+        }
+      } catch (err) {
+        console.error(err)
+        this.errorFacets = 'Falha ao carregar facetas'
+      } finally {
+        this.isLoadingFacets = false
       }
     },
 

@@ -27,3 +27,8 @@ export async function searchCompanies(filterQuery) {
   const res = await api.post('/companies/search', filterQuery || { clauses: [] })
   return res.data
 }
+
+export async function getCompanyFacets() {
+  const res = await api.get('/companies/facets')
+  return res.data
+}

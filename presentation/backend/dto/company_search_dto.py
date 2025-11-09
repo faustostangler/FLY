@@ -52,4 +52,7 @@ class CompanySearchResultDTO(BaseModel):
 class CompanySearchResponseDTO(BaseModel):
     items: List[CompanySearchResultDTO]
     total: int
+
+
+class CompanyFacetsResponseDTO(BaseModel):
     facets: Dict[str, List[str]] = Field(default_factory=dict)

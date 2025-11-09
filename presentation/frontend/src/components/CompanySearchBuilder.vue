@@ -8,6 +8,8 @@
 
     <section class="company-search__facets" aria-labelledby="filters-heading">
       <h2 id="filters-heading">Filtros</h2>
+      <p v-if="isLoadingFacets" class="muted">Carregando facetas…</p>
+      <p v-else-if="errorFacets" class="company-search__error">{{ errorFacets }}</p>
 
       <CompanyFacet
         v-for="facet in facetConfigs"
@@ -92,9 +94,11 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.companies)
 const total = computed(() => store.total)
-const facets = computed(() => store.facets || {})
-const isLoading = computed(() => store.isLoading)
-const error = computed(() => store.error)
+const facets = computed(() => store.facetsAll || {})
+const isLoading = computed(() => store.isLoadingCompanies)
+const error = computed(() => store.errorCompanies)
+const isLoadingFacets = computed(() => store.isLoadingFacets)
+const errorFacets = computed(() => store.errorFacets)
 
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
@@ -232,6 +236,7 @@ function onFacetCommit({ field, logical, values, operator }) {
   const finalOperator = operator || DEFAULT_OPERATOR
 
   store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+  store.loadCompanies()
 
   draftFacets.value = {
     ...draftFacets.value,
