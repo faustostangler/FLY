@@ -2,8 +2,6 @@
   <section class="company-search">
     <header class="company-search__header">
       <h2>Construtor de filtros</h2>
-      <div class="company-search__actions">
-      </div>
     </header>
 
     <section class="company-search__facets" aria-labelledby="filters-heading">
@@ -35,8 +33,12 @@
         placeholder="AND sector IN (Energia, Financeiro)"
       ></textarea>
       <div class="company-search__query-actions">
+      <div class="company-search__actions">
         <button type="button" @click="applyQuery">Buscar</button>
-        <button type="button" class="ghost" @click="clearFilters">Limpar filtros</button>
+        <button type="button" class="ghost" @click="clearFilters">
+          Limpar filtros
+        </button>
+      </div>
         <!-- <button type="button" @click="reload">Buscar</button> -->
         <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
       </div>

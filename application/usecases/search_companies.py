@@ -13,7 +13,7 @@ from domain.value_objects.company_filters import CompanyFilterQuery
 from application.services.company_facets_builder import build_company_facets
 
 
-DEFAULT_LIMIT = 200
+DEFAULT_LIMIT = 1000000
 
 
 @dataclass
@@ -40,11 +40,9 @@ class SearchCompaniesUseCase:
         items = [self._to_result(dto) for dto in dtos]
         facets = build_company_facets(dtos)
 
-        total = len(items)
-
         return CompanySearchResponseDTO(
             items=items,
-            total=total,
+            total=len(items),
             facets=facets,
         )
 

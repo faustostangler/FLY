@@ -1,864 +1,764 @@
-diff --git a/application/dtos/company_facets_dto.py b/application/dtos/company_facets_dto.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..0013ab5943b687849beebacc82e32cb30e7fe85a
---- /dev/null
-+++ b/application/dtos/company_facets_dto.py
-@@ -0,0 +1,9 @@
-+from __future__ import annotations
-+
-+from dataclasses import dataclass, field
-+from typing import Dict, List
-+
-+
-+@dataclass(frozen=True)
-+class CompanyFacetsResponseDTO:
-+    facets: Dict[str, List[str]] = field(default_factory=dict)
-diff --git a/application/dtos/company_search_dto.py b/application/dtos/company_search_dto.py
-index ce9fce13ec3f2692817f37f9269d7ffca55fe5fd..106847aab13ce7d2e7b5b6abccd8e67705ab54d2 100644
---- a/application/dtos/company_search_dto.py
-+++ b/application/dtos/company_search_dto.py
-@@ -1,24 +1,14 @@
- from __future__ import annotations
- 
--from dataclasses import dataclass, field
--from typing import Dict, List
-+from dataclasses import dataclass
-+from typing import List
- 
-+from .company_search_result_dto import CompanySearchResultDTO
- 
--@dataclass(frozen=True)
--class CompanySearchResultDTO:
--    company_name: str
--    trading_name: str | None
--    tickers: List[str] = field(default_factory=list)
--    sector: str | None = None
--    subsector: str | None = None
--    segment: str | None = None
--    market: str | None = None
--    institution_common: str | None = None
--    institution_preferred: str | None = None
-+__all__ = ["CompanySearchResponseDTO", "CompanySearchResultDTO"]
- 
- 
- @dataclass(frozen=True)
- class CompanySearchResponseDTO:
-     items: List[CompanySearchResultDTO]
-     total: int
--    facets: Dict[str, List[str]] = field(default_factory=dict)
-diff --git a/application/dtos/company_search_result_dto.py b/application/dtos/company_search_result_dto.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..c82ef3dcc14a1e1b3cde189efc27d83fe701bc5a
---- /dev/null
-+++ b/application/dtos/company_search_result_dto.py
-@@ -0,0 +1,17 @@
-+from __future__ import annotations
-+
-+from dataclasses import dataclass, field
-+from typing import List
-+
-+
-+@dataclass(frozen=True)
-+class CompanySearchResultDTO:
-+    company_name: str
-+    trading_name: str | None
-+    tickers: List[str] = field(default_factory=list)
-+    sector: str | None = None
-+    subsector: str | None = None
-+    segment: str | None = None
-+    market: str | None = None
-+    institution_common: str | None = None
-+    institution_preferred: str | None = None
-diff --git a/application/usecases/get_company_facets.py b/application/usecases/get_company_facets.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..6cc8a6d289ee5f941ca8798a5eebbf5b95d46fa8
---- /dev/null
-+++ b/application/usecases/get_company_facets.py
-@@ -0,0 +1,88 @@
-+from __future__ import annotations
-+
-+from dataclasses import dataclass
-+from typing import Dict, Iterable, List
-+
-+from application.dtos.company_facets_dto import CompanyFacetsResponseDTO
-+from application.ports.uow_port import UowFactoryPort
-+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
-+from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
-+from domain.value_objects.company_filters import CompanyField
-+
-+DEFAULT_FACETS_BATCH_SIZE = 500
-+
-+
-+@dataclass
-+class GetCompanyFacetsUseCase:
-+    repository: RepositoryCompanyEligiblePort
-+    uow_factory: UowFactoryPort
-+
-+    def __call__(self) -> CompanyFacetsResponseDTO:
-+        with self.uow_factory() as uow:
-+            items: List[CompanyEligibleDTO] = self.repository.get_all(
-+                uow=uow,
-+                batch_size=DEFAULT_FACETS_BATCH_SIZE,
-+            )
-+
-+        facets = self._build_facets(items)
-+        return CompanyFacetsResponseDTO(facets=facets)
-+
-+    def _build_facets(
-+        self,
-+        items: Iterable[CompanyEligibleDTO],
-+    ) -> Dict[str, List[str]]:
-+        string_fields = [
-+            CompanyField.ISSUING_COMPANY,
-+            CompanyField.TRADING_NAME,
-+            CompanyField.COMPANY_NAME,
-+            CompanyField.CNPJ,
-+            CompanyField.MARKET,
-+            CompanyField.INDUSTRY_SECTOR,
-+            CompanyField.INDUSTRY_SUBSECTOR,
-+            CompanyField.INDUSTRY_SEGMENT,
-+            CompanyField.INDUSTRY_CLASSIFICATION,
-+            CompanyField.INDUSTRY_CLASSIFICATION_ENG,
-+            CompanyField.ACTIVITY,
-+            CompanyField.COMPANY_SEGMENT,
-+            CompanyField.COMPANY_SEGMENT_ENG,
-+            CompanyField.COMPANY_CATEGORY,
-+            CompanyField.COMPANY_TYPE,
-+            CompanyField.LISTING_SEGMENT,
-+            CompanyField.REGISTRAR,
-+            CompanyField.WEBSITE,
-+            CompanyField.INSTITUTION_COMMON,
-+            CompanyField.INSTITUTION_PREFERRED,
-+            CompanyField.STATUS,
-+            CompanyField.MARKET_INDICATOR,
-+            CompanyField.CODE,
-+            CompanyField.TYPE_BDR,
-+            CompanyField.REASON,
-+        ]
-+
-+        boolean_fields = [
-+            CompanyField.HAS_BDR,
-+            CompanyField.HAS_QUOTATION,
-+            CompanyField.HAS_EMISSIONS,
-+        ]
-+
-+        buckets: Dict[str, set[str]] = {
-+            field.value: set() for field in string_fields + boolean_fields
-+        }
-+
-+        for item in items:
-+            for field in string_fields:
-+                value = getattr(item, field.value, None)
-+                if value:
-+                    buckets[field.value].add(value)
-+
-+            for field in boolean_fields:
-+                value = getattr(item, field.value, None)
-+                if value is None:
-+                    continue
-+                buckets[field.value].add("true" if value else "false")
-+
-+        return {
-+            key: sorted({v for v in values if v})
-+            for key, values in buckets.items()
-+            if values
-+        }
-diff --git a/application/usecases/search_companies.py b/application/usecases/search_companies.py
-index ca56c1a63d4ee1ab12db2a61cae546b4b13365a1..7a970ad704506281023426e1deba663656ef9c44 100644
---- a/application/usecases/search_companies.py
-+++ b/application/usecases/search_companies.py
-@@ -1,113 +1,51 @@
- from __future__ import annotations
- 
- from dataclasses import dataclass
--from typing import Dict, Iterable, List
-+from typing import List
- 
--from application.dtos.company_search_dto import (
--    CompanySearchResponseDTO,
--    CompanySearchResultDTO,
--)
-+from application.dtos.company_search_dto import CompanySearchResponseDTO
-+from application.dtos.company_search_result_dto import CompanySearchResultDTO
- from application.ports.uow_port import UowFactoryPort
- from domain.dtos.company_eligible_dto import CompanyEligibleDTO
- from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
--from domain.value_objects.company_filters import CompanyFilterQuery, CompanyField
-+from domain.value_objects.company_filters import CompanyFilterQuery
- 
- 
- DEFAULT_LIMIT = 200
- 
- 
- @dataclass
- class SearchCompaniesUseCase:
-     repository: RepositoryCompanyEligiblePort
-     uow_factory: UowFactoryPort
- 
-     def __call__(
-         self,
-         query: CompanyFilterQuery | None = None,
-         *,
-         limit: int | None = None,
-     ) -> CompanySearchResponseDTO:
-         query = query or CompanyFilterQuery()
-         with self.uow_factory() as uow:
-             dtos: List[CompanyEligibleDTO] = self.repository.search(
-                 query,
-                 uow=uow,
-                 limit=limit or DEFAULT_LIMIT,
-             )
- 
-         items = [self._to_result(dto) for dto in dtos]
--        facets = self._build_facets(dtos)
--        return CompanySearchResponseDTO(items=items, total=len(items), facets=facets)
-+        return CompanySearchResponseDTO(items=items, total=len(items))
- 
-     def _to_result(self, dto: CompanyEligibleDTO) -> CompanySearchResultDTO:
-         return CompanySearchResultDTO(
-             company_name=dto.company_name or "",
-             trading_name=dto.trading_name,
-             tickers=list(dto.ticker_codes or []),
-             sector=dto.industry_sector,
-             subsector=dto.industry_subsector,
-             segment=dto.industry_segment,
-             market=dto.market,
-             institution_common=dto.institution_common,
-             institution_preferred=dto.institution_preferred,
-         )
- 
--    def _build_facets(
--        self,
--        items: Iterable[CompanyEligibleDTO],
--    ) -> Dict[str, List[str]]:
--        string_fields = [
--            CompanyField.ISSUING_COMPANY,
--            CompanyField.TRADING_NAME,
--            CompanyField.COMPANY_NAME,
--            CompanyField.CNPJ,
--            CompanyField.MARKET,
--            CompanyField.INDUSTRY_SECTOR,
--            CompanyField.INDUSTRY_SUBSECTOR,
--            CompanyField.INDUSTRY_SEGMENT,
--            CompanyField.INDUSTRY_CLASSIFICATION,
--            CompanyField.INDUSTRY_CLASSIFICATION_ENG,
--            CompanyField.ACTIVITY,
--            CompanyField.COMPANY_SEGMENT,
--            CompanyField.COMPANY_SEGMENT_ENG,
--            CompanyField.COMPANY_CATEGORY,
--            CompanyField.COMPANY_TYPE,
--            CompanyField.LISTING_SEGMENT,
--            CompanyField.REGISTRAR,
--            CompanyField.WEBSITE,
--            CompanyField.INSTITUTION_COMMON,
--            CompanyField.INSTITUTION_PREFERRED,
--            CompanyField.STATUS,
--            CompanyField.MARKET_INDICATOR,
--            CompanyField.CODE,
--            CompanyField.TYPE_BDR,
--            CompanyField.REASON,
--        ]
--
--        boolean_fields = [
--            CompanyField.HAS_BDR,
--            CompanyField.HAS_QUOTATION,
--            CompanyField.HAS_EMISSIONS,
--        ]
--
--        buckets: Dict[str, set[str]] = {
--            field.value: set() for field in string_fields + boolean_fields
--        }
--
--        for item in items:
--            for field in string_fields:
--                value = getattr(item, field.value, None)
--                if value:
--                    buckets[field.value].add(value)
--
--            for field in boolean_fields:
--                value = getattr(item, field.value, None)
--                if value is None:
--                    continue
--                buckets[field.value].add("true" if value else "false")
--
--        return {
--            key: sorted({v for v in values if v})
--            for key, values in buckets.items()
--            if values
--        }
-diff --git a/domain/ports/repository_company_eligible_port.py b/domain/ports/repository_company_eligible_port.py
-index d1af0d552dc45447652873b59f499cc7c652d4c3..fc8d33c92582c83083e6190763f3e6d8a44335e7 100644
---- a/domain/ports/repository_company_eligible_port.py
-+++ b/domain/ports/repository_company_eligible_port.py
-@@ -1,27 +1,36 @@
- """Port definition for the eligible companies repository with search support."""
- 
- from __future__ import annotations
- 
--from typing import Protocol, runtime_checkable
-+from typing import List, Protocol, runtime_checkable
- 
- from application.ports.uow_port import Uow
- from domain.dtos.company_eligible_dto import CompanyEligibleDTO
- from domain.ports.repository_base_port import RepositoryBasePort
- from domain.value_objects.company_filters import CompanyFilterQuery
- 
- 
- @runtime_checkable
- class RepositoryCompanyEligiblePort(
-     RepositoryBasePort[CompanyEligibleDTO, str], Protocol
- ):
-     """Port abstraction for querying the eligible companies projection."""
- 
-     def search(
-         self,
-         query: CompanyFilterQuery,
-         *,
-         uow: Uow,
-         limit: int | None = None,
-     ) -> list[CompanyEligibleDTO]:
-         """Return companies matching the structured filter query."""
-         ...
-+
-+    def get_all(
-+        self,
-+        *,
-+        uow: Uow,
-+        batch_size: int | None = None,
-+    ) -> List[CompanyEligibleDTO]:
-+        """Return every eligible company DTO in stable order."""
-+        ...
-diff --git a/infrastructure/repositories/repository_company_eligible.py b/infrastructure/repositories/repository_company_eligible.py
-index 5ac0293ceb1cde8a033956ef7fa1c6db965b3e7a..8d6fbea6b8cf2ebe40388f4d3e12754ee62cf8f0 100644
---- a/infrastructure/repositories/repository_company_eligible.py
-+++ b/infrastructure/repositories/repository_company_eligible.py
-@@ -1,31 +1,31 @@
- """Repository implementing the eligible companies read/write ports."""
- 
- from __future__ import annotations
- 
- from datetime import datetime
--from typing import Optional, Sequence, Tuple
-+from typing import List, Optional, Sequence, Tuple
- 
- from sqlalchemy import and_, delete, func, not_, or_
- from sqlalchemy.orm import Session
- 
- from application.ports.config_port import ConfigPort
- from application.ports.logger_port import LoggerPort
- from application.ports.uow_port import Uow
- from domain.dtos.company_eligible_dto import CompanyEligibleDTO
- from domain.ports.companies_eligible_port import CompaniesEligiblePort
- from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
- from domain.value_objects.company_filters import (
-     CompanyFilterClause,
-     CompanyFilterCondition,
-     CompanyFilterQuery,
-     CompanyField,
-     ComparisonOperator,
-     LogicalOperator,
- )
- from infrastructure.models.company_eligible_model import CompanyEligibleModel
- from infrastructure.repositories.repository_base import RepositoryBase
- 
- 
- STRING_FIELDS: set[CompanyField] = {
-     CompanyField.ISSUING_COMPANY,
-     CompanyField.TRADING_NAME,
-@@ -132,50 +132,76 @@ class RepositoryCompanyEligible(
-         self,
-         query: CompanyFilterQuery,
-         *,
-         uow: Uow,
-         limit: int | None = None,
-     ) -> list[CompanyEligibleDTO]:
-         session: Session = uow.session
-         model, _ = self.get_model_class()
- 
-         stmt = session.query(model)
- 
-         expression = self._build_boolean_expression(query.clauses, model)
-         if expression is not None:
-             stmt = stmt.filter(expression)
- 
-         stmt = stmt.order_by(model.company_name.asc())
- 
-         if limit is None:
-             limit = 200
-         if limit:
-             stmt = stmt.limit(limit)
- 
-         rows = stmt.all()
-         return [row.to_dto() for row in rows]
- 
-+    def get_all(
-+        self,
-+        *,
-+        uow: Uow,
-+        batch_size: int | None = None,
-+    ) -> List[CompanyEligibleDTO]:
-+        session: Session = uow.session
-+        size = batch_size or self.config.repository.batch_size or 50
-+
-+        query = (
-+            session.query(CompanyEligibleModel)
-+            .order_by(CompanyEligibleModel.company_name.asc())
-+        )
-+
-+        results: List[CompanyEligibleDTO] = []
-+        offset = 0
-+        while True:
-+            chunk = query.offset(offset).limit(size).all()
-+            if not chunk:
-+                break
-+
-+            results.extend(row.to_dto() for row in chunk)
-+            offset += size
-+
-+        return results
-+
-     def replace_all(
-         self,
-         items: Sequence[CompanyEligibleDTO],
-         *,
-         uow: Uow,
-     ) -> None:
-         session: Session = uow.session
- 
-         session.execute(delete(CompanyEligibleModel))
- 
-         if items:
-             objects = [CompanyEligibleModel.from_dto(item) for item in items]
-             session.bulk_save_objects(objects)
- 
-         # self._logger.log(
-         #     f"Projection tbl_company_eligible replaced with {len(items)} rows",
-         #     level="debug",
-         # )
- 
-     # Helpers -----------------------------------------------------------------
-     def _build_boolean_expression(
-         self, clauses: list[CompanyFilterClause], model
-     ) -> Optional[object]:
-         if not clauses:
-             return None
-diff --git a/presentation/backend/dependencies/company_facets_dependencies.py b/presentation/backend/dependencies/company_facets_dependencies.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..aee1aedfbb3f84c2110fd25dee105d1308abd70b
---- /dev/null
-+++ b/presentation/backend/dependencies/company_facets_dependencies.py
-@@ -0,0 +1,21 @@
-+from __future__ import annotations
-+
-+from application.usecases.get_company_facets import GetCompanyFacetsUseCase
-+from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
-+from infrastructure.config.config_adapter import ConfigAdapter
-+from infrastructure.logging.logger_adapter import Logger
-+from infrastructure.repositories.repository_company_eligible import (
-+    RepositoryCompanyEligible,
-+)
-+from infrastructure.uow.uow import UowFactory
-+
-+
-+def get_company_facets_usecase() -> GetCompanyFacetsUseCase:
-+    config = ConfigAdapter()
-+    logger = Logger(config)
-+    repository: RepositoryCompanyEligiblePort = RepositoryCompanyEligible(
-+        config=config,
-+        logger=logger,
-+    )
-+    uow_factory = UowFactory(session_factory=repository.Session)
-+    return GetCompanyFacetsUseCase(repository=repository, uow_factory=uow_factory)
-diff --git a/presentation/backend/dto/company_facets_dto.py b/presentation/backend/dto/company_facets_dto.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..1160706e9a14611f1e1e412bfb2bc07dc86e3fd1
---- /dev/null
-+++ b/presentation/backend/dto/company_facets_dto.py
-@@ -0,0 +1,9 @@
-+from __future__ import annotations
-+
-+from typing import Dict, List
-+
-+from pydantic import BaseModel, Field
-+
-+
-+class CompanyFacetsResponseDTO(BaseModel):
-+    facets: Dict[str, List[str]] = Field(default_factory=dict)
-diff --git a/presentation/backend/dto/company_search_dto.py b/presentation/backend/dto/company_search_dto.py
-index 30a42b861061ea4b4acd376d7b0b08c21cc37194..368ce50c45fc1f7d15494318c351f0c47b42ed1b 100644
---- a/presentation/backend/dto/company_search_dto.py
-+++ b/presentation/backend/dto/company_search_dto.py
-@@ -1,55 +1,52 @@
- from __future__ import annotations
- 
--from typing import Dict, List, Optional
-+from typing import List, Optional
- 
- from pydantic import BaseModel, Field, model_validator
- 
-+from .company_search_result_dto import CompanySearchResultDTO
-+
-+__all__ = [
-+    "CompanyFilterConditionDTO",
-+    "CompanyFilterClauseDTO",
-+    "CompanyFilterQueryDTO",
-+    "CompanySearchResponseDTO",
-+    "CompanySearchResultDTO",
-+]
-+
- 
- class CompanyFilterConditionDTO(BaseModel):
-     field: str
-     operator: str = Field(default="IN")
-     values: List[str] = Field(default_factory=list)
- 
- 
- class CompanyFilterClauseDTO(BaseModel):
-     logical: str = Field(default="AND")
-     condition: Optional[CompanyFilterConditionDTO] = None
-     group: Optional["CompanyFilterQueryDTO"] = None
- 
-     @model_validator(mode="after")
-     def check_structure(self):
-         condition, group = self.condition, self.group
-         if condition is None and group is None:
-             raise ValueError(
-                 "Each clause must provide either a condition or a nested group"
-             )
-         if condition is not None and group is not None:
-             raise ValueError(
-                 "A clause cannot define both a condition and a nested group"
-             )
-         return self
- 
- 
- class CompanyFilterQueryDTO(BaseModel):
-     clauses: List[CompanyFilterClauseDTO] = Field(default_factory=list)
- 
- 
- CompanyFilterClauseDTO.update_forward_refs()
- 
- 
--class CompanySearchResultDTO(BaseModel):
--    company_name: str
--    trading_name: Optional[str] = None
--    tickers: List[str] = Field(default_factory=list)
--    sector: Optional[str] = None
--    subsector: Optional[str] = None
--    segment: Optional[str] = None
--    market: Optional[str] = None
--    institution_common: Optional[str] = None
--    institution_preferred: Optional[str] = None
--
--
- class CompanySearchResponseDTO(BaseModel):
-     items: List[CompanySearchResultDTO]
-     total: int
--    facets: Dict[str, List[str]] = Field(default_factory=dict)
-diff --git a/presentation/backend/dto/company_search_result_dto.py b/presentation/backend/dto/company_search_result_dto.py
-new file mode 100644
-index 0000000000000000000000000000000000000000..ef63d967f4d3b5cd5a38da2a4a8096f8e514ca06
---- /dev/null
-+++ b/presentation/backend/dto/company_search_result_dto.py
-@@ -0,0 +1,17 @@
-+from __future__ import annotations
-+
-+from typing import List, Optional
-+
-+from pydantic import BaseModel, Field
-+
-+
-+class CompanySearchResultDTO(BaseModel):
-+    company_name: str
-+    trading_name: Optional[str] = None
-+    tickers: List[str] = Field(default_factory=list)
-+    sector: Optional[str] = None
-+    subsector: Optional[str] = None
-+    segment: Optional[str] = None
-+    market: Optional[str] = None
-+    institution_common: Optional[str] = None
-+    institution_preferred: Optional[str] = None
-diff --git a/presentation/backend/routers/companies.py b/presentation/backend/routers/companies.py
-index 7d9ce6b67a1a1261bd27ae69435dd57e543c9c71..ad5d1c0dcff696a38babded3d51caac3c1990ff1 100644
---- a/presentation/backend/routers/companies.py
-+++ b/presentation/backend/routers/companies.py
-@@ -1,66 +1,76 @@
- from __future__ import annotations
- 
- from dataclasses import asdict
- 
--from dataclasses import asdict
--from dataclasses import asdict
--
--from fastapi import APIRouter, Depends, Body
-+from fastapi import APIRouter, Body, Depends
- 
-+from application.usecases.get_company_facets import GetCompanyFacetsUseCase
- from application.usecases.search_companies import SearchCompaniesUseCase
- from domain.value_objects.company_filters import (
-     CompanyFilterClause,
-     CompanyFilterCondition,
-     CompanyFilterQuery,
-     CompanyField,
-     ComparisonOperator,
-     LogicalOperator,
- )
-+from presentation.backend.dependencies.company_facets_dependencies import (
-+    get_company_facets_usecase,
-+)
- from presentation.backend.dependencies.company_search_dependencies import (
-     get_company_search_usecase,
- )
-+from presentation.backend.dto.company_facets_dto import CompanyFacetsResponseDTO
- from presentation.backend.dto.company_search_dto import (
-     CompanyFilterConditionDTO,
-     CompanyFilterQueryDTO,
-     CompanySearchResponseDTO,
- )
- 
- 
- router = APIRouter(prefix="/companies", tags=["companies"])
- 
- 
- @router.post("/search", response_model=CompanySearchResponseDTO)
- async def search_companies(
-     filters: CompanyFilterQueryDTO = Body(default_factory=CompanyFilterQueryDTO),
-     use_case: SearchCompaniesUseCase = Depends(get_company_search_usecase),
- ) -> CompanySearchResponseDTO:
-     query = _map_to_domain(filters)
-     result = use_case(query=query)
-     return CompanySearchResponseDTO(**asdict(result))
- 
- 
-+@router.get("/facets", response_model=CompanyFacetsResponseDTO)
-+async def get_company_facets(
-+    use_case: GetCompanyFacetsUseCase = Depends(get_company_facets_usecase),
-+) -> CompanyFacetsResponseDTO:
-+    result = use_case()
-+    return CompanyFacetsResponseDTO(**asdict(result))
-+
-+
- def _map_to_domain(dto: CompanyFilterQueryDTO | None) -> CompanyFilterQuery:
-     if dto is None:
-         return CompanyFilterQuery()
- 
-     clauses: list[CompanyFilterClause] = []
-     for clause in dto.clauses:
-         logical = _map_logical(clause.logical)
-         if logical is None:
-             continue
-         condition = _map_condition(clause.condition)
-         group = _map_to_domain(clause.group) if clause.group else None
- 
-         if group is not None and not group.clauses:
-             group = None
- 
-         if condition is None and group is None:
-             continue
- 
-         try:
-             clauses.append(
-                 CompanyFilterClause(
-                     logical=logical,
-                     condition=condition,
-                     group=group,
-                 )
-diff --git a/presentation/frontend/src/components/CompanySearchBuilder.vue b/presentation/frontend/src/components/CompanySearchBuilder.vue
-index a9bdf16dcacc6c9e618867f3d90d44c426b186e1..a932dffd319fbb15b21fa49ecdc2b4e3f6c2fc73 100644
---- a/presentation/frontend/src/components/CompanySearchBuilder.vue
-+++ b/presentation/frontend/src/components/CompanySearchBuilder.vue
-@@ -364,50 +364,53 @@ watch(
-   async (value) => {
-     if (isSyncingSelection) {
-       return
-     }
- 
-     isSyncingSelection = true
-     try {
-       const parsed = parseSelectionParam(value)
-       const companySelection = store.selectedItems || []
- 
-       if (!selectionsAreEqual(parsed, companySelection)) {
-         store.setSelectedItems(parsed)
-       }
- 
-       await syncChartWithSelection(parsed)
-     } finally {
-       isSyncingSelection = false
-     }
-   },
- )
- 
- onMounted(() => {
-   if (!store.companies.length) {
-     reload()
-   }
-+  if (!Object.keys(store.facets || {}).length) {
-+    store.loadFacets()
-+  }
- })
- </script>
- 
- <style scoped>
- .company-search {
-   display: flex;
-   flex-direction: column;
-   gap: 1.5rem;
-   padding: 1rem;
-   border: 1px solid var(--vt-c-divider-light, #e2e8f0);
-   border-radius: 12px;
-   background-color: var(--vt-c-bg-mute, #f8fafc);
- }
- 
- .company-search__header {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
-   flex-wrap: wrap;
-   gap: 0.75rem;
- }
- 
- .company-search__actions {
-   display: flex;
-   gap: 0.5rem;
-diff --git a/presentation/frontend/src/services/apiService.js b/presentation/frontend/src/services/apiService.js
-index b8ad76b92d22194d81037e99b0345219ef5fd8d7..1efc415c708c2ebcd3b8555beaba1b2ba2cceb4c 100644
---- a/presentation/frontend/src/services/apiService.js
-+++ b/presentation/frontend/src/services/apiService.js
-@@ -5,25 +5,30 @@ const api = axios.create({
- })
- 
- export async function fetchChart(params) {
-   const payload = params || {}
-   const type = String(payload.type || '').trim()
-   if (!type) {
-     throw new Error('Ticker inválido para carregar o gráfico')
-   }
-   const selection = Array.isArray(payload.selection) ? payload.selection : []
- 
-   const query = {}
-   if (selection.length) {
-     query.selection = selection.join(',')
-   }
- 
-   const res = await api.get(`/charts/${encodeURIComponent(type)}`, {
-     params: query,
-   })
-   return res.data
- }
- 
- export async function searchCompanies(filterQuery) {
-   const res = await api.post('/companies/search', filterQuery || { clauses: [] })
-   return res.data
- }
-+
-+export async function fetchCompanyFacets() {
-+  const res = await api.get('/companies/facets')
-+  return res.data
-+}
-diff --git a/presentation/frontend/src/store/companyStore.js b/presentation/frontend/src/store/companyStore.js
-index a0888ec6a760cc7e72d9fc4549cb7c15caed2710..36e320efd350843118cff6e147a64a4ecbd0064a 100644
---- a/presentation/frontend/src/store/companyStore.js
-+++ b/presentation/frontend/src/store/companyStore.js
-@@ -1,27 +1,27 @@
- import { defineStore } from 'pinia'
--import { searchCompanies } from '../services/apiService'
-+import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
- 
- const DEFAULT_OPERATOR = 'IN'
- const SELECTION_SEPARATOR = '::'
- 
- const LOGICAL_ALIASES = {
-   AND: 'AND',
-   MUST: 'AND',
-   OR: 'OR',
-   SHOULD: 'OR',
-   NOT: 'NOT',
-   MUST_NOT: 'NOT',
-   SHOULD_NOT: 'NOT',
-   OR_NOT: 'NOT',
-   'OR-NOT': 'NOT',
- }
- 
- const OPERATOR_ALIASES = {
-   IN: 'IN',
-   EQUALS: 'EQUALS',
-   EQ: 'EQUALS',
-   '=': 'EQUALS',
-   '==': 'EQUALS',
-   CONTAINS: 'CONTAINS',
-   HAS: 'CONTAINS',
-   STARTS_WITH: 'STARTS_WITH',
-@@ -623,63 +623,71 @@ export const useCompanyStore = defineStore('companyStore', {
-         return { ok: false, message }
-       }
-     },
- 
-     resetFilters() {
-       this.filterQuery = { clauses: [] }
-       this.queryText = ''
-       this.selectedItems = []
-       this.loadCompanies()
-     },
- 
-     setSelectedItems(values) {
-       const normalized = Array.isArray(values)
-         ? values.map((value) => String(value)).filter((value) => value.length)
-         : []
-       this.selectedItems = normalized
-     },
- 
-     async loadCompanies() {
-       this.isLoading = true
-       this.error = null
-       try {
-         const payload = await searchCompanies(this.filterQuery)
-         this.companies = payload.items || []
-         this.total = payload.total || 0
--        this.facets = payload.facets || {}
-         this._pruneSelection()
-         if (!this.queryText) {
-           this.queryText = this.serializeQuery(this.filterQuery)
-         }
-       } catch (err) {
-         console.error(err)
-         this.error = 'Falha ao carregar companhias'
-       } finally {
-         this.isLoading = false
-       }
-     },
- 
-+    async loadFacets() {
-+      try {
-+        const payload = await fetchCompanyFacets()
-+        this.facets = payload.facets || {}
-+      } catch (err) {
-+        console.error(err)
-+      }
-+    },
-+
-     serializeQuery(query) {
-       if (!query || !Array.isArray(query.clauses) || query.clauses.length === 0) {
-         return ''
-       }
-       return serializeClauses(query.clauses)
-     },
- 
-     parseQuery(text) {
-       if (!text || !text.trim()) {
-         return { clauses: [] }
-       }
-       return parseTextToQuery(text)
-     },
- 
-     _pruneSelection() {
-       if (!this.selectedItems || this.selectedItems.length === 0) {
-         return
-       }
-       const valid = new Set()
-       for (const company of this.companies || []) {
-         const companyName = company.company_name || ''
-         for (const ticker of company.tickers || []) {
-           if (!ticker) continue
-           valid.add(buildSelectionValue(companyName, ticker))
-         }
+Summary
+
+Updated SearchCompaniesUseCase to rely on repository-side limiting while returning the limited items together with the computed facets payload. 
+
+Testing
+
+⚠️ pytest (fails: unrecognized arguments --cov=fly --cov-report=term-missing from pyproject configuration) 
+
+
+Arquivos (7)
+
+application/dtos/company_search_dto.py
++3
+-2
+
+application/services/company_facets_builder.py
+Novo
+
+application/usecases/get_company_facets.py
++4
+-63
+
+application/usecases/search_companies.py
++14
+-2
+
+presentation/backend/dto/company_search_dto.py
++2
+-1
+
+presentation/frontend/src/components/CompanySearchBuilder.vue
++0
+-11
+
+presentation/frontend/src/store/companyStore.js
++105
+-3
+
+
+
+application/dtos/company_search_dto.py
++3
+-2
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List
+from dataclasses import dataclass, field
+from typing import Dict, List
+
+from .company_search_result_dto import CompanySearchResultDTO
+
+__all__ = ["CompanySearchResponseDTO", "CompanySearchResultDTO"]
+
+
+@dataclass(frozen=True)
+class CompanySearchResponseDTO:
+    items: List[CompanySearchResultDTO]
+    total: int
+    facets: Dict[str, List[str]] = field(default_factory=dict)
+application/services/company_facets_builder.py
+Novo
++72
+-0
+
+"""Utilities for building company facet buckets from search results."""
+
+from __future__ import annotations
+
+from typing import Dict, Iterable, List
+
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.value_objects.company_filters import CompanyField
+
+
+STRING_FIELDS: tuple[CompanyField, ...] = (
+    CompanyField.ISSUING_COMPANY,
+    CompanyField.TRADING_NAME,
+    CompanyField.COMPANY_NAME,
+    CompanyField.CNPJ,
+    CompanyField.MARKET,
+    CompanyField.INDUSTRY_SECTOR,
+    CompanyField.INDUSTRY_SUBSECTOR,
+    CompanyField.INDUSTRY_SEGMENT,
+    CompanyField.INDUSTRY_CLASSIFICATION,
+    CompanyField.INDUSTRY_CLASSIFICATION_ENG,
+    CompanyField.ACTIVITY,
+    CompanyField.COMPANY_SEGMENT,
+    CompanyField.COMPANY_SEGMENT_ENG,
+    CompanyField.COMPANY_CATEGORY,
+    CompanyField.COMPANY_TYPE,
+    CompanyField.LISTING_SEGMENT,
+    CompanyField.REGISTRAR,
+    CompanyField.WEBSITE,
+    CompanyField.INSTITUTION_COMMON,
+    CompanyField.INSTITUTION_PREFERRED,
+    CompanyField.STATUS,
+    CompanyField.MARKET_INDICATOR,
+    CompanyField.CODE,
+    CompanyField.TYPE_BDR,
+    CompanyField.REASON,
+)
+
+BOOLEAN_FIELDS: tuple[CompanyField, ...] = (
+    CompanyField.HAS_BDR,
+    CompanyField.HAS_QUOTATION,
+    CompanyField.HAS_EMISSIONS,
+)
+
+
+def build_company_facets(
+    items: Iterable[CompanyEligibleDTO],
+) -> Dict[str, List[str]]:
+    """Aggregate available values for each facet field."""
+
+    buckets: Dict[str, set[str]] = {
+        field.value: set() for field in (*STRING_FIELDS, *BOOLEAN_FIELDS)
+    }
+
+    for item in items:
+        for field in STRING_FIELDS:
+            value = getattr(item, field.value, None)
+            if value:
+                buckets[field.value].add(value)
+
+        for field in BOOLEAN_FIELDS:
+            value = getattr(item, field.value, None)
+            if value is None:
+                continue
+            buckets[field.value].add("true" if value else "false")
+
+    return {
+        key: sorted({v for v in values if v})
+        for key, values in buckets.items()
+        if values
+    }
+
+application/usecases/get_company_facets.py
++4
+-63
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, Iterable, List
+from typing import List
+
+from application.dtos.company_facets_dto import CompanyFacetsResponseDTO
+from application.ports.uow_port import UowFactoryPort
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
+from domain.value_objects.company_filters import CompanyField
+
+from application.services.company_facets_builder import build_company_facets
+
+DEFAULT_FACETS_BATCH_SIZE = 500
+
+
+@dataclass
+class GetCompanyFacetsUseCase:
+    repository: RepositoryCompanyEligiblePort
+    uow_factory: UowFactoryPort
+
+    def __call__(self) -> CompanyFacetsResponseDTO:
+        with self.uow_factory() as uow:
+            items: List[CompanyEligibleDTO] = self.repository.get_all(
+                uow=uow,
+                batch_size=DEFAULT_FACETS_BATCH_SIZE,
+            )
+
+        facets = self._build_facets(items)
+        facets = build_company_facets(items)
+        return CompanyFacetsResponseDTO(facets=facets)
+
+    def _build_facets(
+        self,
+        items: Iterable[CompanyEligibleDTO],
+    ) -> Dict[str, List[str]]:
+        string_fields = [
+            CompanyField.ISSUING_COMPANY,
+            CompanyField.TRADING_NAME,
+            CompanyField.COMPANY_NAME,
+            CompanyField.CNPJ,
+            CompanyField.MARKET,
+            CompanyField.INDUSTRY_SECTOR,
+            CompanyField.INDUSTRY_SUBSECTOR,
+            CompanyField.INDUSTRY_SEGMENT,
+            CompanyField.INDUSTRY_CLASSIFICATION,
+            CompanyField.INDUSTRY_CLASSIFICATION_ENG,
+            CompanyField.ACTIVITY,
+            CompanyField.COMPANY_SEGMENT,
+            CompanyField.COMPANY_SEGMENT_ENG,
+            CompanyField.COMPANY_CATEGORY,
+            CompanyField.COMPANY_TYPE,
+            CompanyField.LISTING_SEGMENT,
+            CompanyField.REGISTRAR,
+            CompanyField.WEBSITE,
+            CompanyField.INSTITUTION_COMMON,
+            CompanyField.INSTITUTION_PREFERRED,
+            CompanyField.STATUS,
+            CompanyField.MARKET_INDICATOR,
+            CompanyField.CODE,
+            CompanyField.TYPE_BDR,
+            CompanyField.REASON,
+        ]
+
+        boolean_fields = [
+            CompanyField.HAS_BDR,
+            CompanyField.HAS_QUOTATION,
+            CompanyField.HAS_EMISSIONS,
+        ]
+
+        buckets: Dict[str, set[str]] = {
+            field.value: set() for field in string_fields + boolean_fields
+        }
+
+        for item in items:
+            for field in string_fields:
+                value = getattr(item, field.value, None)
+                if value:
+                    buckets[field.value].add(value)
+
+            for field in boolean_fields:
+                value = getattr(item, field.value, None)
+                if value is None:
+                    continue
+                buckets[field.value].add("true" if value else "false")
+
+        return {
+            key: sorted({v for v in values if v})
+            for key, values in buckets.items()
+            if values
+        }
+application/usecases/search_companies.py
++14
+-2
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List
+
+from application.dtos.company_search_dto import CompanySearchResponseDTO
+from application.dtos.company_search_result_dto import CompanySearchResultDTO
+from application.ports.uow_port import UowFactoryPort
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
+from domain.value_objects.company_filters import CompanyFilterQuery
+
+from application.services.company_facets_builder import build_company_facets
+
+
+DEFAULT_LIMIT = 200
+
+
+@dataclass
+class SearchCompaniesUseCase:
+    repository: RepositoryCompanyEligiblePort
+    uow_factory: UowFactoryPort
+
+    def __call__(
+        self,
+        query: CompanyFilterQuery | None = None,
+        *,
+        limit: int | None = None,
+    ) -> CompanySearchResponseDTO:
+        query = query or CompanyFilterQuery()
+        effective_limit = limit or DEFAULT_LIMIT
+
+        with self.uow_factory() as uow:
+            dtos: List[CompanyEligibleDTO] = self.repository.search(
+                query,
+                uow=uow,
+                limit=limit # or DEFAULT_LIMIT,
+                limit=effective_limit,
+            )
+
+        items = [self._to_result(dto) for dto in dtos]
+        return CompanySearchResponseDTO(items=items, total=len(items))
+        facets = build_company_facets(dtos)
+
+        total = len(items)
+
+        return CompanySearchResponseDTO(
+            items=items,
+            total=total,
+            facets=facets,
+        )
+
+    def _to_result(self, dto: CompanyEligibleDTO) -> CompanySearchResultDTO:
+        return CompanySearchResultDTO(
+            company_name=dto.company_name or "",
+            trading_name=dto.trading_name,
+            tickers=list(dto.ticker_codes or []),
+            sector=dto.industry_sector,
+            subsector=dto.industry_subsector,
+            segment=dto.industry_segment,
+            market=dto.market,
+            institution_common=dto.institution_common,
+            institution_preferred=dto.institution_preferred,
+        )
+
+presentation/backend/dto/company_search_dto.py
++2
+-1
+
+from __future__ import annotations
+
+from typing import List, Optional
+from typing import Dict, List, Optional
+
+from pydantic import BaseModel, Field, model_validator
+
+from .company_search_result_dto import CompanySearchResultDTO
+
+__all__ = [
+    "CompanyFilterConditionDTO",
+    "CompanyFilterClauseDTO",
+    "CompanyFilterQueryDTO",
+    "CompanySearchResponseDTO",
+    "CompanySearchResultDTO",
+]
+
+
+class CompanyFilterConditionDTO(BaseModel):
+    field: str
+    operator: str = Field(default="IN")
+    values: List[str] = Field(default_factory=list)
+
+
+class CompanyFilterClauseDTO(BaseModel):
+    logical: str = Field(default="AND")
+    condition: Optional[CompanyFilterConditionDTO] = None
+    group: Optional["CompanyFilterQueryDTO"] = None
+
+    @model_validator(mode="after")
+    def check_structure(self):
+        condition, group = self.condition, self.group
+        if condition is None and group is None:
+            raise ValueError(
+                "Each clause must provide either a condition or a nested group"
+            )
+        if condition is not None and group is not None:
+            raise ValueError(
+                "A clause cannot define both a condition and a nested group"
+            )
+        return self
+
+
+class CompanyFilterQueryDTO(BaseModel):
+    clauses: List[CompanyFilterClauseDTO] = Field(default_factory=list)
+
+
+CompanyFilterClauseDTO.update_forward_refs()
+
+
+class CompanySearchResponseDTO(BaseModel):
+    items: List[CompanySearchResultDTO]
+    total: int
+    facets: Dict[str, List[str]] = Field(default_factory=dict)
+presentation/frontend/src/components/CompanySearchBuilder.vue
++0
+-11
+
+@@ -56,57 +56,50 @@
+      />
+
+      <p v-if="!companies.length && !isLoading" class="muted">
+        Nenhuma companhia encontrada com os filtros atuais.
+      </p>
+    </div>
+  </section>
+</template>
+
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { COMPANY_FACETS } from '../config/companyFacets'
+import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
+import { extractTickers } from '../utils/tickers'
+import CompanyFacet from './CompanyFacet.vue'
+import CompanyResultSelect from './CompanyResultSelect.vue'
+
+const store = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
+let isSyncingSelection = false
+
+// campos da cascata: Setor → Subsetor → Segmento
+const CASCADE_FACETS = [
+  'industry_sector',
+  'industry_subsector',
+  'industry_segment',
+]
+
+const DEFAULT_OPERATOR = 'IN'
+
+const facetConfigs = COMPANY_FACETS
+const parseError = ref('')
+const draftFacets = ref({})
+
+const queryTextModel = computed({
+  get: () => store.queryText,
+  set: (value) => {
+    parseError.value = ''
+    store.setQueryText(value)
+  },
+})
+
+const companies = computed(() => store.companies)
+const total = computed(() => store.total)
+const facets = computed(() => store.facets || {})
+const isLoading = computed(() => store.isLoading)
+const error = computed(() => store.error)
+
+const selectedItemsModel = computed({
+  get: () => store.selectedItems,
+  set: (values) => {
+    onSelectionChange(values)
+  },
+@@ -228,54 +221,50 @@ function onFacetDraftChange({ field, logical, values, operator }) {
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: logical || 'AND',
+      operator: operator || '',
+      values: Array.isArray(values) ? [...values] : [],
+    },
+  }
+}
+
+async function onFacetCommit({ field, logical, values, operator }) {
+  const finalLogical = logical || 'AND'
+  const finalValues = Array.isArray(values) ? [...values] : []
+  const finalOperator = operator || DEFAULT_OPERATOR
+
+  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: finalLogical,
+      operator: finalOperator,
+      values: [],
+    },
+  }
+
+  if (CASCADE_FACETS.includes(field)) {
+    await store.loadCompanies()
+  }
+}
+
+function applyQuery() {
+  const result = store.applyQueryText()
+  if (!result.ok) {
+    parseError.value = result.message || 'Não foi possível interpretar a consulta.'
+    return
+  }
+  parseError.value = ''
+}
+
+function clearFilters() {
+  store.resetFilters()
+  parseError.value = ''
+  draftFacets.value = {}
+}
+
+function reload() {
+  store.loadCompanies()
+}
+
+async function syncChartWithSelection(selectionValues, { forceLoad = false } = {}) {
+  const tickers = extractTickers(selectionValues)
+  const [primaryTicker, ...comparisonTickers] = tickers
+  const currentType = chartStore.params.type || ''
+presentation/frontend/src/store/companyStore.js
++105
+-3
+
+import { defineStore } from 'pinia'
+import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
+
+const DEFAULT_OPERATOR = 'IN'
+const SELECTION_SEPARATOR = '::'
+
+const CASCADE_CHAIN = [
+  'industry_sector',
+  'industry_subsector',
+  'industry_segment',
+]
+
+const LOGICAL_ALIASES = {
+  AND: 'AND',
+  MUST: 'AND',
+  OR: 'OR',
+  SHOULD: 'OR',
+  NOT: 'NOT',
+  MUST_NOT: 'NOT',
+  SHOULD_NOT: 'NOT',
+  OR_NOT: 'NOT',
+  'OR-NOT': 'NOT',
+}
+
+const OPERATOR_ALIASES = {
+  IN: 'IN',
+  EQUALS: 'EQUALS',
+  EQ: 'EQUALS',
+  '=': 'EQUALS',
+  '==': 'EQUALS',
+  CONTAINS: 'CONTAINS',
+  HAS: 'CONTAINS',
+  STARTS_WITH: 'STARTS_WITH',
+  STARTSWITH: 'STARTS_WITH',
+  PREFIX: 'STARTS_WITH',
+  BETWEEN: 'BETWEEN',
+}
+@@ -559,145 +565,241 @@ export const useCompanyStore = defineStore('companyStore', {
+    queryText: '',
+    companies: [],
+    total: 0,
+    facets: {},
+    selectedItems: [],
+    isLoading: false,
+    error: null,
+  }),
+
+  getters: {
+    clauseByField(state) {
+      const map = {}
+      for (const clause of state.filterQuery.clauses || []) {
+        if (clause.condition && clause.condition.field) {
+          map[clause.condition.field] = clause
+        }
+      }
+      return map
+    },
+    selectedPairs(state) {
+      return (state.selectedItems || []).map(splitSelectionValue)
+    },
+  },
+
+  actions: {
+    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+    setFacetSelection(
+      field,
+      logical,
+      values,
+      operator = DEFAULT_OPERATOR,
+      options = {},
+    ) {
+      const { skipCascade = false, skipLoad = false } = options || {}
+      const normalizedField = normalizeField(field) || field
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+      const normalizedValues = normalizeValues(values)
+      const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
+
+      const clauses = cloneClauses(this.filterQuery.clauses || [])
+      const filteredClauses = clauses.filter(
+        (clause) => !clause.condition || clause.condition.field !== normalizedField,
+      )
+
+      const previousQuery = this.serializeQuery(this.filterQuery)
+
+      if (normalizedValues.length) {
+        filteredClauses.push({
+          logical: normalizedLogical,
+          condition: {
+            field: normalizedField,
+            operator: normalizedOperator,
+            values: normalizedValues,
+          },
+        })
+      }
+
+      this.filterQuery = { clauses: filteredClauses }
+      this.queryText = this.serializeQuery(this.filterQuery)
+      const nextQuery = { clauses: filteredClauses }
+      const nextQueryText = this.serializeQuery(nextQuery)
+
+      if (previousQuery === nextQueryText) {
+        return { changed: false }
+      }
+
+      this.filterQuery = nextQuery
+      this.queryText = nextQueryText
+
+      const isCascadeField = CASCADE_CHAIN.includes(normalizedField)
+      let cascadeMutated = false
+
+      if (!skipCascade && isCascadeField) {
+        cascadeMutated = this._normalizeCascadeSelections(normalizedField)
+      }
+
+      if (!skipLoad && isCascadeField && (cascadeMutated || previousQuery !== nextQueryText)) {
+        this.loadCompanies()
+      }
+
+      return { changed: true }
+    },
+
+    setQueryText(text) {
+      this.queryText = text
+    },
+
+    applyQueryText() {
+      try {
+        const parsed = this.parseQuery(this.queryText)
+        this.filterQuery = parsed
+        this.queryText = this.serializeQuery(parsed)
+        this.loadCompanies()
+        return { ok: true }
+      } catch (error) {
+        const message = error instanceof ParseError ? error.message : 'Consulta inválida.'
+        return { ok: false, message }
+      }
+    },
+
+    resetFilters() {
+      this.filterQuery = { clauses: [] }
+      this.queryText = ''
+      this.selectedItems = []
+      this.loadCompanies()
+    },
+
+    setSelectedItems(values) {
+      const normalized = Array.isArray(values)
+        ? values.map((value) => String(value)).filter((value) => value.length)
+        : []
+      this.selectedItems = normalized
+    },
+
+    async loadCompanies() {
+      const initialQueryText = this.serializeQuery(this.filterQuery)
+      this.isLoading = true
+      this.error = null
+      let shouldRetry = false
+      try {
+        const payload = await searchCompanies(this.filterQuery)
+        this.companies = payload.items || []
+        this.total = payload.total || 0
+        this.facets = payload.facets || {}
+        this._pruneSelection()
+        const cascadeAdjusted = this._normalizeCascadeSelections(CASCADE_CHAIN[0])
+        if (cascadeAdjusted) {
+          const normalizedQuery = this.serializeQuery(this.filterQuery)
+          this.queryText = normalizedQuery
+          if (normalizedQuery !== initialQueryText) {
+            shouldRetry = true
+          }
+        }
+        if (!this.queryText) {
+          this.queryText = this.serializeQuery(this.filterQuery)
+        }
+      } catch (err) {
+        console.error(err)
+        this.error = 'Falha ao carregar companhias'
+      } finally {
+        this.isLoading = false
+      }
+
+      if (shouldRetry) {
+        await this.loadCompanies()
+      }
+    },
+
+    async loadFacets() {
+      try {
+        const payload = await fetchCompanyFacets()
+        this.facets = payload.facets || {}
+      } catch (err) {
+        console.error(err)
+      }
+    },
+
+    serializeQuery(query) {
+      if (!query || !Array.isArray(query.clauses) || query.clauses.length === 0) {
+        return ''
+      }
+      return serializeClauses(query.clauses)
+    },
+
+    parseQuery(text) {
+      if (!text || !text.trim()) {
+        return { clauses: [] }
+      }
+      return parseTextToQuery(text)
+    },
+
+    _pruneSelection() {
+      if (!this.selectedItems || this.selectedItems.length === 0) {
+        return
+      }
+      const valid = new Set()
+      for (const company of this.companies || []) {
+        const companyName = company.company_name || ''
+        for (const ticker of company.tickers || []) {
+          if (!ticker) continue
+          valid.add(buildSelectionValue(companyName, ticker))
+        }
+      }
+      const filtered = this.selectedItems.filter((value) => valid.has(value))
+      if (filtered.length !== this.selectedItems.length) {
+        this.selectedItems = filtered
+      }
+    },
+
+    _normalizeCascadeSelections(changedField) {
+      const index = CASCADE_CHAIN.indexOf(changedField)
+      if (index === -1) {
+        return false
+      }
+
+      let mutated = false
+      const facets = this.facets || {}
+
+      for (let i = index + 1; i < CASCADE_CHAIN.length; i += 1) {
+        const field = CASCADE_CHAIN[i]
+        const rawOptions = Array.isArray(facets[field]) ? facets[field] : []
+        const available = new Set(
+          rawOptions
+            .map((option) => {
+              if (option && typeof option === 'object') {
+                const value = option.value ?? option.label ?? ''
+                return String(value || '').trim()
+              }
+              return String(option || '').trim()
+            })
+            .filter((value) => value.length > 0),
+        )
+
+        const clause = this.clauseByField[field]
+        if (!clause || !clause.condition) {
+          continue
+        }
+
+        const currentValues = clause.condition.values || []
+        const filteredValues = currentValues.filter((value) => available.has(value))
+
+        if (filteredValues.length !== currentValues.length) {
+          const operator = clause.condition.operator || DEFAULT_OPERATOR
+          this.setFacetSelection(field, clause.logical, filteredValues, operator, {
+            skipCascade: true,
+            skipLoad: true,
+          })
+          mutated = true
+        } else if (!available.size && currentValues.length) {
+          const operator = clause.condition.operator || DEFAULT_OPERATOR
+          this.setFacetSelection(field, clause.logical, [], operator, {
+            skipCascade: true,
+            skipLoad: true,
+          })
+          mutated = true
+        }
+      }
+
+      return mutated
+    },
+  },
+})
+
+export { ParseError }

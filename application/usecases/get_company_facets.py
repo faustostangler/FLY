@@ -10,7 +10,7 @@ from domain.ports.repository_company_eligible_port import RepositoryCompanyEligi
 
 from application.services.company_facets_builder import build_company_facets
 
-DEFAULT_FACETS_BATCH_SIZE = 500
+DEFAULT_FACETS_BATCH_SIZE = 1000000
 
 
 @dataclass
