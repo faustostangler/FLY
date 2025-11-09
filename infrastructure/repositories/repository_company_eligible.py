@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from sqlalchemy import and_, delete, func, not_, or_
 from sqlalchemy.orm import Session
@@ -153,6 +153,32 @@ class RepositoryCompanyEligible(
 
         rows = stmt.all()
         return [row.to_dto() for row in rows]
+
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> List[CompanyEligibleDTO]:
+        session: Session = uow.session
+        size = batch_size or self.config.repository.batch_size or 50
+
+        query = (
+            session.query(CompanyEligibleModel)
+            .order_by(CompanyEligibleModel.company_name.asc())
+        )
+
+        results: List[CompanyEligibleDTO] = []
+        offset = 0
+        while True:
+            chunk = query.offset(offset).limit(size).all()
+            if not chunk:
+                break
+
+            results.extend(row.to_dto() for row in chunk)
+            offset += size
+
+        return results
 
     def replace_all(
         self,

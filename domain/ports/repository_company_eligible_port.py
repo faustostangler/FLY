@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import List, Protocol, runtime_checkable
 
 from application.ports.uow_port import Uow
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
@@ -24,4 +24,13 @@ class RepositoryCompanyEligiblePort(
         limit: int | None = None,
     ) -> list[CompanyEligibleDTO]:
         """Return companies matching the structured filter query."""
+        ...
+
+    def get_all(
+        self,
+        *,
+        uow: Uow,
+        batch_size: int | None = None,
+    ) -> List[CompanyEligibleDTO]:
+        """Return every eligible company DTO in stable order."""
         ...

@@ -1,8 +1,18 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
+
+from .company_search_result_dto import CompanySearchResultDTO
+
+__all__ = [
+    "CompanyFilterConditionDTO",
+    "CompanyFilterClauseDTO",
+    "CompanyFilterQueryDTO",
+    "CompanySearchResponseDTO",
+    "CompanySearchResultDTO",
+]
 
 
 class CompanyFilterConditionDTO(BaseModel):
@@ -37,19 +47,6 @@ class CompanyFilterQueryDTO(BaseModel):
 CompanyFilterClauseDTO.update_forward_refs()
 
 
-class CompanySearchResultDTO(BaseModel):
-    company_name: str
-    trading_name: Optional[str] = None
-    tickers: List[str] = Field(default_factory=list)
-    sector: Optional[str] = None
-    subsector: Optional[str] = None
-    segment: Optional[str] = None
-    market: Optional[str] = None
-    institution_common: Optional[str] = None
-    institution_preferred: Optional[str] = None
-
-
 class CompanySearchResponseDTO(BaseModel):
     items: List[CompanySearchResultDTO]
     total: int
-    facets: Dict[str, List[str]] = Field(default_factory=dict)
