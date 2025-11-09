@@ -1,24 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List
+from dataclasses import dataclass
+from typing import List
 
+from .company_search_result_dto import CompanySearchResultDTO
 
-@dataclass(frozen=True)
-class CompanySearchResultDTO:
-    company_name: str
-    trading_name: str | None
-    tickers: List[str] = field(default_factory=list)
-    sector: str | None = None
-    subsector: str | None = None
-    segment: str | None = None
-    market: str | None = None
-    institution_common: str | None = None
-    institution_preferred: str | None = None
+__all__ = ["CompanySearchResponseDTO", "CompanySearchResultDTO"]
 
 
 @dataclass(frozen=True)
 class CompanySearchResponseDTO:
     items: List[CompanySearchResultDTO]
     total: int
-    facets: Dict[str, List[str]] = field(default_factory=dict)

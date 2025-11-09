@@ -386,6 +386,9 @@ onMounted(() => {
   if (!store.companies.length) {
     reload()
   }
+  if (!Object.keys(store.facets || {}).length) {
+    store.loadFacets()
+  }
 })
 </script>
 

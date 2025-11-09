@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { searchCompanies } from '../services/apiService'
+import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -645,7 +645,6 @@ export const useCompanyStore = defineStore('companyStore', {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
-        this.facets = payload.facets || {}
         this._pruneSelection()
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
@@ -655,6 +654,15 @@ export const useCompanyStore = defineStore('companyStore', {
         this.error = 'Falha ao carregar companhias'
       } finally {
         this.isLoading = false
+      }
+    },
+
+    async loadFacets() {
+      try {
+        const payload = await fetchCompanyFacets()
+        this.facets = payload.facets || {}
+      } catch (err) {
+        console.error(err)
       }
     },
 
