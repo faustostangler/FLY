@@ -2,11 +2,6 @@
   <section class="company-facet">
     <header class="company-facet__header">
       <h3>{{ label }}</h3>
-      <select v-model="localLogical" aria-label="Operador lógico">
-        <option v-for="option in logicalOptions" :key="option" :value="option">
-          {{ option }}
-        </option>
-      </select>
     </header>
 
     <div class="company-facet__body">
@@ -46,6 +41,7 @@
             placeholder="Filtrar opções…"
             @input="onSearch"
           />
+
           <select
             v-model="localSelection"
             :multiple="multiple"
@@ -66,6 +62,12 @@
     </div>
 
     <div class="company-facet__footer">
+      <select v-model="localLogical" aria-label="Operador lógico">
+        <option v-for="option in logicalOptions" :key="option" :value="option">
+          {{ option }}
+        </option>
+      </select>
+
       <button type="button" class="company-facet__commit" @click="commit">
         Enviar para consulta
       </button>
