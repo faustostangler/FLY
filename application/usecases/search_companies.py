@@ -10,6 +10,8 @@ from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
 from domain.value_objects.company_filters import CompanyFilterQuery
 
+from application.services.company_facets_builder import build_company_facets
+
 
 DEFAULT_LIMIT = 200
 
@@ -26,15 +28,25 @@ class SearchCompaniesUseCase:
         limit: int | None = None,
     ) -> CompanySearchResponseDTO:
         query = query or CompanyFilterQuery()
+        effective_limit = limit or DEFAULT_LIMIT
+
         with self.uow_factory() as uow:
             dtos: List[CompanyEligibleDTO] = self.repository.search(
                 query,
                 uow=uow,
-                limit=limit # or DEFAULT_LIMIT,
+                limit=effective_limit,
             )
 
         items = [self._to_result(dto) for dto in dtos]
-        return CompanySearchResponseDTO(items=items, total=len(items))
+        facets = build_company_facets(dtos)
+
+        total = len(items)
+
+        return CompanySearchResponseDTO(
+            items=items,
+            total=total,
+            facets=facets,
+        )
 
     def _to_result(self, dto: CompanyEligibleDTO) -> CompanySearchResultDTO:
         return CompanySearchResultDTO(

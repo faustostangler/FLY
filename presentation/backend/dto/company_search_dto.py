@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -50,3 +50,4 @@ CompanyFilterClauseDTO.update_forward_refs()
 class CompanySearchResponseDTO(BaseModel):
     items: List[CompanySearchResultDTO]
     total: int
+    facets: Dict[str, List[str]] = Field(default_factory=dict)

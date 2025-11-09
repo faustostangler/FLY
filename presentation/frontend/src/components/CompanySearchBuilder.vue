@@ -78,13 +78,6 @@ const route = useRoute()
 const router = useRouter()
 let isSyncingSelection = false
 
-// campos da cascata: Setor → Subsetor → Segmento
-const CASCADE_FACETS = [
-  'industry_sector',
-  'industry_subsector',
-  'industry_segment',
-]
-
 const DEFAULT_OPERATOR = 'IN'
 
 const facetConfigs = COMPANY_FACETS
@@ -249,10 +242,6 @@ async function onFacetCommit({ field, logical, values, operator }) {
       operator: finalOperator,
       values: [],
     },
-  }
-
-  if (CASCADE_FACETS.includes(field)) {
-    await store.loadCompanies()
   }
 }
 
