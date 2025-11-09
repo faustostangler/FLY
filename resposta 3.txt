@@ -1,0 +1,152 @@
+Summary
+
+Declared the cascading industry facet fields in the company search builder so the UI knows which filters should trigger immediate refreshes.
+
+Made facet commits asynchronous and reload company data whenever a sector, subsector, or segment filter is applied to keep downstream options in sync.
+
+Testing
+
+⚠️ Tests not run (not requested)
+
+
+Arquivo (1)
+
+presentation/frontend/src/components/CompanySearchBuilder.vue
++14
+-1
+
+presentation/frontend/src/components/CompanySearchBuilder.vue
++14
+-1
+
+@@ -56,50 +56,59 @@
+      />
+
+      <p v-if="!companies.length && !isLoading" class="muted">
+        Nenhuma companhia encontrada com os filtros atuais.
+      </p>
+    </div>
+  </section>
+</template>
+
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { COMPANY_FACETS } from '../config/companyFacets'
+import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
+import { extractTickers } from '../utils/tickers'
+import CompanyFacet from './CompanyFacet.vue'
+import CompanyResultSelect from './CompanyResultSelect.vue'
+
+const store = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
+let isSyncingSelection = false
+
+// campos da cascata: Setor → Subsetor → Segmento
+const CASCADE_FACETS = [
+  'industry_sector',
+  'industry_subsector',
+  'industry_segment',
+]
+
+const DEFAULT_OPERATOR = 'IN'
+
+const facetConfigs = COMPANY_FACETS
+const parseError = ref('')
+const draftFacets = ref({})
+
+const queryTextModel = computed({
+  get: () => store.queryText,
+  set: (value) => {
+    parseError.value = ''
+    store.setQueryText(value)
+  },
+})
+
+const companies = computed(() => store.companies)
+const total = computed(() => store.total)
+const facets = computed(() => store.facets || {})
+const isLoading = computed(() => store.isLoading)
+const error = computed(() => store.error)
+
+const selectedItemsModel = computed({
+  get: () => store.selectedItems,
+  set: (values) => {
+    onSelectionChange(values)
+  },
+})
+
+@@ -204,65 +213,69 @@ function facetOperator(field) {
+  if (draft && draft.operator) {
+    return draft.operator
+  }
+  return store.clauseByField[field]?.condition?.operator || ''
+}
+
+function facetValues(field) {
+  const draft = draftFacets.value[field]
+  if (draft && Array.isArray(draft.values)) {
+    return draft.values
+  }
+  return store.clauseByField[field]?.condition?.values || []
+}
+
+function onFacetDraftChange({ field, logical, values, operator }) {
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: logical || 'AND',
+      operator: operator || '',
+      values: Array.isArray(values) ? [...values] : [],
+    },
+  }
+}
+
+function onFacetCommit({ field, logical, values, operator }) {
+async function onFacetCommit({ field, logical, values, operator }) {
+  const finalLogical = logical || 'AND'
+  const finalValues = Array.isArray(values) ? [...values] : []
+  const finalOperator = operator || DEFAULT_OPERATOR
+
+  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: finalLogical,
+      operator: finalOperator,
+      values: [],
+    },
+  }
+
+  if (CASCADE_FACETS.includes(field)) {
+    await store.loadCompanies()
+  }
+}
+
+function applyQuery() {
+  const result = store.applyQueryText()
+  if (!result.ok) {
+    parseError.value = result.message || 'Não foi possível interpretar a consulta.'
+    return
+  }
+  parseError.value = ''
+}
+
+function clearFilters() {
+  store.resetFilters()
+  parseError.value = ''
+  draftFacets.value = {}
+}
+
+function reload() {
+  store.loadCompanies()
+}
+
+async function syncChartWithSelection(selectionValues, { forceLoad = false } = {}) {
+  const tickers = extractTickers(selectionValues)
+  const [primaryTicker, ...comparisonTickers] = tickers
+  const currentType = chartStore.params.type || ''
