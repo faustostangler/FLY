@@ -8,24 +8,64 @@
         </option>
       </select>
     </header>
-    <div v-if="!options.length" class="company-facet__empty">
-      Nenhuma opção disponível
-    </div>
-    <ul v-else class="company-facet__options">
-      <li v-for="option in options" :key="option">
-        <label>
+
+    <div class="company-facet__body">
+      <template v-if="isDateRange">
+        <div class="company-facet__dates">
+          <label>
+            Início
+            <input type="date" v-model="startDate" @change="onDateChange" />
+          </label>
+          <label>
+            Fim
+            <input type="date" v-model="endDate" @change="onDateChange" />
+          </label>
+        </div>
+      </template>
+
+      <template v-else-if="isBoolean">
+        <select v-model="localBoolean" @change="emitDraftChange">
+          <option value="">Selecione…</option>
+          <option
+            v-for="option in normalizedOptions"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </template>
+
+      <template v-else>
+        <div v-if="normalizedOptions.length" class="company-facet__select-wrapper">
           <input
-            :type="multiple ? 'checkbox' : 'radio'"
-            :name="field"
-            :value="option"
-            :checked="isSelected(option)"
-            @change="toggle(option)"
+            v-if="searchable"
+            v-model="searchText"
+            type="search"
+            class="company-facet__search"
+            placeholder="Filtrar opções…"
+            @input="onSearch"
           />
-          <span>{{ option }}</span>
-        </label>
-      </li>
-    </ul>
-    <div v-if="options.length" class="company-facet__footer">
+          <select
+            v-model="localSelection"
+            :multiple="multiple"
+            class="company-facet__select"
+            :size="computedSize"
+          >
+            <option
+              v-for="option in filteredOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+        <p v-else class="company-facet__empty">Nenhuma opção disponível</p>
+      </template>
+    </div>
+
+    <div class="company-facet__footer">
       <button type="button" class="company-facet__commit" @click="commit">
         Enviar para consulta
       </button>
@@ -34,22 +74,135 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   field: { type: String, required: true },
   label: { type: String, required: true },
   options: { type: Array, default: () => [] },
   logical: { type: String, default: 'AND' },
+  operator: { type: String, default: '' },
   values: { type: Array, default: () => [] },
   multiple: { type: Boolean, default: true },
+  type: { type: String, default: 'text' },
+  searchable: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['change', 'commit'])
 
 const logicalOptions = ['AND', 'OR', 'NOT']
 const localLogical = ref(props.logical || 'AND')
-const selected = ref([...props.values])
+const localSelection = ref([])
+const localBoolean = ref('')
+const startDate = ref('')
+const endDate = ref('')
+const searchText = ref('')
+const isSyncing = ref(false)
+
+const isBoolean = computed(() => props.type === 'boolean')
+const isDateRange = computed(() => props.type === 'date-range')
+const isTextual = computed(() => !isBoolean.value && !isDateRange.value)
+
+const defaultOperator = computed(() => {
+  if (isDateRange.value) return 'BETWEEN'
+  if (isBoolean.value) return 'EQUALS'
+  return 'IN'
+})
+
+const activeOperator = computed(() => props.operator || defaultOperator.value)
+
+const normalizedOptions = computed(() => {
+  const raw = Array.isArray(props.options) ? props.options : []
+  const seen = new Set()
+  const entries = []
+  for (const option of raw) {
+    let value
+    let label
+    if (option && typeof option === 'object') {
+      value = option.value ?? option.label ?? ''
+      label = option.label ?? String(option.value ?? '')
+    } else {
+      value = option
+      label = option
+    }
+    if (value === undefined || value === null || value === '') {
+      continue
+    }
+    const key = String(value)
+    if (seen.has(key)) continue
+    seen.add(key)
+    entries.push({ value: key, label: String(label ?? value) })
+  }
+  return entries
+})
+
+const filteredOptions = computed(() => {
+  if (!props.searchable || !searchText.value.trim()) {
+    return normalizedOptions.value
+  }
+  const needle = searchText.value.toLowerCase()
+  return normalizedOptions.value.filter((option) =>
+    option.label.toLowerCase().includes(needle)
+  )
+})
+
+const computedSize = computed(() => {
+  if (!isTextual.value) return 1
+  const total = filteredOptions.value.length
+  if (!total) return 4
+  return Math.min(Math.max(total, 4), 12)
+})
+
+function currentValues() {
+  if (isBoolean.value) {
+    return localBoolean.value ? [localBoolean.value] : []
+  }
+  if (isDateRange.value) {
+    const values = [startDate.value, endDate.value].filter((value) => !!value)
+    if (values.length === 2) {
+      return [startDate.value, endDate.value]
+    }
+    return []
+  }
+  return Array.isArray(localSelection.value)
+    ? localSelection.value.map((value) => String(value))
+    : []
+}
+
+function emitDraftChange() {
+  if (isSyncing.value) return
+  emit('change', {
+    field: props.field,
+    logical: localLogical.value,
+    operator: activeOperator.value,
+    values: currentValues(),
+  })
+}
+
+function commit() {
+  emit('commit', {
+    field: props.field,
+    logical: localLogical.value,
+    operator: activeOperator.value,
+    values: currentValues(),
+  })
+}
+
+function onDateChange() {
+  emitDraftChange()
+}
+
+function onSearch() {
+  if (!searchText.value) {
+    searchText.value = ''
+  }
+}
+
+watch(localSelection, emitDraftChange, { deep: true })
+watch(localBoolean, emitDraftChange)
+watch(startDate, emitDraftChange)
+watch(endDate, emitDraftChange)
+watch(localLogical, emitDraftChange)
 
 watch(
   () => props.logical,
@@ -63,57 +216,47 @@ watch(
 watch(
   () => props.values,
   (value) => {
-    const incoming = Array.isArray(value) ? [...value] : []
-    if (JSON.stringify(incoming) !== JSON.stringify(selected.value)) {
-      selected.value = incoming
+    isSyncing.value = true
+    const incoming = Array.isArray(value) ? value.map((entry) => String(entry)) : []
+    if (isBoolean.value) {
+      localBoolean.value = incoming[0] ?? ''
+    } else if (isDateRange.value) {
+      startDate.value = incoming[0] ?? ''
+      endDate.value = incoming[1] ?? ''
+    } else {
+      localSelection.value = [...incoming]
     }
-  }
+    nextTick(() => {
+      isSyncing.value = false
+    })
+  },
+  { immediate: true }
 )
 
-function isSelected(option) {
-  return selected.value.includes(option)
-}
-
-function toggle(option) {
-  const exists = selected.value.includes(option)
-  if (props.multiple) {
-    if (exists) {
-      selected.value = selected.value.filter((value) => value !== option)
-    } else {
-      selected.value = [...selected.value, option]
-    }
-  } else {
-    selected.value = exists ? [] : [option]
+watch(
+  () => props.operator,
+  () => {
+    emitDraftChange()
   }
-  emitDraftChange()
-}
-
-function emitDraftChange() {
-  emit('change', {
-    field: props.field,
-    logical: localLogical.value,
-    values: [...selected.value],
-  })
-}
-
-function commit() {
-  emit('commit', {
-    field: props.field,
-    logical: localLogical.value,
-    values: [...selected.value],
-  })
-}
-
-watch(localLogical, () => emitDraftChange())
+)
 
 watch(
   () => props.options,
   (options) => {
-    const normalized = new Set(options)
-    const filtered = selected.value.filter((value) => normalized.has(value))
-    if (filtered.length !== selected.value.length) {
-      selected.value = filtered
-      emitDraftChange()
+    if (!isTextual.value) {
+      return
+    }
+    const available = new Set(
+      (options || []).map((option) => {
+        if (option && typeof option === 'object') {
+          return String(option.value ?? option.label ?? '')
+        }
+        return String(option ?? '')
+      })
+    )
+    const filtered = (localSelection.value || []).filter((value) => available.has(value))
+    if (filtered.length !== (localSelection.value || []).length) {
+      localSelection.value = filtered
     }
   }
 )
@@ -126,7 +269,7 @@ watch(
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   background-color: var(--vt-c-bg-soft, #ffffff);
 }
 
@@ -148,22 +291,54 @@ watch(
   border-radius: 4px;
 }
 
-.company-facet__options {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.25rem 0.75rem;
-  max-height: 200px;
-  overflow-y: auto;
+.company-facet__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.company-facet__options label {
+.company-facet__body select {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+}
+
+.company-facet__select-wrapper {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.9rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.company-facet__search {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+}
+
+.company-facet__select {
+  min-height: 120px;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+  padding: 0.4rem;
+}
+
+.company-facet__dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.company-facet__dates label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.25rem;
+}
+
+.company-facet__dates input[type='date'] {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
 }
 
 .company-facet__empty {

@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 from application.usecases.search_companies import SearchCompaniesUseCase
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_company_eligible_port import (
+    RepositoryCompanyEligiblePort,
+)
 from infrastructure.config.config_adapter import ConfigAdapter
 from infrastructure.logging.logger_adapter import Logger
-from infrastructure.repositories.repository_company_data import RepositoryCompanyData
+from infrastructure.repositories.repository_company_eligible import (
+    RepositoryCompanyEligible,
+)
 from infrastructure.uow.uow import UowFactory
 
 
 def get_company_search_usecase() -> SearchCompaniesUseCase:
     config = ConfigAdapter()
     logger = Logger(config)
-    repository: RepositoryCompanyDataPort = RepositoryCompanyData(
+    repository: RepositoryCompanyEligiblePort = RepositoryCompanyEligible(
         config=config,
         logger=logger,
     )

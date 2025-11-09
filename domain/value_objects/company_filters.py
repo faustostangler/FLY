@@ -10,15 +10,43 @@ from typing import List
 class CompanyField(str, Enum):
     """Enumeration of filterable company attributes."""
 
-    SECTOR = "sector"
-    SUBSECTOR = "subsector"
-    SEGMENT = "segment"
-    COMPANY_NAME = "company_name"
+    ISSUING_COMPANY = "issuing_company"
     TRADING_NAME = "trading_name"
-    TICKER = "ticker"
-    INSTITUTION_PREFERRED = "institution_preferred"
-    INSTITUTION_COMMON = "institution_common"
+    COMPANY_NAME = "company_name"
+    CNPJ = "cnpj"
     MARKET = "market"
+    INDUSTRY_SECTOR = "industry_sector"
+    INDUSTRY_SUBSECTOR = "industry_subsector"
+    INDUSTRY_SEGMENT = "industry_segment"
+    INDUSTRY_CLASSIFICATION = "industry_classification"
+    INDUSTRY_CLASSIFICATION_ENG = "industry_classification_eng"
+    ACTIVITY = "activity"
+    COMPANY_SEGMENT = "company_segment"
+    COMPANY_SEGMENT_ENG = "company_segment_eng"
+    COMPANY_CATEGORY = "company_category"
+    COMPANY_TYPE = "company_type"
+    LISTING_SEGMENT = "listing_segment"
+    REGISTRAR = "registrar"
+    WEBSITE = "website"
+    INSTITUTION_COMMON = "institution_common"
+    INSTITUTION_PREFERRED = "institution_preferred"
+    STATUS = "status"
+    MARKET_INDICATOR = "market_indicator"
+    CODE = "code"
+    TYPE_BDR = "type_bdr"
+    REASON = "reason"
+    HAS_BDR = "has_bdr"
+    HAS_QUOTATION = "has_quotation"
+    HAS_EMISSIONS = "has_emissions"
+    DATE_QUOTATION = "date_quotation"
+    LAST_DATE = "last_date"
+    LISTING_DATE = "listing_date"
+
+    # Backwards compatibility aliases
+    SECTOR = INDUSTRY_SECTOR
+    SUBSECTOR = INDUSTRY_SUBSECTOR
+    SEGMENT = INDUSTRY_SEGMENT
+    TICKER = CODE
 
 
 class ComparisonOperator(str, Enum):
@@ -28,6 +56,7 @@ class ComparisonOperator(str, Enum):
     IN = "IN"
     CONTAINS = "CONTAINS"
     STARTS_WITH = "STARTS_WITH"
+    BETWEEN = "BETWEEN"
 
 
 class LogicalOperator(str, Enum):

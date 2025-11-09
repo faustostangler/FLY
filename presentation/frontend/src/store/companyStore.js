@@ -27,30 +27,74 @@ const OPERATOR_ALIASES = {
   STARTS_WITH: 'STARTS_WITH',
   STARTSWITH: 'STARTS_WITH',
   PREFIX: 'STARTS_WITH',
+  BETWEEN: 'BETWEEN',
 }
 
 const FIELD_ALIASES = {
-  sector: 'sector',
-  setor: 'sector',
-  subsector: 'subsector',
-  subsetor: 'subsector',
-  segment: 'segment',
-  segmento: 'segment',
+  sector: 'industry_sector',
+  setor: 'industry_sector',
+  industry_sector: 'industry_sector',
+  subsector: 'industry_subsector',
+  subsetor: 'industry_subsector',
+  industry_subsector: 'industry_subsector',
+  segment: 'industry_segment',
+  segmento: 'industry_segment',
+  industry_segment: 'industry_segment',
+  industry_classification: 'industry_classification',
+  classificacao: 'industry_classification',
+  industry_classification_eng: 'industry_classification_eng',
+  classification_en: 'industry_classification_eng',
+  activity: 'activity',
+  atividade: 'activity',
+  company_segment: 'company_segment',
+  segmento_companhia: 'company_segment',
+  company_segment_eng: 'company_segment_eng',
+  company_category: 'company_category',
+  categoria: 'company_category',
+  company_type: 'company_type',
+  tipo_companhia: 'company_type',
+  listing_segment: 'listing_segment',
+  segmento_listagem: 'listing_segment',
+  registrar: 'registrar',
+  escriturador: 'registrar',
+  website: 'website',
+  site: 'website',
+  institution_common: 'institution_common',
+  instituicao_ordinaria: 'institution_common',
+  institution_preferred: 'institution_preferred',
+  instituicao_preferencial: 'institution_preferred',
+  market: 'market',
+  mercado: 'market',
+  market_indicator: 'market_indicator',
+  indicador_mercado: 'market_indicator',
+  code: 'code',
+  codigo: 'code',
+  ticker: 'code',
+  type_bdr: 'type_bdr',
+  tipo_bdr: 'type_bdr',
+  reason: 'reason',
+  motivo: 'reason',
   company_name: 'company_name',
   companhia: 'company_name',
   company: 'company_name',
   trading_name: 'trading_name',
   trading: 'trading_name',
   nome_pregao: 'trading_name',
-  ticker: 'ticker',
-  codigo: 'ticker',
-  code: 'ticker',
-  institution_preferred: 'institution_preferred',
-  instituicao_preferencial: 'institution_preferred',
-  institution_common: 'institution_common',
-  instituicao_ordinaria: 'institution_common',
-  market: 'market',
-  mercado: 'market',
+  issuing_company: 'issuing_company',
+  emissora: 'issuing_company',
+  cnpj: 'cnpj',
+  has_bdr: 'has_bdr',
+  tem_bdr: 'has_bdr',
+  has_quotation: 'has_quotation',
+  tem_cotacao: 'has_quotation',
+  has_emissions: 'has_emissions',
+  tem_emissoes: 'has_emissions',
+  date_quotation: 'date_quotation',
+  data_cotacao: 'date_quotation',
+  last_date: 'last_date',
+  ultima_data: 'last_date',
+  listing_date: 'listing_date',
+  data_listagem: 'listing_date',
 }
 
 class ParseError extends Error {
@@ -80,7 +124,20 @@ function normalizeField(value) {
 
 function normalizeValues(values) {
   return (values || [])
-    .map((value) => String(value ?? '').trim())
+    .map((value) => {
+      const raw = String(value ?? '').trim()
+      const upper = raw.toUpperCase()
+      if (upper === 'TRUE' || upper === 'FALSE') {
+        return upper.toLowerCase()
+      }
+      if (upper === 'SIM') {
+        return 'true'
+      }
+      if (upper === 'NAO' || upper === 'NÃO') {
+        return 'false'
+      }
+      return raw
+    })
     .filter((value) => value.length)
 }
 
@@ -377,6 +434,10 @@ class QueryParser {
     const normalizedValues = normalizeValues(values)
     if (!normalizedValues.length && !['CONTAINS', 'STARTS_WITH'].includes(operator)) {
       throw new ParseError(`Informe pelo menos um valor para ${field}.`)
+    }
+
+    if (operator === 'BETWEEN' && normalizedValues.length !== 2) {
+      throw new ParseError(`O operador BETWEEN exige dois valores para ${field}.`)
     }
 
     return {
