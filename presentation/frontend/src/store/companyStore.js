@@ -4,6 +4,12 @@ import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
 
+const CASCADE_CHAIN = [
+  'industry_sector',
+  'industry_subsector',
+  'industry_segment',
+]
+
 const LOGICAL_ALIASES = {
   AND: 'AND',
   MUST: 'AND',
@@ -581,7 +587,14 @@ export const useCompanyStore = defineStore('companyStore', {
   },
 
   actions: {
-    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+    setFacetSelection(
+      field,
+      logical,
+      values,
+      operator = DEFAULT_OPERATOR,
+      options = {},
+    ) {
+      const { skipCascade = false, skipLoad = false } = options || {}
       const normalizedField = normalizeField(field) || field
       const normalizedLogical = normalizeLogical(logical) || 'AND'
       const normalizedValues = normalizeValues(values)
@@ -591,6 +604,8 @@ export const useCompanyStore = defineStore('companyStore', {
       const filteredClauses = clauses.filter(
         (clause) => !clause.condition || clause.condition.field !== normalizedField,
       )
+
+      const previousQuery = this.serializeQuery(this.filterQuery)
 
       if (normalizedValues.length) {
         filteredClauses.push({
@@ -603,8 +618,28 @@ export const useCompanyStore = defineStore('companyStore', {
         })
       }
 
-      this.filterQuery = { clauses: filteredClauses }
-      this.queryText = this.serializeQuery(this.filterQuery)
+      const nextQuery = { clauses: filteredClauses }
+      const nextQueryText = this.serializeQuery(nextQuery)
+
+      if (previousQuery === nextQueryText) {
+        return { changed: false }
+      }
+
+      this.filterQuery = nextQuery
+      this.queryText = nextQueryText
+
+      const isCascadeField = CASCADE_CHAIN.includes(normalizedField)
+      let cascadeMutated = false
+
+      if (!skipCascade && isCascadeField) {
+        cascadeMutated = this._normalizeCascadeSelections(normalizedField)
+      }
+
+      if (!skipLoad && isCascadeField && (cascadeMutated || previousQuery !== nextQueryText)) {
+        this.loadCompanies()
+      }
+
+      return { changed: true }
     },
 
     setQueryText(text) {
@@ -639,13 +674,24 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     async loadCompanies() {
+      const initialQueryText = this.serializeQuery(this.filterQuery)
       this.isLoading = true
       this.error = null
+      let shouldRetry = false
       try {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
+        this.facets = payload.facets || {}
         this._pruneSelection()
+        const cascadeAdjusted = this._normalizeCascadeSelections(CASCADE_CHAIN[0])
+        if (cascadeAdjusted) {
+          const normalizedQuery = this.serializeQuery(this.filterQuery)
+          this.queryText = normalizedQuery
+          if (normalizedQuery !== initialQueryText) {
+            shouldRetry = true
+          }
+        }
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
         }
@@ -654,6 +700,10 @@ export const useCompanyStore = defineStore('companyStore', {
         this.error = 'Falha ao carregar companhias'
       } finally {
         this.isLoading = false
+      }
+
+      if (shouldRetry) {
+        await this.loadCompanies()
       }
     },
 
@@ -696,6 +746,58 @@ export const useCompanyStore = defineStore('companyStore', {
       if (filtered.length !== this.selectedItems.length) {
         this.selectedItems = filtered
       }
+    },
+
+    _normalizeCascadeSelections(changedField) {
+      const index = CASCADE_CHAIN.indexOf(changedField)
+      if (index === -1) {
+        return false
+      }
+
+      let mutated = false
+      const facets = this.facets || {}
+
+      for (let i = index + 1; i < CASCADE_CHAIN.length; i += 1) {
+        const field = CASCADE_CHAIN[i]
+        const rawOptions = Array.isArray(facets[field]) ? facets[field] : []
+        const available = new Set(
+          rawOptions
+            .map((option) => {
+              if (option && typeof option === 'object') {
+                const value = option.value ?? option.label ?? ''
+                return String(value || '').trim()
+              }
+              return String(option || '').trim()
+            })
+            .filter((value) => value.length > 0),
+        )
+
+        const clause = this.clauseByField[field]
+        if (!clause || !clause.condition) {
+          continue
+        }
+
+        const currentValues = clause.condition.values || []
+        const filteredValues = currentValues.filter((value) => available.has(value))
+
+        if (filteredValues.length !== currentValues.length) {
+          const operator = clause.condition.operator || DEFAULT_OPERATOR
+          this.setFacetSelection(field, clause.logical, filteredValues, operator, {
+            skipCascade: true,
+            skipLoad: true,
+          })
+          mutated = true
+        } else if (!available.size && currentValues.length) {
+          const operator = clause.condition.operator || DEFAULT_OPERATOR
+          this.setFacetSelection(field, clause.logical, [], operator, {
+            skipCascade: true,
+            skipLoad: true,
+          })
+          mutated = true
+        }
+      }
+
+      return mutated
     },
   },
 })
