@@ -81,6 +81,28 @@ let isSyncingSelection = false
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
 const draftFacets = ref({})
+const DEFAULT_OPERATOR = 'IN'
+
+const CASCADE_CONFIG = {
+  industry_sector: {
+    level: 'sector',
+    parentField: null,
+  },
+  industry_subsector: {
+    level: 'subsector',
+    parentField: 'industry_sector',
+  },
+  industry_segment: {
+    level: 'segment',
+    parentField: 'industry_subsector',
+  },
+}
+
+const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
+
+function isCascadeField(field) {
+  return CASCADE_FIELDS.includes(field)
+}
 
 const queryTextModel = computed({
   get: () => store.queryText,
@@ -184,11 +206,94 @@ function facetOptions(facet) {
     return facet.options || []
   }
 
-  if (dynamic.length) {
-    return dynamic
+  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
+
+  if (!isCascadeField(field)) {
+    return baseOptions
   }
 
-  return facet.options || []
+  const cascade = store.industryCascade || {}
+  const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
+
+  const selectedSectors = currentCascadeValues('industry_sector')
+  const selectedSubsectors = currentCascadeValues('industry_subsector')
+
+  let allowedValues = null
+
+  if (field === 'industry_sector') {
+    const sectorsFromGraph = Object.keys(sectorToSubsectors).length
+      ? Object.keys(sectorToSubsectors)
+      : Object.keys(sectorToSegments)
+
+    if (sectorsFromGraph.length) {
+      allowedValues = sectorsFromGraph
+    }
+  } else if (field === 'industry_subsector') {
+    const sectors = selectedSectors.length
+      ? selectedSectors
+      : Object.keys(sectorToSubsectors)
+
+    const aggregated = new Set()
+    for (const sector of sectors) {
+      for (const subsector of sectorToSubsectors[sector] || []) {
+        aggregated.add(subsector)
+      }
+    }
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  } else if (field === 'industry_segment') {
+    const aggregated = new Set()
+
+    if (selectedSubsectors.length) {
+      for (const subsector of selectedSubsectors) {
+        for (const segment of subsectorToSegments[subsector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else if (selectedSectors.length) {
+      for (const sector of selectedSectors) {
+        for (const segment of sectorToSegments[sector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else {
+      for (const key of Object.keys(subsectorToSegments)) {
+        for (const segment of subsectorToSegments[key] || []) {
+          aggregated.add(segment)
+        }
+      }
+    }
+
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  }
+
+  if (!allowedValues || !allowedValues.length) {
+    // Sem restrição de cascata calculada: devolve a lista original
+    return baseOptions
+  }
+
+  // Aqui a cascata entra em ação de fato
+  const allowedSet = new Set(
+    allowedValues.map((value) => String(value || '').trim()),
+  )
+
+  // Garante que todas as opções sejam { value, label }
+  const normalized = baseOptions.map((option) => {
+    if (option && typeof option === 'object') {
+      const value = String(option.value ?? option.label ?? '').trim()
+      const label = option.label ?? value
+      return { value, label }
+    }
+    const value = String(option || '').trim()
+    return { value, label: value }
+  })
+
+  return normalized.filter((option) =>
+    allowedSet.has(String(option.value || '').trim()),
+  )
 }
 
 function facetLogical(field) {
@@ -213,6 +318,23 @@ function facetValues(field) {
     return draft.values
   }
   return store.clauseByField[field]?.condition?.values || []
+}
+
+function currentCascadeValues(field) {
+  const committed = store.clauseByField[field]?.condition?.values || []
+  const draft = draftFacets.value[field]?.values || []
+  const all = [...committed, ...draft]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+
+  const seen = new Set()
+  const result = []
+  for (const value of all) {
+    if (seen.has(value)) continue
+    seen.add(value)
+    result.push(value)
+  }
+  return result
 }
 
 function onFacetDraftChange({ field, logical, values, operator }) {
