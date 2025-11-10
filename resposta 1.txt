@@ -1,272 +1,163 @@
 Summary
 
-Refactored PlotlyViewer to resolve optional props with chart-store fallbacks and derive an accessible aria label from the resolved chart metadata, keeping the component stable for both legacy and new views.
+Introduced the SearchFilterTree value object to centralize the shared filter grammar across layers and provide deterministic hashing utilities.
 
-Confirmed the engine setup invokes BaseModel.metadata.create_all(...) and that the account charts router remains registered with the FastAPI app, ensuring the financial statements table is created and exposed through the new endpoint.
+Updated the ratios service to consume SearchFilterTree instances, log filter issues gracefully, and exposed the new VO through the domain exports.
+
+Added reusable filter presets for the CLI and a FastAPI-facing SearchFiltersDTO so presentation adapters can serialize and reuse the same filter structure.
 
 Testing
 
-⚠️ pytest --override-ini=addopts= (fails: missing optional dependencies sqlalchemy and pandas in the test environment).
+⚠️ pytest -o addopts= (fails: environment lacks optional dependencies such as pandas and sqlalchemy required by the test suite).
 
 
-Files (20)
+Files (6)
 
-application/dtos/account_series_dto.py
-New
-
-application/usecases/get_account_series.py
-New
-
-domain/entities/__init__.py
-+2
--1
-
-domain/entities/account_series.py
-New
-
-domain/ports/__init__.py
-+2
--0
-
-domain/ports/repository_account_series_port.py
-New
+domain/services/service_ratios.py
++22
+-11
 
 domain/value_objects/__init__.py
 +2
 -0
 
-domain/value_objects/account_code.py
+domain/value_objects/search_filter_tree.py
 New
 
-infrastructure/models/__init__.py
-+2
--0
-
-infrastructure/models/account_series_model.py
+presentation/backend/dto/search_filters_dto.py
 New
 
-infrastructure/repositories/repository_account_series.py
+presentation/controllers/cli.py
++5
+-5
+
+presentation/controllers/filter_presets.py
 New
+domain/services/service_ratios.py
++22
+-11
 
-presentation/backend/api.py
-+4
--0
-
-presentation/backend/dependencies/account_chart_dependencies.py
-New
-
-presentation/backend/routers/account_charts.py
-New
-
-presentation/frontend/src/App.vue
-+2
--1
-
-presentation/frontend/src/components/PlotlyViewer.vue
-+55
--10
-
-presentation/frontend/src/router/index.js
-+6
--0
-
-presentation/frontend/src/services/apiService.js
-+20
--0
-
-presentation/frontend/src/store/accountChartsStore.js
-New
-
-presentation/frontend/src/views/AccountChartsView.vue
-New
-
-application/dtos/account_series_dto.py
-New
-+19
--0
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from datetime import date
-from typing import List
+from typing import Any, List, Dict, Optional
+import pandas as pd
 
 
-@dataclass
-class AccountSeriesPointDTO:
-    date: date
-    value: float
-
-
-@dataclass
-class AccountSeriesDTO:
-    ticker: str
-    account_code: str
-    label: str
-    points: List[AccountSeriesPointDTO]
-application/usecases/get_account_series.py
-New
-+53
--0
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from datetime import date
-from typing import List
-
-from application.dtos.account_series_dto import (
-    AccountSeriesDTO,
-    AccountSeriesPointDTO,
-)
-from application.ports.uow_port import UowFactoryPort
-from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
-from domain.value_objects.account_code import AccountCode
-
-
-@dataclass
-class GetAccountSeriesUseCase:
-    repository: RepositoryAccountSeriesPort
-    uow_factory: UowFactoryPort
-
-    def __call__(
-        self,
-        *,
-        ticker: str,
-        account_code: str,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> AccountSeriesDTO:
-        account = AccountCode(account_code)
-
-        with self.uow_factory() as uow:
-            points = self.repository.get_account_series(
-                ticker=ticker,
-                account=account,
-                uow=uow,
-                start_date=start_date,
-                end_date=end_date,
-            )
-            uow.commit()
-
-        dto_points: List[AccountSeriesPointDTO] = [
-            AccountSeriesPointDTO(date=p.date, value=float(p.value)) for p in points
-        ]
-        dto_points.sort(key=lambda p: p.date)
-
-        label = f"Conta {account.value}"
-
-        return AccountSeriesDTO(
-            ticker=ticker,
-            account_code=account.value,
-            label=label,
-            points=dto_points,
-        )
-domain/entities/__init__.py
-+2
--1
-
-"""Domain entities package."""
-
-from .eligible_company import EligibleCompany
-from .account_series import AccountPoint
-
-__all__ = ["EligibleCompany"]
-__all__ = ["EligibleCompany", "AccountPoint"]
-domain/entities/account_series.py
-New
-+12
--0
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from datetime import date
-
-
-@dataclass
-class AccountPoint:
-    """Representa um ponto da série temporal de uma conta contábil."""
-
-    date: date
-    value: float
-domain/ports/__init__.py
-+2
--0
-
-from __future__ import annotations
-
-from application.ports.cli_port import CliPort
+from application.processors.filter_builder import FilterBuilder
+from infrastructure.utils.pandas_visitor import PandasVisitor
 from application.ports.config_port import ConfigPort
-from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
-from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.uow_port import UowFactoryPort
 from application.ports.worker_pool_port import WorkerPoolPort
-from domain.ports.datacleaner_port import DataCleanerPort
-from domain.ports.repository_base_port import RepositoryBasePort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
-from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
-from domain.ports.repository_statements_fetched_port import (
-           RepositoryStatementFetchedPort,
+from application.services.eligible_companies_batch_updater_service import (
+    EligibleCompaniesBatchUpdaterService,
 )
-from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.scraper_base_port import ScraperBasePort
-from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
-from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-
-__all__ = [
-    "CliPort",
-    "RepositoryCompanyDataPort",
-    "RepositoryCompanyEligiblePort",
-    "ConfigPort",
-    "DataCleanerPort",
-    "AffinityHttpClientPort",
-    "LoggerPort",
-    "RepositoryBasePort",
-    "RepositoryNsdPort",
-    "RepositoryStatementsRawPort",
-    "RepositoryStatementFetchedPort",
-    "ScraperBasePort",
-    "ScraperCompanyDataPort",
-    "ScraperStatementRawPort",
-    "MetricsCollectorPort",
-    "WorkerPoolPort",
-    "RepositoryAccountSeriesPort",
-]
-domain/ports/repository_account_series_port.py
-New
-+27
--0
-
-from __future__ import annotations
-
-from abc import ABC, abstractmethod
-from datetime import date
-from typing import List
-
-from application.ports.uow_port import Uow
-from domain.entities.account_series import AccountPoint
-from domain.value_objects.account_code import AccountCode
+from application.usecases.normalize_ratios import NormalizeUseCase
+from application.usecases.companies_eligible import (
+    CompaniesEligibleUseCase,
+)
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
+from domain.value_objects.search_filter_tree import SearchFilterTree
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
 
 
-class RepositoryAccountSeriesPort(ABC):
-    """Porta de repositório para séries temporais de contas contábeis."""
+class RatiosService:
+    """Service layer to coordinate company-related synchronization use cases."""
 
-    @abstractmethod
-    def get_account_series(
+    def __init__(
         self,
-        *,
-        ticker: str,
-        account: AccountCode,
-        uow: Uow,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> List[AccountPoint]:
-        """Retorna série temporal de uma conta para um ticker."""
+        config: ConfigPort,
+        logger: LoggerPort,
 
-*** End of File
+        repository_company: RepositoryCompanyDataPort,
+        repository_stock_quote: RepositoryStockQuotePort,
+        repository_indicators: RepositoryIndicatorsPort,
+        repository_statements_fetched: RepositoryStatementFetchedPort,
+        cache_ratios: CacheRatiosPort,
+
+        uow_factory: UowFactoryPort,
+@@ -79,54 +80,64 @@ class RatiosService:
+            repository_statements_fetched=self.repository_statements_fetched,
+            repository_stock_quote=self.repository_stock_quote,
+            batch_service=self._companies_eligible_batch_service,
+            uow_factory=self.uow_factory,
+        )
+
+        # Initialize the use case responsible for company synchronization
+        self.normalize_usecase = NormalizeUseCase(
+            config=self.config,
+            logger=self.logger,
+
+            repository_stock_quote=self.repository_stock_quote,
+            repository_indicators=self.repository_indicators,
+            repository_statements_fetched=self.repository_statements_fetched,
+            cache_ratios=self.cache_ratios,
+            companies_eligible_port=companies_eligible_port,
+
+            uow_factory=self.uow_factory,
+            worker_pool=self.worker_pool,
+            # http_client=self.http_client,
+
+            # max_workers=self.config.worker_pool.max_workers,
+        )
+
+    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        return self.run(filters=kwds.get("filters"))
+        raw_filters = kwds.get("filters")
+        return self.run(filters=raw_filters)
+
+    def run(self, filters: Optional[Dict[str, Any]] = None) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        """
+        Executa a normalização com filtros complexos.
+    def run(
+        self, filters: Optional[Dict[str, Any]] = None
+    ) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        """Executa a normalização com filtros estruturados."""
+        filter_tree = SearchFilterTree.from_raw(filters)
+
+        Args:
+        """
+        with self.uow_factory() as uow:
+            companies_eligible: List[CompanyEligibleDTO] = self.companies_eligible_port.list(uow=uow)
+
+        df = pd.DataFrame([c.to_dict() for c in companies_eligible])
+
+        companies_to_process = self._apply_filters(df, filters)
+        companies_to_process = self._apply_filters(df, filter_tree)
+        if companies_to_process.empty:
+            return SyncResultsDTO(items=[], metrics=0)
+
+        return self.normalize_usecase(companies=companies_to_process)
+
+    def _apply_filters(self, df: pd.DataFrame, filters: dict | None) -> pd.DataFrame:
+        if not filters:
+    def _apply_filters(
+        self,
+        df: pd.DataFrame,
+        filters: Optional[SearchFilterTree],
+    ) -> pd.DataFrame:
+        if filters is None or filters.is_empty():
+            return df
+        try:
+            spec = FilterBuilder().build_spec(filters)
+            spec = FilterBuilder().build_spec(filters.to_dict())
+            mask = spec.accept(PandasVisitor(), df)
+            return df[mask]
+        except Exception as e:
+        except Exception as exc:
+            if hasattr(self.logger, "log"):
+                self.logger.log(
+                    f"Falha ao aplicar filtros em RatiosService: {exc}",
+                    level="warning",
+                )
+            return df
+
 domain/value_objects/__init__.py
 +2
 -0
@@ -282,6 +173,7 @@ from .company_filters import (
     CompanyFilterQuery,
 )
 from .account_code import AccountCode
+from .search_filter_tree import SearchFilterTree
 
 __all__ = [
     "CompanyField",
@@ -291,708 +183,212 @@ __all__ = [
     "CompanyFilterClause",
     "CompanyFilterQuery",
     "AccountCode",
+    "SearchFilterTree",
 ]
-domain/value_objects/account_code.py
+domain/value_objects/search_filter_tree.py
 New
-+24
++47
 -0
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+
+FilterDict = Dict[str, Any]
+
+
+def _canonical_json(data: FilterDict) -> str:
+    """Return a canonical JSON representation used for hashing."""
+    return json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
 @dataclass(frozen=True)
-class AccountCode:
-    """Value object que representa um código de conta contábil."""
+class SearchFilterTree:
+    """Value object that encapsulates the structured filter tree used across the app."""
 
-    value: str
+    raw: FilterDict
 
-    def __post_init__(self) -> None:
-        v = self.value.strip()
-        if not v:
-            raise ValueError("AccountCode vazio")
-
-        parts = v.split(".")
-        if any(not part.isdigit() for part in parts):
-            raise ValueError(f"AccountCode inválido: {v}")
-
-        object.__setattr__(self, "value", v)
-
-    def __str__(self) -> str:
-        return self.value
-infrastructure/models/__init__.py
-+2
--0
-
-from __future__ import annotations
-
-from infrastructure.models.base_model import BaseModel
-from infrastructure.models.company_eligible_model import CompanyEligibleModel
-from infrastructure.models.account_series_model import FinancialStatementModel
-
-__all__ = [
-    "BaseModel",
-    "CompanyEligibleModel",
-    "FinancialStatementModel",
-]
-infrastructure/models/account_series_model.py
-New
-+31
--0
-
-from __future__ import annotations
-
-from datetime import datetime
-
-from sqlalchemy import Float, Integer, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
-
-from infrastructure.models.base_model import BaseModel, _YMDDate
-
-
-class FinancialStatementModel(BaseModel):
-    """Modelo ORM simplificado para séries temporais de contas."""
-
-    __tablename__ = "financial_statements"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    ticker: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
-    account_code: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
-    reference_date: Mapped[datetime] = mapped_column(
-        _YMDDate(), index=True, nullable=False
-    )
-    value: Mapped[float] = mapped_column(Float, nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "ticker",
-            "account_code",
-            "reference_date",
-            name="uq_financial_statement",
-        ),
-    )
-infrastructure/repositories/repository_account_series.py
-New
-+63
--0
-
-from __future__ import annotations
-
-from datetime import date, datetime, time
-from typing import List
-
-from sqlalchemy.orm import Session
-
-from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import Uow
-from domain.entities.account_series import AccountPoint
-from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
-from domain.value_objects.account_code import AccountCode
-from infrastructure.adapters.engine_setup import EngineSetup
-from infrastructure.models.account_series_model import FinancialStatementModel
-
-
-class RepositoryAccountSeries(EngineSetup, RepositoryAccountSeriesPort):
-    """Repositório SQLAlchemy para séries temporais de contas contábeis."""
-
-    def __init__(self, *, config: ConfigPort, logger: LoggerPort) -> None:
-        super().__init__(config.database.connection_string, logger)
-
-    def get_account_series(
-        self,
-        *,
-        ticker: str,
-        account: AccountCode,
-        uow: Uow,
-        start_date: date | None = None,
-        end_date: date | None = None,
-    ) -> List[AccountPoint]:
-        session: Session = uow.session
-
-        query = (
-            session.query(FinancialStatementModel)
-            .filter(FinancialStatementModel.ticker == ticker)
-            .filter(FinancialStatementModel.account_code == account.value)
-            .order_by(FinancialStatementModel.reference_date.asc())
-        )
-
-        if start_date is not None:
-            query = query.filter(
-                FinancialStatementModel.reference_date
-                >= datetime.combine(start_date, time.min)
+    @classmethod
+    def from_raw(cls, data: Optional[Any]) -> Optional["SearchFilterTree"]:
+        """Coerce a raw dict (or already wrapped instance) into ``SearchFilterTree``."""
+        if data is None:
+            return None
+        if isinstance(data, SearchFilterTree):
+            return data
+        if not isinstance(data, dict):
+            raise TypeError(
+                "SearchFilterTree expects a mapping compatible with the FilterBuilder grammar."
             )
-        if end_date is not None:
-            query = query.filter(
-                FinancialStatementModel.reference_date
-                <= datetime.combine(end_date, time.max)
-            )
+        return cls(raw=data)
 
-        rows = query.all()
+    def to_dict(self) -> FilterDict:
+        """Expose the raw tree as a plain dictionary."""
+        return self.raw
 
-        return [
-            AccountPoint(
-                date=row.reference_date.date()
-                if isinstance(row.reference_date, datetime)
-                else row.reference_date,
-                value=float(row.value) if row.value is not None else 0.0,
-            )
-            for row in rows
-        ]
-presentation/backend/api.py
-+4
--0
+    def is_empty(self) -> bool:
+        """True when no condition is declared inside the tree."""
+        return not bool(self.raw)
 
-# presentation/backend/api.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from presentation.backend.routers.charts import router as charts_router
-from presentation.backend.routers.companies import router as companies_router
-from presentation.backend.routers.account_charts import (
-    router as account_charts_router,
-)
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(
-        title="FLY Web API",
-        version="0.1.0",
-    )
-
-    # CORS para permitir o frontend do Vite (http://localhost:5173)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Camada de apresentação: apenas inclui routers finos
-    app.include_router(charts_router)
-    app.include_router(account_charts_router)
-    app.include_router(companies_router)
-
-    return app
-
-
-app = create_app()
-presentation/backend/dependencies/account_chart_dependencies.py
+    def to_hash(self) -> str:
+        """Return a deterministic hash-friendly representation."""
+        if self.is_empty():
+            return "empty"
+        return _canonical_json(self.raw)
+presentation/backend/dto/search_filters_dto.py
 New
-+19
--0
-
-from __future__ import annotations
-
-from application.usecases.get_account_series import GetAccountSeriesUseCase
-from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
-from infrastructure.config.config_adapter import ConfigAdapter
-from infrastructure.logging.logger_adapter import Logger
-from infrastructure.repositories.repository_account_series import RepositoryAccountSeries
-from infrastructure.uow.uow import UowFactory
-
-
-def get_account_series_usecase() -> GetAccountSeriesUseCase:
-    config = ConfigAdapter()
-    logger = Logger(config)
-    repository: RepositoryAccountSeriesPort = RepositoryAccountSeries(
-        config=config,
-        logger=logger,
-    )
-    uow_factory = UowFactory(session_factory=repository.Session)
-    return GetAccountSeriesUseCase(repository=repository, uow_factory=uow_factory)
-presentation/backend/routers/account_charts.py
-New
-+57
--0
-
-from __future__ import annotations
-
-from datetime import date
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-
-from application.usecases.get_account_series import GetAccountSeriesUseCase
-from presentation.backend.dependencies.account_chart_dependencies import (
-    get_account_series_usecase,
-)
-from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
-
-router = APIRouter(
-    prefix="/api/charts/accounts",
-    tags=["charts"],
-)
-
-
-@router.get("/line/{ticker}", response_model=ChartDTO)
-async def get_account_line_chart(
-    ticker: str,
-    account_code: str = Query(..., description="Código da conta, ex: 02.03"),
-    start_date: date | None = Query(None),
-    end_date: date | None = Query(None),
-    usecase: GetAccountSeriesUseCase = Depends(get_account_series_usecase),
-) -> ChartDTO:
-    series = usecase(
-        ticker=ticker,
-        account_code=account_code,
-        start_date=start_date,
-        end_date=end_date,
-    )
-
-    if not series.points:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Série temporal vazia para esta conta",
-        )
-
-    trace = PlotlyTraceDTO(
-        x=[point.date for point in series.points],
-        y=[point.value for point in series.points],
-        type="scatter",
-        mode="lines",
-        name=f"{series.account_code} – {series.label}",
-        extra={
-            "hovertemplate": "%{x}<br>Valor: %{y}<extra></extra>",
-        },
-    )
-
-    layout = {
-        "title": f"{series.label} – {series.ticker}",
-        "xaxis": {"title": "Data"},
-        "yaxis": {"title": "Valor"},
-    }
-
-    return ChartDTO(data=[trace], layout=layout)
-presentation/frontend/src/App.vue
-+2
--1
-
-<!-- src/App.vue -->
-<template>
-  <div class="component-box">
-    <a href="http://localhost:5173/">Home</a> |
-    <a href="http://localhost:5173/charts">Chart</a>
-    <a href="http://localhost:5173/charts">Chart</a> |
-    <a href="http://localhost:5173/charts/accounts">Contas</a>
-  </div>
-  <div>
-    <header>
-      <h1>FLY Project</h1>
-    </header>
-    <router-view />
-    <p>
-      (c) Crafted in the Pampas and powered by yerba mate: an authentic gaucho tech.
-    </p>
-  </div>
-</template>
-
-<script setup>
-// por enquanto, nada aqui
-</script>
-
-<style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-header {
-  padding: 1rem;
-  border-bottom: 1px solid #ccc;
-presentation/frontend/src/components/PlotlyViewer.vue
-+55
--10
-
-<template>
-  <section class="plotly-viewer">
-    <div v-if="isLoading" role="status" aria-live="polite">
-    <div v-if="resolvedIsLoading" role="status" aria-live="polite">
-      Carregando gráfico...
-    </div>
-
-    <div v-else-if="error" role="alert">
-      {{ error }}
-    <div v-else-if="resolvedError" role="alert">
-      {{ resolvedError }}
-    </div>
-
-    <div
-      v-else-if="chart"
-      v-else-if="resolvedChart"
-      role="img"
-      :aria-label="chart.title"
-      :aria-label="resolvedAriaLabel"
-    >
-      <VuePlotly
-        :data="chart.data"
-        :layout="chart.layout"
-        :data="resolvedChart.data"
-        :layout="resolvedChart.layout"
-        :useResizeHandler="true"
-        style="width: 100%; height: 400px;"
-      />
-    </div>
-
-    <p v-else>
-      Selecione uma companhia para visualizar o gráfico.
-    </p>
-  </section>
-</template>
-
-<script setup>
-import { computed } from 'vue'
-import { VuePlotly } from 'vue3-plotly'
-import { useChartStore } from '../store/chartStore'
-
-const props = defineProps({
-  chart: {
-    type: Object,
-    default: null,
-  },
-  isLoading: {
-    type: Boolean,
-    default: undefined,
-  },
-  error: {
-    type: String,
-    default: undefined,
-  },
-})
-
-const store = useChartStore()
-
-const chart = computed(() => store.chart)
-const isLoading = computed(() => store.isLoading)
-const error = computed(() => store.error)
-const storeChart = computed(() => store.chart)
-const storeIsLoading = computed(() => store.isLoading)
-const storeError = computed(() => store.error)
-
-const resolvedChart = computed(() =>
-  props.chart !== null ? props.chart : storeChart.value,
-)
-
-const resolvedIsLoading = computed(() =>
-  typeof props.isLoading === 'boolean'
-    ? props.isLoading
-    : storeIsLoading.value,
-)
-
-const resolvedError = computed(() =>
-  typeof props.error === 'string' ? props.error : storeError.value,
-)
-
-const resolvedAriaLabel = computed(() => {
-  const chart = resolvedChart.value
-  if (!chart) {
-    return 'Gráfico'
-  }
-  const title = chart.layout?.title
-  if (typeof title === 'string') {
-    return title
-  }
-  if (title && typeof title.text === 'string') {
-    return title.text
-  }
-  return 'Gráfico'
-})
-</script>
-presentation/frontend/src/router/index.js
-+6
--0
-
-// src/router/index.js
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import ChartView from '../views/ChartView.vue'
-import AccountChartsView from '../views/AccountChartsView.vue'
-
-const routes = [
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView,
-  },
-  {
-    path: '/charts',
-    name: 'charts',
-    component: ChartView,
-  },
-  {
-    path: '/charts/accounts',
-    name: 'accountCharts',
-    component: AccountChartsView,
-  },
-]
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-})
-
-export default router
-presentation/frontend/src/services/apiService.js
 +20
 -0
 
-import axios from 'axios'
+from __future__ import annotations
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000',
-})
+from typing import Any, Dict, Optional
 
-export async function fetchChart(params) {
-  const payload = params || {}
-  const type = String(payload.type || '').trim()
-  if (!type) {
-    throw new Error('Ticker inválido para carregar o gráfico')
-  }
-  const selection = Array.isArray(payload.selection) ? payload.selection : []
+from pydantic import BaseModel, Field
 
-  const query = {}
-  if (selection.length) {
-    query.selection = selection.join(',')
-  }
+from domain.value_objects.search_filter_tree import SearchFilterTree
 
-  const res = await api.get(`/charts/${encodeURIComponent(type)}`, {
-    params: query,
-  })
-  return res.data
-}
 
-export async function fetchAccountLineChart(ticker, accountCode, params = {}) {
-  const t = String(ticker || '').trim()
-  const a = String(accountCode || '').trim()
+class SearchFiltersDTO(BaseModel):
+    """Pydantic DTO que espelha a árvore de filtros estruturados."""
 
-  if (!t || !a) {
-    throw new Error('Ticker e accountCode são obrigatórios')
-  }
+    tree: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Árvore de filtros compatível com o FilterBuilder.",
+    )
 
-  const res = await api.get(
-    `/api/charts/accounts/line/${encodeURIComponent(t)}`,
-    {
-      params: {
-        account_code: a,
-        ...params,
-      },
-    },
-  )
-  return res.data
-}
+    def to_domain(self) -> Optional[SearchFilterTree]:
+        """Converte o DTO em ``SearchFilterTree`` do domínio."""
+        return SearchFilterTree.from_raw(self.tree)
+presentation/controllers/cli.py
++5
+-5
 
-export async function searchCompanies(filterQuery) {
-  const res = await api.post('/companies/search', filterQuery || { clauses: [] })
-  return res.data
-}
+@@ -2,50 +2,54 @@ from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.polices.nsd_policy import NsdPolicyPort
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
+from domain.ports.scraper_nsd_port import ScraperNsdPort
+from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.services.service_company_data import CompanyDataService
+from domain.services.service_nsd import NsdService
+from domain.services.service_ratios import RatiosService
+from domain.services.service_stock_quote import StockQuoteService
 
-export async function fetchCompanyFacets() {
-  const res = await api.get('/companies/facets')
-  return res.data
-}
-presentation/frontend/src/store/accountChartsStore.js
-New
-+77
--0
+from presentation.controllers.filter_presets import (
+    build_default_ratios_filter,
+)
 
-import { defineStore } from 'pinia'
-import { fetchAccountLineChart } from '../services/apiService'
+# from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
+from infrastructure.utils.byte_formatter import ByteFormatter
 
-export const useAccountChartsStore = defineStore('accountCharts', {
-  state: () => ({
-    ticker: '',
-    charts: {
-      '02.03': null,
-      '03.01': null,
-    },
-    isLoading: {
-      '02.03': false,
-      '03.01': false,
-    },
-    error: {
-      '02.03': '',
-      '03.01': '',
-    },
-  }),
-  actions: {
-    setTicker(ticker) {
-      this.ticker = String(ticker || '').trim()
-    },
 
-    _ensureKeys(code) {
-      if (!(code in this.charts)) {
-        this.charts = { ...this.charts, [code]: null }
-      }
-      if (!(code in this.isLoading)) {
-        this.isLoading = { ...this.isLoading, [code]: false }
-      }
-      if (!(code in this.error)) {
-        this.error = { ...this.error, [code]: '' }
-      }
-    },
+class Cli:
+    """CLI façade that coordinates domain services.
 
-    async loadAccountChart(accountCode, params = {}) {
-      const code = String(accountCode || '').trim()
-      if (!code) {
-        return
-      }
+    This class is intentionally minimal: it composes dependencies and
+    triggers the high-level workflows without embedding domain logic.
 
-      this._ensureKeys(code)
+    Args:
+        config (ConfigPort): Read-only application configuration.
+        logger (LoggerPort): Logging abstraction for structured events.
+        repository_company (RepositoryCompanyDataPort): Persistence port for company data.
+        scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
+    """
 
-      if (!this.ticker) {
-        this.error = {
-          ...this.error,
-          [code]: 'Ticker e código da conta são obrigatórios',
+    def __init__(
+        self,
+        config: ConfigPort,
+        logger: LoggerPort,
+        repository_company: RepositoryCompanyDataPort,
+        repository_nsd: RepositoryNsdPort,
+        repository_stock_quote: RepositoryStockQuotePort,
+        repository_indicators: RepositoryIndicatorsPort,
+@@ -205,32 +209,28 @@ class Cli:
+        # filters: Dicionário de filtros (ex: {'company_name': {'contains': 'GERDAU'}}).
+        #             Se None, processa todas as empresas elegíveis.
+        #             cada folha da árvore é uma condição concreta sobre uma coluna (Cmp, StrMatch, NullCheck, ListAny).
+        #             {
+        #         "and": [
+        #             {"status": "ATIVO"},
+        #             {
+        #             "or": [
+        #                 {
+        #                 "and": [
+        #                     {"has_bdr": True},
+        #                     {"market": {"in": ["NM"]}}
+        #                 ]
+        #                 },
+        #                 {"listing_date": {">=": "2020-01-01"}}
+        #             ]
+        #             },
+        #             {"market": {"in": ["NM", "N2"]}}
+        #         ]
+        #         }
+        #         Essa estrutura representa:
+        #         (status == "ATIVO") 
+        #         AND ( (has_bdr == True AND market in ["NM"]) OR (listing_date >= "2020-01-01") )
+        #         AND (market in ["NM", "N2"])
+
+        filters = {
+             "and": [
+                {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
+            ]
         }
-        return
-      }
+        filters = build_default_ratios_filter()
 
-      this.isLoading = { ...this.isLoading, [code]: true }
-      this.error = { ...this.error, [code]: '' }
-
-      try {
-        const chart = await fetchAccountLineChart(this.ticker, code, params)
-        this.charts = { ...this.charts, [code]: chart }
-      } catch (err) {
-        console.error(err)
-        const message = err?.message || 'Falha ao carregar gráfico'
-        this.error = { ...this.error, [code]: message }
-        this.charts = { ...this.charts, [code]: null }
-      } finally {
-        this.isLoading = { ...this.isLoading, [code]: false }
-      }
-    },
-
-    async loadMultipleAccounts(accountCodes, params = {}) {
-      const codes = (accountCodes || [])
-        .map(code => String(code || '').trim())
-        .filter(Boolean)
-
-      await Promise.all(codes.map(code => this.loadAccountChart(code, params)))
-    },
-  },
-})
-presentation/frontend/src/views/AccountChartsView.vue
+        return ratios_service(filters=filters)
+presentation/controllers/filter_presets.py
 New
-+118
++32
 -0
 
-<template>
-  <section class="account-charts">
-    <header class="account-charts__header">
-      <h2>Gráficos por conta contábil</h2>
-      <p>
-        Informe um ticker e visualize múltiplas contas financeiras usando o mesmo
-        pipeline.
-      </p>
-    </header>
+from __future__ import annotations
 
-    <div class="account-charts__controls">
-      <label for="ticker-input">Ticker</label>
-      <input
-        id="ticker-input"
-        v-model="localTicker"
-        type="text"
-        placeholder="Ex.: PETR4"
-        @keyup.enter="load"
-      />
+from typing import Any, Dict
 
-      <button type="button" @click="load">
-        Carregar gráficos
-      </button>
-    </div>
+FilterDict = Dict[str, Any]
 
-    <div class="account-charts__grid">
-      <section class="account-chart" aria-live="polite">
-        <h3>02.03 – Patrimônio Líquido</h3>
-        <PlotlyViewer
-          :chart="charts['02.03']"
-          :isLoading="isLoading['02.03']"
-          :error="error['02.03']"
-        />
-      </section>
 
-      <section class="account-chart" aria-live="polite">
-        <h3>03.01 – Receita Líquida</h3>
-        <PlotlyViewer
-          :chart="charts['03.01']"
-          :isLoading="isLoading['03.01']"
-          :error="error['03.01']"
-        />
-      </section>
-    </div>
-  </section>
-</template>
+def build_ratios_filter_by_issuing_company(issuing_company: str) -> FilterDict:
+    """Retorna um filtro simples para restringir ratios por empresa emissora."""
+    company = (issuing_company or "").strip()
+    if not company:
+        raise ValueError("issuing_company não pode ser vazio")
 
-<script setup>
-import { computed, ref } from 'vue'
-import { useAccountChartsStore } from '../store/accountChartsStore'
-import PlotlyViewer from '../components/PlotlyViewer.vue'
+    return {
+        "and": [
+            {
+                "issuing_company": {
+                    "==": company,
+                    "case": False,
+                }
+            }
+        ]
+    }
 
-const store = useAccountChartsStore()
-const localTicker = ref(store.ticker)
 
-const charts = computed(() => store.charts)
-const isLoading = computed(() => store.isLoading)
-const error = computed(() => store.error)
-
-async function load() {
-  store.setTicker(localTicker.value)
-  await store.loadMultipleAccounts(['02.03', '03.01'])
-}
-</script>
-
-<style scoped>
-.account-charts {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem;
-}
-
-.account-charts__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.account-charts__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.account-charts__controls input {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-width: 160px;
-}
-
-.account-charts__controls button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background-color: #2563eb;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.account-charts__controls button:hover {
-  background-color: #1d4ed8;
-}
-
-.account-charts__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.account-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-</style>
+def build_default_ratios_filter() -> FilterDict:
+    """Filtro padrão reutilizado pelo CLI ao processar ratios."""
+    return {
+        "and": [
+            {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
+        ]
+    }

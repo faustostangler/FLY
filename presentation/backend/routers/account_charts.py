@@ -32,10 +32,14 @@ async def get_account_line_chart(
     )
 
     if not series.points:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Série temporal vazia para esta conta",
-        )
+        # print(series)
+
+        layout = {
+            "title": f"{series.label} – {series.ticker}",
+            "xaxis": {"title": "Data"},
+            "yaxis": {"title": "Valor"},
+        }
+        return ChartDTO(data=[], layout=layout)
 
     trace = PlotlyTraceDTO(
         x=[point.date for point in series.points],

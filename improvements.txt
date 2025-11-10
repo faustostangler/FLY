@@ -1,0 +1,2681 @@
+Resumo: Tenho uma empresa, vários accounts, um cache de ratios em Parquet. Preciso transformar isso em séries para o Plotly em Vue via FastAPI. A refatoração precisa alinhar os blocos existentes em torno de um contrato de filtros e de um caso de uso de “gráfico de accounts por empresa”, mantendo hexágono limpo.
+
+O sistema deve entregar: O usuário filtra com facetas e escolhe uma empresa no frontend. O AccountChartsView.vue deve exibir vários gráficos de linha de diferentes accounts dessa empresa. Cada série de linha corresponde a uma coluna da tabela de ratios em cache. Extrair a “linguagem de filtros” do CLI para um módulo próprio, com um dicionário de filtros em forma de árvore, em que cada folha é uma condição sobre uma coluna (criar um DTO Pydantic de entrada que envolva o filtro; os endpoints que precisam de filtro recebem SearchFiltersDTO no body; Pinia guarda um estado de filtro que consiga ser serializado para o mesmo formato que o DTO Pydantic espera; e a action do Pinia transforma o estado atual das facetas). 
+
+1. Fluxo atual: do cli.py até o parquet de ratios. Onde os ratios são calculados, papel do _ratios_service() e como o CLI chega até ele. 1.A. Origem dos dados: O cálculo de ratios vive no NormalizeUseCase em application/usecases/normalize_ratios.py. Carrega os indicadores brutos e trata para df limpo, carrega empresas elegíveis (filtradas, hoje em cli.py, refatorar para um SearchFiltersDTO) em df para tasks. Para cada empresa, monta o snapshot (com indicators, statements e quotes), trata e organiza em company_data. Então chama o serviço de cache de ratios. 1.B. Regra de negócios ratios: processa dados e monta calculate_df para aplicar fórmulas de intel.py. Cada fórmula gera uma nova coluna adicionada ao df. Cada coluna representa um “account” ou um ratio calculado (uma série no endpoint). 1.C. CacheRatiosService e do cache Parquet: application/services/cache_ratios_service.py recebe os dados brutos e devolve um df de ratios e CacheRatiosResultDTO. Independente de CLI ou futuro FastAPI, O produto final do pipeline de ratios é sempre um DataFrame por empresa (Índice: datas (date) e Colunas: múltiplos accounts / ratios) calculado em _create_ratios, salvo/lido como Parquet pelo CacheRatiosService + CacheRatiosPort e usado no NormalizeUseCase para atualizar o cache e medir métricas. Para o frontend, as séries são colunas específicas desse df. 
+
+2. Reorganizar o fluxo em camadas hexagonais. Domínio (Conceitos: empresa, account, ratio, série temporal; Regras: como cada ratio é calculado a partir de dados brutos; Portas: CacheRatiosPort, interfaces para leitura e gravação do cache), Aplicação (Casos de uso: calcular ratios, consultar ratios; Serviços de orquestração: CacheRatiosService, que decide cache hit ou cache miss), Infraestrutura (Implementação concreta de CacheRatiosPort com Parquet e SQLite; Repositórios que leem os dados brutos originais), Apresentação (CLI; FastAPI; Vue). O cálculo de ratios e o cache pertencem ao domínio e à aplicação. FastAPI é um adaptador fino em cima disso. 
+
+3. Definir claramente os contratos. 3.A. Contrato de filtro: Estrutura do dicionário de filtros; Tipos de condições: comparação, texto, nulidade, pertencimento a lista; Relação com o frontend: o filtro que vem do Vue precisa ser compatível com o que o CLI já usa. 3.B. Contrato do cache de ratios; Entrada lógica do cálculo: empresa + filtros; Saída: DataFrame indexado por data, com colunas de accounts; Chave de cache: algo que leva em conta filtros, empresa e hash do código de cálculo. 3.C. Contrato de gráfico (ChartDTO); Entrada do frontend: JSON que representa séries; Estrutura conceitual: data: lista de séries, cada série com name, x, y; layout: metadados de eixo, título, etc; meta: informações adicionais (empresa, accounts, se veio de cache, etc.). 
+
+4. Novo caso de uso de leitura para gráficos (o fluxo de cálculo já existe. O que falta é um caso de uso focado em entregar séries para gráficos, O caso de uso não conhece FastAPI, nem Vue, nem Axios. Ele só recebe dados simples e devolve DTO de gráfico). Visão lógica do caso de uso “Obter gráficos de accounts por empresa”: Entrada: company_name. Lista de accounts desejadas. Dicionário de filtros. Passos internos: Montar um “contexto de cache” com empresa, filtros e código de cálculo. Chamar o CacheRatiosService para obter o DataFrame, deixando o serviço decidir cache hit ou miss. A partir do DataFrame retornado, selecionar apenas as colunas que correspondem às accounts. Validar que o índice é temporal e ordenar por data. Transformar essa visão tabular em uma visão de séries: Cada coluna vira uma série. x é o eixo temporal. y são os valores da coluna. Embalar isso em um ChartDTO. Saída: Um ChartDTO pronto para o Plotly.
+
+5. Cache. O FastAPI não participa dessa decisão. Ele apenas aciona o caso de uso que, por sua vez, aciona o serviço de cache. O cache é central e serviço de domínio. Fluxo conceitual que o desenvolvedor deve fixar: Recebo company_name e filters. Gero uma chave de cache baseada nesse contexto. Pergunto ao CacheRatiosPort se existe um Parquet correspondente. Se existir, retorno o DataFrame e marco como cache hit. Se não existir: Reexecuto o pipeline de cálculo de ratios. Gero o DataFrame com todas as colunas de accounts. Gravo no cache. Retorno o DataFrame e marco como cache miss.
+
+6. Adaptador FastAPI como uma casca fina (A rota só traduz HTTP para DTO e DTO para HTTP. Toda a lógica de negócio está fora dela). Três funções básicas. Receber o corpo da requisição JSON: company_name, accounts, filters. Validar automaticamente com Pydantic no DTO de entrada. Resolver o caso de uso via injeção de dependências: FastAPI pede um GetCompanyAccountsChartUseCase, O container monta esse use case com as implementações concretas de ports de cache e repositórios. Invocar o caso de uso e receber um ChartDTO. Pydantic valida esse ChartDTO de saída e o FastAPI devolve como JSON.
+
+7. Vue frontend com o contrato de gráfico. AccountChartsView.vue não precisa saber nada sobre Parquet, DataFrame ou regras de cálculo. Ele só consome ChartDTO. Camada de estado (Pinia): Guarda os parâmetros de filtro relevantes para gráficos, Guarda o último ChartDTO retornado pelo backend, Exibe isLoading e erros. Camada de serviço de API: Tem uma função que sabe chamar o endpoint de gráficos, Envia company_name, accounts e filters no formato correto, Devolve um ChartDTO. Camada de apresentação: AccountChartsView.vue orquestra: Leitura e atualização de filtros do usuário, Disparo de ações de carregamento de gráficos, Passagem do ChartDTO para um componente que desenha o Plotly.
+
+O mesmo pipeline de cálculo de ratios serve tanto ao CLI quanto ao FastAPI, o cache é único e o frontend recebe sempre o mesmo formato de ChartDTO, independentemente de como o backend decidiu calcular ou ler do cache. 
+
+---
+
+Estas cinco tarefas te dão o desenho de contrato principal:
+Filtro: SearchFiltersDTO (Pydantic) ↔ SearchFilterTree (domínio) ↔ FilterBuilder.
+Ratios: GetCompanyRatiosFrameUseCase entrega CompanyRatiosFrameDTO com DataFrame.
+Gráficos: GetCompanyAccountsChartUseCase transforma DataFrame em CompanyAccountsSeriesDTO.
+FastAPI: transforma CompanyAccountsSeriesDTO em ChartDTO para Plotly.
+Vue/Pinia: tem um estado de filtros que gera o tree compatível e consome apenas ChartDTO.
+
+Tarefa 1 – Unificar a “linguagem de filtros” em um contrato explícito
+Objetivo: parar de passar dict solto de filtros pelo CLI/serviços e ter um contrato claro que possa ser compartilhado entre CLI, FastAPI e Vue.
+1. Extrair contrato de filtros genérico (backend puro, sem Pydantic): 
+1.1. Criar um VO de domínio, algo como domain/value_objects/search_filter_tree.py. 
+1.2. Ajustar service_ratios.py para trabalhar internamente com esse VO:
+run(self, filters: Optional[Dict[str, Any]] = None) → internamente criar um SearchFilterTree quando filters for passado.
+_apply_filters(self, df: pd.DataFrame, filters: dict | None) → passar SearchFilterTree para o FilterBuilder.
+2. DTO de entrada via Pydantic para FastAPI (camada de apresentação):
+2.1. Arquivo novo: presentation/backend/dto/search_filters_dto.py
+2.2. Esse DTO espelha o dicionário de filtros em árvore.
+2.3. Conversor no adaptador FastAPI (ou no dependency): SearchFiltersDTO → SearchFilterTree.
+3. Reaproveitar com CLI
+3.1. Em presentation/controllers/cli.py, onde hoje você cria filters = {...}, o contrato permanece um dict, porém:
+3.2. Centralizar a criação desses filtros em uma função utilitária, por exemplo presentation/controllers/filter_presets.py, que retorna um dict no formato da árvore.
+3.3. A partir daí, CLI e FastAPI compartilham a mesma “linguagem” de filtros.
+4. Pinia alinhado ao DTO:
+4.1. Meta deste bloco, sem ainda mexer no código: O estado de filtros em Pinia (facetas) precisa conseguir produzir exatamente esse tree: Dict[str, Any> que SearchFiltersDTO espera.
+4.2. Esse ajuste é detalhado no Bloco 5, mas o contrato é definido aqui.
+
+Vamos direto para a Tarefa/Bloco 1: unificar a “linguagem de filtros” num contrato explícito e reaproveitável.
+
+Vou dividir em passos práticos, com contexto, problema e solução + código concreto.
+
+---
+
+## 1. VO de domínio: `SearchFilterTree`
+
+### Contexto
+
+Hoje o `FilterBuilder` recebe um `dict` solto. Isso funciona, mas não há nenhum VO garantindo que esse formato é estável e compartilhável entre CLI, FastAPI e frontend.
+
+### Problema
+
+Sem um VO, cada camada pode inventar o próprio formato, e você perde o controle do contrato. O `FilterBuilder` vira um detalhe “mágico” no domínio.
+
+### Solução esperada
+
+Criar um VO imutável que encapsula o `dict` da árvore, com métodos mínimos:
+
+* `from_raw(...)` para aceitar `dict` ou o próprio VO.
+* `to_dict()` para entregar o formato que o `FilterBuilder` espera.
+* `is_empty()` para curto-circuitar.
+
+### Implementação
+
+Crie `domain/value_objects/search_filter_tree.py`:
+
+```python
+# domain/value_objects/search_filter_tree.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+
+FilterDict = Dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SearchFilterTree:
+    """
+    VO genérico para a árvore de filtros consumida pelo FilterBuilder.
+
+    A estrutura interna `raw` deve respeitar o contrato do FilterBuilder, por ex.:
+
+        {
+            "and": [
+                {"status": "ATIVO"},
+                {
+                    "or": [
+                        {"has_bdr": True},
+                        {"market": {"in": ["NM"]}}
+                    ]
+                },
+                {"market": {"in": ["NM", "N2"]}}
+            ]
+        }
+
+    Raiz: "and" / "or" / "not" OU um dict de campo -> condição.
+    Folha: valor direto ou dict de operadores (==, !=, >, <, in, contains, etc.).
+    """
+
+    raw: FilterDict
+
+    @classmethod
+    def from_raw(cls, data: Optional[Any]) -> Optional["SearchFilterTree"]:
+        """Converte dict/VO em SearchFilterTree, ou None se não houver filtro."""
+        if data is None:
+            return None
+        if isinstance(data, SearchFilterTree):
+            return data
+        if not isinstance(data, dict):
+            raise TypeError(
+                f"SearchFilterTree.from_raw espera dict ou SearchFilterTree, "
+                f"recebeu {type(data)}"
+            )
+        return cls(raw=data)
+
+    def to_dict(self) -> FilterDict:
+        """Retorna o dict no formato esperado pelo FilterBuilder."""
+        return self.raw
+
+    def is_empty(self) -> bool:
+        """True quando não há nenhuma condição na árvore."""
+        return not bool(self.raw)
+```
+
+Atualize `domain/value_objects/__init__.py` para exportar o VO:
+
+```python
+# domain/value_objects/__init__.py
+"""Domain-level value objects shared across use cases."""
+
+from .company_filters import (
+    CompanyField,
+    ComparisonOperator,
+    LogicalOperator,
+    CompanyFilterCondition,
+    CompanyFilterClause,
+    CompanyFilterQuery,
+)
+from .account_code import AccountCode
+from .search_filter_tree import SearchFilterTree   # <-- novo
+
+__all__ = [
+    "CompanyField",
+    "ComparisonOperator",
+    "LogicalOperator",
+    "CompanyFilterCondition",
+    "CompanyFilterClause",
+    "CompanyFilterQuery",
+    "AccountCode",
+    "SearchFilterTree",  # <-- novo
+]
+```
+
+---
+
+## 2. `service_ratios` trabalhando com `SearchFilterTree`
+
+### Contexto
+
+`domain/services/service_ratios.py` hoje recebe `filters: Optional[Dict[str, Any]]` e passa esse dict direto para o `FilterBuilder`.
+
+Trecho relevante:
+
+```python
+def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
+    return self.run(filters=kwds.get("filters"))
+
+def run(self, filters: Optional[Dict[str, Any]] = None) -> SyncResultsDTO[CacheRatiosResultDTO]:
+    ...
+    companies_to_process = self._apply_filters(df, filters)
+    ...
+
+def _apply_filters(self, df: pd.DataFrame, filters: dict | None) -> pd.DataFrame:
+    if not filters:
+        return df
+    try:
+        spec = FilterBuilder().build_spec(filters)
+        mask = spec.accept(PandasVisitor(), df)
+        return df[mask]
+    except Exception as e:
+        return df
+```
+
+### Problema
+
+O domínio ainda depende de um `dict` solto. O VO `SearchFilterTree` não está participando da orquestração.
+
+### Solução esperada
+
+* `run` converte o `dict` vindo de fora em `SearchFilterTree`.
+* `_apply_filters` opera em cima de `SearchFilterTree` (ou `None`).
+* O `FilterBuilder` continua trabalhando com `dict`, mas agora sempre via `SearchFilterTree.to_dict()`.
+
+### Implementação
+
+Ajuste `domain/services/service_ratios.py`:
+
+```python
+# domain/services/service_ratios.py
+from typing import Any, List, Dict, Optional
+import pandas as pd
+
+from application.processors.filter_builder import FilterBuilder
+from infrastructure.utils.pandas_visitor import PandasVisitor
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from application.services.eligible_companies_batch_updater_service import (
+    EligibleCompaniesBatchUpdaterService,
+)
+from application.usecases.normalize_ratios import NormalizeUseCase
+from application.usecases.companies_eligible import (
+    CompaniesEligibleUseCase,
+)
+from domain.value_objects.search_filter_tree import SearchFilterTree  # <-- IMPORTE AQUI
+from domain.dtos.sync_results_dto import SyncResultsDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+```
+
+Depois, ajuste `run` e `_apply_filters`:
+
+```python
+    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        # CLI ainda pode passar dict; aqui fazemos a conversão
+        raw_filters = kwds.get("filters")
+        return self.run(filters=raw_filters)
+
+    def run(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        """
+        Executa a normalização com filtros complexos.
+
+        Args:
+            filters: dicionário de filtros no formato do FilterBuilder,
+                     ou None para processar todas as empresas elegíveis.
+        """
+        # 1) Converte o dict em VO de domínio
+        filter_tree = SearchFilterTree.from_raw(filters)
+
+        # 2) Obtenha o DataFrame de empresas elegíveis (código já existente)
+        df = self.companies_eligible_usecase(...)  # mantém a lógica existente
+
+        # 3) Aplica filtros via VO
+        companies_to_process = self._apply_filters(df, filter_tree)
+        if companies_to_process.empty:
+            return SyncResultsDTO(items=[], metrics=0)
+
+        return self.normalize_usecase(companies=companies_to_process)
+
+    def _apply_filters(
+        self,
+        df: pd.DataFrame,
+        filters: Optional[SearchFilterTree],
+    ) -> pd.DataFrame:
+        """
+        Aplica filtros da árvore genérica ao DataFrame de empresas elegíveis.
+        """
+        if filters is None or filters.is_empty():
+            return df
+
+        try:
+            spec = FilterBuilder().build_spec(filters.to_dict())
+            mask = spec.accept(PandasVisitor(), df)
+            return df[mask]
+        except Exception as e:
+            # Falha no filtro não pode derrubar o batch;
+            # loga o erro e segue com df sem filtragem.
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    "Erro ao aplicar filtros em service_ratios: %s", e
+                )
+            return df
+```
+
+Ponto importante: você não mexe na semântica da árvore. Apenas garante que tudo que entra no `FilterBuilder` passou antes pelo `SearchFilterTree`.
+
+Finalmente, crie documentação explícita da gramática no FilterBuilder
+Coloque logo na classe FilterBuilder, um bloco de comentário/documentação mostrando exemplos de:
+{"and": [...]}, {"or": [...]}, {"not": {...}}
+Condições:
+{"campo": {"==": 10}}
+{"campo": {"in": ["NM", "N2"]}}
+{"campo": {"contains": "PETR"}}
+{"campo": {"isnull": True}}
+
+Isso não muda código, mas é um ponto a mais de clareza para qualquer dev que for montar filtros.
+
+---
+
+## 3. DTO Pydantic: `SearchFiltersDTO` (camada de apresentação / FastAPI)
+
+### Contexto
+
+Os endpoints FastAPI precisam receber filtros JSON no mesmo formato que o CLI já usa, mas com validação mínima e conversão para o VO de domínio.
+
+### Problema
+
+Hoje não existe nenhum DTO que represente o “filtro genérico”. Quando for criar endpoints que aceitam filtros, cada rota vai inventar o próprio `dict`.
+
+### Solução esperada
+
+* Criar um DTO Pydantic que encapsula a árvore (`tree`).
+* Ter um método `to_domain()` que devolve `SearchFilterTree`.
+* Manter o formato compatível com o `FilterBuilder` (chaves `and`, `or`, `not`, campos, operadores).
+
+### Implementação
+
+Crie `presentation/backend/dto/search_filters_dto.py`:
+
+```python
+# presentation/backend/dto/search_filters_dto.py
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field
+
+from domain.value_objects.search_filter_tree import SearchFilterTree
+
+
+class SearchFiltersDTO(BaseModel):
+    """
+    DTO genérico de filtros estruturados.
+
+    `tree` deve seguir o contrato aceito por FilterBuilder, por exemplo:
+
+        {
+            "and": [
+                {"status": "ATIVO"},
+                {
+                    "or": [
+                        {"has_bdr": True},
+                        {"market": {"in": ["NM"]}}
+                    ]
+                },
+                {"market": {"in": ["NM", "N2"]}}
+            ]
+        }
+    """
+
+    tree: Optional[Dict[str, Any]] = Field(default=None)
+
+    def to_domain(self) -> Optional[SearchFilterTree]:
+        """Converte o DTO em VO de domínio."""
+        return SearchFilterTree.from_raw(self.tree)
+```
+
+Uso típico em uma rota FastAPI futura:
+
+```python
+@router.post("/alguma-coisa")
+async def algo(search_filters: SearchFiltersDTO):
+    filter_tree = search_filters.to_domain()
+    resultado = ratios_service(filters=filter_tree.to_dict() if filter_tree else None)
+    ...
+```
+
+Por enquanto, o importante é o DTO existir e expressar o contrato.
+
+---
+
+## 4. Reaproveitar com CLI: `filter_presets.py`
+
+### Contexto
+
+O `cli.py` hoje monta filtros na mão, dentro do método, com um `dict` literal:
+
+```python
+filters = {
+    "and": [
+        {"issuing_company": {"==": "PETR", "case": False}},
+    ]
+}
+df_ratios = ratios_service(filters=filters)
+```
+
+### Problema
+
+Se você precisar usar o mesmo filtro em outro lugar (por exemplo, FastAPI), vai ter dois lugares com JSON “mágico” duplicado. Fica frágil.
+
+### Solução esperada
+
+* Criar um módulo de presets de filtros na camada de apresentação (CLI).
+* Mover a construção do dicionário para funções bem nomeadas.
+* Garantir que esse dicionário segue exatamente o contrato do `FilterBuilder` / `SearchFilterTree`.
+
+### Implementação
+
+Crie `presentation/controllers/filter_presets.py`:
+
+```python
+# presentation/controllers/filter_presets.py
+from __future__ import annotations
+
+from typing import Any, Dict
+
+
+FilterDict = Dict[str, Any]
+
+
+def build_ratios_filter_by_issuing_company(issuing_company: str) -> FilterDict:
+    """
+    Filtro básico para ratios por empresa emissora.
+
+    Equivalente a:
+        issuing_company == <issuing_company> (case insensitive opcional).
+    """
+    return {
+        "and": [
+            {
+                "issuing_company": {
+                    "==": issuing_company,
+                    "case": False,
+                }
+            }
+        ]
+    }
+
+
+def build_default_ratios_filter() -> FilterDict:
+    """
+    Ponto de extensão para um filtro padrão mais complexo.
+
+    Exemplo (comentado) de filtro composto que o FilterBuilder entende:
+
+        return {
+            "and": [
+                {"status": "ATIVO"},
+                {
+                    "or": [
+                        {
+                            "and": [
+                                {"has_bdr": True},
+                                {"market": {"in": ["NM"]}},
+                            ]
+                        },
+                        {"listing_date": {">=": "2020-01-01"}},
+                    ]
+                },
+                {"market": {"in": ["NM", "N2"]}},
+            ]
+        }
+    """
+    return {}
+```
+
+Em `presentation/controllers/cli.py`, altere o trecho onde o filtro é montado:
+
+```python
+# presentation/controllers/cli.py
+from presentation.controllers.filter_presets import (
+    build_ratios_filter_by_issuing_company,
+)
+
+...
+
+    def sync_ratios(self) -> SyncResultsDTO[CacheRatiosResultDTO]:
+        ...
+
+        # Exemplo: filtro por empresa emissora específico
+        filters = build_ratios_filter_by_issuing_company("PETR")
+
+        df_ratios = ratios_service(filters=filters)
+        return df_ratios
+```
+
+Resultado: o CLI continua usando `dict`, mas:
+
+* O formato do `dict` é centralizado.
+* O `ServiceRatios` converte para `SearchFilterTree`.
+* O `FilterBuilder` recebe sempre uma árvore consistente.
+
+---
+
+## 5. Alinhamento conceitual com Pinia (sem código ainda)
+
+### Contexto
+
+O frontend (Vue + Pinia) precisa gerar filtros em JSON que batem exatamente com o que o `SearchFiltersDTO` espera.
+
+### Problema
+
+Se o estado das facetas em Pinia gerar um shape diferente, você quebra o contrato na borda da API.
+
+### Solução esperada (desenho, não implementação agora)
+
+* O estado de filtros em Pinia deve conseguir produzir um objeto JavaScript que seja 1:1 com `SearchFiltersDTO.tree`.
+* Exemplos de objeto que o frontend deve gerar:
+
+```js
+// Exemplo simples: mesma empresa emissora do preset do CLI
+const filterTree = {
+  and: [
+    {
+      issuing_company: {
+        "==": "PETR",
+        case: false,
+      },
+    },
+  ],
+};
+
+// Exemplo mais complexo com setor/segmento/listing_date
+const filterTree2 = {
+  and: [
+    { status: "ATIVO" },
+    {
+      or: [
+        {
+          and: [
+            { industry_sector: { in: ["ENERGIA", "SANEAMENTO"] } },
+            { market: { in: ["NM"] } },
+          ],
+        },
+        { listing_date: { ">=": "2020-01-01" } },
+      ],
+    },
+  ],
+};
+```
+
+Quando você for implementar o `filterTreeBuilder.js` no frontend, a meta é: “a saída dessa função precisa ser exatamente serializável para `SearchFiltersDTO.tree`”.
+
+---
+
+Tarefa 2 – Isolar o fluxo de ratios em um caso de uso focado em leitura
+Objetivo: separar “pipeline de normalização em massa” (NormalizeUseCase) de “obter DataFrame de ratios para uma empresa com cache”, que é o que o gráfico precisa.
+1. Identificar o pipeline de cálculo de ratios:
+1.1. Hoje: 
+application/usecases/normalize_ratios.py: Usa _create_ratios para gerar pd.DataFrame com índice temporal e múltiplas colunas de accounts/ratios. Usa CacheRatiosService.get_or_compute(...) para cachear. 
+domain/services/service_ratios.py orquestra: Busca empresas elegíveis (CompaniesEligibleUseCase). Aplica filtros de empresas (_apply_filters). Chama NormalizeUseCase com companies_to_process.
+1.2. Novo caso de uso de leitura de ratios por empresa:
+Criar application/usecases/get_company_ratios_frame.py:
+Entrada: company_name: str; filters: SearchFilterTree | None (para futuros usos, inclusive filtros de datas/segmentos de linha do tempo). 
+Dependências injetadas: CacheRatiosService; Ports de repositório que montam o company_data necessário para _create_ratios (quotes, statements, indicators).
+Passos: Resolver a empresa alvo (se vier ticker, converter para company_name usando os repositórios). Carregar dados brutos necessários (quotes, indicadores, demonstrações). Montar o compute_fn reaproveitando _create_ratios do NormalizeUseCase ou extraindo essa função para um serviço de domínio compartilhado (para evitar duplicação). Chamar CacheRatiosService.get_or_compute(...) com: company_name. quotes, statements, indicators. code_hash já montado em NormalizeUseCase (você já tem self._ratios_code_hash).
+Retornar: df_ratios: pd.DataFrame (indexado por data, colunas = accounts/ratios). Metadados relevantes: cache hit/miss, cache_key, etc.
+Contratos claros: Definir um DTO de aplicação para retorno lógico, algo como: application/dtos/company_ratios_frame_dto.py. Esse DTO é o “produto bruto” compartilhado entre CLI e os casos de uso de gráficos.
+
+## Passo 2.1 – DTO de saída de leitura de ratios
+
+**Contexto**
+Você precisa de um contrato estável para “ratios de uma empresa”: `company_name + df de ratios + info de cache`, utilizável por CLI, FastAPI e futuros casos de uso.
+
+**Problema**
+Hoje você só tem `df` e `CacheRatiosResultDTO` soltos. Não existe um DTO de aplicação que represente isso.
+
+**Solução**
+
+Crie `application/dtos/company_ratios_frame_dto.py`:
+
+```python
+# application/dtos/company_ratios_frame_dto.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+import pandas as pd
+
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+
+
+@dataclass(frozen=True, kw_only=True)
+class CompanyRatiosFrameDTO:
+    """
+    Resultado lógico da leitura de ratios para uma empresa.
+
+    - df: DataFrame indexado por data, colunas = contas/ratios.
+    - cache_info: metadados de cache (hit/miss, chave, etc.).
+    """
+    company_name: str
+    df: pd.DataFrame
+    cache_info: CacheRatiosResultDTO
+```
+
+Esse será o “produto bruto” da leitura de ratios que o caso de uso de gráficos vai consumir no Bloco 3.
+
+---
+
+## Passo 2.2 – Extrair helpers puros de tratamento e cálculo em normalize_ratios.py
+
+**Contexto**
+O `NormalizeUseCase` hoje concentra:
+
+* `_treat_data(self, ...)`
+* `_create_ratios(self, ...)`
+
+Esses métodos estão colados na classe e usados no batch (CLI).
+
+**Problema**
+Você precisa reaproveitar exatamente a mesma lógica para leitura de UMA empresa, sem duplicar código e sem criar outro “caminho” de cálculo que possa divergir.
+
+**Solução**
+
+1. Abra `application/usecases/normalize_ratios.py`.
+   Copie o corpo dos métodos `_treat_data` e `_create_ratios` para funções de módulo puras:
+
+```python
+# application/usecases/normalize_ratios.py
+import pandas as pd
+from typing import Dict
+
+def _treat_data_helper(
+    data: dict[str, dict[str, pd.DataFrame]],
+    aggregate_method: str = "last",
+) -> dict[str, dict[str, pd.DataFrame]]:
+    """
+    Versão pura do antigo NormalizeUseCase._treat_data.
+    Copie o corpo, removendo uso de self.
+    """
+    # TODO: copiar lógica atual, exemplo simplificado:
+    # - normalização de índices
+    # - agregações
+    # - ajustes de colunas
+    return data  # substitua pela implementação real
+
+
+def _create_ratios_helper(
+    company_data: dict[str, dict[str, pd.DataFrame]],
+) -> pd.DataFrame:
+    """
+    Versão pura do antigo NormalizeUseCase._create_ratios.
+    Copie o corpo, removendo uso de self.
+    """
+    # TODO: copiar lógica atual, inclusive chamadas às funções de intel.py
+    df = ...  # DataFrame final de ratios
+    return df
+```
+
+2. Dentro de `NormalizeUseCase`, troque as chamadas para os helpers:
+
+Antes (exemplo):
+
+```python
+company_data = self._treat_data(data_snapshot, aggregate_method="last")
+df, cache_result = self.cache_ratios_service.get_or_compute(
+    company_name=company_dto.company_name,
+    quotes=company_data.get("quotes"),
+    statements=company_data.get("statements"),
+    indicators=company_data.get("indicators"),
+    compute_fn=lambda: self._create_ratios(company_data),
+    code_hash=self._ratios_code_hash,
+)
+```
+
+Depois:
+
+```python
+from application.usecases.normalize_ratios import (
+    _treat_data_helper,
+    _create_ratios_helper,
+)
+
+company_data = _treat_data_helper(data_snapshot, aggregate_method="last")
+df, cache_result = self.cache_ratios_service.get_or_compute(
+    company_name=company_dto.company_name,
+    quotes=company_data.get("quotes"),
+    statements=company_data.get("statements"),
+    indicators=company_data.get("indicators"),
+    compute_fn=lambda: _create_ratios_helper(company_data),
+    code_hash=self._ratios_code_hash,
+)
+```
+
+3. Ajuste o `code_hash` para basear no helper:
+
+```python
+import domain.utils.intel as intel
+from application.services.cache_ratios_service import CacheRatiosService
+
+class NormalizeUseCase:
+    def __init__(...):
+        ...
+        self._ratios_code_hash = CacheRatiosService.build_code_hash(
+            [_create_ratios_helper, intel]
+        )
+```
+
+Resultado: o CLI continua funcionando igual, e você pode reaproveitar `_treat_data_helper` e `_create_ratios_helper` no novo fluxo de leitura.
+
+---
+
+## Passo 2.3 – Função de módulo “snapshot → cache → df” com filtros
+
+**Contexto**
+Você precisa de um ponto único que faça:
+
+* carregar dados brutos da empresa;
+* tratar dados;
+* falar com o cache;
+* devolver `CompanyRatiosFrameDTO`.
+
+**Problema**
+Hoje isso está diluído dentro do loop do `NormalizeUseCase`. Falta algo que faça “uma empresa só”, com suporte a filtros e mesma lógica do batch.
+
+**Solução**
+
+1. Ainda em `application/usecases/normalize_ratios.py`, crie helpers mínimos para carregar dados de UMA empresa (copie o corpo do que já existe nos métodos atuais):
+
+```python
+from application.ports.uow_port import Uow, UowFactoryPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+
+def _load_quotes_for_company(
+    *,
+    repository_stock_quote: RepositoryStockQuotePort,
+    company_name: str,
+    uow: Uow,
+) -> dict[str, pd.DataFrame]:
+    # copie a lógica de _load_quotes ou similar, adaptando para uma empresa
+    ...
+
+
+def _load_statements_for_company(
+    *,
+    repository_statements_fetched: RepositoryStatementFetchedPort,
+    company_name: str,
+    uow: Uow,
+) -> dict[str, pd.DataFrame]:
+    # copie a lógica de _load_statements, adaptando para uma empresa
+    ...
+
+
+def _load_indicators(
+    *,
+    repository_indicators: RepositoryIndicatorsPort,
+    uow: Uow,
+) -> dict[str, dict[str, pd.DataFrame]]:
+    # reaproveite a lógica já existente no NormalizeUseCase para indicadores “tratados”
+    ...
+```
+
+2. Crie a função de módulo que junta tudo e respeita filtros:
+
+```python
+from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from application.services.cache_ratios_service import CacheRatiosService
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from domain.value_objects.search_filter_tree import SearchFilterTree  # da Tarefa 1
+import pandas as pd
+import domain.utils.intel as intel
+
+
+def get_company_ratios_frame_from_snapshot(
+    *,
+    config: ConfigPort,
+    logger: LoggerPort,
+    cache_port: CacheRatiosPort,
+    company_name: str,
+    treated_indicators: dict[str, dict[str, pd.DataFrame]],
+    repository_stock_quote: RepositoryStockQuotePort,
+    repository_statements_fetched: RepositoryStatementFetchedPort,
+    uow_factory: UowFactoryPort,
+    filters: SearchFilterTree | None = None,
+) -> CompanyRatiosFrameDTO:
+    """
+    Executa a mesma lógica de cálculo de ratios do NormalizeUseCase,
+    mas focada em UMA empresa, retornando CompanyRatiosFrameDTO.
+    """
+    cache_service = CacheRatiosService(
+        cache_port=cache_port,
+        logical_name=config.fly_settings.app_name,
+        version=config.fly_settings.version,
+    )
+
+    code_hash = CacheRatiosService.build_code_hash(
+        [_create_ratios_helper, intel]
+    )
+
+    with uow_factory() as uow:
+        quotes = _load_quotes_for_company(
+            repository_stock_quote=repository_stock_quote,
+            company_name=company_name,
+            uow=uow,
+        )
+        statements = _load_statements_for_company(
+            repository_statements_fetched=repository_statements_fetched,
+            company_name=company_name,
+            uow=uow,
+        )
+
+    data_snapshot = {
+        "indicators": treated_indicators,
+        "statements": statements,
+        "quotes": quotes,
+    }
+
+    company_data = _treat_data_helper(data_snapshot, aggregate_method="last")
+
+    def compute_fn() -> pd.DataFrame:
+        return _create_ratios_helper(company_data)
+
+    df, cache_result = cache_service.get_or_compute(
+        company_name=company_name,
+        quotes=company_data.get("quotes"),
+        statements=company_data.get("statements"),
+        indicators=company_data.get("indicators"),
+        compute_fn=compute_fn,
+        code_hash=code_hash,
+        filters=filters,  # NOVO: filtros entram no cache
+    )
+
+    return CompanyRatiosFrameDTO(
+        company_name=company_name,
+        df=df,
+        cache_info=cache_result,
+    )
+```
+
+3. Ajuste `CacheRatiosService.get_or_compute` para aceitar filtros (se ainda não aceitar):
+
+```python
+# application/services/cache_ratios_service.py
+from domain.value_objects.search_filter_tree import SearchFilterTree
+
+class CacheRatiosService:
+    ...
+
+    def get_or_compute(
+        self,
+        *,
+        company_name: str,
+        quotes: dict[str, pd.DataFrame],
+        statements: dict[str, pd.DataFrame],
+        indicators: dict[str, dict[str, pd.DataFrame]],
+        compute_fn: Callable[[], pd.DataFrame],
+        code_hash: str,
+        filters: SearchFilterTree | None = None,
+    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
+        cache_key = self._build_cache_key(
+            company_name=company_name,
+            filters=filters,
+            code_hash=code_hash,
+        )
+        ...
+```
+
+E dentro de `_build_cache_key`, use algo tipo:
+
+```python
+def _build_cache_key(
+    self,
+    *,
+    company_name: str,
+    filters: SearchFilterTree | None,
+    code_hash: str,
+) -> str:
+    filters_hash = filters.to_hash() if filters else "nofilters"
+    return f"{company_name}:{filters_hash}:{code_hash}"
+```
+
+Isso conecta Tarefa 2 com a Tarefa 1 (linguagem de filtros) e garante que o cache respeita filtros.
+
+---
+
+## Passo 2.4 – Criar o GetCompanyRatiosFrameUseCase fino
+
+**Contexto**
+Agora você tem:
+
+* Helpers puros (`_treat_data_helper`, `_create_ratios_helper`).
+* Função de módulo `get_company_ratios_frame_from_snapshot`.
+* `CompanyRatiosFrameDTO`.
+
+**Problema**
+Ainda falta o caso de uso que FastAPI e outros adaptadores possam injetar: “ler ratios de UMA empresa”, com opção de filtros.
+
+**Solução**
+
+Crie `application/usecases/get_company_ratios_frame.py`:
+
+```python
+# application/usecases/get_company_ratios_frame.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementFetchedPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.value_objects.search_filter_tree import SearchFilterTree
+
+from application.usecases.normalize_ratios import (
+    get_company_ratios_frame_from_snapshot,
+    _load_indicators,
+)
+
+
+@dataclass(frozen=True)
+class GetCompanyRatiosFrameRequest:
+    company_name: str
+    filters: SearchFilterTree | None = None
+
+
+@dataclass
+class GetCompanyRatiosFrameUseCase:
+    """
+    Caso de uso de leitura de ratios para UMA empresa.
+
+    Não conhece FastAPI, Plotly nem Vue.
+    Só entrega CompanyRatiosFrameDTO.
+    """
+    config: ConfigPort
+    logger: LoggerPort
+
+    repository_stock_quote: RepositoryStockQuotePort
+    repository_indicators: RepositoryIndicatorsPort
+    repository_statements_fetched: RepositoryStatementsFetchedPort
+    cache_ratios: CacheRatiosPort
+
+    uow_factory: UowFactoryPort
+
+    def __call__(self, request: GetCompanyRatiosFrameRequest) -> CompanyRatiosFrameDTO:
+        return self.run(request=request)
+
+    def run(self, request: GetCompanyRatiosFrameRequest) -> CompanyRatiosFrameDTO:
+        # 1. Carregar indicadores tratados (como no NormalizeUseCase)
+        with self.uow_factory() as uow:
+            treated_indicators = _load_indicators(
+                repository_indicators=self.repository_indicators,
+                uow=uow,
+            )
+
+        # 2. Delegar para helper snapshot → cache → df
+        result = get_company_ratios_frame_from_snapshot(
+            config=self.config,
+            logger=self.logger,
+            cache_port=self.cache_ratios,
+            company_name=request.company_name,
+            treated_indicators=treated_indicators,
+            repository_stock_quote=self.repository_stock_quote,
+            repository_statements_fetched=self.repository_statements_fetched,
+            uow_factory=self.uow_factory,
+            filters=request.filters,
+        )
+
+        return result
+```
+
+Esse use case:
+
+* Usa exatamente o mesmo caminho de cálculo do batch.
+* Considera filtros (`SearchFilterTree`).
+* Está pronto para ser reutilizado na Tarefa 3 (caso de uso de gráficos) e pela CLI, se necessário.
+
+---
+
+## Passo 2.5 – Preparar a factory de injeção para FastAPI
+
+**Contexto**
+O Bloco 3 vai criar o caso de uso de gráfico que depende do `GetCompanyRatiosFrameUseCase`. FastAPI usa `Depends` para construir os casos de uso.
+
+**Problema**
+Sem uma factory de dependência centralizada, o júnior vai acabar instanciando o use case “na mão” dentro do router.
+
+**Solução**
+
+Crie `presentation/backend/dependencies/ratios_dependencies.py`:
+
+```python
+# presentation/backend/dependencies/ratios_dependencies.py
+from fastapi import Depends
+
+from application.usecases.get_company_ratios_frame import GetCompanyRatiosFrameUseCase
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import RepositoryStatementsFetchedPort
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+
+from .common import (  # ajuste para o módulo real
+    get_config,
+    get_logger,
+    get_uow_factory,
+    get_cache_ratios_port,
+    get_repository_indicators,
+    get_repository_statements_fetched,
+    get_repository_stock_quote,
+)
+
+
+def get_company_ratios_frame_usecase(
+    config: ConfigPort = Depends(get_config),
+    logger: LoggerPort = Depends(get_logger),
+    uow_factory: UowFactoryPort = Depends(get_uow_factory),
+    cache_ratios: CacheRatiosPort = Depends(get_cache_ratios_port),
+    repository_indicators: RepositoryIndicatorsPort = Depends(get_repository_indicators),
+    repository_statements_fetched: RepositoryStatementsFetchedPort = Depends(get_repository_statements_fetched),
+    repository_stock_quote: RepositoryStockQuotePort = Depends(get_repository_stock_quote),
+) -> GetCompanyRatiosFrameUseCase:
+    return GetCompanyRatiosFrameUseCase(
+        config=config,
+        logger=logger,
+        repository_stock_quote=repository_stock_quote,
+        repository_indicators=repository_indicators,
+        repository_statements_fetched=repository_statements_fetched,
+        cache_ratios=cache_ratios,
+        uow_factory=uow_factory,
+    )
+```
+
+Depois, em qualquer router (no Bloco 3), você só precisa:
+
+```python
+from fastapi import APIRouter, Depends
+from application.usecases.get_company_ratios_frame import (
+    GetCompanyRatiosFrameUseCase,
+    GetCompanyRatiosFrameRequest,
+)
+from presentation.backend.dependencies.ratios_dependencies import (
+    get_company_ratios_frame_usecase,
+)
+
+router = APIRouter()
+
+@router.post("/api/internal/ratios/by-company")
+async def get_ratios_by_company(
+    body: SomeRequestDTO,  # depois você alinha com o DTO Pydantic
+    usecase: GetCompanyRatiosFrameUseCase = Depends(get_company_ratios_frame_usecase),
+):
+    request = GetCompanyRatiosFrameRequest(
+        company_name=body.company_name,
+        filters=body.filters.to_domain_tree() if body.filters else None,
+    )
+    result = usecase(request)
+    ...
+```
+
+Com isso, a Tarefa/Bloco 2 fica alinhada com o plano geral, reaproveita o `NormalizeUseCase`, respeita filtros e prepara o terreno para o Bloco 3 (gráficos) e para o frontend.
+
+--
+
+Tarefa 3 – Caso de uso de gráfico por empresa + contrato de séries
+Objetivo: transformar o DataFrame de ratios de uma empresa em séries prontas para ChartDTO, sem que esse caso de uso saiba nada de FastAPI/Pydantic/Vue.
+3.1. Definir DTO de séries na camada de aplicação: Você já tem: application/dtos/account_series_dto.py com: AccountSeriesDTO (ticker, account_code, label, points).
+Reaproveitável: Em vez de inventar outro tipo, use AccountSeriesDTO para representar cada coluna de ratio: account_code = nome da coluna do df_ratios; label = rótulo amigável (pode vir de um dicionário de metadados de accounts); 
+3.2. Novo caso de uso: GetCompanyAccountsChartUseCase
+Arquivo: application/usecases/get_company_accounts_chart.py.
+Entrada: company_name: str (ou ticker, a definir no contrato; idealmente company_name + tradutor de ticker em outro lugar). accounts: list[str] (códigos de colunas do df de ratios). filters: SearchFilterTree | None (mesmo contrato do Bloco 1).
+Dependência: GetCompanyRatiosFrameUseCase (do Bloco 2).
+Passos: Chamar o caso de uso de ratios e obter CompanyRatiosFrameDTO. Extrair do df apenas as colunas listadas em accounts. 
+Validar: Colunas não encontradas → erro de domínio explícito ou listas vazias, de acordo com política. Garantir ordenação temporal: df_sorted = df_selected.sort_index() e index deve ser DatetimeIndex ou date. Para cada coluna gerar um AccountSeriesDTO: ticker: opcionalmente obtido dos metadados ou passado na entrada. account_code: nome da coluna. label: usar mapa de labels (p. ex. intel.py ou um dicionário de metadados de accounts). points: [AccountSeriesPointDTO(date=index_value, value=value)], ordenados. 
+Definir um DTO agregador: CompanyAccountsSeriesDTO. 
+3.3. Mapeamento para ChartDTO fica fora desse caso de uso:
+Esse caso de uso devolve CompanyAccountsSeriesDTO, ainda sem Plotly.
+A camada de apresentação (FastAPI) converte esses DTOs em ChartDTO (presentation/backend/dto/chart_dto.py) ou em múltiplos ChartDTO, conforme o formato que você escolher para o endpoint.
+
+Foco:
+
+* DTOs de séries bem definidos na aplicação.
+* Use case `GetCompanyAccountsChartUseCase` com validações fortes.
+* Mapper para `ChartDTO` fora do use case.
+
+Tudo alinhado ao resto da estratégia de refatoração.
+
+---
+
+## Passo 1 – DTOs de séries na camada de aplicação
+
+### 1.1. Ajustar `AccountSeriesDTO` e `AccountSeriesPointDTO`
+
+**Contexto**
+
+Cada coluna do `DataFrame` de ratios deve virar uma série temporal de domínio.
+Essa série é genérica: serve para ratios, KPIs de clínica, qualquer time series.
+
+**Objetivo**
+
+Padronizar DTOs de séries na aplicação, sem Pydantic e sem amarrar a Plotly.
+
+**Implementação**
+
+Arquivo: `application/dtos/account_series_dto.py`
+
+```python
+# application/dtos/account_series_dto.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime
+from typing import List, Optional, Union
+
+
+DateLike = Union[date, datetime]
+
+
+@dataclass(frozen=True)
+class AccountSeriesPointDTO:
+    """
+    Um ponto de uma série temporal de conta/ratio.
+
+    'date' é o eixo temporal.
+    'value' é o valor numérico (pode ser None para buracos na série).
+    """
+    date: DateLike
+    value: Optional[float]
+
+
+@dataclass(frozen=True)
+class AccountSeriesDTO:
+    """
+    Série temporal de um account (ratio, KPI etc.) para uma empresa/ticker.
+    """
+    ticker: Optional[str]
+    account_code: str   # ex: "02.03", "ROE"
+    label: str          # ex: "Patrimônio Líquido"
+    points: List[AccountSeriesPointDTO]
+```
+
+Pontos importantes:
+
+* Tipos simples, sem Pydantic.
+* Nomes `date` e `value` são semânticos de domínio.
+* `DateLike` permite `date` ou `datetime`, encaixa com `DataFrame.index`.
+
+---
+
+### 1.2. DTO agregador `CompanyAccountsSeriesDTO`
+
+**Contexto**
+
+O use case de gráfico vai devolver um “pacote” de séries de uma empresa, + metadados (incluindo info de cache via `meta`).
+
+**Objetivo**
+
+Ter um retorno único de aplicação que qualquer adaptador pode consumir (CLI, FastAPI, outro).
+
+**Implementação**
+
+Arquivo novo: `application/dtos/company_accounts_series_dto.py`
+
+```python
+# application/dtos/company_accounts_series_dto.py
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
+
+from application.dtos.account_series_dto import AccountSeriesDTO
+
+
+@dataclass(frozen=True)
+class CompanyAccountsSeriesDTO:
+    """
+    Conjunto de séries de accounts (ratios) para uma empresa.
+    """
+    company_name: str
+    ticker: str | None
+    series: List[AccountSeriesDTO]
+    meta: Dict[str, Any] = field(default_factory=dict)
+```
+
+Observação:
+Informações de cache (hit/miss, chave etc.) devem vir em `meta` como dict genérico, não como um DTO de cache fortemente tipado. Isso mantém o acoplamento baixo.
+
+---
+
+### 1.3. DTO de frame bruto de ratios (entrada de Bloco 3)
+
+**Contexto**
+
+Bloco 2 entrega um `DataFrame` com ratios por empresa. Bloco 3 só consome.
+
+**Objetivo**
+
+Padronizar esse pipeline em um DTO simples.
+
+**Implementação**
+
+Arquivo: `application/dtos/company_ratios_frame_dto.py`
+
+```python
+# application/dtos/company_ratios_frame_dto.py
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Dict
+
+import pandas as pd
+
+
+@dataclass(frozen=True)
+class CompanyRatiosFrameDTO:
+    """
+    Resultado bruto do cálculo/consulta de ratios para uma empresa.
+
+    frame: DataFrame indexado por data, colunas = accounts/ratios.
+    """
+    company_name: str
+    ticker: str | None
+    frame: pd.DataFrame
+    meta: Dict[str, Any] = field(default_factory=dict)
+```
+
+---
+
+## Passo 2 – Use case `GetCompanyAccountsChartUseCase`
+
+**Contexto**
+
+Bloco 2 tem o `GetCompanyRatiosFrameUseCase` que devolve `CompanyRatiosFrameDTO`.
+Bloco 3 precisa transformar esse frame em séries de domínio (`CompanyAccountsSeriesDTO`).
+
+**Objetivo**
+
+Criar um caso de uso de aplicação que:
+
+* recebe `company_name`, `accounts`, `filters`;
+* chama `GetCompanyRatiosFrameUseCase`;
+* valida entradas;
+* garante índice temporal ordenado;
+* filtra colunas;
+* transforma colunas em `AccountSeriesDTO`;
+* devolve `CompanyAccountsSeriesDTO`.
+
+### 2.1. Interface do `GetCompanyRatiosFrameUseCase` (dependência)
+
+Arquivo: `application/usecases/get_company_ratios_frame.py` (já deve existir por Bloco 2).
+Aqui só interessa a assinatura:
+
+```python
+# application/usecases/get_company_ratios_frame.py (interface resumida)
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from domain.value_objects.search_filter_tree import SearchFilterTree
+
+
+@dataclass
+class GetCompanyRatiosFrameUseCase:
+    # injete serviços/ports reais na implementação
+    # ex.: cache_ratios_service, repositórios etc.
+
+    def __call__(
+        self,
+        *,
+        company_name: str,
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyRatiosFrameDTO:
+        raise NotImplementedError
+```
+
+### 2.2. Implementar `GetCompanyAccountsChartUseCase`
+
+Arquivo novo: `application/usecases/get_company_accounts_chart.py`
+
+```python
+# application/usecases/get_company_accounts_chart.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from typing import Iterable, List, Optional, Sequence
+
+import pandas as pd
+
+from application.dtos.account_series_dto import (
+    AccountSeriesDTO,
+    AccountSeriesPointDTO,
+)
+from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
+from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from domain.value_objects.search_filter_tree import SearchFilterTree
+from domain.exceptions import DomainError  # ajuste o import conforme o projeto
+from .get_company_ratios_frame import GetCompanyRatiosFrameUseCase
+```
+
+```python
+@dataclass
+class GetCompanyAccountsChartUseCase:
+    """
+    Caso de uso: obter séries de accounts (ratios) por empresa.
+
+    Entrada: company_name, accounts desejadas, filtros.
+    Saída: CompanyAccountsSeriesDTO, agnóstico a Plotly/FastAPI.
+    """
+    ratios_frame_usecase: GetCompanyRatiosFrameUseCase
+    account_labels: dict[str, str] | None = None  # opcional
+
+    def __call__(
+        self,
+        *,
+        company_name: str,
+        accounts: Sequence[str],
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyAccountsSeriesDTO:
+        # 1. Validar entrada
+        company_name = (company_name or "").strip()
+        if not company_name:
+            raise DomainError(
+                "company_name é obrigatório para obter séries de accounts."
+            )
+
+        account_codes = [str(a).strip() for a in (accounts or []) if str(a).strip()]
+        if not account_codes:
+            raise DomainError(
+                "Lista de accounts não pode ser vazia ao solicitar séries de gráfico."
+            )
+
+        # 2. Obter frame de ratios via Bloco 2
+        ratios_frame_dto: CompanyRatiosFrameDTO = self.ratios_frame_usecase(
+            company_name=company_name,
+            filters=filters,
+        )
+        df = ratios_frame_dto.frame
+
+        if df is None or df.empty:
+            raise DomainError(
+                f"Nenhum dado de ratios disponível para empresa "
+                f"'{ratios_frame_dto.company_name}'."
+            )
+
+        # 3. Garantir índice temporal ordenado
+        df = self._ensure_datetime_index(df)
+
+        # 4. Selecionar colunas pedidas
+        df_selected = self._select_accounts(df, account_codes, ratios_frame_dto)
+
+        # 5. Converter DataFrame em séries de domínio
+        series_dtos = self._build_series_dtos(
+            company_name=ratios_frame_dto.company_name,
+            ticker=ratios_frame_dto.ticker,
+            df=df_selected,
+        )
+
+        # 6. Empacotar em CompanyAccountsSeriesDTO
+        return CompanyAccountsSeriesDTO(
+            company_name=ratios_frame_dto.company_name,
+            ticker=ratios_frame_dto.ticker,
+            series=series_dtos,
+            meta={**ratios_frame_dto.meta},
+        )
+```
+
+Helpers internos:
+
+```python
+    def _ensure_datetime_index(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Garante que o índice do DataFrame é temporal e ordenado.
+        Tenta converter índice atual ou coluna 'date'.
+        """
+        index = df.index
+
+        if not isinstance(index, (pd.DatetimeIndex, pd.PeriodIndex)):
+            df = df.copy()
+            if "date" in df.columns:
+                df["date"] = pd.to_datetime(df["date"], errors="coerce")
+                df = df.set_index("date")
+            else:
+                df.index = pd.to_datetime(df.index, errors="coerce")
+
+        df = df.sort_index()
+        return df
+
+    def _select_accounts(
+        self,
+        df: pd.DataFrame,
+        account_codes: Sequence[str],
+        ratios_frame_dto: CompanyRatiosFrameDTO,
+    ) -> pd.DataFrame:
+        """
+        Seleciona somente as colunas pedidas.
+        Se alguma estiver ausente, levanta DomainError com detalhe.
+        """
+        missing = [c for c in account_codes if c not in df.columns]
+        if missing:
+            raise DomainError(
+                f"As seguintes accounts não existem no DataFrame de ratios "
+                f"para '{ratios_frame_dto.company_name}': {missing}. "
+                f"Colunas disponíveis: {list(df.columns)}"
+            )
+
+        df_selected = df[account_codes].sort_index()
+        return df_selected
+```
+
+Conversão para séries:
+
+```python
+    def _build_series_dtos(
+        self,
+        *,
+        company_name: str,
+        ticker: str | None,
+        df: pd.DataFrame,
+    ) -> List[AccountSeriesDTO]:
+        """
+        DataFrame (index temporal, colunas numéricas) -> List[AccountSeriesDTO].
+        """
+        series: List[AccountSeriesDTO] = []
+
+        if df.empty:
+            return series
+
+        labels_map = self._get_account_labels(df.columns)
+
+        for account_code in df.columns:
+            col = df[account_code]
+
+            # opcional: filtrar NaN para reduzir ruído
+            # col = col.dropna()
+
+            points: List[AccountSeriesPointDTO] = []
+
+            for idx, value in col.items():
+                # idx é Timestamp ou date; value pode ser NaN
+                if pd.isna(value):
+                    point_value = None
+                else:
+                    point_value = float(value)
+
+                if hasattr(idx, "date"):
+                    d: date = idx.date()
+                else:
+                    d = idx
+
+                points.append(
+                    AccountSeriesPointDTO(
+                        date=d,
+                        value=point_value,
+                    )
+                )
+
+            label = labels_map.get(account_code, account_code)
+
+            series.append(
+                AccountSeriesDTO(
+                    ticker=ticker or company_name,
+                    account_code=account_code,
+                    label=label,
+                    points=points,
+                )
+            )
+
+        return series
+
+    def _get_account_labels(self, account_codes: Iterable[str]) -> dict[str, str]:
+        """
+        Hook para mapear códigos de account para labels amigáveis.
+
+        Hoje: usa account_labels injetado, se existir.
+        Senão: usa o próprio código.
+        """
+        if self.account_labels:
+            return {
+                code: self.account_labels.get(code, code)
+                for code in account_codes
+            }
+        return {code: code for code in account_codes}
+```
+
+Com isso:
+
+* Entrada inválida gera `DomainError` com mensagem clara.
+* Se accounts pedidas não existem, o erro lista `missing` e colunas disponíveis.
+* Index é garantido como temporal e ordenado.
+* Cada coluna vira uma `AccountSeriesDTO` consistente.
+
+---
+
+## Passo 3 – Integração com `ChartDTO` fora do use case
+
+**Contexto**
+
+`GetCompanyAccountsChartUseCase` entrega `CompanyAccountsSeriesDTO`.
+`ChartDTO` é contrato de apresentação (Pydantic, Plotly).
+Essa conversão pertence à camada de apresentação / FastAPI.
+
+**Objetivo**
+
+Manter um mapper separado que traduz DTOs de aplicação para `ChartDTO` usado pelo Vue.
+
+### 3.1. Mapper `CompanyAccountsSeriesDTO` → `ChartDTO`
+
+Arquivo novo: `presentation/backend/mappers/accounts_series_chart_mapper.py`
+
+Supondo que você já tenha `ChartDTO` e `PlotlyTraceDTO` em
+`presentation/backend/dto/chart_dto.py`.
+
+```python
+# presentation/backend/mappers/accounts_series_chart_mapper.py
+from typing import List
+
+from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
+from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
+
+
+def company_accounts_to_chart(dto: CompanyAccountsSeriesDTO) -> ChartDTO:
+    """
+    Converte CompanyAccountsSeriesDTO em ChartDTO genérico para Plotly.
+    """
+    traces: List[PlotlyTraceDTO] = []
+
+    for series in dto.series:
+        x = [p.date for p in series.points]
+        y = [p.value for p in series.points]
+
+        traces.append(
+            PlotlyTraceDTO(
+                x=x,
+                y=y,
+                type="scatter",
+                name=f"{series.account_code} - {series.label}",
+                # se PlotlyTraceDTO tiver 'meta' ou 'customdata', você pode incluir:
+                # meta={"ticker": series.ticker}
+            )
+        )
+
+    layout = {
+        "title": f"Séries de contas – {dto.company_name}",
+        "xaxis": {"title": "Data"},
+        "yaxis": {"title": "Valor"},
+    }
+
+    return ChartDTO(
+        data=traces,
+        layout=layout,
+        # se ChartDTO tiver meta, você pode passar dto.meta aqui
+        # meta=dto.meta,
+    )
+```
+
+### 3.2. Expectativa para o adaptador FastAPI
+
+No Bloco 4 (rota FastAPI), o fluxo fica:
+
+1. Rota recebe `company_name`, `accounts`, `filters` via DTO Pydantic.
+2. Converte `filters` (Pydantic) → `SearchFilterTree`.
+3. Injeta `GetCompanyAccountsChartUseCase`.
+4. Chama o use case:
+
+   ```python
+   company_series = use_case(
+       company_name=body.company_name,
+       accounts=body.accounts,
+       filters=search_filter_tree,
+   )
+   ```
+5. Chama o mapper:
+
+   ```python
+   chart_dto = company_accounts_to_chart(company_series)
+   ```
+6. Retorna `chart_dto` como JSON.
+
+### Resumo 
+
+1. Implementar/ajustar os DTOs em `application/dtos`:
+
+   * `AccountSeriesPointDTO` com `date`/`value` e `DateLike`.
+   * `AccountSeriesDTO` com `ticker`, `account_code`, `label`, `points`.
+   * `CompanyRatiosFrameDTO` com `frame` e `meta`.
+   * `CompanyAccountsSeriesDTO` com `series` e `meta`.
+
+2. Implementar `GetCompanyAccountsChartUseCase` em
+   `application/usecases/get_company_accounts_chart.py`:
+
+   * valida `company_name` e lista de `accounts`;
+   * chama `GetCompanyRatiosFrameUseCase`;
+   * garante índice temporal;
+   * valida colunas e lança `DomainError` com `missing`;
+   * converte DataFrame em `List[AccountSeriesDTO]`;
+   * retorna `CompanyAccountsSeriesDTO`.
+
+3. Implementar o mapper `company_accounts_to_chart` em
+   `presentation/backend/mappers/accounts_series_chart_mapper.py`:
+
+   * lê `CompanyAccountsSeriesDTO`;
+   * monta lista de traces (`x = date`, `y = value`);
+   * monta `ChartDTO` com layout básico.
+
+Com isso, Bloco 3 fica fechado, forte em validação e pronto para o Bloco 4 (FastAPI) e Bloco 5 (Vue/Pinia).
+
+
+---
+
+Tarefa 4 – Adaptador FastAPI fino para gráficos de accounts por empresa
+Objetivo: criar um endpoint REST que transforme HTTP → DTO de entrada → caso de uso → DTO de saída Plotly (ChartDTO), sem lógica de negócio.
+4.1. DTO de entrada Pydantic para o endpoint de gráficos: Arquivo: presentation/backend/dto/company_accounts_chart_request_dto.py. 
+4.2. Router FastAPI: Arquivo atual: presentation/backend/routers/account_charts.py está focado em /api/charts/accounts/line/{ticker} e GetAccountSeriesUseCase.
+Tarefa: Criar uma nova rota dedicada a ratios, por exemplo: prefix="/api/charts/ratios" ou Reaproveitar o prefix="/api/charts/accounts" com um novo path, como @router.post("/company", response_model=ChartDTO). Essa rota passa a ser o contrato único do frontend para gráficos de ratios.
+4.3. Wiring das dependências: Em presentation/backend/dependencies/... criar algo como ratios_chart_dependencies.py: Funções get_company_accounts_chart_usecase(...) que constroem o caso de uso com: CacheRatiosService. Ports de repositório. Config, Logger, etc.
+Em presentation/backend/api.py incluir o novo router.
+
+
+## Passo 1 – DTOs Pydantic de entrada e saída
+
+### 1.1 Contexto
+
+A rota FastAPI precisa de contratos claros:
+
+* Entrada: `company_name`, `accounts`, `filters` em formato de árvore.
+* Saída: `ChartDTO` genérico para Plotly, reaproveitável por outros gráficos.
+
+Isso garante compatibilidade entre CLI, FastAPI e Vue, alinhado ao contrato global:
+
+* Filtro: `SearchFiltersDTO` ↔ `SearchFilterTree` ↔ `FilterBuilder`.
+* Ratios: use case retorna DataFrame.
+* Gráficos: use case transforma para DTO de séries.
+* FastAPI converte para `ChartDTO`.
+* Vue só enxerga `ChartDTO`.
+
+### 1.2 Problema
+
+Hoje o endpoint não tem um DTO explícito para o corpo de requisição nem um `ChartDTO` bem definido com `meta`. Isso deixa o contrato frágil e complica a integração com Pinia e Plotly.
+
+### 1.3 Solução esperada
+
+Criar:
+
+1. `SearchFiltersDTO` simples, com `tree: dict | None`.
+2. `CompanyAccountsChartRequestDTO` com `company_name`, `accounts`, `filters`.
+3. `ChartDTO` genérico com `data`, `layout`, `meta`.
+
+### 1.4 Implementação
+
+**1) DTO de filtros**
+
+Arquivo: `presentation/backend/dto/search_filters_dto.py`
+
+```python
+# presentation/backend/dto/search_filters_dto.py
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field
+
+
+class SearchFiltersDTO(BaseModel):
+    """
+    Representa a árvore de filtros estruturados.
+    Este formato espelha o dicionário consumido pelo FilterBuilder.
+    """
+    tree: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Árvore de filtros estruturados usada pelo FilterBuilder",
+    )
+```
+
+**2) DTO da requisição de gráfico de ratios**
+
+Arquivo: `presentation/backend/dto/company_accounts_chart_request_dto.py`
+
+```python
+# presentation/backend/dto/company_accounts_chart_request_dto.py
+from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+from presentation.backend.dto.search_filters_dto import SearchFiltersDTO
+
+
+class CompanyAccountsChartRequestDTO(BaseModel):
+    company_name: str = Field(
+        ...,
+        description="Nome da empresa alvo para cálculo/consulta de ratios",
+    )
+    accounts: List[str] = Field(
+        ...,
+        description="Lista de códigos de accounts/ratios a serem exibidos",
+    )
+    filters: Optional[SearchFiltersDTO] = Field(
+        default=None,
+        description="Árvore de filtros estruturados aplicada na seleção de dados",
+    )
+```
+
+JSON esperado do frontend:
+
+```json
+{
+  "company_name": "PETROBRAS",
+  "accounts": ["02.03", "03.01"],
+  "filters": {
+    "tree": {
+      "and": [
+        { "industry_sector": { "in": ["Petróleo, Gás e Biocombustíveis"] } }
+      ]
+    }
+  }
+}
+```
+
+**3) DTO de gráfico genérico**
+
+Arquivo: `presentation/backend/dto/chart_dto.py`
+
+```python
+# presentation/backend/dto/chart_dto.py
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
+
+class PlotlyTraceDTO(BaseModel):
+    x: List[Any]
+    y: List[Any]
+    type: str = "scatter"
+    mode: str = "lines"
+    name: str
+    extra: Optional[Dict[str, Any]] = None
+
+
+class ChartDTO(BaseModel):
+    data: List[PlotlyTraceDTO]
+    layout: Optional[Dict[str, Any]] = None
+    meta: Optional[Dict[str, Any]] = None
+```
+
+Esse `ChartDTO` é agnóstico ao domínio. Serve para qualquer gráfico Plotly no projeto.
+
+---
+
+## Passo 2 – Dependências: montar os use cases via `Depends`
+
+### 2.1 Contexto
+
+Na arquitetura hexagonal, a camada de apresentação não instancia direto repositórios ou serviços. Ela recebe um use case pronto via `Depends()`. A montagem (config, logger, cache, repositórios) fica numa função de dependência.
+
+Você já definiu na estratégia:
+
+* `GetCompanyRatiosFrameUseCase`: entrega o DataFrame de ratios com cache.
+* `GetCompanyAccountsChartUseCase`: transforma esse DataFrame em séries de accounts.
+
+### 2.2 Problema
+
+Se o endpoint instanciar `GetCompanyAccountsChartUseCase` diretamente, você perde:
+
+* inversão de dependência
+* facilidade de teste com mocks
+* alinhamento com o desenho dos blocos 2 e 3
+
+### 2.3 Solução esperada
+
+Criar um módulo de dependências que:
+
+1. Monta `GetCompanyRatiosFrameUseCase` com:
+
+   * `ConfigAdapter`
+   * `Logger`
+   * `CacheRatiosAdapter` + `CacheRatiosService`
+   * repositórios de quotes, indicadores, statements
+2. Monta `GetCompanyAccountsChartUseCase` recebendo o use case anterior.
+
+### 2.4 Implementação
+
+Arquivo: `presentation/backend/dependencies/ratios_chart_dependencies.py`
+
+Ajuste os imports para os nomes reais do seu projeto.
+
+```python
+# presentation/backend/dependencies/ratios_chart_dependencies.py
+from __future__ import annotations
+
+from fastapi import Depends
+
+from application.services.cache_ratios_service import CacheRatiosService
+from application.usecases.get_company_ratios_frame import (
+    GetCompanyRatiosFrameUseCase,
+)
+from application.usecases.get_company_accounts_chart import (
+    GetCompanyAccountsChartUseCase,
+)
+
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+
+from infrastructure.cache.ratios_cache import CacheRatiosAdapter
+from infrastructure.config.config_adapter import ConfigAdapter
+from infrastructure.logging.logger_adapter import Logger
+from infrastructure.repositories.repository_indicators import RepositoryIndicators
+from infrastructure.repositories.repository_statements_fetched import (
+    RepositoryStatementsFetched,
+)
+from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
+
+
+def get_company_ratios_frame_usecase() -> GetCompanyRatiosFrameUseCase:
+    """
+    Monta o caso de uso que consulta ou calcula o DataFrame de ratios da empresa.
+    """
+    config = ConfigAdapter()
+    logger = Logger(config)
+
+    cache_port: CacheRatiosPort = CacheRatiosAdapter(
+        config=config,
+        logger=logger,
+    )
+    cache_service = CacheRatiosService(
+        cache_port=cache_port,
+        logical_name="ratios",
+        version="1",
+    )
+
+    repository_stock_quote: RepositoryStockQuotePort = RepositoryStockQuote(
+        config=config,
+        logger=logger,
+    )
+    repository_indicators: RepositoryIndicatorsPort = RepositoryIndicators(
+        config=config,
+        logger=logger,
+    )
+    repository_statements: RepositoryStatementFetchedPort = (
+        RepositoryStatementsFetched(
+            config=config,
+            logger=logger,
+        )
+    )
+
+    return GetCompanyRatiosFrameUseCase(
+        config=config,
+        logger=logger,
+        cache_ratios_service=cache_service,
+        repository_stock_quote=repository_stock_quote,
+        repository_indicators=repository_indicators,
+        repository_statements=repository_statements,
+    )
+
+
+def get_company_accounts_chart_usecase(
+    ratios_frame_usecase: GetCompanyRatiosFrameUseCase = Depends(
+        get_company_ratios_frame_usecase
+    ),
+) -> GetCompanyAccountsChartUseCase:
+    """
+    Monta o caso de uso que transforma o DataFrame de ratios em séries de accounts.
+    """
+    return GetCompanyAccountsChartUseCase(
+        get_company_ratios_frame_usecase=ratios_frame_usecase,
+    )
+```
+
+O júnior precisa alinhar a assinatura dos construtores com os use cases reais. Abrir os arquivos dos use cases e ajustar argumentos se necessário.
+
+---
+
+## Passo 3 – Router FastAPI fino para gráficos de ratios
+
+### 3.1 Contexto
+
+O router é o adaptador HTTP. Ele só conhece:
+
+* DTO Pydantic de entrada
+* função de dependência que fornece o use case
+* DTO de aplicação (`CompanyAccountsSeriesDTO` e `AccountSeriesDTO`)
+* mapeamento final para `ChartDTO`
+
+Filtros chegam como `SearchFiltersDTO` e são convertidos para `SearchFilterTree`, que o domínio entende.
+
+### 3.2 Problema
+
+Sem um router dedicado, o frontend não tem um path claro para “gráficos de ratios por empresa”, e a conversão de filtro para VO corre risco de ficar espalhada.
+
+### 3.3 Solução esperada
+
+Criar um router com:
+
+* `prefix="/api/charts/ratios"`
+* rota `POST /company`
+* body: `CompanyAccountsChartRequestDTO`
+* use case via `Depends(get_company_accounts_chart_usecase)`
+* função auxiliar que converte `SearchFiltersDTO` em `SearchFilterTree`
+* resposta: `ChartDTO` com `data`, `layout`, `meta` (incluindo `cache_hit` e `cache_key`)
+
+### 3.4 Implementação
+
+Arquivo: `presentation/backend/routers/ratios_charts.py`
+
+```python
+# presentation/backend/routers/ratios_charts.py
+from __future__ import annotations
+
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from application.usecases.get_company_accounts_chart import (
+    GetCompanyAccountsChartUseCase,
+)
+from domain.value_objects.search_filter_tree import SearchFilterTree
+
+from presentation.backend.dependencies.ratios_chart_dependencies import (
+    get_company_accounts_chart_usecase,
+)
+from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
+from presentation.backend.dto.company_accounts_chart_request_dto import (
+    CompanyAccountsChartRequestDTO,
+)
+from presentation.backend.dto.search_filters_dto import SearchFiltersDTO
+
+
+router = APIRouter(
+    prefix="/api/charts/ratios",
+    tags=["charts-ratios"],
+)
+
+
+def _map_filters_dto_to_vo(
+    filters_dto: Optional[SearchFiltersDTO],
+) -> Optional[SearchFilterTree]:
+    """
+    Único ponto que conhece Pydantic + VO de domínio.
+    """
+    if filters_dto is None or filters_dto.tree is None:
+        return None
+    return SearchFilterTree(tree=filters_dto.tree)
+
+
+@router.post(
+    "/company",
+    response_model=ChartDTO,
+)
+async def get_company_ratios_chart(
+    payload: CompanyAccountsChartRequestDTO,
+    usecase: GetCompanyAccountsChartUseCase = Depends(
+        get_company_accounts_chart_usecase
+    ),
+) -> ChartDTO:
+    """
+    Endpoint fino: recebe company_name, accounts e filters,
+    chama o caso de uso de ratios e converte o resultado em ChartDTO.
+    """
+    filter_tree = _map_filters_dto_to_vo(payload.filters)
+
+    result = usecase(
+        company_name=payload.company_name,
+        accounts=payload.accounts,
+        filters=filter_tree,
+    )
+    # result deve ser um CompanyAccountsSeriesDTO
+    # com atributos: company_name, series, cache_info
+
+    if not result.series:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Nenhuma série encontrada para empresa '{payload.company_name}'",
+        )
+
+    traces: List[PlotlyTraceDTO] = []
+    for series in result.series:
+        x = [point.date for point in series.points]
+        y = [point.value for point in series.points]
+
+        trace = PlotlyTraceDTO(
+            x=x,
+            y=y,
+            type="scatter",
+            mode="lines",
+            name=f"{series.account_code} - {series.label}",
+            extra={
+                "hovertemplate": "%{x}<br>Valor: %{y}<extra></extra>",
+            },
+        )
+        traces.append(trace)
+
+    layout = {
+        "title": f"Ratios – {result.company_name}",
+        "xaxis": {"title": "Data"},
+        "yaxis": {"title": "Valor"},
+    }
+
+    meta = {
+        "company_name": result.company_name,
+        "cache_hit": getattr(result.cache_info, "hit", None),
+        "cache_key": getattr(result.cache_info, "cache_key", None),
+    }
+
+    return ChartDTO(
+        data=traces,
+        layout=layout,
+        meta=meta,
+    )
+```
+
+Para isso funcionar, o `CompanyAccountsSeriesDTO` na camada de aplicação deve expor:
+
+* `company_name: str`
+* `series: list[AccountSeriesDTO]`
+* `cache_info` com pelo menos `hit` e `cache_key` ou algo equivalente.
+
+Se ainda não expõe, o júnior precisa ajustar o DTO de aplicação.
+
+---
+
+## Passo 4 – Registrar o router e validar o contrato
+
+### 4.1 Contexto
+
+O router só fica disponível se estiver registrado no `FastAPI` principal. Depois disso você testa o contrato antes de integrar no Vue.
+
+### 4.2 Problema
+
+Se esquecer de registrar o router em `api.py`, o frontend recebe 404 e a investigação perde tempo.
+
+### 4.3 Solução esperada
+
+1. Registrar o router em `presentation/backend/api.py`.
+2. Testar o endpoint com payload real via `httpie` ou `curl`.
+3. Confirmar que a resposta está no formato `ChartDTO` esperado pelo `PlotlyViewer`.
+
+### 4.4 Implementação
+
+Arquivo: `presentation/backend/api.py`
+
+```python
+# presentation/backend/api.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from presentation.backend.routers.charts import router as charts_router
+from presentation.backend.routers.companies import router as companies_router
+from presentation.backend.routers.account_charts import (
+    router as account_charts_router,
+)
+from presentation.backend.routers.ratios_charts import (
+    router as ratios_charts_router,
+)
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="FLY Web API",
+        version="0.1.0",
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(charts_router)
+    app.include_router(account_charts_router)
+    app.include_router(companies_router)
+    app.include_router(ratios_charts_router)
+
+    return app
+
+
+app = create_app()
+```
+
+Teste manual com `httpie`:
+
+```bash
+http POST :8000/api/charts/ratios/company \
+  company_name=PETROBRAS \
+  accounts:='["ROE","ROIC"]' \
+  filters:='{"tree":{"and":[{"status":{"==":"ATIVO"}}]}}'
+```
+
+Validação esperada:
+
+* Status 200.
+* Corpo com:
+
+  * `data`: lista de traces, cada um com `x`, `y`, `name`.
+  * `layout.title`: string com o nome da empresa.
+  * `meta.company_name`, `meta.cache_hit`, `meta.cache_key`.
+
+Se isso estiver funcionando, o Bloco 4 está pronto para o frontend consumir o endpoint de ratios via Pinia e `ChartDTO`, dentro da estratégia geral de hexágono, contratos claros e reaproveitamento do pipeline de `_ratios_service`.
+
+
+---
+
+Tarefa 5 – Integração Vue + Pinia com o novo endpoint e filtros
+Objetivo: fazer o AccountChartsView.vue consumir o novo endpoint de ratios e alinhar o estado de filtros com o contrato SearchFiltersDTO.
+5.1. Serviço de API no frontend: Em presentation/frontend/src/services/apiService.js: Adicionar função nova agnóstica de Plotly. Ela só devolve o ChartDTO JSON.
+5.2. Store de gráficos de accounts: Em presentation/frontend/src/store/accountChartsStore.js. Hoje a store chama fetchAccountLineChart(this.ticker, code, params).
+Nova estratégia: Guardar: companyName em vez de ticker se o backend trabalhar com company_name. Uma lista de accounts observada pelo AccountChartsView. Um único ChartDTO com múltiplas séries ou um charts[accountCode] se preferir um gráfico por card. loadMultipleAccounts passa a chamar o novo serviço. Para manter “um card por account”, deve desmembrar o ChartDTO em traces individuais no componente, sem mudar o contrato do backend.
+5.3. AccountChartsView.vue consumindo ChartDTO: Em presentation/frontend/src/views/AccountChartsView.vue: 
+Hoje: Recebe ticker. Chama store.loadMultipleAccounts(['02.03', '03.01']). Cada <PlotlyViewer> recebe um chart separado.
+Estratégia: Usar o mesmo Pinia que controla os filtros de empresa (facetas) para derivar: companyName selecionado. filterTree compatível com SearchFiltersDTO. Chamar store.loadMultipleAccounts(accountCodes, currentFilterTree). Passar o ChartDTO único para um <PlotlyViewer> que contenha múltiplas séries ou, se preferir, filtrar as séries dentro do componente.
+5.4. Filtro → DTO no frontend: A partir das facetas existentes (setor, subsetor, segmento, etc.), você precisa de uma função pura que gere o dicionário no formato da árvore:
+Arquivo sugerido: presentation/frontend/src/utils/filterTreeBuilder.js. Essa função recebe o estado das facetas de Pinia e devolve um objeto ({
+  and: [
+    { status: { '==': 'ATIVO' } },
+    { market: { in: ['NM', 'N2'] } },
+    // etc.
+  ]
+}
+). Esse objeto é enviado para o backend dentro de filters: { tree: ... } e casa com o FilterBuilder. 
+
+
+
+## 5.1 – Serviço de API para gráficos de ratios por empresa
+
+**Contexto**
+
+Frontend precisa de uma função dedicada para o endpoint de ratios, alinhada ao contrato:
+
+```json
+POST /api/charts/ratios/company
+{
+  "company_name": "PETROBRAS ON",
+  "accounts": ["02.03", "03.01"],
+  "filters": { "tree": { ... } }  // opcional
+}
+```
+
+Resposta: um único `ChartDTO` com múltiplas séries (uma trace por account).
+
+**Implementação**
+
+Arquivo: `presentation/frontend/src/services/apiService.js`
+
+1. Garanta que exista um `api` configurado com `axios.create`.
+
+2. Adicione a função abaixo no final do arquivo:
+
+```js
+export async function fetchCompanyRatiosChart(companyName, accounts, filterTree = null) {
+  const name = String(companyName || "").trim();
+  if (!name) {
+    throw new Error("Nome de companhia inválido para carregar gráficos de cuentas");
+  }
+
+  const normalizedAccounts = Array.isArray(accounts)
+    ? accounts.map(code => String(code || "").trim()).filter(Boolean)
+    : [];
+
+  if (!normalizedAccounts.length) {
+    throw new Error("Pelo menos um código de conta é obrigatório");
+  }
+
+  const payload = {
+    company_name: name,
+    accounts: normalizedAccounts,
+    filters: filterTree ? { tree: filterTree } : null,
+  };
+
+  const res = await api.post("/api/charts/ratios/company", payload);
+  // backend devolve ChartDTO já compatível com Plotly
+  return res.data;
+}
+```
+
+Essa função:
+
+* Normaliza strings
+* Valida se há empresa e pelo menos um account
+* Mantém `filters` no formato que o `SearchFiltersDTO` espera
+
+---
+
+## 5.2 – Store Pinia com ChartDTO único e filtros
+
+**Contexto**
+
+A store precisa ser a fonte de verdade para:
+
+* empresa selecionada
+* accounts selecionados
+* filtro em árvore (`filterTree`)
+* um único `ChartDTO` com múltiplas séries
+* estados de loading e erro
+
+**Objetivo**
+
+Uma action `loadChart()` faz uma chamada ao backend e atualiza `chart` único.
+O componente de visualização apenas consome esse `ChartDTO`.
+
+**Implementação**
+
+Arquivo: `presentation/frontend/src/store/accountChartsStore.js`
+
+```js
+import { defineStore } from "pinia";
+import { fetchCompanyRatiosChart } from "@/services/apiService";
+import { buildChartFilterTree } from "@/utils/chartFilters";
+
+export const useAccountChartsStore = defineStore("accountCharts", {
+  state: () => ({
+    companyName: "",          // nome da empresa
+    selectedAccounts: [],     // lista de códigos ["02.03", "03.01"]
+    filterTree: null,         // árvore de filtros compatível com backend
+    chart: null,              // ChartDTO único com múltiplas séries
+    isLoading: false,
+    error: null,
+  }),
+
+  actions: {
+    setCompanyName(name) {
+      this.companyName = String(name || "").trim();
+    },
+
+    setSelectedAccounts(accounts) {
+      this.selectedAccounts = Array.isArray(accounts)
+        ? accounts.map(code => String(code || "").trim()).filter(Boolean)
+        : [];
+    },
+
+    // recebe filterQuery do companyStore e converte em árvore
+    setFilterFromFilterQuery(filterQuery) {
+      this.filterTree = buildChartFilterTree(filterQuery);
+    },
+
+    resetChart() {
+      this.chart = null;
+      this.error = null;
+    },
+
+    async loadChart() {
+      if (!this.companyName) {
+        this.error = "Selecione uma companhia antes de carregar o gráfico";
+        this.chart = null;
+        return;
+      }
+
+      if (!this.selectedAccounts.length) {
+        this.error = "Selecione pelo menos uma conta para exibir";
+        this.chart = null;
+        return;
+      }
+
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const dto = await fetchCompanyRatiosChart(
+          this.companyName,
+          this.selectedAccounts,
+          this.filterTree,
+        );
+
+        // dto é o ChartDTO com múltiplas séries
+        this.chart = dto;
+      } catch (err) {
+        console.error(err);
+        const message =
+          err?.response?.data?.detail ||
+          err?.message ||
+          "Erro ao carregar gráfico de ratios";
+
+        this.error = message;
+        this.chart = null;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+  },
+});
+```
+
+Essa store assume:
+
+* `buildChartFilterTree` traduz a DSL de filtros da tela de busca para a árvore que o backend entende.
+* O backend já devolve `ChartDTO.data` contendo uma trace por account.
+
+---
+
+## 5.3 – AccountChartsView.vue integrando seleção de empresa, accounts e ChartDTO único
+
+**Contexto**
+
+`AccountChartsView.vue` deve:
+
+* Ler a companhia selecionada no `companyStore`
+* Derivar os filtros do `companyStore.filterQuery`
+* Definir a lista de accounts que o gráfico deve mostrar
+* Disparar `accountChartsStore.loadChart()`
+* Passar o `ChartDTO` único para o `PlotlyViewer`
+
+**Implementação**
+
+Arquivo: `presentation/frontend/src/views/AccountChartsView.vue`
+
+```vue
+<template>
+  <section class="account-charts">
+    <header class="account-charts__header">
+      <h2>Gráficos de ratios por empresa</h2>
+
+      <p v-if="activeCompanyName">
+        Companhia selecionada:
+        <strong>{{ activeCompanyName }}</strong>
+      </p>
+      <p v-else class="muted">
+        Nenhuma companhia selecionada. Use o construtor de filtros para escolher uma.
+      </p>
+
+      <div class="account-charts__controls">
+        <!-- exemplo simples: lista fixa de accounts, depois pode virar seleção dinâmica -->
+        <label>
+          Contas selecionadas
+          <select multiple v-model="localAccounts">
+            <option value="02.03">02.03 – Patrimônio Líquido</option>
+            <option value="03.01">03.01 – Receita Líquida</option>
+            <option value="04.02">04.02 – EBITDA</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          @click="onReload"
+          :disabled="!canReload || chartsStore.isLoading"
+        >
+          Carregar gráficos
+        </button>
+      </div>
+    </header>
+
+    <main class="account-charts__body">
+      <div v-if="chartsStore.isLoading">
+        Carregando gráficos de ratios...
+      </div>
+
+      <div v-else-if="chartsStore.error">
+        {{ chartsStore.error }}
+      </div>
+
+      <PlotlyViewer
+        v-else-if="chartsStore.chart"
+        :chart="chartsStore.chart"
+        :loading="chartsStore.isLoading"
+        :error="chartsStore.error"
+        aria-label="Gráfico de séries de ratios da empresa selecionada"
+      />
+
+      <div v-else>
+        Selecione uma companhia, marque as contas e clique em Carregar gráficos.
+      </div>
+    </main>
+  </section>
+</template>
+
+<script setup>
+import { computed, ref, watch } from "vue";
+import { storeToRefs } from "pinia";
+import { useAccountChartsStore } from "@/store/accountChartsStore";
+import { useCompanyStore } from "@/store/companyStore";
+import PlotlyViewer from "@/components/PlotlyViewer.vue";
+
+const chartsStore = useAccountChartsStore();
+const companyStore = useCompanyStore();
+
+const { selectedPairs, filterQuery } = storeToRefs(companyStore);
+
+// companhia ativa vem do construtor de filtros
+const activeCompanyName = computed(() => {
+  const pairs = selectedPairs.value || [];
+  if (!pairs.length) return "";
+  return pairs[0].company || "";
+});
+
+// accounts selecionados localmente na view
+const localAccounts = ref(["02.03", "03.01"]);
+
+const canReload = computed(() => {
+  return (
+    !!activeCompanyName.value &&
+    localAccounts.value.length > 0 &&
+    !chartsStore.isLoading
+  );
+});
+
+// sincroniza empresa na store de gráficos sempre que seleção mudar
+watch(
+  activeCompanyName,
+  (name) => {
+    chartsStore.setCompanyName(name);
+    chartsStore.resetChart();
+  },
+  { immediate: true }
+);
+
+// sincroniza filtro em árvore quando filterQuery mudar
+watch(
+  filterQuery,
+  (fq) => {
+    chartsStore.setFilterFromFilterQuery(fq);
+  },
+  { deep: true, immediate: true }
+);
+
+// sincroniza accounts selecionados com a store
+watch(
+  localAccounts,
+  (accounts) => {
+    chartsStore.setSelectedAccounts(accounts);
+    chartsStore.resetChart();
+  },
+  { deep: true, immediate: true }
+);
+
+async function onReload() {
+  await chartsStore.loadChart();
+}
+</script>
+
+<style scoped>
+.account-charts {
+  display: grid;
+  gap: 1rem;
+}
+
+.account-charts__header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.account-charts__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.account-charts__body {
+  min-height: 200px;
+}
+
+.muted {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+</style>
+```
+
+Essa view:
+
+* Depende apenas de `companyStore.selectedPairs` e `companyStore.filterQuery`
+* Alimenta o `accountChartsStore` com empresa, filtro e lista de accounts
+* Recebe um único `ChartDTO` com múltiplas séries do backend
+
+---
+
+## 5.4 – Builder de filtros em árvore compatível com `FilterBuilder` e `SearchFilterTree`
+
+**Contexto**
+
+O backend usa um `FilterBuilder` sobre um `SearchFilterTree` em forma de dicionário.
+O `companyStore` já produz uma DSL estruturada:
+
+```js
+filterQuery = {
+  clauses: [
+    {
+      logical: "AND",
+      condition: {
+        field: "market",
+        operator: "IN",
+        values: ["NM", "N2"],
+      },
+    },
+    {
+      logical: "OR",
+      condition: {
+        field: "status",
+        operator: "EQUALS",
+        values: ["ATIVO"],
+      },
+    },
+    // e assim por diante
+  ],
+};
+```
+
+Você precisa converter isso em algo como:
+
+```js
+{
+  and: [
+    { market: { in: ["NM", "N2"] } },
+    { status: "ATIVO" }
+  ]
+}
+```
+
+Ou combinações mais complexas com `or` e `not`.
+
+**Implementação**
+
+Arquivo novo: `presentation/frontend/src/utils/chartFilters.js`
+
+```js
+// mapeia operadores da DSL do frontend para nomes esperados pelo backend
+const OPERATOR_TO_FILTER_BUILDER = {
+  IN: "in",
+  EQUALS: "eq",
+  CONTAINS: "contains",
+  STARTS_WITH: "startswith",
+  BETWEEN: "between",
+  GT: "gt",
+  GTE: "gte",
+  LT: "lt",
+  LTE: "lte",
+};
+
+/**
+ * Constrói uma folha: { field: { op: value } } ou { field: value }
+ */
+function buildLeafFromCondition(condition) {
+  if (!condition || !condition.field) {
+    return null;
+  }
+
+  const field = condition.field;
+  const operator = String(condition.operator || "").toUpperCase();
+  const values = Array.isArray(condition.values) ? condition.values : [];
+
+  const cleanedValues = values
+    .map(v => (v === null || v === undefined ? "" : String(v).trim()))
+    .filter(v => v.length);
+
+  if (!cleanedValues.length) {
+    return null;
+  }
+
+  const fbOp = OPERATOR_TO_FILTER_BUILDER[operator] || null;
+
+  // igualdade simples com um valor
+  if (fbOp === "eq" && cleanedValues.length === 1) {
+    return {
+      [field]: cleanedValues[0],
+    };
+  }
+
+  // IN ou EQUALS com múltiplos valores
+  if ((fbOp === "in" || fbOp === "eq") && cleanedValues.length > 1) {
+    return {
+      [field]: {
+        in: cleanedValues,
+      },
+    };
+  }
+
+  // BETWEEN com dois limites
+  if (fbOp === "between" && cleanedValues.length === 2) {
+    return {
+      [field]: {
+        between: cleanedValues,
+      },
+    };
+  }
+
+  // operadores relacionais
+  if (["gt", "gte", "lt", "lte"].includes(fbOp)) {
+    return {
+      [field]: {
+        [fbOp]: cleanedValues.length === 1 ? cleanedValues[0] : cleanedValues,
+      },
+    };
+  }
+
+  // CONTAINS, STARTS_WITH e similares
+  if (fbOp && !["eq", "in", "between"].includes(fbOp)) {
+    return {
+      [field]: {
+        [fbOp]: cleanedValues.length === 1 ? cleanedValues[0] : cleanedValues,
+      },
+    };
+  }
+
+  // fallback: igualdade simples com primeiro valor
+  return {
+    [field]: cleanedValues[0],
+  };
+}
+
+/**
+ * Constrói árvore de filtros a partir de filterQuery.clauses
+ */
+export function buildChartFilterTree(filterQuery) {
+  if (!filterQuery || !Array.isArray(filterQuery.clauses)) {
+    return null;
+  }
+
+  const andClauses = [];
+  const orClauses = [];
+  const notClauses = [];
+
+  for (const clause of filterQuery.clauses) {
+    if (!clause || !clause.condition) continue;
+
+    const leaf = buildLeafFromCondition(clause.condition);
+    if (!leaf) continue;
+
+    const logical = String(clause.logical || "AND").toUpperCase();
+
+    if (logical === "AND") {
+      andClauses.push(leaf);
+    } else if (logical === "OR") {
+      orClauses.push(leaf);
+    } else if (logical === "NOT") {
+      notClauses.push({ not: leaf });
+    }
+  }
+
+  let tree = null;
+
+  // monta nó com AND
+  if (andClauses.length === 1) {
+    tree = andClauses[0];
+  } else if (andClauses.length > 1) {
+    tree = { and: andClauses };
+  }
+
+  // integra OR
+  if (orClauses.length === 1) {
+    const orNode = orClauses[0];
+    tree = tree ? { and: [tree, orNode] } : orNode;
+  } else if (orClauses.length > 1) {
+    const orNode = { or: orClauses };
+    tree = tree ? { and: [tree, orNode] } : orNode;
+  }
+
+  // integra NOT
+  if (notClauses.length === 1) {
+    const notNode = notClauses[0];
+    tree = tree ? { and: [tree, notNode] } : notNode;
+  } else if (notClauses.length > 1) {
+    const notNode = { and: notClauses };
+    tree = tree ? { and: [tree, notNode] } : notNode;
+  }
+
+  return tree;
+}
+```
+
+Uso na store (já mostrado, mas explícito):
+
+```js
+setFilterFromFilterQuery(filterQuery) {
+  this.filterTree = buildChartFilterTree(filterQuery);
+}
+```
+
+Com isso:
+
+* A DSL de filtros do frontend é traduzida de forma sistemática para `SearchFilterTree`
+* O mesmo formato será entendido pelo `FilterBuilder` no domínio
+* CLI e FastAPI podem compartilhar a mesma “linguagem de filtros”
+
+Esse Bloco 5 fica aderente ao resto da refatoração:
+
+* Endpoint de ratios entrega um `ChartDTO` único com múltiplas séries
+* Pinia centraliza empresa, accounts, filtro e ChartDTO
+* AccountChartsView.vue só orquestra seleção e disparo de ação
+* Builder de filtros garante compatibilidade com o contrato do backend e com a DSL já usada pelo CLI e pelo `companyStore`

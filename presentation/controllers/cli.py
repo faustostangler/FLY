@@ -229,8 +229,9 @@ class Cli:
 
         filters = {
              "and": [
-                {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
+                {"issuing_company": {"==": "PETR", "case": False}},
             ]
         }
 
-        return ratios_service(filters=filters)
+        df_ratios = ratios_service(filters=filters)
+        return df_ratios
