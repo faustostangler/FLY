@@ -11,6 +11,7 @@ from domain.ports.repository_base_port import RepositoryBasePort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
 from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
 from domain.ports.repository_statements_fetched_port import (
            RepositoryStatementFetchedPort,
 )
@@ -36,4 +37,5 @@ __all__ = [
     "ScraperStatementRawPort",
     "MetricsCollectorPort",
     "WorkerPoolPort",
+    "RepositoryAccountSeriesPort",
 ]

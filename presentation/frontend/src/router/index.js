@@ -2,6 +2,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChartView from '../views/ChartView.vue'
+import AccountChartsView from '../views/AccountChartsView.vue'
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
     path: '/charts',
     name: 'charts',
     component: ChartView,
+  },
+  {
+    path: '/charts/accounts',
+    name: 'accountCharts',
+    component: AccountChartsView,
   },
 ]
 
