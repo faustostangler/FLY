@@ -1,29 +1,28 @@
 Summary
 
-Added an industryCascade structure to the company store and rebuild it after each search to keep sector, subsector, and segment relationships in sync with the current results.
-
-Updated the search builder to recognize industry cascade facets, merge draft and committed selections, and filter available options based on the cascade graph while preserving existing boolean/date behaviors.
+Updated cascade facet option handling to always derive from a shared baseOptions list and apply cascade restrictions only when computed, normalizing options before filtering so sector/subsector/segment selections properly constrain downstream choices.
 
 Testing
 
-⚠️ No automated tests were run (not requested).
+⚠️ not run (not requested)
 
 
-Arquivos (2)
+Files (2)
 
 presentation/frontend/src/components/CompanySearchBuilder.vue
-+136
++125
 -3
 
 presentation/frontend/src/store/companyStore.js
-+64
++67
 -0
 
 presentation/frontend/src/components/CompanySearchBuilder.vue
-+136
++125
 -3
 
-@@ -60,50 +60,71 @@
+@@ -59,50 +59,72 @@
+        Nenhuma companhia encontrada com os filtros atuais.
       </p>
     </div>
   </section>
@@ -48,6 +47,7 @@ let isSyncingSelection = false
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
 const draftFacets = ref({})
+const DEFAULT_OPERATOR = 'IN'
 
 const CASCADE_CONFIG = {
   industry_sector: {
@@ -94,8 +94,7 @@ const selectedItemsModel = computed({
 function normalizeSelection(values) {
   if (!Array.isArray(values)) {
     return []
-  }
-@@ -162,81 +183,193 @@ function facetOptions(facet) {
+@@ -162,81 +184,181 @@ function facetOptions(facet) {
     for (const option of base) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
@@ -123,7 +122,7 @@ function normalizeSelection(values) {
 
   if (dynamic.length) {
     return dynamic
-  const baseOptions = dynamic.length ? dynamic : facet.options || []
+  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
 
   if (!isCascadeField(field)) {
     return baseOptions
@@ -144,10 +143,12 @@ function normalizeSelection(values) {
       : Object.keys(sectorToSegments)
 
     if (sectorsFromGraph.length) {
-      allowedValues = [...sectorsFromGraph].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      allowedValues = sectorsFromGraph
     }
   } else if (field === 'industry_subsector') {
-    const sectors = selectedSectors.length ? selectedSectors : Object.keys(sectorToSubsectors)
+    const sectors = selectedSectors.length
+      ? selectedSectors
+      : Object.keys(sectorToSubsectors)
 
     const aggregated = new Set()
     for (const sector of sectors) {
@@ -155,9 +156,8 @@ function normalizeSelection(values) {
         aggregated.add(subsector)
       }
     }
-
     if (aggregated.size) {
-      allowedValues = Array.from(aggregated).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      allowedValues = Array.from(aggregated)
     }
   } else if (field === 'industry_segment') {
     const aggregated = new Set()
@@ -183,45 +183,34 @@ function normalizeSelection(values) {
     }
 
     if (aggregated.size) {
-      allowedValues = Array.from(aggregated).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-    }
-  }
-
-  const normalized = []
-  const seen = new Set()
-
-  const pushOption = (value, label) => {
-    const normalizedValue = String(value ?? '').trim()
-    if (!normalizedValue || seen.has(normalizedValue)) {
-      return
-    }
-    seen.add(normalizedValue)
-    normalized.push({ value: normalizedValue, label: label ?? normalizedValue })
-  }
-
-  for (const option of Array.isArray(baseOptions) ? baseOptions : []) {
-    if (option && typeof option === 'object') {
-      const value = option.value ?? option.label ?? ''
-      const label = option.label ?? String(option.value ?? '')
-      pushOption(value, label)
-    } else {
-      pushOption(option, String(option ?? ''))
+      allowedValues = Array.from(aggregated)
     }
   }
 
   if (!allowedValues || !allowedValues.length) {
-    return normalized
+    // Sem restrição de cascata calculada: devolve a lista original
+    return baseOptions
   }
 
-  for (const value of allowedValues) {
-    pushOption(value, String(value ?? ''))
-  }
-
+  // Aqui a cascata entra em ação de fato
   const allowedSet = new Set(
-    allowedValues.map((value) => String(value ?? '').trim()).filter((value) => value.length),
+    allowedValues.map((value) => String(value || '').trim()),
   )
 
-  return normalized.filter((option) => allowedSet.has(String(option.value ?? '').trim()))
+  // Garante que todas as opções sejam { value, label }
+  const normalized = baseOptions.map((option) => {
+    if (option && typeof option === 'object') {
+      const value = String(option.value ?? option.label ?? '').trim()
+      const label = option.label ?? value
+      return { value, label }
+    }
+    const value = String(option || '').trim()
+    return { value, label: value }
+  })
+
+  return normalized.filter((option) =>
+    allowedSet.has(String(option.value || '').trim()),
+  )
 }
 
 function facetLogical(field) {
@@ -251,16 +240,14 @@ function facetValues(field) {
 function currentCascadeValues(field) {
   const committed = store.clauseByField[field]?.condition?.values || []
   const draft = draftFacets.value[field]?.values || []
-  const combined = [...committed, ...draft]
-    .map((value) => String(value ?? '').trim())
-    .filter((value) => value.length)
+  const all = [...committed, ...draft]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
 
   const seen = new Set()
   const result = []
-  for (const value of combined) {
-    if (seen.has(value)) {
-      continue
-    }
+  for (const value of all) {
+    if (seen.has(value)) continue
     seen.add(value)
     result.push(value)
   }
@@ -293,10 +280,10 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
 presentation/frontend/src/store/companyStore.js
-+64
++67
 -0
 
-@@ -541,50 +541,55 @@ function parseTextToQuery(text) {
+@@ -541,50 +541,57 @@ function parseTextToQuery(text) {
     const parser = new QueryParser(tokens)
     const ast = parser.parse()
     if (!ast) {
@@ -322,6 +309,8 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedItems: [],
     isLoading: false,
     error: null,
+
+    // Estrutura da cascata Setor → Subsetor → Segmento
     industryCascade: {
       sectorToSubsectors: {},
       sectorToSegments: {},
@@ -352,7 +341,7 @@ export const useCompanyStore = defineStore('companyStore', {
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
       const clauses = cloneClauses(this.filterQuery.clauses || [])
-@@ -623,81 +628,140 @@ export const useCompanyStore = defineStore('companyStore', {
+@@ -623,81 +630,141 @@ export const useCompanyStore = defineStore('companyStore', {
         return { ok: false, message }
       }
     },
@@ -378,6 +367,7 @@ export const useCompanyStore = defineStore('companyStore', {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
+
         this._rebuildIndustryCascade(this.companies)
         this._pruneSelection()
         if (!this.queryText) {
@@ -424,9 +414,7 @@ export const useCompanyStore = defineStore('companyStore', {
         const subsector = (company.subsector || '').trim()
         const segment = (company.segment || '').trim()
 
-        if (!sector && !subsector && !segment) {
-          continue
-        }
+        if (!sector && !subsector && !segment) continue
 
         if (sector) {
           if (!sectorToSubsectors.has(sector)) {
@@ -437,8 +425,10 @@ export const useCompanyStore = defineStore('companyStore', {
           }
         }
 
-        if (subsector && !subsectorToSegments.has(subsector)) {
-          subsectorToSegments.set(subsector, new Set())
+        if (subsector) {
+          if (!subsectorToSegments.has(subsector)) {
+            subsectorToSegments.set(subsector, new Set())
+          }
         }
 
         if (sector && subsector) {
@@ -456,8 +446,8 @@ export const useCompanyStore = defineStore('companyStore', {
 
       const normalizeMap = (map) => {
         const result = {}
-        for (const [key, valueSet] of map.entries()) {
-          const values = Array.from(valueSet).filter((value) => value && value.length)
+        for (const [key, set] of map.entries()) {
+          const values = Array.from(set).filter((value) => value && value.length)
           if (values.length) {
             result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
           }

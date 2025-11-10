@@ -1,30 +1,29 @@
 Summary
 
-Added an industryCascade graph to the company store and rebuild logic that runs after each search to support cascading industry facets.
+Added an industryCascade graph to the company store, rebuilding it after each search to reflect the latest sector, subsector, and segment relationships.
 
-Applied cascade-aware option filtering in CompanySearchBuilder.vue, combining draft and committed selections to limit subsector and segment choices dynamically.
+Applied cascade-aware filtering when computing sector, subsector, and segment facet options so dependent lists react to current selections without triggering extra queries.
 
 Testing
 
-⚠️ Not run (not requested)
+⚠️ not run (not requested)
 
 
-Arquivos (2)
+Files (2)
 
 presentation/frontend/src/components/CompanySearchBuilder.vue
-+116
++114
 -3
 
 presentation/frontend/src/store/companyStore.js
-+67
++65
 -0
 
 presentation/frontend/src/components/CompanySearchBuilder.vue
-+116
++114
 -3
 
-@@ -59,50 +59,72 @@
-        Nenhuma companhia encontrada com os filtros atuais.
+@@ -60,50 +60,71 @@
       </p>
     </div>
   </section>
@@ -49,7 +48,6 @@ let isSyncingSelection = false
 const facetConfigs = COMPANY_FACETS
 const parseError = ref('')
 const draftFacets = ref({})
-const DEFAULT_OPERATOR = 'IN'
 
 const CASCADE_CONFIG = {
   industry_sector: {
@@ -96,7 +94,8 @@ const selectedItemsModel = computed({
 function normalizeSelection(values) {
   if (!Array.isArray(values)) {
     return []
-@@ -162,81 +184,172 @@ function facetOptions(facet) {
+  }
+@@ -162,81 +183,171 @@ function facetOptions(facet) {
     for (const option of base) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
@@ -130,7 +129,6 @@ function normalizeSelection(values) {
     return baseOptions
   }
 
-  return facet.options || []
   const cascade = store.industryCascade || {}
   const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
 
@@ -149,7 +147,6 @@ function normalizeSelection(values) {
     }
   } else if (field === 'industry_subsector') {
     const sectors = selectedSectors.length ? selectedSectors : Object.keys(sectorToSubsectors)
-
     const aggregated = new Set()
     for (const sector of sectors) {
       for (const subsector of sectorToSubsectors[sector] || []) {
@@ -191,6 +188,7 @@ function normalizeSelection(values) {
     return baseOptions
   }
 
+  return facet.options || []
   const allowedSet = new Set(allowedValues.map((value) => String(value || '').trim()))
 
   const normalized = baseOptions.map((option) => {
@@ -233,13 +231,13 @@ function facetValues(field) {
 function currentCascadeValues(field) {
   const committed = store.clauseByField[field]?.condition?.values || []
   const draft = draftFacets.value[field]?.values || []
-  const combined = [...committed, ...draft]
+  const all = [...committed, ...draft]
     .map((value) => String(value || '').trim())
     .filter(Boolean)
 
   const seen = new Set()
   const result = []
-  for (const value of combined) {
+  for (const value of all) {
     if (seen.has(value)) continue
     seen.add(value)
     result.push(value)
@@ -273,10 +271,10 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
 presentation/frontend/src/store/companyStore.js
-+67
++65
 -0
 
-@@ -541,50 +541,57 @@ function parseTextToQuery(text) {
+@@ -541,50 +541,56 @@ function parseTextToQuery(text) {
     const parser = new QueryParser(tokens)
     const ast = parser.parse()
     if (!ast) {
@@ -303,7 +301,6 @@ export const useCompanyStore = defineStore('companyStore', {
     isLoading: false,
     error: null,
 
-    // Derived graph for cascading industry facets
     industryCascade: {
       sectorToSubsectors: {},
       sectorToSegments: {},
@@ -334,7 +331,7 @@ export const useCompanyStore = defineStore('companyStore', {
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
       const clauses = cloneClauses(this.filterQuery.clauses || [])
-@@ -623,81 +630,141 @@ export const useCompanyStore = defineStore('companyStore', {
+@@ -623,81 +629,140 @@ export const useCompanyStore = defineStore('companyStore', {
         return { ok: false, message }
       }
     },
@@ -360,7 +357,6 @@ export const useCompanyStore = defineStore('companyStore', {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
-
         this._rebuildIndustryCascade(this.companies)
         this._pruneSelection()
         if (!this.queryText) {
