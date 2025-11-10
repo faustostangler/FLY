@@ -563,6 +563,13 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedItems: [],
     isLoading: false,
     error: null,
+
+    // Estrutura da cascata Setor → Subsetor → Segmento
+    industryCascade: {
+      sectorToSubsectors: {},
+      sectorToSegments: {},
+      subsectorToSegments: {},
+    },
   }),
 
   getters: {
@@ -645,6 +652,8 @@ export const useCompanyStore = defineStore('companyStore', {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
+
+        this._rebuildIndustryCascade(this.companies)
         this._pruneSelection()
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
@@ -678,6 +687,64 @@ export const useCompanyStore = defineStore('companyStore', {
         return { clauses: [] }
       }
       return parseTextToQuery(text)
+    },
+
+    _rebuildIndustryCascade(items = []) {
+      const sectorToSubsectors = new Map()
+      const sectorToSegments = new Map()
+      const subsectorToSegments = new Map()
+
+      for (const company of items || []) {
+        const sector = (company.sector || '').trim()
+        const subsector = (company.subsector || '').trim()
+        const segment = (company.segment || '').trim()
+
+        if (!sector && !subsector && !segment) continue
+
+        if (sector) {
+          if (!sectorToSubsectors.has(sector)) {
+            sectorToSubsectors.set(sector, new Set())
+          }
+          if (!sectorToSegments.has(sector)) {
+            sectorToSegments.set(sector, new Set())
+          }
+        }
+
+        if (subsector) {
+          if (!subsectorToSegments.has(subsector)) {
+            subsectorToSegments.set(subsector, new Set())
+          }
+        }
+
+        if (sector && subsector) {
+          sectorToSubsectors.get(sector).add(subsector)
+        }
+
+        if (sector && segment) {
+          sectorToSegments.get(sector).add(segment)
+        }
+
+        if (subsector && segment) {
+          subsectorToSegments.get(subsector).add(segment)
+        }
+      }
+
+      const normalizeMap = (map) => {
+        const result = {}
+        for (const [key, set] of map.entries()) {
+          const values = Array.from(set).filter((value) => value && value.length)
+          if (values.length) {
+            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          }
+        }
+        return result
+      }
+
+      this.industryCascade = {
+        sectorToSubsectors: normalizeMap(sectorToSubsectors),
+        sectorToSegments: normalizeMap(sectorToSegments),
+        subsectorToSegments: normalizeMap(subsectorToSegments),
+      }
     },
 
     _pruneSelection() {
