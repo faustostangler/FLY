@@ -2,7 +2,8 @@
 <template>
   <div class="component-box">
     <a href="http://localhost:5173/">Home</a> |
-    <a href="http://localhost:5173/charts">Chart</a>
+    <a href="http://localhost:5173/charts">Chart</a> |
+    <a href="http://localhost:5173/charts/accounts">Contas</a>
   </div>
   <div>
     <header>

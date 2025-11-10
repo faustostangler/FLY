@@ -1,21 +1,21 @@
 <template>
   <section class="plotly-viewer">
-    <div v-if="isLoading" role="status" aria-live="polite">
+    <div v-if="resolvedIsLoading" role="status" aria-live="polite">
       Carregando gráfico...
     </div>
 
-    <div v-else-if="error" role="alert">
-      {{ error }}
+    <div v-else-if="resolvedError" role="alert">
+      {{ resolvedError }}
     </div>
 
     <div
-      v-else-if="chart"
+      v-else-if="resolvedChart"
       role="img"
-      :aria-label="chart.title"
+      :aria-label="resolvedAriaLabel"
     >
       <VuePlotly
-        :data="chart.data"
-        :layout="chart.layout"
+        :data="resolvedChart.data"
+        :layout="resolvedChart.layout"
         :useResizeHandler="true"
         style="width: 100%; height: 400px;"
       />
@@ -29,11 +29,56 @@
 
 <script setup>
 import { computed } from 'vue'
+import { VuePlotly } from 'vue3-plotly'
 import { useChartStore } from '../store/chartStore'
+
+const props = defineProps({
+  chart: {
+    type: Object,
+    default: null,
+  },
+  isLoading: {
+    type: Boolean,
+    default: undefined,
+  },
+  error: {
+    type: String,
+    default: undefined,
+  },
+})
 
 const store = useChartStore()
 
-const chart = computed(() => store.chart)
-const isLoading = computed(() => store.isLoading)
-const error = computed(() => store.error)
+const storeChart = computed(() => store.chart)
+const storeIsLoading = computed(() => store.isLoading)
+const storeError = computed(() => store.error)
+
+const resolvedChart = computed(() =>
+  props.chart !== null ? props.chart : storeChart.value,
+)
+
+const resolvedIsLoading = computed(() =>
+  typeof props.isLoading === 'boolean'
+    ? props.isLoading
+    : storeIsLoading.value,
+)
+
+const resolvedError = computed(() =>
+  typeof props.error === 'string' ? props.error : storeError.value,
+)
+
+const resolvedAriaLabel = computed(() => {
+  const chart = resolvedChart.value
+  if (!chart) {
+    return 'Gráfico'
+  }
+  const title = chart.layout?.title
+  if (typeof title === 'string') {
+    return title
+  }
+  if (title && typeof title.text === 'string') {
+    return title.text
+  }
+  return 'Gráfico'
+})
 </script>

@@ -8,6 +8,7 @@ from .company_filters import (
     CompanyFilterClause,
     CompanyFilterQuery,
 )
+from .account_code import AccountCode
 
 __all__ = [
     "CompanyField",
@@ -16,4 +17,5 @@ __all__ = [
     "CompanyFilterCondition",
     "CompanyFilterClause",
     "CompanyFilterQuery",
+    "AccountCode",
 ]

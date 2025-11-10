@@ -23,6 +23,26 @@ export async function fetchChart(params) {
   return res.data
 }
 
+export async function fetchAccountLineChart(ticker, accountCode, params = {}) {
+  const t = String(ticker || '').trim()
+  const a = String(accountCode || '').trim()
+
+  if (!t || !a) {
+    throw new Error('Ticker e accountCode são obrigatórios')
+  }
+
+  const res = await api.get(
+    `/api/charts/accounts/line/${encodeURIComponent(t)}`,
+    {
+      params: {
+        account_code: a,
+        ...params,
+      },
+    },
+  )
+  return res.data
+}
+
 export async function searchCompanies(filterQuery) {
   const res = await api.post('/companies/search', filterQuery || { clauses: [] })
   return res.data
