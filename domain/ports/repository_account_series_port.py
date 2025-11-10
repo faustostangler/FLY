@@ -23,5 +23,3 @@ class RepositoryAccountSeriesPort(ABC):
         end_date: date | None = None,
     ) -> List[AccountPoint]:
         """Retorna série temporal de uma conta para um ticker."""
-
-*** End of File

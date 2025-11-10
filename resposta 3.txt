@@ -1,478 +1,971 @@
 Summary
 
-Added an industryCascade structure to the company store and rebuild it from each search result set to keep sector, subsector, and segment relationships synchronized with the current companies.
+Added domain value object, entity, repository port, DTOs, and a reusable account-series use case to normalize arbitrary account code time series for charts.
 
-Enhanced CompanySearchBuilder facet option handling to apply cascading filters for industry facets while preserving existing boolean/date behaviors and draft selections.
+Implemented SQLAlchemy models, session factory, repository, and UoW wiring plus FastAPI dependencies and router that serve Plotly-ready chart payloads and register the new endpoint.
+
+Expanded the frontend with an API helper, Pinia store, enhanced Plotly viewer, router entry, and account charts view to display multiple account code line charts from the shared pipeline.
 
 Testing
 
-⚠️ Not run (not requested)
+⚠️ pytest *(fails: missing pytest-cov plugin configured in pyproject)*
 
 
-Files (2)
+Files (23)
 
-presentation/frontend/src/components/CompanySearchBuilder.vue
-+116
--3
+application/dtos/account_series_dto.py
+New
 
-presentation/frontend/src/store/companyStore.js
-+67
+application/usecases/__init__.py
++6
+-1
+
+application/usecases/get_account_series.py
+New
+
+domain/entities/__init__.py
++5
+-1
+
+domain/entities/account_series.py
+New
+
+domain/ports/__init__.py
++3
+-1
+
+domain/ports/repository_account_series_port.py
+New
+
+domain/value_objects/__init__.py
++2
 -0
 
-presentation/frontend/src/components/CompanySearchBuilder.vue
-+116
--3
+domain/value_objects/account_code.py
+New
 
-@@ -60,50 +60,71 @@
-      </p>
+infrastructure/db/__init__.py
+New
+
+infrastructure/db/models.py
+New
+
+infrastructure/db/session.py
+New
+
+infrastructure/repositories/repository_account_series.py
+New
+
+infrastructure/uow/sqlalchemy_uow.py
+New
+
+presentation/backend/api.py
++2
+-0
+
+presentation/backend/dependencies/account_chart_dependencies.py
+New
+
+presentation/backend/dto/chart_dto.py
++9
+-19
+
+presentation/backend/routers/account_charts.py
+New
+
+presentation/frontend/src/components/PlotlyViewer.vue
++42
+-10
+
+presentation/frontend/src/router/index.js
++6
+-0
+
+presentation/frontend/src/services/apiService.js
++17
+-0
+
+presentation/frontend/src/store/accountChartsStore.js
+New
+
+presentation/frontend/src/views/AccountChartsView.vue
+New
+
+application/dtos/account_series_dto.py
+New
++19
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from typing import List
+
+
+@dataclass
+class AccountSeriesPointDTO:
+    date: date
+    value: float
+
+
+@dataclass
+class AccountSeriesDTO:
+    ticker: str
+    account_code: str
+    label: str
+    points: List[AccountSeriesPointDTO]
+application/usecases/__init__.py
++6
+-1
+
+from application.usecases.get_account_series import GetAccountSeriesUseCase
+from application.usecases.statements_transformer import StatementTransformer
+from application.usecases.sync_company_data import SyncCompanyDataUseCase
+
+__all__ = ["StatementTransformer", "SyncCompanyDataUseCase"]
+__all__ = [
+    "GetAccountSeriesUseCase",
+    "StatementTransformer",
+    "SyncCompanyDataUseCase",
+]
+application/usecases/get_account_series.py
+New
++50
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from typing import List
+
+from application.dtos.account_series_dto import AccountSeriesDTO, AccountSeriesPointDTO
+from application.ports.uow_port import UowFactoryPort
+from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
+from domain.value_objects.account_code import AccountCode
+
+
+@dataclass
+class GetAccountSeriesUseCase:
+    repository: RepositoryAccountSeriesPort
+    uow_factory: UowFactoryPort
+
+    def __call__(
+        self,
+        *,
+        ticker: str,
+        account_code: str,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> AccountSeriesDTO:
+        account = AccountCode(account_code)
+
+        with self.uow_factory() as uow:
+            points = self.repository.get_account_series(
+                ticker=ticker,
+                account=account,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            uow.commit()
+
+        dto_points: List[AccountSeriesPointDTO] = [
+            AccountSeriesPointDTO(date=point.date, value=float(point.value))
+            for point in points
+        ]
+        dto_points.sort(key=lambda point: point.date)
+
+        label = f"Conta {account.value}"
+
+        return AccountSeriesDTO(
+            ticker=ticker,
+            account_code=account.value,
+            label=label,
+            points=dto_points,
+        )
+domain/entities/__init__.py
++5
+-1
+
+"""Domain entities package."""
+
+from .account_series import AccountPoint
+from .eligible_company import EligibleCompany
+
+__all__ = ["EligibleCompany"]
+__all__ = [
+    "AccountPoint",
+    "EligibleCompany",
+]
+domain/entities/account_series.py
+New
++10
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+
+
+@dataclass
+class AccountPoint:
+    date: date
+    value: float
+domain/ports/__init__.py
++3
+-1
+
+from __future__ import annotations
+
+from application.ports.cli_port import CliPort
+from application.ports.config_port import ConfigPort
+from application.ports.http_client_port import AffinityHttpClientPort
+from application.ports.logger_port import LoggerPort
+from application.ports.metrics_collector_port import MetricsCollectorPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from domain.ports.datacleaner_port import DataCleanerPort
+from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
+from domain.ports.repository_base_port import RepositoryBasePort
+from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
+from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
+from domain.ports.repository_nsd_port import RepositoryNsdPort
+from domain.ports.repository_statements_fetched_port import (
+           RepositoryStatementFetchedPort,
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
+from domain.ports.scraper_base_port import ScraperBasePort
+from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
+from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
+
+__all__ = [
+    "CliPort",
+    "RepositoryCompanyDataPort",
+    "RepositoryCompanyEligiblePort",
+    "ConfigPort",
+    "DataCleanerPort",
+    "AffinityHttpClientPort",
+    "LoggerPort",
+    "RepositoryBasePort",
+    "RepositoryAccountSeriesPort",
+    "RepositoryNsdPort",
+    "RepositoryStatementsRawPort",
+    "RepositoryStatementFetchedPort",
+    "ScraperBasePort",
+    "ScraperCompanyDataPort",
+    "ScraperStatementRawPort",
+    "MetricsCollectorPort",
+    "WorkerPoolPort",
+]
+domain/ports/repository_account_series_port.py
+New
++22
+-0
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from datetime import date
+from typing import List
+
+from domain.entities.account_series import AccountPoint
+from domain.value_objects.account_code import AccountCode
+
+
+class RepositoryAccountSeriesPort(ABC):
+    @abstractmethod
+    def get_account_series(
+        self,
+        *,
+        ticker: str,
+        account: AccountCode,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> List[AccountPoint]:
+        """Retorna série temporal de uma conta para um ticker."""
+        raise NotImplementedError
+domain/value_objects/__init__.py
++2
+-0
+
+"""Domain-level value objects shared across use cases."""
+
+from .account_code import AccountCode
+from .company_filters import (
+    CompanyField,
+    ComparisonOperator,
+    LogicalOperator,
+    CompanyFilterCondition,
+    CompanyFilterClause,
+    CompanyFilterQuery,
+)
+
+__all__ = [
+    "AccountCode",
+    "CompanyField",
+    "ComparisonOperator",
+    "LogicalOperator",
+    "CompanyFilterCondition",
+    "CompanyFilterClause",
+    "CompanyFilterQuery",
+]
+domain/value_objects/account_code.py
+New
++20
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class AccountCode:
+    value: str
+
+    def __post_init__(self) -> None:
+        v = self.value.strip()
+        if not v:
+            raise ValueError("AccountCode vazio")
+        parts = v.split(".")
+        if any(not part.isdigit() for part in parts):
+            raise ValueError(f"AccountCode inválido: {v}")
+        object.__setattr__(self, "value", v)
+
+    def __str__(self) -> str:
+        return self.value
+infrastructure/db/__init__.py
+New
+
+No content
+infrastructure/db/models.py
+New
++17
+-0
+
+from __future__ import annotations
+
+from sqlalchemy import Column, Date, Float, Integer, String
+from sqlalchemy.orm import declarative_base
+
+
+Base = declarative_base()
+
+
+class FinancialStatementModel(Base):
+    __tablename__ = "financial_statements"
+
+    id = Column(Integer, primary_key=True)
+    ticker = Column(String, index=True, nullable=False)
+    account_code = Column(String, index=True, nullable=False)
+    reference_date = Column(Date, index=True, nullable=False)
+    value = Column(Float, nullable=False)
+infrastructure/db/session.py
+New
++32
+-0
+
+from __future__ import annotations
+
+import os
+from typing import Callable
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from infrastructure.db.models import Base
+
+_ENGINE: Engine | None = None
+_SESSION_FACTORY: Callable[[], Session] | None = None
+
+
+def get_session_factory(database_url: str | None = None) -> Callable[[], Session]:
+    global _ENGINE, _SESSION_FACTORY
+
+    if _SESSION_FACTORY is None:
+        url = database_url or os.getenv("DATABASE_URL", "sqlite:///./app.db")
+        engine = create_engine(url, future=True)
+        Base.metadata.create_all(engine)
+
+        _ENGINE = engine
+        _SESSION_FACTORY = sessionmaker(
+            bind=engine,
+            autoflush=False,
+            expire_on_commit=False,
+            future=True,
+        )
+
+    return _SESSION_FACTORY
+infrastructure/repositories/repository_account_series.py
+New
++48
+-0
+
+from __future__ import annotations
+
+from datetime import date
+from typing import Callable, List
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from domain.entities.account_series import AccountPoint
+from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
+from domain.value_objects.account_code import AccountCode
+from infrastructure.db.models import FinancialStatementModel
+
+
+class RepositoryAccountSeriesSqlAlchemy(RepositoryAccountSeriesPort):
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
+
+    def get_account_series(
+        self,
+        *,
+        ticker: str,
+        account: AccountCode,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> List[AccountPoint]:
+        with self._session_factory() as session:
+            stmt = (
+                select(FinancialStatementModel)
+                .where(FinancialStatementModel.ticker == ticker)
+                .where(FinancialStatementModel.account_code == account.value)
+            )
+
+            if start_date is not None:
+                stmt = stmt.where(
+                    FinancialStatementModel.reference_date >= start_date
+                )
+            if end_date is not None:
+                stmt = stmt.where(FinancialStatementModel.reference_date <= end_date)
+
+            stmt = stmt.order_by(FinancialStatementModel.reference_date.asc())
+
+            rows = session.execute(stmt).scalars().all()
+
+        return [
+            AccountPoint(date=row.reference_date, value=row.value)
+            for row in rows
+        ]
+infrastructure/uow/sqlalchemy_uow.py
+New
++44
+-0
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from typing import Callable, ContextManager
+
+from sqlalchemy.orm import Session
+
+from application.ports.uow_port import Uow, UowFactoryPort
+
+
+class SqlAlchemyUowFactory(UowFactoryPort):
+    def __init__(self, *, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
+
+    @contextmanager
+    def __call__(self) -> ContextManager[Uow]:  # type: ignore[override]
+        session = self._session_factory()
+        uow = _SqlAlchemyUow(session)
+        try:
+            yield uow
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            if session.in_transaction():
+                session.rollback()
+            session.close()
+
+
+class _SqlAlchemyUow(Uow):
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    @property
+    def session(self) -> Session:
+        return self._session
+
+    def commit(self) -> None:
+        if self._session.in_transaction():
+            self._session.commit()
+
+    def rollback(self) -> None:
+        if self._session.in_transaction():
+            self._session.rollback()
+presentation/backend/api.py
++2
+-0
+
+# presentation/backend/api.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from presentation.backend.routers.account_charts import router as account_charts_router
+from presentation.backend.routers.charts import router as charts_router
+from presentation.backend.routers.companies import router as companies_router
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="FLY Web API",
+        version="0.1.0",
+    )
+
+    # CORS para permitir o frontend do Vite (http://localhost:5173)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Camada de apresentação: apenas inclui routers finos
+    app.include_router(charts_router)
+    app.include_router(companies_router)
+    app.include_router(account_charts_router)
+
+    return app
+
+
+app = create_app()
+presentation/backend/dependencies/account_chart_dependencies.py
+New
++18
+-0
+
+from __future__ import annotations
+
+from application.usecases.get_account_series import GetAccountSeriesUseCase
+from domain.ports.repository_account_series_port import RepositoryAccountSeriesPort
+from infrastructure.db.session import get_session_factory
+from infrastructure.repositories.repository_account_series import (
+    RepositoryAccountSeriesSqlAlchemy,
+)
+from infrastructure.uow.sqlalchemy_uow import SqlAlchemyUowFactory
+
+
+def get_account_series_usecase() -> GetAccountSeriesUseCase:
+    session_factory = get_session_factory()
+    repository: RepositoryAccountSeriesPort = RepositoryAccountSeriesSqlAlchemy(
+        session_factory=session_factory,
+    )
+    uow_factory = SqlAlchemyUowFactory(session_factory=session_factory)
+    return GetAccountSeriesUseCase(repository=repository, uow_factory=uow_factory)
+presentation/backend/dto/chart_dto.py
++9
+-19
+
+# presentation/backend/schemas/chart_dto.py
+from __future__ import annotations
+
+from datetime import date
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+from typing import Any, List, Dict, Optional
+
+
+class PlotlyTraceDTO(BaseModel):
+    """
+    Trace genérico para Plotly.
+
+    Mantém estrutura mínima para 80% dos gráficos (scatter, bar etc.).
+    """
+    x: List[Any]
+    y: List[Any]
+    x: List[date]
+    y: List[float]
+    name: str
+    type: str = Field(default="scatter")
+    mode: Optional[str] = Field(default="lines")
+    name: Optional[str] = None
+    # campo extra para qualquer coisa específica de Plotly
+    extra: Dict[str, Any] = Field(default_factory=dict)
+    mode: str = Field(default="lines")
+    extra: Optional[Dict[str, Any]] = None
+
+
+class ChartDTO(BaseModel):
+    """
+    DTO de saída da API para o frontend Vue/Plotly.
+
+    'data' é uma lista de traces Plotly,
+    'layout' é um dict livre conforme API do Plotly.js.
+    """
+    data: List[PlotlyTraceDTO]
+    layout: Dict[str, Any] = Field(default_factory=dict)
+presentation/backend/routers/account_charts.py
+New
++55
+-0
+
+from __future__ import annotations
+
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from application.usecases.get_account_series import GetAccountSeriesUseCase
+from presentation.backend.dependencies.account_chart_dependencies import (
+    get_account_series_usecase,
+)
+from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
+
+router = APIRouter(
+    prefix="/api/charts/accounts",
+    tags=["charts"],
+)
+
+
+@router.get("/line/{ticker}", response_model=ChartDTO)
+async def get_account_line_chart(
+    ticker: str,
+    account_code: str = Query(..., description="Código da conta, ex: 02.03"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    usecase: GetAccountSeriesUseCase = Depends(get_account_series_usecase),
+) -> ChartDTO:
+    series = usecase(
+        ticker=ticker,
+        account_code=account_code,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    if not series.points:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Série temporal vazia para esta conta",
+        )
+
+    trace = PlotlyTraceDTO(
+        x=[point.date for point in series.points],
+        y=[point.value for point in series.points],
+        name=f"{series.account_code} – {series.label}",
+        extra={
+            "hovertemplate": "%{x}<br>Valor: %{y}<extra></extra>",
+        },
+    )
+
+    layout = {
+        "title": f"{series.label} – {series.ticker}",
+        "xaxis": {"title": "Data"},
+        "yaxis": {"title": "Valor"},
+    }
+
+    return ChartDTO(data=[trace], layout=layout)
+presentation/frontend/src/components/PlotlyViewer.vue
++42
+-10
+
+<template>
+  <section class="plotly-viewer">
+    <div v-if="isLoading" role="status" aria-live="polite">
+    <div v-if="resolvedLoading" role="status" aria-live="polite">
+      Carregando gráfico...
+    </div>
+
+    <div v-else-if="error" role="alert">
+      {{ error }}
+    <div v-else-if="resolvedError" role="alert">
+      {{ resolvedError }}
+    </div>
+
+    <div
+      v-else-if="chart"
+      v-else-if="resolvedChart"
+      role="img"
+      :aria-label="chart.title"
+      :aria-label="resolvedAriaLabel"
+    >
+      <VuePlotly
+        :data="chart.data"
+        :layout="chart.layout"
+        :data="resolvedChart.data"
+        :layout="resolvedChart.layout"
+        :useResizeHandler="true"
+        style="width: 100%; height: 400px;"
+      />
+    </div>
+
+    <p v-else>
+      Selecione uma companhia para visualizar o gráfico.
+    </p>
+  </section>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useChartStore } from '../store/chartStore'
+
+const props = defineProps({
+  chart: {
+    type: Object,
+    default: null,
+  },
+  isLoading: {
+    type: Boolean,
+    default: undefined,
+  },
+  error: {
+    type: String,
+    default: undefined,
+  },
+})
+
+const store = useChartStore()
+
+const chart = computed(() => store.chart)
+const isLoading = computed(() => store.isLoading)
+const error = computed(() => store.error)
+const resolvedChart = computed(() => props.chart ?? store.chart)
+const resolvedLoading = computed(() =>
+  typeof props.isLoading === 'boolean' ? props.isLoading : store.isLoading,
+)
+const resolvedError = computed(() =>
+  typeof props.error === 'string' ? props.error : store.error,
+)
+const resolvedAriaLabel = computed(() => {
+  if (!resolvedChart.value) {
+    return 'Gráfico'
+  }
+  const title = resolvedChart.value.layout?.title
+  if (typeof title === 'string') {
+    return title
+  }
+  if (title && typeof title.text === 'string') {
+    return title.text
+  }
+  return 'Gráfico'
+})
+</script>
+presentation/frontend/src/router/index.js
++6
+-0
+
+// src/router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+import HomeView from '../views/HomeView.vue'
+import ChartView from '../views/ChartView.vue'
+import AccountChartsView from '../views/AccountChartsView.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView,
+  },
+  {
+    path: '/charts',
+    name: 'charts',
+    component: ChartView,
+  },
+  {
+    path: '/account-charts',
+    name: 'accountCharts',
+    component: AccountChartsView,
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+export default router
+presentation/frontend/src/services/apiService.js
++17
+-0
+
+@@ -10,25 +10,42 @@ export async function fetchChart(params) {
+  if (!type) {
+    throw new Error('Ticker inválido para carregar o gráfico')
+  }
+  const selection = Array.isArray(payload.selection) ? payload.selection : []
+
+  const query = {}
+  if (selection.length) {
+    query.selection = selection.join(',')
+  }
+
+  const res = await api.get(`/charts/${encodeURIComponent(type)}`, {
+    params: query,
+  })
+  return res.data
+}
+
+export async function searchCompanies(filterQuery) {
+  const res = await api.post('/companies/search', filterQuery || { clauses: [] })
+  return res.data
+}
+
+export async function fetchCompanyFacets() {
+  const res = await api.get('/companies/facets')
+  return res.data
+}
+
+export async function fetchAccountLineChart(ticker, accountCode, params = {}) {
+  const t = String(ticker || '').trim()
+  const a = String(accountCode || '').trim()
+
+  if (!t || !a) {
+    throw new Error('Ticker e accountCode são obrigatórios')
+  }
+
+  const res = await api.get(`/api/charts/accounts/line/${encodeURIComponent(t)}`, {
+    params: {
+      account_code: a,
+      ...params,
+    },
+  })
+  return res.data
+}
+presentation/frontend/src/store/accountChartsStore.js
+New
++47
+-0
+
+import { defineStore } from 'pinia'
+import { fetchAccountLineChart } from '../services/apiService'
+
+export const useAccountChartsStore = defineStore('accountCharts', {
+  state: () => ({
+    ticker: '',
+    charts: {},
+    isLoading: {},
+    error: {},
+  }),
+  actions: {
+    setTicker(ticker) {
+      this.ticker = String(ticker || '').trim()
+    },
+
+    async loadAccountChart(accountCode) {
+      const code = String(accountCode || '').trim()
+      const key = code || String(accountCode || '') || 'unknown'
+
+      if (!this.ticker || !code) {
+        this.error[key] = 'Ticker e código da conta são obrigatórios'
+        return
+      }
+
+      this.isLoading[key] = true
+      this.error[key] = ''
+
+      try {
+        const chart = await fetchAccountLineChart(this.ticker, code)
+        this.charts[key] = chart
+      } catch (err) {
+        console.error(err)
+        this.error[key] = err?.message || 'Falha ao carregar gráfico'
+      } finally {
+        this.isLoading[key] = false
+      }
+    },
+
+    async loadMultipleAccounts(accountCodes) {
+      const codes = accountCodes
+        .map((code) => String(code || '').trim())
+        .filter(Boolean)
+
+      await Promise.all(codes.map((code) => this.loadAccountChart(code)))
+    },
+  },
+})
+presentation/frontend/src/views/AccountChartsView.vue
+New
++82
+-0
+
+<template>
+  <section class="account-charts">
+    <header>
+      <h2>Gráficos por conta contábil</h2>
+    </header>
+
+    <div class="account-charts__controls">
+      <label for="ticker">Ticker</label>
+      <input
+        id="ticker"
+        v-model="localTicker"
+        type="text"
+        @keyup.enter="load"
+      />
+
+      <button type="button" @click="load">
+        Carregar gráficos
+      </button>
+    </div>
+
+    <div class="account-charts__grid">
+      <section v-for="account in accounts" :key="account.code">
+        <h3>{{ account.code }} – {{ account.label }}</h3>
+        <PlotlyViewer
+          :chart="charts[account.code]"
+          :isLoading="isLoading[account.code]"
+          :error="error[account.code]"
+        />
+      </section>
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { COMPANY_FACETS } from '../config/companyFacets'
-import { useCompanyStore } from '../store/companyStore'
-import { useChartStore } from '../store/chartStore'
-import { extractTickers } from '../utils/tickers'
-import CompanyFacet from './CompanyFacet.vue'
-import CompanyResultSelect from './CompanyResultSelect.vue'
+import { computed, ref } from 'vue'
+import PlotlyViewer from '../components/PlotlyViewer.vue'
+import { useAccountChartsStore } from '../store/accountChartsStore'
 
-const store = useCompanyStore()
-const chartStore = useChartStore()
-const route = useRoute()
-const router = useRouter()
-let isSyncingSelection = false
+const store = useAccountChartsStore()
+const localTicker = ref(store.ticker || '')
 
-const facetConfigs = COMPANY_FACETS
-const parseError = ref('')
-const draftFacets = ref({})
-
-const CASCADE_CONFIG = {
-  industry_sector: {
-    level: 'sector',
-    parentField: null,
-  },
-  industry_subsector: {
-    level: 'subsector',
-    parentField: 'industry_sector',
-  },
-  industry_segment: {
-    level: 'segment',
-    parentField: 'industry_subsector',
-  },
-}
-
-const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
-
-function isCascadeField(field) {
-  return CASCADE_FIELDS.includes(field)
-}
-
-const queryTextModel = computed({
-  get: () => store.queryText,
-  set: (value) => {
-    parseError.value = ''
-    store.setQueryText(value)
-  },
-})
-
-const companies = computed(() => store.companies)
-const total = computed(() => store.total)
-const facets = computed(() => store.facets || {})
+const charts = computed(() => store.charts)
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
-const selectedItemsModel = computed({
-  get: () => store.selectedItems,
-  set: (values) => {
-    onSelectionChange(values)
-  },
-})
+const accounts = [
+  { code: '02.03', label: 'Patrimônio Líquido' },
+  { code: '03.01', label: 'Receita Líquida' },
+]
 
-function normalizeSelection(values) {
-  if (!Array.isArray(values)) {
-    return []
-  }
-@@ -162,81 +183,173 @@ function facetOptions(facet) {
-    for (const option of base) {
-      if (option && typeof option === 'object') {
-        pushOption(option.value ?? option.label ?? '', option.label)
-      } else {
-        pushOption(option, undefined)
-      }
-    }
+async function load() {
+  store.setTicker(localTicker.value)
+  await store.loadMultipleAccounts(accounts.map((account) => account.code))
+}
+</script>
 
-    for (const option of dynamic) {
-      if (option && typeof option === 'object') {
-        pushOption(option.value ?? option.label ?? '', option.label)
-      } else if (typeof option === 'boolean') {
-        pushOption(option ? 'true' : 'false', undefined)
-      } else {
-        pushOption(option, undefined)
-      }
-    }
-
-    return normalized
-  }
-
-  if (facet.type === 'date-range') {
-    return facet.options || []
-  }
-
-  if (dynamic.length) {
-    return dynamic
-  const baseOptions = dynamic.length ? dynamic : facet.options || []
-
-  if (!isCascadeField(field)) {
-    return baseOptions
-  }
-
-  return facet.options || []
-  const cascade = store.industryCascade || {}
-  const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
-
-  const selectedSectors = currentCascadeValues('industry_sector')
-  const selectedSubsectors = currentCascadeValues('industry_subsector')
-
-  let allowedValues = null
-
-  if (field === 'industry_sector') {
-    const sectorsFromGraph = Object.keys(sectorToSubsectors).length
-      ? Object.keys(sectorToSubsectors)
-      : Object.keys(sectorToSegments)
-
-    if (sectorsFromGraph.length) {
-      allowedValues = sectorsFromGraph
-    }
-  } else if (field === 'industry_subsector') {
-    const sectors = selectedSectors.length ? selectedSectors : Object.keys(sectorToSubsectors)
-    const aggregated = new Set()
-    for (const sector of sectors) {
-      for (const subsector of sectorToSubsectors[sector] || []) {
-        aggregated.add(subsector)
-      }
-    }
-    if (aggregated.size) {
-      allowedValues = Array.from(aggregated)
-    }
-  } else if (field === 'industry_segment') {
-    const aggregated = new Set()
-
-    if (selectedSubsectors.length) {
-      for (const subsector of selectedSubsectors) {
-        for (const segment of subsectorToSegments[subsector] || []) {
-          aggregated.add(segment)
-        }
-      }
-    } else if (selectedSectors.length) {
-      for (const sector of selectedSectors) {
-        for (const segment of sectorToSegments[sector] || []) {
-          aggregated.add(segment)
-        }
-      }
-    } else {
-      for (const key of Object.keys(subsectorToSegments)) {
-        for (const segment of subsectorToSegments[key] || []) {
-          aggregated.add(segment)
-        }
-      }
-    }
-
-    if (aggregated.size) {
-      allowedValues = Array.from(aggregated)
-    }
-  }
-
-  if (!allowedValues || !allowedValues.length) {
-    return baseOptions
-  }
-
-  const allowedSet = new Set(allowedValues.map((value) => String(value || '').trim()))
-
-  const normalized = baseOptions.map((option) => {
-    if (option && typeof option === 'object') {
-      const value = String(option.value ?? option.label ?? '').trim()
-      const label = option.label ?? value
-      return { value, label }
-    }
-    const value = String(option || '').trim()
-    return { value, label: value }
-  })
-
-  return normalized.filter((option) => allowedSet.has(String(option.value || '').trim()))
+<style scoped>
+.account-charts__controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-function facetLogical(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.logical) {
-    return draft.logical
-  }
-  return store.clauseByField[field]?.logical || 'AND'
+.account-charts__controls input {
+  flex: 1;
+  padding: 0.5rem;
 }
 
-function facetOperator(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.operator) {
-    return draft.operator
-  }
-  return store.clauseByField[field]?.condition?.operator || ''
+.account-charts__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
 }
 
-function facetValues(field) {
-  const draft = draftFacets.value[field]
-  if (draft && Array.isArray(draft.values)) {
-    return draft.values
-  }
-  return store.clauseByField[field]?.condition?.values || []
+.account-charts__grid section {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-
-function currentCascadeValues(field) {
-  const committed = store.clauseByField[field]?.condition?.values || []
-  const draft = draftFacets.value[field]?.values || []
-  const normalized = [...committed, ...draft]
-    .map((value) => String(value || '').trim())
-    .filter((value) => value.length)
-
-  const seen = new Set()
-  const result = []
-  for (const value of normalized) {
-    if (seen.has(value)) {
-      continue
-    }
-    seen.add(value)
-    result.push(value)
-  }
-  return result
-}
-
-function onFacetDraftChange({ field, logical, values, operator }) {
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: logical || 'AND',
-      operator: operator || '',
-      values: Array.isArray(values) ? [...values] : [],
-    },
-  }
-}
-
-function onFacetCommit({ field, logical, values, operator }) {
-  const finalLogical = logical || 'AND'
-  const finalValues = Array.isArray(values) ? [...values] : []
-  const finalOperator = operator || DEFAULT_OPERATOR
-
-  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
-
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: finalLogical,
-      operator: finalOperator,
-      values: [],
-    },
-presentation/frontend/src/store/companyStore.js
-+67
--0
-
-@@ -541,50 +541,56 @@ function parseTextToQuery(text) {
-    const parser = new QueryParser(tokens)
-    const ast = parser.parse()
-    if (!ast) {
-      return { clauses: [] }
-    }
-    const clauses = astToClauses(ast, 'AND')
-    return { clauses }
-  } catch (error) {
-    if (error instanceof ParseError) {
-      throw error
-    }
-    throw new ParseError('Não foi possível interpretar a consulta fornecida.')
-  }
-}
-
-export const useCompanyStore = defineStore('companyStore', {
-  state: () => ({
-    filterQuery: { clauses: [] },
-    queryText: '',
-    companies: [],
-    total: 0,
-    facets: {},
-    selectedItems: [],
-    isLoading: false,
-    error: null,
-
-    industryCascade: {
-      sectorToSubsectors: {},
-      sectorToSegments: {},
-      subsectorToSegments: {},
-    },
-  }),
-
-  getters: {
-    clauseByField(state) {
-      const map = {}
-      for (const clause of state.filterQuery.clauses || []) {
-        if (clause.condition && clause.condition.field) {
-          map[clause.condition.field] = clause
-        }
-      }
-      return map
-    },
-    selectedPairs(state) {
-      return (state.selectedItems || []).map(splitSelectionValue)
-    },
-  },
-
-  actions: {
-    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
-      const normalizedField = normalizeField(field) || field
-      const normalizedLogical = normalizeLogical(logical) || 'AND'
-      const normalizedValues = normalizeValues(values)
-      const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
-
-      const clauses = cloneClauses(this.filterQuery.clauses || [])
-@@ -623,81 +629,142 @@ export const useCompanyStore = defineStore('companyStore', {
-        return { ok: false, message }
-      }
-    },
-
-    resetFilters() {
-      this.filterQuery = { clauses: [] }
-      this.queryText = ''
-      this.selectedItems = []
-      this.loadCompanies()
-    },
-
-    setSelectedItems(values) {
-      const normalized = Array.isArray(values)
-        ? values.map((value) => String(value)).filter((value) => value.length)
-        : []
-      this.selectedItems = normalized
-    },
-
-    async loadCompanies() {
-      this.isLoading = true
-      this.error = null
-      try {
-        const payload = await searchCompanies(this.filterQuery)
-        this.companies = payload.items || []
-        this.total = payload.total || 0
-        this._rebuildIndustryCascade(this.companies)
-        this._pruneSelection()
-        if (!this.queryText) {
-          this.queryText = this.serializeQuery(this.filterQuery)
-        }
-      } catch (err) {
-        console.error(err)
-        this.error = 'Falha ao carregar companhias'
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    async loadFacets() {
-      try {
-        const payload = await fetchCompanyFacets()
-        this.facets = payload.facets || {}
-      } catch (err) {
-        console.error(err)
-      }
-    },
-
-    serializeQuery(query) {
-      if (!query || !Array.isArray(query.clauses) || query.clauses.length === 0) {
-        return ''
-      }
-      return serializeClauses(query.clauses)
-    },
-
-    parseQuery(text) {
-      if (!text || !text.trim()) {
-        return { clauses: [] }
-      }
-      return parseTextToQuery(text)
-    },
-
-    _rebuildIndustryCascade(items = []) {
-      const sectorToSubsectors = new Map()
-      const sectorToSegments = new Map()
-      const subsectorToSegments = new Map()
-
-      for (const company of items || []) {
-        const sector = (company.sector || '').trim()
-        const subsector = (company.subsector || '').trim()
-        const segment = (company.segment || '').trim()
-
-        if (!sector && !subsector && !segment) {
-          continue
-        }
-
-        if (sector) {
-          if (!sectorToSubsectors.has(sector)) {
-            sectorToSubsectors.set(sector, new Set())
-          }
-          if (!sectorToSegments.has(sector)) {
-            sectorToSegments.set(sector, new Set())
-          }
-        }
-
-        if (subsector) {
-          if (!subsectorToSegments.has(subsector)) {
-            subsectorToSegments.set(subsector, new Set())
-          }
-        }
-
-        if (sector && subsector) {
-          sectorToSubsectors.get(sector).add(subsector)
-        }
-
-        if (sector && segment) {
-          sectorToSegments.get(sector).add(segment)
-        }
-
-        if (subsector && segment) {
-          subsectorToSegments.get(subsector).add(segment)
-        }
-      }
-
-      const normalizeMap = (map) => {
-        const result = {}
-        for (const [key, set] of map.entries()) {
-          const values = Array.from(set).filter((value) => value && value.length)
-          if (values.length) {
-            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
-          }
-        }
-        return result
-      }
-
-      this.industryCascade = {
-        sectorToSubsectors: normalizeMap(sectorToSubsectors),
-        sectorToSegments: normalizeMap(sectorToSegments),
-        subsectorToSegments: normalizeMap(subsectorToSegments),
-      }
-    },
-
-    _pruneSelection() {
-      if (!this.selectedItems || this.selectedItems.length === 0) {
-        return
-      }
-      const valid = new Set()
-      for (const company of this.companies || []) {
-        const companyName = company.company_name || ''
-        for (const ticker of company.tickers || []) {
-          if (!ticker) continue
-          valid.add(buildSelectionValue(companyName, ticker))
-        }
-      }
-      const filtered = this.selectedItems.filter((value) => valid.has(value))
-      if (filtered.length !== this.selectedItems.length) {
-        this.selectedItems = filtered
-      }
-    },
-  },
-})
-
-export { ParseError }
+</style>

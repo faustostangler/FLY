@@ -49,10 +49,12 @@ const props = defineProps({
 
 const store = useChartStore()
 
+// valores do store (para compatibilidade com telas antigas que não passam props)
 const storeChart = computed(() => store.chart)
 const storeIsLoading = computed(() => store.isLoading)
 const storeError = computed(() => store.error)
 
+// resolução de fonte: se a prop vier, usa a prop; caso contrário, usa o store
 const resolvedChart = computed(() =>
   props.chart !== null ? props.chart : storeChart.value,
 )
@@ -64,7 +66,9 @@ const resolvedIsLoading = computed(() =>
 )
 
 const resolvedError = computed(() =>
-  typeof props.error === 'string' ? props.error : storeError.value,
+  typeof props.error === 'string'
+    ? props.error
+    : storeError.value,
 )
 
 const resolvedAriaLabel = computed(() => {
