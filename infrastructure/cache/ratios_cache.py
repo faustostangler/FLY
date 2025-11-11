@@ -95,12 +95,29 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         Persiste o DataFrame em Parquet com flush/fsync atômico e grava metadados.
         Atualiza acessos e executa políticas de invalidação/evicção.
         """
+        # Caminho final (.parquet) e temporário (.tmp)
         file_path = self._build_file_path(context=context, company_name=company_name)
+        file_path = Path(file_path)  # defesa: garante Path
         temp_path = file_path.with_suffix(".tmp")
 
+        # Garante que o diretório pai do TEMP existe
+        parent_dir = temp_path.parent
+        parent_dir.mkdir(parents=True, exist_ok=True)
+
+        # Log defensivo de caminho
+        if self._logger:
+            self._logger.log(
+                f"[CacheRatiosAdapter.store] "
+                f"company={company_name!r} cache_key={context.cache_key} "
+                f"temp_path={temp_path} parent_exists={parent_dir.exists()}",
+                level="info",
+            )
+
         # Escrita atômica do payload
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(temp_path, compression=str(self._config.cache.parquet_compression))  # type: ignore[arg-type]
+        df.to_parquet(
+            temp_path,
+            compression=str(self._config.cache.parquet_compression),  # type: ignore[arg-type]
+        )
         with temp_path.open("rb+") as handle:
             handle.flush()
             os.fsync(handle.fileno())
@@ -145,7 +162,6 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
                     session.delete(stale)
             raise
 
-        # Pós-condições
         entry_dto = CacheRatiosEntryDTO(
             cache_key=context.cache_key,
             file_path=str(file_path),
@@ -156,7 +172,7 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
             code_hash=context.code_hash,
         )
 
-        # Políticas
+        # Políticas de manutenção
         self.invalidate_outdated(code_hash=context.code_hash)
         self._evict_cache_if_needed()
 
@@ -206,17 +222,23 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         session.delete(entry)
 
     def _build_file_path(self, *, context: CacheRatiosContextDTO, company_name: str) -> Path:
-        """Return a stable Parquet location within the cache directory hierarchy."""
+        """
+        Retorna um caminho simples para o Parquet dentro da hierarquia de cache.
+
+        Estrutura:
+
+            <cache_dir>/<empresa-normalizada>/<cache_key>.parquet
+
+        Onde:
+          - cache_dir vem de config.paths.cache_dir
+          - empresa-normalizada é o nome sanitizado da companhia
+          - cache_key garante unicidade por versão/filtros/etc.
+        """
+        base_dir = Path(self._config.paths.cache_dir)
 
         safe_company = self._sanitize_company_name(company_name)
-        version_segment = f"v{context.version}"
 
-        target_dir = (
-            self._config.paths.cache_dir
-            / context.logical_name
-            / version_segment
-            / safe_company
-        )
+        target_dir = base_dir / safe_company
         target_dir.mkdir(parents=True, exist_ok=True)
 
         return target_dir / f"{context.cache_key}.parquet"
