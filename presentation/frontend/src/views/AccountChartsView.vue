@@ -8,29 +8,13 @@
         <strong>{{ activeCompanyName }}</strong>
       </p>
       <p v-else class="muted">
-        Nenhuma companhia selecionada. Utilize os filtros na busca para escolher uma.
+        Nenhuma companhia selecionada. Utilize os filtros na Home para escolher uma.
       </p>
 
-      <div class="account-charts__controls">
-        <label class="account-charts__select">
-          Contas
-          <select multiple v-model="localAccounts">
-            <option value="02.03">02.03 – Patrimônio Líquido</option>
-            <option value="03.01">03.01 – Receita Líquida</option>
-            <option value="04.02">04.02 – EBITDA</option>
-            <option value="05.01">05.01 – Lucro Líquido</option>
-          </select>
-        </label>
-
-        <button
-          type="button"
-          class="account-charts__button"
-          @click="onReload"
-          :disabled="!canReload"
-        >
-          Carregar gráficos
-        </button>
-      </div>
+      <p class="muted">
+        Exibindo automaticamente 4 contas principais:
+        02.03, 03.01, 04.02 e 05.01.
+      </p>
     </header>
 
     <main class="account-charts__body">
@@ -51,7 +35,7 @@
       />
 
       <div v-else class="muted">
-        Selecione uma companhia, escolha as contas desejadas e clique em “Carregar gráficos”.
+        Selecione uma companhia na Home. Os gráficos das 4 contas principais serão carregados automaticamente.
       </div>
     </main>
   </section>
@@ -85,16 +69,8 @@ const activeCompanyName = computed(() => {
   return pairs[0].company || ''
 })
 
-const localAccounts = ref(['02.03', '03.01'])
-
-// Permite recarregar apenas quando há companhia, contas selecionadas e nenhuma requisição pendente.
-const canReload = computed(() => {
-  return (
-    !!activeCompanyName.value &&
-    localAccounts.value.length > 0 &&
-    !chartsStore.isLoading
-  )
-})
+// 4 contas padrão
+const localAccounts = ref(['02.03', '03.01', '04.02', '05.01'])
 
 watch(
   activeCompanyName,
@@ -122,9 +98,17 @@ watch(
   { deep: true, immediate: true },
 )
 
-async function onReload() {
-  await chartsStore.loadChart()
-}
+watch(
+  [activeCompanyName, localAccounts, filterQuery],
+  async ([name, accounts]) => {
+    if (!name || !accounts.length || chartsStore.isLoading) {
+      return
+    }
+
+    await chartsStore.loadChart()
+  },
+  { deep: true, immediate: true },
+)
 </script>
 
 <style scoped>
@@ -137,41 +121,6 @@ async function onReload() {
 .account-charts__header {
   display: grid;
   gap: 0.75rem;
-}
-
-.account-charts__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-}
-
-.account-charts__select {
-  display: grid;
-  gap: 0.5rem;
-  font-weight: 600;
-}
-
-.account-charts__select select {
-  min-width: 220px;
-  min-height: 96px;
-  padding: 0.5rem;
-  border: 1px solid #cbd5f5;
-  border-radius: 4px;
-}
-
-.account-charts__button {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #2563eb;
-  color: #fff;
-  cursor: pointer;
-}
-
-.account-charts__button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .account-charts__body {
