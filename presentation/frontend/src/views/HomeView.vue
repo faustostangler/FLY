@@ -31,6 +31,17 @@
             </tr>
           </tbody>
         </table>
+
+        <div class="home__selected-actions-bar">
+          <button
+            type="button"
+            class="home__charts-button"
+            @click="onVisualizarGraficos"
+            :disabled="!selectedPairs.length"
+          >
+            Visualizar Gráficos
+          </button>
+        </div>
       </section>
 
       <section
@@ -42,7 +53,7 @@
         <AccountChartsView v-if="selectedPairs.length" />
 
         <p v-else class="home__charts-empty">
-          Selecione uma companhia na busca para ver os gráficos.
+          Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
         </p>
       </section>
     </section>
@@ -58,16 +69,24 @@ import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
 import AccountChartsView from './AccountChartsView.vue'
 
 import { useCompanyStore } from '../store/companyStore'
+import { useAccountChartsStore } from '../store/accountChartsStore'
 
 const title = ref('Dashboard de Indicadores')
 
 const companyStore = useCompanyStore()
+const chartsStore = useAccountChartsStore()
 const { selectedPairs: selectedPairsRef } = storeToRefs(companyStore)
 
 const selectedPairs = computed(() => {
   const pairs = selectedPairsRef.value
   return Array.isArray(pairs) ? pairs : []
 })
+
+const onVisualizarGraficos = () => {
+  chartsStore.setCompanies(selectedPairs.value)
+  chartsStore.setSelectedAccounts(['02.03', '03.01'])
+  chartsStore.loadCharts()
+}
 </script>
 
 <style scoped>
@@ -121,5 +140,31 @@ const selectedPairs = computed(() => {
 
 .home__charts-empty {
   color: #64748b;
+}
+
+.home__selected-actions-bar {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.home__charts-button {
+  padding: 0.75rem 1.5rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.home__charts-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.home__charts-button:not(:disabled):hover {
+  background: #1d4ed8;
 }
 </style>

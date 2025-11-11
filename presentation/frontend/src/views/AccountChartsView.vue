@@ -1,50 +1,65 @@
+<!-- presentation/frontend/src/views/AccountChartsView.vue -->
 <template>
   <section class="account-charts">
     <header class="account-charts__header">
       <h2>Gráficos de ratios por empresa</h2>
 
-      <p v-if="activeCompanyName">
-        Companhia selecionada:
-        <strong>{{ activeCompanyName }}</strong>
+      <p v-if="companies.length">
+        Companhias selecionadas:
+        <strong>
+          {{ companies.map((c) => `${c.company} (${c.ticker})`).join(' · ') }}
+        </strong>
       </p>
       <p v-else class="muted">
-        Nenhuma companhia selecionada. Utilize os filtros na Home para escolher uma.
+        Nenhuma companhia selecionada. Use a Home para escolher e clique em
+        “Visualizar Gráficos”.
       </p>
 
       <p class="muted">
-        Exibindo automaticamente 4 contas principais:
-        02.03, 03.01, 04.02 e 05.01.
+        Exibindo as contas:
+        {{ selectedAccounts.join(', ') }}.
       </p>
     </header>
 
     <main class="account-charts__body">
       <div v-if="chartsStore.isLoading" role="status" aria-live="polite">
-        Carregando gráficos de ratios...
+        Carregando gráficos...
       </div>
 
       <div v-else-if="chartsStore.error" role="alert">
         {{ chartsStore.error }}
       </div>
 
-      <PlotlyViewer
-        v-else-if="chartsStore.chart"
-        :chart="chartsStore.chart"
-        :isLoading="chartsStore.isLoading"
-        :error="chartsStore.error"
-        aria-label="Gráfico de séries de ratios da empresa selecionada"
-      />
+      <div v-else-if="hasCharts">
+        <section
+          v-for="accountCode in selectedAccounts"
+          :key="accountCode"
+          class="account-charts__chart-block"
+        >
+          <h3 class="account-charts__chart-title">
+            Conta {{ accountCode }}
+          </h3>
+
+          <PlotlyViewer
+            :chart="chartsStore.chartsByAccount[accountCode]"
+            :isLoading="chartsStore.isLoading"
+            :error="chartsStore.error"
+            :aria-label="`Gráfico da conta ${accountCode} para as companhias selecionadas`"
+          />
+        </section>
+      </div>
 
       <div v-else class="muted">
-        Selecione uma companhia na Home. Os gráficos das 4 contas principais serão carregados automaticamente.
+        Selecione companhias na Home e clique em “Visualizar Gráficos” para
+        carregar os dados.
       </div>
     </main>
   </section>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRoute } from 'vue-router'
 
 import PlotlyViewer from '../components/PlotlyViewer.vue'
 import { useAccountChartsStore } from '../store/accountChartsStore'
@@ -52,35 +67,11 @@ import { useCompanyStore } from '../store/companyStore'
 
 const chartsStore = useAccountChartsStore()
 const companyStore = useCompanyStore()
-const route = useRoute()
 
-const { selectedPairs, filterQuery } = storeToRefs(companyStore)
+const { filterQuery } = storeToRefs(companyStore)
+const { companies, selectedAccounts } = storeToRefs(chartsStore)
 
-const activeCompanyName = computed(() => {
-  const fromRoute = route.query.company
-  if (typeof fromRoute === 'string' && fromRoute.trim().length > 0) {
-    return fromRoute.trim()
-  }
-
-  const pairs = selectedPairs.value || []
-  if (!pairs.length) {
-    return ''
-  }
-  return pairs[0].company || ''
-})
-
-// 4 contas padrão
-const localAccounts = ref(['02.03', '03.01', '04.02', '05.01'])
-
-watch(
-  activeCompanyName,
-  (name) => {
-    chartsStore.setCompanyName(name)
-    chartsStore.resetChart()
-  },
-  { immediate: true },
-)
-
+// Mantém o filtro estruturado sincronizado com a CompanyStore
 watch(
   filterQuery,
   (query) => {
@@ -89,26 +80,16 @@ watch(
   { deep: true, immediate: true },
 )
 
-watch(
-  localAccounts,
-  (accounts) => {
-    chartsStore.setSelectedAccounts(accounts)
-    chartsStore.resetChart()
-  },
-  { deep: true, immediate: true },
-)
+// Caso ninguém tenha setado contas ainda, usa defaults
+const defaultAccounts = ['02.03', '03.01']
+if (!selectedAccounts.value.length) {
+  chartsStore.setSelectedAccounts(defaultAccounts)
+}
 
-watch(
-  [activeCompanyName, localAccounts, filterQuery],
-  async ([name, accounts]) => {
-    if (!name || !accounts.length || chartsStore.isLoading) {
-      return
-    }
-
-    await chartsStore.loadChart()
-  },
-  { deep: true, immediate: true },
-)
+const hasCharts = computed(() => {
+  const charts = chartsStore.chartsByAccount || {}
+  return Object.keys(charts).length > 0
+})
 </script>
 
 <style scoped>
@@ -127,9 +108,17 @@ watch(
   min-height: 280px;
 }
 
+.account-charts__chart-block {
+  margin-bottom: 2rem;
+}
+
+.account-charts__chart-title {
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
 .muted {
   color: #64748b;
   font-size: 0.95rem;
 }
 </style>
-
