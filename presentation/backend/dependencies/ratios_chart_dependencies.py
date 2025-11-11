@@ -14,7 +14,7 @@ from infrastructure.repositories.repository_company_eligible import (
 )
 from infrastructure.repositories.repository_indicators import RepositoryIndicators
 from infrastructure.repositories.repository_statements_fetched import (
-    RepositoryStatementsFetched,
+    StatementFetchedRepository,
 )
 from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
 from infrastructure.uow.uow import UowFactory
@@ -28,7 +28,7 @@ def get_company_ratios_frame_usecase() -> GetCompanyRatiosFrameUseCase:
 
     repository_company = RepositoryCompanyEligible(config=config, logger=logger)
     repository_indicators = RepositoryIndicators(config=config, logger=logger)
-    repository_statements = RepositoryStatementsFetched(config=config, logger=logger)
+    repository_statements = StatementFetchedRepository(config=config, logger=logger)
     repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
 
     uow_factory = UowFactory(session_factory=repository_company.Session)
