@@ -19,7 +19,6 @@
             <tr>
               <th scope="col">Companhia</th>
               <th scope="col">Ticker</th>
-              <th scope="col" class="home__selected-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -29,15 +28,6 @@
             >
               <td>{{ pair.company }}</td>
               <td>{{ pair.ticker }}</td>
-              <td class="home__selected-actions">
-                <button
-                  type="button"
-                  class="home__charts-button"
-                  @click="viewAccountCharts(pair)"
-                >
-                  Ver gráficos de ratios
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -48,9 +38,12 @@
         aria-labelledby="chart-results-heading"
       >
         <h2 id="chart-results-heading">Resultados</h2>
-        <h3>Preço</h3>
 
-        <PlotlyViewer />
+        <AccountChartsView v-if="selectedPairs.length" />
+
+        <p v-else class="home__charts-empty">
+          Selecione uma companhia na busca para ver os gráficos.
+        </p>
       </section>
     </section>
   </main>
@@ -59,15 +52,15 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
-import PlotlyViewer from '../components/PlotlyViewer.vue'
+
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
+import AccountChartsView from './AccountChartsView.vue'
+
 import { useCompanyStore } from '../store/companyStore'
 
 const title = ref('Dashboard de Indicadores')
 
-const router = useRouter()
 const companyStore = useCompanyStore()
 const { selectedPairs: selectedPairsRef } = storeToRefs(companyStore)
 
@@ -75,20 +68,6 @@ const selectedPairs = computed(() => {
   const pairs = selectedPairsRef.value
   return Array.isArray(pairs) ? pairs : []
 })
-
-function viewAccountCharts(pair) {
-  const company = String(pair?.company || '').trim()
-  if (!company) {
-    return
-  }
-
-  router.push({
-    name: 'account-charts',
-    query: {
-      company,
-    },
-  })
-}
 </script>
 
 <style scoped>
@@ -140,26 +119,7 @@ function viewAccountCharts(pair) {
   border-bottom: none;
 }
 
-.home__charts-button {
-  padding: 0.5rem 1rem;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.home__charts-button:hover,
-.home__charts-button:focus-visible {
-  background: #1d4ed8;
-}
-
-.home__charts-button:focus-visible {
-  outline: 2px solid #1d4ed8;
-  outline-offset: 2px;
-}
-
-.home__selected-actions {
-  text-align: right;
+.home__charts-empty {
+  color: #64748b;
 }
 </style>
