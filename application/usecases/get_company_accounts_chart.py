@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -12,10 +12,63 @@ from domain import DomainError
 from domain.value_objects import SearchFilterTree
 
 
+def extract_account_code(col_name: str) -> str:
+    """
+    Extrai o código da conta do nome completo da coluna.
+
+    Exemplos:
+        '03.01 - Receita de Venda de Bens e/ou Serviços - ...' -> '03.01'
+        '99.3.adj_close - stock_3' -> '99.3.adj_close'
+        'company_name' -> 'company_name'
+    """
+    text = str(col_name).strip()
+
+    # Se tiver padrão ' - ', usa tudo que vem antes
+    if " - " in text:
+        return text.split(" - ", 1)[0].strip()
+
+    # Senão, pega até o primeiro espaço
+    return text.split(" ", 1)[0].strip()
+
+
 @dataclass
 class GetCompanyAccountsChartUseCase:
     ratios_frame_usecase: GetCompanyRatiosFrameUseCase
     account_labels: Optional[dict[str, str]] = None
+
+    def _resolve_accounts(
+        self,
+        *,
+        df: pd.DataFrame,
+        requested: Iterable[str],
+    ) -> Tuple[List[str], List[str]]:
+        """
+        Mapeia códigos pedidos ('02.03', '03.01', '03.11', '99.3.adj_close')
+        para os nomes reais das colunas do DataFrame.
+
+        Retorna:
+          - resolved: lista de nomes de colunas reais no df
+          - missing: lista de códigos que não foram encontrados
+        """
+        # Mapa: '03.01' -> '03.01 - Receita de Venda de Bens e/ou Serviços - ...'
+        code_to_column: dict[str, str] = {}
+
+        for col in df.columns:
+            code = extract_account_code(str(col))
+            code_to_column[code] = col
+
+        resolved: List[str] = []
+        missing: List[str] = []
+
+        for acc in requested:
+            acc_code = acc.strip()
+            col_name = code_to_column.get(acc_code)
+            if col_name is None:
+                missing.append(acc_code)
+            else:
+                resolved.append(col_name)
+
+        return resolved, missing
 
     def __call__(
         self,
@@ -53,9 +106,26 @@ class GetCompanyAccountsChartUseCase:
             )
 
         df = self._ensure_datetime_index(df)
-        df_selected = self._select_accounts(df, account_codes, ratios_frame.company_name)
-        series = self._build_series(df_selected, ratios_frame)
 
+        # accounts vem do payload do frontend, ex.: ['02.03', '03.01', '03.11']
+        requested_accounts: List[str] = list(account_codes or [])
+
+        # Resolve '02.03', '03.01', '03.11', '99.3.adj_close' para nomes reais de coluna
+        resolved_cols, missing = self._resolve_accounts(
+            df=df,
+            requested=requested_accounts,
+        )
+
+        if missing:
+            raise DomainError(
+                f"As seguintes contas não foram encontradas para "
+                f"'{ratios_frame.company_name}': {missing}."
+            )
+
+        # Seleciona apenas as colunas resolvidas e ordena pelo índice de data
+        df_selected = self._select_accounts(df, resolved_cols)
+
+        series = self._build_series(df_selected, ratios_frame)
         meta = dict(ratios_frame.meta)
 
         return CompanyAccountsSeriesDTO(
@@ -65,6 +135,16 @@ class GetCompanyAccountsChartUseCase:
             cache_info=ratios_frame.cache_info,
             meta=meta,
         )
+
+    def _select_accounts(
+        self,
+        df: pd.DataFrame,
+        columns: Sequence[str],
+    ) -> pd.DataFrame:
+        """
+        Seleciona as colunas já resolvidas e ordena pelo índice de data.
+        """
+        return df.loc[:, list(columns)].sort_index()
 
     def _ensure_datetime_index(self, df: pd.DataFrame) -> pd.DataFrame:
         if isinstance(df.index, (pd.DatetimeIndex, pd.PeriodIndex)):
@@ -78,19 +158,6 @@ class GetCompanyAccountsChartUseCase:
             df.index = pd.to_datetime(df.index, errors="coerce")
         df.sort_index(inplace=True)
         return df
-
-    def _select_accounts(
-        self,
-        df: pd.DataFrame,
-        accounts: Sequence[str],
-        company_name: str,
-    ) -> pd.DataFrame:
-        missing = [code for code in accounts if code not in df.columns]
-        if missing:
-            raise DomainError(
-                f"As seguintes contas não foram encontradas para '{company_name}': {missing}."
-            )
-        return df.loc[:, list(accounts)].sort_index()
 
     def _build_series(
         self,
