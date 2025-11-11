@@ -17,7 +17,8 @@ const routes = [
   },
   {
     path: '/charts/accounts',
-    name: 'accountCharts',
+    // Keep this name in sync with views that navigate to the account charts page.
+    name: 'account-charts',
     component: AccountChartsView,
   },
 ]

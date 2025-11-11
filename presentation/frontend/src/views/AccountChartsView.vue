@@ -60,6 +60,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRoute } from 'vue-router'
 
 import PlotlyViewer from '../components/PlotlyViewer.vue'
 import { useAccountChartsStore } from '../store/accountChartsStore'
@@ -67,10 +68,16 @@ import { useCompanyStore } from '../store/companyStore'
 
 const chartsStore = useAccountChartsStore()
 const companyStore = useCompanyStore()
+const route = useRoute()
 
 const { selectedPairs, filterQuery } = storeToRefs(companyStore)
 
 const activeCompanyName = computed(() => {
+  const fromRoute = route.query.company
+  if (typeof fromRoute === 'string' && fromRoute.trim().length > 0) {
+    return fromRoute.trim()
+  }
+
   const pairs = selectedPairs.value || []
   if (!pairs.length) {
     return ''
@@ -80,8 +87,13 @@ const activeCompanyName = computed(() => {
 
 const localAccounts = ref(['02.03', '03.01'])
 
+// Permite recarregar apenas quando há companhia, contas selecionadas e nenhuma requisição pendente.
 const canReload = computed(() => {
-  return Boolean(activeCompanyName.value && localAccounts.value.length && !chartsStore.isLoading)
+  return (
+    !!activeCompanyName.value &&
+    localAccounts.value.length > 0 &&
+    !chartsStore.isLoading
+  )
 })
 
 watch(
