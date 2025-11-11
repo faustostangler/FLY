@@ -9,6 +9,7 @@ from .company_filters import (
     CompanyFilterQuery,
 )
 from .account_code import AccountCode
+from .search_filter_tree import SearchFilterTree
 
 __all__ = [
     "CompanyField",
@@ -18,4 +19,5 @@ __all__ = [
     "CompanyFilterClause",
     "CompanyFilterQuery",
     "AccountCode",
+    "SearchFilterTree",
 ]

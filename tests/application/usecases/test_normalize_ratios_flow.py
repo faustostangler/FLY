@@ -118,8 +118,9 @@ class FakeCacheRatiosService:
         indicators,
         compute_fn,
         code_hash: str,
+        filters=None,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
-        del quotes, statements, indicators, compute_fn
+        del quotes, statements, indicators, compute_fn, filters
         self.calls.append(company_name)
         entry = CacheRatiosEntryDTO(
             cache_key=f"{company_name}-cache",

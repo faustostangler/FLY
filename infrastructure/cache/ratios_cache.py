@@ -206,12 +206,19 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         session.delete(entry)
 
     def _build_file_path(self, *, context: CacheRatiosContextDTO, company_name: str) -> Path:
-        """
-        Constrói caminho estável: <cache_dir>/<logical_name>/v<version>/<company>/<cache_key>.parquet
-        """
-        # safe_company = self._sanitize_company_name(company_name)
-        # version_segment = f"v{context.version}"
-        target_dir = self._config.paths.cache_dir # / context.logical_name / version_segment / safe_company
+        """Return a stable Parquet location within the cache directory hierarchy."""
+
+        safe_company = self._sanitize_company_name(company_name)
+        version_segment = f"v{context.version}"
+
+        target_dir = (
+            self._config.paths.cache_dir
+            / context.logical_name
+            / version_segment
+            / safe_company
+        )
+        target_dir.mkdir(parents=True, exist_ok=True)
+
         return target_dir / f"{context.cache_key}.parquet"
 
     def _sanitize_company_name(self, company_name: str) -> str:

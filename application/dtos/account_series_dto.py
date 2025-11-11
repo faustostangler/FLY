@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
-from typing import List
+from datetime import date, datetime
+from typing import List, Optional, Union
+
+DateLike = Union[date, datetime]
 
 
-@dataclass
+@dataclass(frozen=True)
 class AccountSeriesPointDTO:
-    date: date
-    value: float
+    date: DateLike
+    value: Optional[float]
 
 
-@dataclass
+@dataclass(frozen=True)
 class AccountSeriesDTO:
-    ticker: str
+    ticker: Optional[str]
     account_code: str
     label: str
     points: List[AccountSeriesPointDTO]

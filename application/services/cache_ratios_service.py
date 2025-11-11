@@ -11,6 +11,7 @@ import pandas as pd
 from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
 from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.value_objects import SearchFilterTree
 
 
 class CacheRatiosService:
@@ -72,6 +73,7 @@ class CacheRatiosService:
         indicators: Mapping[str, pd.DataFrame] | None,
         compute_fn: Callable[[], pd.DataFrame],
         code_hash: str,
+        filters: SearchFilterTree | None = None,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         """Return cached ratios or compute and persist them when absent"""
         context = CacheRatiosContextDTO(
@@ -81,6 +83,7 @@ class CacheRatiosService:
             statements_hash=self._hash_mapping(statements),
             indicators_hash=self._hash_mapping(indicators),
             code_hash=code_hash,
+            filters_hash=self._hash_filters(filters),
         )
         cache_key = context.cache_key
 
@@ -148,6 +151,12 @@ class CacheRatiosService:
 
         hashed = pd.util.hash_pandas_object(normalized, index=True).values.tobytes()
         return hashlib.sha256(hashed).hexdigest()
+
+    def _hash_filters(self, filters: SearchFilterTree | None) -> str:
+        if filters is None or filters.is_empty():
+            return self._empty_hash()
+
+        return filters.to_hash()
 
     @staticmethod
     def _empty_hash() -> str:

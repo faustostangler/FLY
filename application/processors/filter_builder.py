@@ -7,6 +7,21 @@ from domain.utils.specs import And, Or, Not, Cmp, StrMatch, NullCheck, ListAny, 
 @dataclass(frozen=True)
 class FilterBuilder:
     '''
+    Exemplo de estrutura de árvore aceita::
+
+        {
+            "and": [
+                {"status": "ATIVO"},
+                {
+                    "or": [
+                        {"has_bdr": True},
+                        {"market": {"in": ["NM"]}},
+                    ]
+                },
+                {"listing_date": {">=": "2020-01-01"}},
+            ]
+        }
+
     Operadores aceitos pelo FilterBuilder (um por linha):
 
     # Lógicos (estrutura da árvore)
