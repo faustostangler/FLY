@@ -25,6 +25,21 @@ from domain.ports.repository_statements_fetched_port import (
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from application.utils.ratios_pipeline import (
+    load_indicators as pipeline_load_indicators,
+    load_statements as pipeline_load_statements,
+    load_quotes as pipeline_load_quotes,
+    treat_quotes as pipeline_treat_quotes,
+    treat_statements as pipeline_treat_statements,
+    treat_indicators as pipeline_treat_indicators,
+    treat_data as pipeline_treat_data,
+    create_ratios as pipeline_create_ratios,
+    _create_calendar as pipeline_create_calendar,
+    _get_stock_calendar as pipeline_get_stock_calendar,
+    _create_daily_calendar as pipeline_create_daily_calendar,
+    _resample_series as pipeline_resample_series,
+    _infer_granularity as pipeline_infer_granularity,
+)
 
 
 class NormalizeUseCase:
@@ -66,7 +81,7 @@ class NormalizeUseCase:
                 logical_name=self.config.fly_settings.app_name,
                 version=self.config.fly_settings.version
                 )
-        self._ratios_code_hash = CacheRatiosService.build_code_hash([self._create_ratios, intel,])
+        self._ratios_code_hash = CacheRatiosService.build_code_hash([pipeline_create_ratios, intel,])
 
         self.uow_factory = uow_factory
         self.worker_pool = worker_pool
@@ -134,6 +149,7 @@ class NormalizeUseCase:
                                 indicators=company_data.get("indicators"),
                                 compute_fn=lambda: self._create_ratios(company_data),
                                 code_hash=self._ratios_code_hash,
+                                filters=None,
                             )
                             metrics_value = cache_result.entry.size_bytes
 
@@ -213,102 +229,21 @@ class NormalizeUseCase:
         return results
 
     def _load_indicators(self, uow: Uow) -> dict[str, pd.DataFrame]:
-        indicators: dict[str, pd.DataFrame] = {}
-
-        rows = self.repository_indicators.get_all(uow=uow)
-        if not rows:
-            return indicators
-
-        indicators_df = pd.DataFrame(rows)
-        indicators_df["date"] = pd.to_datetime(indicators_df["date"], errors="coerce")
-        indicators_df["value"] = pd.to_numeric(indicators_df["value"], errors="coerce")
-        indicators_df.sort_values(["code", "name", "date"], inplace=True)
-        indicators_df = indicators_df.dropna(subset=["date"]).reset_index(drop=True)
-
-        for (source, code), group in indicators_df.groupby(["source", "code"]):
-            pivot = (
-                group.pivot_table(
-                    index="date",
-                    columns="name",
-                    values="value",
-                    aggfunc="last",
-                )
-                .sort_index()
-                .reset_index()
-            )
-            indicators[str(code)] = pivot
-
-        return indicators
+        return pipeline_load_indicators(self.repository_indicators, uow=uow)
 
     def _load_statements(self, company_name:str, uow: Uow) -> dict[str, pd.DataFrame]:
-        statements_df = {}
-        rows = self.repository_statements_fetched.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-        if not rows:
-            return statements_df
-
-        def _build_set(df: pd.DataFrame, use_other: bool, df_other: pd.DataFrame) -> pd.DataFrame:
-            if df is None or df.empty:
-                return pd.DataFrame()
-            parts = [df]
-            if use_other and df_other is not None and not df_other.empty:
-                parts.append(df_other)
-            out = pd.concat(parts, ignore_index=True)
-            return out.sort_values(["quarter", "account"], kind="mergesort").reset_index(drop=True)
-
-        statements = pd.DataFrame(rows)
-        statements["quarter"] = pd.to_datetime(statements["quarter"], errors="coerce")
-        statements["value"] = pd.to_numeric(statements["value"], errors="coerce")
-        statements["version_numeric"] = pd.to_numeric(statements["version"], errors="coerce").fillna(-1)
-        statements.sort_values(["company_name", "quarter", "version_numeric"], inplace=True)
-        df = statements.dropna(subset=["quarter"]).reset_index(drop=True)
-
-        mask = df["version_numeric"] == df.groupby("quarter")["version_numeric"].transform("max")
-        df = df[mask].reset_index(drop=True)
-
-        if "grupo" not in df.columns:
-            raise ValueError("coluna 'grupo' ausente")
-
-        df_ind0 = df[df["grupo"] == "DFs Individuais"]
-        df_con0 = df[df["grupo"] == "DFs Consolidadas"]
-        df_other = df[~df["grupo"].isin(["DFs Individuais", "DFs Consolidadas"])].drop(columns=[], errors="ignore")
-
-        has_ind = not df_ind0.empty
-        has_con = not df_con0.empty
-        has_other = not df_other.empty
-
-        if has_con:
-            statements_df['statements'] = _build_set(df_con0, has_other and has_con, df_other)
-        else:
-            statements_df['statements'] = _build_set(df_ind0, has_other and has_ind, df_other)
-
-        if has_con:
-            statements_df['df_consolidadas'] = _build_set(df_con0, has_other and has_con, df_other)
-        if has_ind:
-            statements_df['df_individuais'] = _build_set(df_ind0, has_other and has_ind, df_other)
-
-        return statements_df
+        return pipeline_load_statements(
+            self.repository_statements_fetched,
+            company_name,
+            uow=uow,
+        )
 
     def _load_quotes(self, ticker_codes: List, uow: Uow) -> dict[str, pd.DataFrame]:
-        quotes_df = {}
-        for ticker in ticker_codes:
-            rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker)], uow=uow)
-            if not rows:
-                continue
-
-            quotes = pd.DataFrame(rows)
-            quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
-            numeric_cols = ["open", "low", "high", "close", "adj_close", "volume"]
-            for col in numeric_cols:
-                quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
-            quotes.sort_values(["ticker", "date"], inplace=True)
-
-
-            m = re.search(r'\d+$', ticker)
-            digit = m.group() if m else ""
-            key = f"stock_{digit}" if digit else f"stock_{len(quotes_df)+1}"
-            quotes_df[key] = quotes.dropna(subset=["date"]).reset_index(drop=True)
-
-        return quotes_df
+        return pipeline_load_quotes(
+            self.repository_stock_quote,
+            ticker_codes,
+            uow=uow,
+        )
 
     def _treat_quotes(self, q: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
 
@@ -592,105 +527,8 @@ class NormalizeUseCase:
         return df_data
 
     def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]], aggregate_method:str="last") -> dict[str, dict[str, pd.DataFrame]]:
-        cutoff:datetime = datetime(year=2010, month=12, day=31)
-        g_map:dict[str, str] = {'day': 'D', 'month': 'ME', 'quarter': 'QE', 'year': 'Y'}
-        granularity = g_map['day']
-        calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method=aggregate_method)
-
-        data_treated = {}
-        for k, d in data.items():
-            k = "quotes"
-            data_treated[k] = {}
-            for stock_quote, df_stock_quote in data[k].items():
-                df_stock_quote = df_stock_quote.set_index('date')
-                resampled = self._resample_series(df_stock_quote, calendar, aggregate_method=aggregate_method)
-                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
-
-            k = "statements"
-            data_treated[k] = {}
-            if data[k]:
-                for statement, df_statement in data[k].items():
-                    data_treated[k][statement] = self._treat_statements(df_statement, calendar)
-            else:
-                data_treated[k] = []
-
-            k = "indicators"
-            data_treated[k] = {}
-            if data[k]:
-                for indicator, df_indicator in data[k].items():
-                    data_treated[k][indicator] = self._treat_indicators(df_indicator, calendar)
-            else:
-                data_treated[k] = []
-
-        return data_treated
+        return pipeline_treat_data(data, aggregate_method=aggregate_method)
 
     def _create_ratios(self, c: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
-        ''' Description'''
-        source_df = c['statements']['statements'].copy()
-        ratios_df = source_df.copy()
-
-        quotes: dict[str, pd.DataFrame] = c.get("quotes", {}) or {}
-
-        stock_keys = [k for k in quotes.keys() if str(k).startswith('stock_')]
-        stock_keys.sort(key=lambda x: int(str(x).split('_', 1)[1]) if '_' in str(x) else float('inf'))
-
-        ignore_stock_keys_cols = ['id', 'date', 'company_name', 'ticker']
-        frames = []
-
-        for i, qkey in enumerate(stock_keys):
-            try:
-                suffix = qkey.split("_", 1)[1]           # '3', '4', ...
-                code = f"99.{suffix}"
-            except Exception:
-                code = f"99.{i+3}"
-
-            dfq = quotes.get(qkey)
-            if dfq is None or dfq.empty:
-                continue
-
-            dfq = dfq.loc[:, [c for c in dfq.columns if c not in ignore_stock_keys_cols]].copy()
-            if dfq.empty:
-                continue
-
-            dfq.columns = [f"{code}.{c} - {qkey}" for c in dfq.columns]
-            frames.append(dfq)
-
-        if frames:
-            price_df = pd.concat(frames, axis=1)
-            source_df = source_df.join(price_df, how='left')
-            ratios_df = ratios_df.join(price_df, how="left")
-
-        account_long_map = {c: c.split(" - ")[0] for c in source_df.columns if " - " in c}
-        calculate_df = source_df.rename(columns=account_long_map).copy()
-
-        indicator_names = [
-            name
-            for name in dir(intel)
-            if name.startswith('indicators_')
-            and isinstance(getattr(intel, name), list)
-            ]
-        indicator_names.sort()
-
-        for name in indicator_names:
-            ratios_df = ratios_df.copy()
-            calculate_df = calculate_df.copy()
-            indicators_list = getattr(intel, name)
-            for indicator in indicators_list:
-                account_name = indicator["account"]
-                description  = indicator["description"]
-                formula_obj  = indicator["formula"]
-                col_out = f"{account_name} - {description}"
-                try:
-                    series_value = formula_obj(calculate_df)
-                    ratios_df[col_out] = series_value
-                    calculate_df[account_name] = series_value   # persiste para loops
-                except KeyError:
-                    ratios_df[col_out] = np.nan
-                    calculate_df[account_name] = np.nan   # persiste para loops
-
-        if isinstance(ratios_df.index, pd.MultiIndex):
-            ratios_df = ratios_df.reset_index(drop=False)  # transforma níveis do índice em colunas
-            ratios_df = ratios_df.set_index("date").sort_index()
-
-        return ratios_df.fillna(0)
+        return pipeline_create_ratios(c)
 
