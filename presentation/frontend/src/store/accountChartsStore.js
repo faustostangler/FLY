@@ -1,77 +1,63 @@
 import { defineStore } from 'pinia'
-import { fetchAccountLineChart } from '../services/apiService'
+import { fetchCompanyRatiosChart } from '../services/apiService'
+import { buildChartFilterTree } from '../utils/chartFilters'
 
 export const useAccountChartsStore = defineStore('accountCharts', {
   state: () => ({
-    ticker: '',
-    charts: {
-      '02.03': null,
-      '03.01': null,
-    },
-    isLoading: {
-      '02.03': false,
-      '03.01': false,
-    },
-    error: {
-      '02.03': '',
-      '03.01': '',
-    },
+    companyName: '',
+    selectedAccounts: [],
+    filterTree: null,
+    chart: null,
+    isLoading: false,
+    error: null,
   }),
   actions: {
-    setTicker(ticker) {
-      this.ticker = String(ticker || '').trim()
+    setCompanyName(name) {
+      this.companyName = String(name || '').trim()
     },
-
-    _ensureKeys(code) {
-      if (!(code in this.charts)) {
-        this.charts = { ...this.charts, [code]: null }
-      }
-      if (!(code in this.isLoading)) {
-        this.isLoading = { ...this.isLoading, [code]: false }
-      }
-      if (!(code in this.error)) {
-        this.error = { ...this.error, [code]: '' }
-      }
+    setSelectedAccounts(accounts) {
+      this.selectedAccounts = Array.isArray(accounts)
+        ? accounts.map((code) => String(code || '').trim()).filter(Boolean)
+        : []
     },
-
-    async loadAccountChart(accountCode, params = {}) {
-      const code = String(accountCode || '').trim()
-      if (!code) {
+    setFilterFromFilterQuery(filterQuery) {
+      this.filterTree = buildChartFilterTree(filterQuery)
+    },
+    resetChart() {
+      this.chart = null
+      this.error = null
+    },
+    async loadChart() {
+      if (!this.companyName) {
+        this.error = 'Selecione uma companhia antes de carregar o gráfico'
+        this.chart = null
+        return
+      }
+      if (!this.selectedAccounts.length) {
+        this.error = 'Selecione ao menos uma conta'
+        this.chart = null
         return
       }
 
-      this._ensureKeys(code)
-
-      if (!this.ticker) {
-        this.error = {
-          ...this.error,
-          [code]: 'Ticker e código da conta são obrigatórios',
-        }
-        return
-      }
-
-      this.isLoading = { ...this.isLoading, [code]: true }
-      this.error = { ...this.error, [code]: '' }
+      this.isLoading = true
+      this.error = null
 
       try {
-        const chart = await fetchAccountLineChart(this.ticker, code, params)
-        this.charts = { ...this.charts, [code]: chart }
+        const chart = await fetchCompanyRatiosChart(
+          this.companyName,
+          this.selectedAccounts,
+          this.filterTree,
+        )
+        this.chart = chart
       } catch (err) {
         console.error(err)
-        const message = err?.message || 'Falha ao carregar gráfico'
-        this.error = { ...this.error, [code]: message }
-        this.charts = { ...this.charts, [code]: null }
+        const message =
+          err?.response?.data?.detail || err?.message || 'Falha ao carregar gráfico de ratios'
+        this.error = message
+        this.chart = null
       } finally {
-        this.isLoading = { ...this.isLoading, [code]: false }
+        this.isLoading = false
       }
-    },
-
-    async loadMultipleAccounts(accountCodes, params = {}) {
-      const codes = (accountCodes || [])
-        .map(code => String(code || '').trim())
-        .filter(Boolean)
-
-      await Promise.all(codes.map(code => this.loadAccountChart(code, params)))
     },
   },
 })

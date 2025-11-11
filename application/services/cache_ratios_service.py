@@ -11,6 +11,7 @@ import pandas as pd
 from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
 from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
 from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.value_objects import SearchFilterTree
 
 
 class CacheRatiosService:
@@ -21,11 +22,13 @@ class CacheRatiosService:
         *,
         cache_port: CacheRatiosPort,
         logical_name: str = "ratios",
-        version: str = '1',
+        version: str = "1",
+        redis_client: Any | None = None,
     ) -> None:
         self._cache_port = cache_port
         self._logical_name = logical_name
         self._version = version
+        self._redis = redis_client
         self._cache_port.initialize()
 
     @staticmethod
@@ -72,8 +75,10 @@ class CacheRatiosService:
         indicators: Mapping[str, pd.DataFrame] | None,
         compute_fn: Callable[[], pd.DataFrame],
         code_hash: str,
+        filters: SearchFilterTree | None = None,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         """Return cached ratios or compute and persist them when absent"""
+        filters_hash = filters.to_hash() if filters else None
         context = CacheRatiosContextDTO(
             logical_name=self._logical_name,
             version=self._version,
@@ -81,12 +86,23 @@ class CacheRatiosService:
             statements_hash=self._hash_mapping(statements),
             indicators_hash=self._hash_mapping(indicators),
             code_hash=code_hash,
+            filters_hash=filters_hash,
         )
         cache_key = context.cache_key
+
+        redis_hit = self._load_from_redis(cache_key)
+        if redis_hit is not None:
+            return redis_hit, CacheRatiosResultDTO(
+                company_name=company_name,
+                cache_key=cache_key,
+                hit=True,
+                entry=None,
+            )
 
         cached = self._cache_port.load(cache_key)
         if cached is not None:
             df_cached, entry = cached
+            self._store_in_redis(cache_key, df_cached)
             return df_cached, CacheRatiosResultDTO(
                 company_name=company_name,
                 cache_key=cache_key,
@@ -100,6 +116,7 @@ class CacheRatiosService:
             df=df,
             company_name=company_name,
         )
+        self._store_in_redis(cache_key, df)
         return df, CacheRatiosResultDTO(
             company_name=company_name,
             cache_key=cache_key,
@@ -152,3 +169,28 @@ class CacheRatiosService:
     @staticmethod
     def _empty_hash() -> str:
         return hashlib.sha256(b"EMPTY").hexdigest()
+
+    def _load_from_redis(self, cache_key: str) -> pd.DataFrame | None:
+        if self._redis is None:
+            return None
+        try:
+            payload = self._redis.get(cache_key)
+        except Exception:
+            return None
+        if not payload:
+            return None
+        if isinstance(payload, bytes):
+            payload = payload.decode("utf-8")
+        try:
+            return pd.read_json(payload, orient="split")
+        except ValueError:
+            return None
+
+    def _store_in_redis(self, cache_key: str, df: pd.DataFrame | None) -> None:
+        if self._redis is None or df is None or df.empty:
+            return
+        try:
+            payload = df.to_json(orient="split", date_format="iso")
+            self._redis.set(cache_key, payload)
+        except Exception:
+            return

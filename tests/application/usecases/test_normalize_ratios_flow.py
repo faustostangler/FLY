@@ -118,6 +118,7 @@ class FakeCacheRatiosService:
         indicators,
         compute_fn,
         code_hash: str,
+        filters=None,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
         del quotes, statements, indicators, compute_fn
         self.calls.append(company_name)

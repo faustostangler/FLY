@@ -14,6 +14,7 @@ class CacheRatiosContextDTO:
     statements_hash: str
     indicators_hash: str
     code_hash: str
+    filters_hash: str | None = None
 
     @property
     def app_hash(self) -> str:
@@ -22,7 +23,8 @@ class CacheRatiosContextDTO:
 
     @property
     def cache_key(self) -> str:
+        filters_part = self.filters_hash or "nofilters"
         payload = (
-            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}".encode()
+            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}{filters_part}".encode()
         )
         return hashlib.sha256(payload).hexdigest()

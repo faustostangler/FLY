@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
 import pandas as pd
 
 
@@ -25,6 +25,7 @@ from domain.ports.repository_statements_fetched_port import (
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.value_objects import SearchFilterTree
 
 
 class RatiosService:
@@ -103,30 +104,43 @@ class RatiosService:
     def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
         return self.run(filters=kwds.get("filters"))
 
-    def run(self, filters: Optional[Dict[str, Any]] = None) -> SyncResultsDTO[CacheRatiosResultDTO]:
+    def run(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> SyncResultsDTO[CacheRatiosResultDTO]:
         """
         Executa a normalização com filtros complexos.
 
         Args:
         """
+        filter_tree = SearchFilterTree.from_raw(filters)
+
         with self.uow_factory() as uow:
             companies_eligible: List[CompanyEligibleDTO] = self.companies_eligible_port.list(uow=uow)
 
         df = pd.DataFrame([c.to_dict() for c in companies_eligible])
 
-        companies_to_process = self._apply_filters(df, filters)
+        companies_to_process = self._apply_filters(df, filter_tree)
         if companies_to_process.empty:
             return SyncResultsDTO(items=[], metrics=0)
 
         return self.normalize_usecase(companies=companies_to_process)
 
-    def _apply_filters(self, df: pd.DataFrame, filters: dict | None) -> pd.DataFrame:
-        if not filters:
+    def _apply_filters(
+        self,
+        df: pd.DataFrame,
+        filters: Optional[SearchFilterTree],
+    ) -> pd.DataFrame:
+        if filters is None or filters.is_empty():
             return df
         try:
-            spec = FilterBuilder().build_spec(filters)
+            spec = FilterBuilder().build_spec(filters.to_dict())
             mask = spec.accept(PandasVisitor(), df)
             return df[mask]
         except Exception as e:
+            if self.logger:
+                self.logger.warning(
+                    "Erro ao aplicar filtros no RatiosService: %s", e
+                )
             return df
 

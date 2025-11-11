@@ -22,6 +22,9 @@ from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_ratios import RatiosService
+from presentation.controllers.filter_presets import (
+    build_default_ratios_filter,
+)
 from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
@@ -227,10 +230,6 @@ class Cli:
         #         AND ( (has_bdr == True AND market in ["NM"]) OR (listing_date >= "2020-01-01") )
         #         AND (market in ["NM", "N2"])
 
-        filters = {
-             "and": [
-                {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
-            ]
-        }
+        filters = build_default_ratios_filter()
 
         return ratios_service(filters=filters)
