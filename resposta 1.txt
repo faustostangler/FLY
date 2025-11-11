@@ -1,21 +1,56 @@
 Summary
 
-Introduced the SearchFilterTree value object to centralize the shared filter grammar across layers and provide deterministic hashing utilities.
-
-Updated the ratios service to consume SearchFilterTree instances, log filter issues gracefully, and exposed the new VO through the domain exports.
-
-Added reusable filter presets for the CLI and a FastAPI-facing SearchFiltersDTO so presentation adapters can serialize and reuse the same filter structure.
+Corrected the AccountSeries DTO module so the DateLike alias is defined outside of the dataclass decorators, ensuring the module imports without syntax errors.
 
 Testing
 
-⚠️ pytest -o addopts= (fails: environment lacks optional dependencies such as pandas and sqlalchemy required by the test suite).
+⚠️ Tests not run (not requested)
 
 
-Files (6)
+Files (29)
+
+application/dtos/account_series_dto.py
++9
+-7
+
+application/dtos/company_accounts_series_dto.py
+New
+
+application/dtos/company_ratios_frame_dto.py
+New
+
+application/processors/filter_builder.py
++15
+-0
+
+application/services/cache_ratios_service.py
++9
+-0
+
+application/usecases/get_company_accounts_chart.py
+New
+
+application/usecases/get_company_ratios_frame.py
+New
+
+application/usecases/normalize_ratios.py
++6
+-0
+
+domain/__init__.py
++3
+-0
+
+domain/dtos/cache_ratios_context_dto.py
++2
+-1
+
+domain/exceptions.py
+New
 
 domain/services/service_ratios.py
-+22
--11
++20
+-5
 
 domain/value_objects/__init__.py
 +2
@@ -24,21 +59,749 @@ domain/value_objects/__init__.py
 domain/value_objects/search_filter_tree.py
 New
 
+infrastructure/cache/ratios_cache.py
++13
+-6
+
+presentation/backend/api.py
++4
+-0
+
+presentation/backend/dependencies/ratios_chart_dependencies.py
+New
+
+presentation/backend/dto/chart_dto.py
++3
+-0
+
+presentation/backend/dto/company_accounts_chart_request_dto.py
+New
+
 presentation/backend/dto/search_filters_dto.py
 New
 
+presentation/backend/mappers/accounts_series_chart_mapper.py
+New
+
+presentation/backend/routers/ratios_charts.py
+New
+
 presentation/controllers/cli.py
-+5
++4
 -5
 
 presentation/controllers/filter_presets.py
 New
-domain/services/service_ratios.py
-+22
--11
 
-from typing import Any, List, Dict, Optional
+presentation/frontend/src/services/apiService.js
++24
+-0
+
+presentation/frontend/src/store/accountChartsStore.js
++45
+-52
+
+presentation/frontend/src/utils/chartFilters.js
+New
+
+presentation/frontend/src/views/AccountChartsView.vue
++128
+-72
+
+tests/application/usecases/test_normalize_ratios_flow.py
++2
+-1
+
+application/dtos/account_series_dto.py
++9
+-7
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from typing import List
+from datetime import date, datetime
+from typing import List, Optional, Union
+
+DateLike = Union[date, datetime]
+
+@dataclass
+
+@dataclass(frozen=True)
+class AccountSeriesPointDTO:
+    date: date
+    value: float
+    date: DateLike
+    value: Optional[float]
+
+
+@dataclass
+@dataclass(frozen=True)
+class AccountSeriesDTO:
+    ticker: str
+    ticker: Optional[str]
+    account_code: str
+    label: str
+    points: List[AccountSeriesPointDTO]
+application/dtos/company_accounts_series_dto.py
+New
++20
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+from application.dtos.account_series_dto import AccountSeriesDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+
+
+@dataclass(frozen=True)
+class CompanyAccountsSeriesDTO:
+    company_name: str
+    series: List[AccountSeriesDTO]
+    ticker: Optional[str] = None
+    cache_info: Optional[CacheRatiosResultDTO] = None
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+
+__all__ = ["CompanyAccountsSeriesDTO"]
+
+application/dtos/company_ratios_frame_dto.py
+New
++23
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
+
 import pandas as pd
+
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+
+
+@dataclass(frozen=True)
+class CompanyRatiosFrameDTO:
+    """Raw ratios frame for a single company."""
+
+    company_name: str
+    frame: pd.DataFrame
+    cache_info: CacheRatiosResultDTO
+    ticker: Optional[str] = None
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+
+__all__ = ["CompanyRatiosFrameDTO"]
+
+application/processors/filter_builder.py
++15
+-0
+
+# application/processors/filter_builder.py
+from __future__ import annotations
+from typing import Any
+from dataclasses import dataclass
+from domain.utils.specs import And, Or, Not, Cmp, StrMatch, NullCheck, ListAny, Spec
+
+@dataclass(frozen=True)
+class FilterBuilder:
+    '''
+    Exemplo de estrutura de árvore aceita::
+
+        {
+            "and": [
+                {"status": "ATIVO"},
+                {
+                    "or": [
+                        {"has_bdr": True},
+                        {"market": {"in": ["NM"]}},
+                    ]
+                },
+                {"listing_date": {">=": "2020-01-01"}},
+            ]
+        }
+
+    Operadores aceitos pelo FilterBuilder (um por linha):
+
+    # Lógicos (estrutura da árvore)
+    and → todas as condições verdadeiras.
+    or → pelo menos uma condição verdadeira.
+    not → inverte o resultado do filtro interno.
+
+    # Comparativos numéricos ou de data (folhas Cmp)
+    == ou eq → igual a.
+    != ou ne → diferente de.
+    >  ou gt → maior que.
+    >= ou gte → maior ou igual a.
+    <  ou lt → menor que.
+    <= ou lte → menor ou igual a.
+    in → valor está dentro de uma lista.
+    nin → valor não está dentro de uma lista.
+    between → valor entre dois limites (inclusive).
+
+    # Textuais (folhas StrMatch)
+    contains → texto contém o padrão.
+    startswith → texto começa com o padrão.
+    endswith → texto termina com o padrão.
+    regex → casa com expressão regular.
+    modificadores opcionais: case (sensível a maiúsculas), na (como tratar nulos).
+    
+application/services/cache_ratios_service.py
++9
+-0
+
+from __future__ import annotations
+
+import hashlib
+import inspect
+from collections.abc import Mapping
+from types import ModuleType
+from typing import Any, Callable, Iterable
+
+import pandas as pd
+
+from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
+from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.value_objects import SearchFilterTree
+
+
+class CacheRatiosService:
+    """High-level helper responsible for caching ratios computations."""
+
+    def __init__(
+        self,
+        *,
+        cache_port: CacheRatiosPort,
+        logical_name: str = "ratios",
+        version: str = '1',
+    ) -> None:
+        self._cache_port = cache_port
+        self._logical_name = logical_name
+        self._version = version
+        self._cache_port.initialize()
+
+    @staticmethod
+    def build_code_hash(items: Iterable[Any]) -> str:
+        """
+        Calcula um hash SHA-256 determinístico a partir de uma lista de objetos
+        (funções, módulos, classes ou qualquer outro Python object).
+
+        Args:
+            items: iterável de objetos a serem inspecionados.
+@@ -50,59 +51,61 @@ class CacheRatiosService:
+                try:
+                    # se for módulo, tenta ler o arquivo
+                    if isinstance(obj, ModuleType) and hasattr(obj, "__file__"):
+                        with open(obj.__file__, "r", encoding="utf-8") as f:
+                            src = f.read()
+                    else:
+                        # fallback: repr das chaves conhecidas
+                        src = repr(sorted(vars(obj).keys()))
+                except Exception:
+                    src = repr(obj)
+
+            parts.append(src)
+
+        payload = "\n/*--SEGMENT--*/\n".join(parts).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    def get_or_compute(
+        self,
+        *,
+        company_name: str,
+        quotes: Mapping[str, pd.DataFrame] | None,
+        statements: Mapping[str, pd.DataFrame] | None,
+        indicators: Mapping[str, pd.DataFrame] | None,
+        compute_fn: Callable[[], pd.DataFrame],
+        code_hash: str,
+        filters: SearchFilterTree | None = None,
+    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
+        """Return cached ratios or compute and persist them when absent"""
+        context = CacheRatiosContextDTO(
+            logical_name=self._logical_name,
+            version=self._version,
+            quotes_hash=self._hash_mapping(quotes),
+            statements_hash=self._hash_mapping(statements),
+            indicators_hash=self._hash_mapping(indicators),
+            code_hash=code_hash,
+            filters_hash=self._hash_filters(filters),
+        )
+        cache_key = context.cache_key
+
+        cached = self._cache_port.load(cache_key)
+        if cached is not None:
+            df_cached, entry = cached
+            return df_cached, CacheRatiosResultDTO(
+                company_name=company_name,
+                cache_key=cache_key,
+                hit=True,
+                entry=entry,
+            )
+
+        df = compute_fn()
+        entry = self._cache_port.store(
+            context=context,
+            df=df,
+            company_name=company_name,
+        )
+        return df, CacheRatiosResultDTO(
+            company_name=company_name,
+            cache_key=cache_key,
+            hit=False,
+            entry=entry,
+        )
+@@ -127,28 +130,34 @@ class CacheRatiosService:
+            return self._empty_hash()
+
+        payload = "|".join(parts).encode()
+        return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _hash_dataframe(df: pd.DataFrame) -> str:
+        if df is None or df.empty:
+            return CacheRatiosService._empty_hash()
+
+        normalized = df.copy()
+        normalized = normalized.sort_index()
+        normalized = normalized.sort_index(axis=1)
+
+        if isinstance(normalized.index, pd.DatetimeIndex):
+            normalized.index = normalized.index.tz_localize(None)
+
+        for column in normalized.columns:
+            series = normalized[column]
+            if pd.api.types.is_datetime64_any_dtype(series):
+                normalized[column] = pd.to_datetime(series, errors="coerce")
+
+        hashed = pd.util.hash_pandas_object(normalized, index=True).values.tobytes()
+        return hashlib.sha256(hashed).hexdigest()
+
+    def _hash_filters(self, filters: SearchFilterTree | None) -> str:
+        if filters is None or filters.is_empty():
+            return self._empty_hash()
+
+        return filters.to_hash()
+
+    @staticmethod
+    def _empty_hash() -> str:
+        return hashlib.sha256(b"EMPTY").hexdigest()
+application/usecases/get_company_accounts_chart.py
+New
++137
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Iterable, List, Optional, Sequence
+
+import pandas as pd
+
+from application.dtos.account_series_dto import AccountSeriesDTO, AccountSeriesPointDTO
+from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
+from application.usecases.get_company_ratios_frame import GetCompanyRatiosFrameUseCase
+from domain import DomainError
+from domain.value_objects import SearchFilterTree
+
+
+@dataclass
+class GetCompanyAccountsChartUseCase:
+    ratios_frame_usecase: GetCompanyRatiosFrameUseCase
+    account_labels: Optional[dict[str, str]] = None
+
+    def __call__(
+        self,
+        *,
+        company_name: str,
+        accounts: Sequence[str],
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyAccountsSeriesDTO:
+        return self.run(company_name=company_name, accounts=accounts, filters=filters)
+
+    def run(
+        self,
+        *,
+        company_name: str,
+        accounts: Sequence[str],
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyAccountsSeriesDTO:
+        normalized_company = (company_name or "").strip()
+        if not normalized_company:
+            raise DomainError("company_name é obrigatório para gerar séries de gráfico.")
+
+        account_codes = [code.strip() for code in accounts if str(code).strip()]
+        if not account_codes:
+            raise DomainError("Informe ao menos um código de conta para gerar o gráfico.")
+
+        ratios_frame = self.ratios_frame_usecase(
+            company_name=normalized_company,
+            filters=filters,
+        )
+        df = ratios_frame.frame
+
+        if df is None or df.empty:
+            raise DomainError(
+                f"Nenhum dado de ratios disponível para '{ratios_frame.company_name}'."
+            )
+
+        df = self._ensure_datetime_index(df)
+        df_selected = self._select_accounts(df, account_codes, ratios_frame.company_name)
+        series = self._build_series(df_selected, ratios_frame)
+
+        meta = dict(ratios_frame.meta)
+
+        return CompanyAccountsSeriesDTO(
+            company_name=ratios_frame.company_name,
+            ticker=ratios_frame.ticker,
+            series=series,
+            cache_info=ratios_frame.cache_info,
+            meta=meta,
+        )
+
+    def _ensure_datetime_index(self, df: pd.DataFrame) -> pd.DataFrame:
+        if isinstance(df.index, (pd.DatetimeIndex, pd.PeriodIndex)):
+            return df.sort_index()
+
+        df = df.copy()
+        if "date" in df.columns:
+            df.index = pd.to_datetime(df["date"], errors="coerce")
+            df.drop(columns=["date"], inplace=True)
+        else:
+            df.index = pd.to_datetime(df.index, errors="coerce")
+        df.sort_index(inplace=True)
+        return df
+
+    def _select_accounts(
+        self,
+        df: pd.DataFrame,
+        accounts: Sequence[str],
+        company_name: str,
+    ) -> pd.DataFrame:
+        missing = [code for code in accounts if code not in df.columns]
+        if missing:
+            raise DomainError(
+                f"As seguintes contas não foram encontradas para '{company_name}': {missing}."
+            )
+        return df.loc[:, list(accounts)].sort_index()
+
+    def _build_series(
+        self,
+        df: pd.DataFrame,
+        ratios_frame,
+    ) -> List[AccountSeriesDTO]:
+        labels = self._build_labels(df.columns)
+        series_list: List[AccountSeriesDTO] = []
+        ticker = ratios_frame.ticker or ratios_frame.company_name
+
+        for account_code in df.columns:
+            column = df[account_code]
+            points: List[AccountSeriesPointDTO] = []
+            for index, value in column.items():
+                if pd.isna(value):
+                    point_value: Optional[float] = None
+                else:
+                    point_value = float(value)
+                if hasattr(index, "date"):
+                    date_value = index.date()
+                else:
+                    date_value = index
+                points.append(
+                    AccountSeriesPointDTO(
+                        date=date_value,
+                        value=point_value,
+                    )
+                )
+
+            series_list.append(
+                AccountSeriesDTO(
+                    ticker=ticker,
+                    account_code=account_code,
+                    label=labels.get(account_code, account_code),
+                    points=points,
+                )
+            )
+
+        return series_list
+
+    def _build_labels(self, account_codes: Iterable[str]) -> dict[str, str]:
+        if not self.account_labels:
+            return {code: code for code in account_codes}
+        return {code: self.account_labels.get(code, code) for code in account_codes}
+application/usecases/get_company_ratios_frame.py
+New
++140
+-0
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+import pandas as pd
+
+from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from application.ports.config_port import ConfigPort
+from application.ports.logger_port import LoggerPort
+from application.ports.uow_port import UowFactoryPort
+from application.ports.worker_pool_port import WorkerPoolPort
+from application.usecases.normalize_ratios import NormalizeUseCase
+from domain import DomainError
+from domain.dtos.company_eligible_dto import CompanyEligibleDTO
+from domain.ports.cache_ratios_port import CacheRatiosPort
+from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
+from domain.ports.repository_statements_fetched_port import (
+    RepositoryStatementFetchedPort,
+)
+from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
+from domain.value_objects import SearchFilterTree
+
+
+@dataclass
+class GetCompanyRatiosFrameUseCase:
+    config: ConfigPort
+    logger: LoggerPort
+    repository_stock_quote: RepositoryStockQuotePort
+    repository_indicators: RepositoryIndicatorsPort
+    repository_statements_fetched: RepositoryStatementFetchedPort
+    cache_ratios: CacheRatiosPort
+    companies_eligible_port: CompaniesEligiblePort
+    uow_factory: UowFactoryPort
+    worker_pool: WorkerPoolPort
+
+    def __post_init__(self) -> None:
+        self._normalize_usecase = NormalizeUseCase(
+            config=self.config,
+            logger=self.logger,
+            repository_stock_quote=self.repository_stock_quote,
+            repository_indicators=self.repository_indicators,
+            repository_statements_fetched=self.repository_statements_fetched,
+            cache_ratios=self.cache_ratios,
+            companies_eligible_port=self.companies_eligible_port,
+            uow_factory=self.uow_factory,
+            worker_pool=self.worker_pool,
+        )
+
+    def __call__(
+        self,
+        *,
+        company_name: str,
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyRatiosFrameDTO:
+        return self.run(company_name=company_name, filters=filters)
+
+    def run(
+        self,
+        *,
+        company_name: str,
+        filters: Optional[SearchFilterTree] = None,
+    ) -> CompanyRatiosFrameDTO:
+        target_name = (company_name or "").strip()
+        if not target_name:
+            raise DomainError("company_name é obrigatório para recuperar ratios.")
+
+        company = self._get_company(target_name)
+
+        treated_indicators = self._load_treated_indicators()
+
+        with self.uow_factory() as uow:
+            quotes = self._normalize_usecase._load_quotes(  # pylint: disable=protected-access
+                ticker_codes=list(company.ticker_codes),
+                uow=uow,
+            )
+            statements = self._normalize_usecase._load_statements(  # pylint: disable=protected-access
+                company_name=company.company_name or target_name,
+                uow=uow,
+            )
+
+        data_snapshot = {
+            "indicators": treated_indicators,
+            "statements": statements,
+            "quotes": quotes,
+        }
+
+        company_data = self._normalize_usecase._treat_data(  # pylint: disable=protected-access
+            data_snapshot,
+            aggregate_method="last",
+        )
+
+        def _compute() -> pd.DataFrame:
+            return self._normalize_usecase._create_ratios(company_data)  # pylint: disable=protected-access
+
+        df, cache_result = self._normalize_usecase.cache_ratios_service.get_or_compute(
+            company_name=company.company_name or target_name,
+            quotes=company_data.get("quotes"),
+            statements=company_data.get("statements"),
+            indicators=company_data.get("indicators"),
+            compute_fn=_compute,
+            code_hash=self._normalize_usecase.ratios_code_hash,
+            filters=filters,
+        )
+
+        ticker = next(iter(company.ticker_codes), None)
+        meta = {
+            "company_id": company.id,
+            "filters": filters.to_dict() if filters else None,
+        }
+
+        return CompanyRatiosFrameDTO(
+            company_name=company.company_name or target_name,
+            frame=df,
+            cache_info=cache_result,
+            ticker=ticker,
+            meta=meta,
+        )
+
+    def _load_treated_indicators(self) -> dict[str, dict[str, pd.DataFrame]]:
+        with self.uow_factory() as uow:
+            indicators = self._normalize_usecase._load_indicators(uow=uow)  # pylint: disable=protected-access
+        return {
+            indicator: self._normalize_usecase._treat_indicators(df)  # pylint: disable=protected-access
+            for indicator, df in indicators.items()
+        }
+
+    def _get_company(self, company_name: str) -> CompanyEligibleDTO:
+        with self.uow_factory() as uow:
+            matches = self.companies_eligible_port.list(
+                uow=uow,
+                company_name=company_name,
+            )
+        if not matches:
+            raise DomainError(
+                f"Empresa '{company_name}' não encontrada na projeção de elegíveis."
+            )
+        return matches[0]
+
+application/usecases/normalize_ratios.py
++6
+-0
+
+@@ -52,50 +52,56 @@ class NormalizeUseCase:
+            config (ConfigPort): Application configuration provider.
+            logger (LoggerPort): Logger interface for capturing messages.
+            repository (RepositoryCompanyDataPort): Repository for persisting company data.
+            scraper (ScraperCompanyDataPort): Scraper used to fetch company data.
+            max_workers (int, optional): Maximum number of workers for parallel execution.
+                Defaults to 1, or falls back to the value in the config worker pool.
+        """
+        self.config = config
+        self.logger = logger
+        self.repository_stock_quote = repository_stock_quote
+        self.repository_indicators = repository_indicators
+        self.repository_statements_fetched = repository_statements_fetched
+        self.cache_ratios_service = CacheRatiosService(
+                cache_port=cache_ratios,
+                logical_name=self.config.fly_settings.app_name,
+                version=self.config.fly_settings.version
+                )
+        self._ratios_code_hash = CacheRatiosService.build_code_hash([self._create_ratios, intel,])
+
+        self.uow_factory = uow_factory
+        self.worker_pool = worker_pool
+
+        self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
+        self.companies_eligible_port = companies_eligible_port
+
+    @property
+    def ratios_code_hash(self) -> str:
+        """Expose the code hash used for cache coordination."""
+
+        return self._ratios_code_hash
+
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self.run(companies=kwds.get("companies"))
+
+    def run(self, companies:pd.DataFrame) -> SyncResultsDTO:
+        """Run the full synchronization pipeline.
+
+        Steps:
+            1. Retrieve company data from the persistence layer.
+            2. Transform results into normalized ``pandas`` data structures.
+            3. Cache the calculated ratios for reuse across runs.
+
+        Returns:
+            SyncCompanyDataResultDTO: Summary of the synchronization process,
+            including counts and network usage metrics.
+        """
+        metrics = 0
+        cache_results: List[CacheRatiosResultDTO] = []
+        start_time = time.perf_counter()
+
+        if companies.empty:
+            return SyncResultsDTO(items=[], metrics=0)
+        total_companies = len(companies)
+
+        try:
+            with self.uow_factory() as bootstrap_uow:
+domain/__init__.py
++3
+-0
+
+from __future__ import annotations
+
+from .exceptions import DomainError
+
+__all__ = ["DomainError"]
+domain/dtos/cache_ratios_context_dto.py
++2
+-1
+
+from __future__ import annotations
+
+import hashlib
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, kw_only=True)
+class CacheRatiosContextDTO:
+    """Hashes describing the inputs used to compute ratios for caching."""
+
+    logical_name: str
+    version: str
+    quotes_hash: str
+    statements_hash: str
+    indicators_hash: str
+    code_hash: str
+    filters_hash: str = ""
+
+    @property
+    def app_hash(self) -> str:
+        payload = f"{self.logical_name}|{self.version}".encode()
+        return hashlib.sha256(payload).hexdigest()
+
+    @property
+    def cache_key(self) -> str:
+        payload = (
+            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}".encode()
+            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}{self.filters_hash}".encode()
+        )
+        return hashlib.sha256(payload).hexdigest()
+domain/exceptions.py
+New
++11
+-0
+
+"""Domain-level exception hierarchy."""
+
+from __future__ import annotations
+
+
+class DomainError(Exception):
+    """Base exception for domain/business rule violations."""
+
+
+__all__ = ["DomainError"]
+
+domain/services/service_ratios.py
++20
+-5
+
+@@ -3,50 +3,51 @@ import pandas as pd
 
 
 from application.processors.filter_builder import FilterBuilder
@@ -56,7 +819,6 @@ from application.usecases.companies_eligible import (
 )
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
-from domain.value_objects.search_filter_tree import SearchFilterTree
 from domain.ports.cache_ratios_port import CacheRatiosPort
 from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
 from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
@@ -65,6 +827,7 @@ from domain.ports.repository_statements_fetched_port import (
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.ports.companies_eligible_port import CompaniesEligiblePort
+from domain.value_objects import SearchFilterTree
 
 
 class RatiosService:
@@ -82,9 +845,15 @@ class RatiosService:
         cache_ratios: CacheRatiosPort,
 
         uow_factory: UowFactoryPort,
-@@ -79,54 +80,64 @@ class RatiosService:
-            repository_statements_fetched=self.repository_statements_fetched,
-            repository_stock_quote=self.repository_stock_quote,
+        worker_pool: WorkerPoolPort,
+        companies_eligible_port: CompaniesEligiblePort,
+    ):
+        """Initialize the service with required dependencies.
+
+        Args:
+            config (ConfigPort): Provides application configuration settings.
+            logger (LoggerPort): Logging interface for tracking operations.
+@@ -81,52 +82,66 @@ class RatiosService:
             batch_service=self._companies_eligible_batch_service,
             uow_factory=self.uow_factory,
         )
@@ -109,20 +878,19 @@ class RatiosService:
 
     def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
         return self.run(filters=kwds.get("filters"))
-        raw_filters = kwds.get("filters")
-        return self.run(filters=raw_filters)
 
     def run(self, filters: Optional[Dict[str, Any]] = None) -> SyncResultsDTO[CacheRatiosResultDTO]:
+    def run(
+        self,
+        filters: Optional[Dict[str, Any]] = None,
+    ) -> SyncResultsDTO[CacheRatiosResultDTO]:
         """
         Executa a normalização com filtros complexos.
-    def run(
-        self, filters: Optional[Dict[str, Any]] = None
-    ) -> SyncResultsDTO[CacheRatiosResultDTO]:
-        """Executa a normalização com filtros estruturados."""
-        filter_tree = SearchFilterTree.from_raw(filters)
 
         Args:
         """
+        filter_tree = SearchFilterTree.from_raw(filters)
+
         with self.uow_factory() as uow:
             companies_eligible: List[CompanyEligibleDTO] = self.companies_eligible_port.list(uow=uow)
 
@@ -150,11 +918,10 @@ class RatiosService:
             mask = spec.accept(PandasVisitor(), df)
             return df[mask]
         except Exception as e:
-        except Exception as exc:
-            if hasattr(self.logger, "log"):
-                self.logger.log(
-                    f"Falha ao aplicar filtros em RatiosService: {exc}",
-                    level="warning",
+            if self.logger:
+                self.logger.warning(
+                    "Falha ao aplicar filtros em RatiosService: %s",
+                    e,
                 )
             return df
 
@@ -187,11 +954,20 @@ __all__ = [
 ]
 domain/value_objects/search_filter_tree.py
 New
-+47
++86
 -0
+
+"""Domain value object encapsulating the generic filter tree structure.
+
+The project already relied on dictionaries that follow the grammar consumed by
+``FilterBuilder``.  This value object adds a thin but explicit contract so the
+same structure can be shared across CLI, FastAPI and the frontend without
+passing loose dictionaries around.
+"""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -200,47 +976,317 @@ from typing import Any, Dict, Optional
 FilterDict = Dict[str, Any]
 
 
-def _canonical_json(data: FilterDict) -> str:
-    """Return a canonical JSON representation used for hashing."""
-    return json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-
-
 @dataclass(frozen=True)
 class SearchFilterTree:
-    """Value object that encapsulates the structured filter tree used across the app."""
+    """Immutable representation of the search filter grammar.
+
+    ``raw`` must respect the specification expected by ``FilterBuilder``.  The
+    structure is a recursive tree where internal nodes are logical operators and
+    leaves describe column conditions.  Examples::
+
+        {"and": [{"status": "ATIVO"}, {"market": {"in": ["NM", "N2"]}}]}
+        {"or": [
+            {"has_bdr": True},
+            {"listing_date": {">=": "2020-01-01"}},
+        ]}
+
+    Leaves accept comparison operators (``==``, ``!=``, ``in``, ``between``),
+    text matching (``contains``, ``startswith`` ...) and null checks, mirroring
+    what ``FilterBuilder`` already supports.
+    """
 
     raw: FilterDict
 
     @classmethod
     def from_raw(cls, data: Optional[Any]) -> Optional["SearchFilterTree"]:
-        """Coerce a raw dict (or already wrapped instance) into ``SearchFilterTree``."""
+        """Create a :class:`SearchFilterTree` from ``dict``/VO/``None``.
+
+        ``None`` is propagated so callers can easily short-circuit when no
+        filter is provided.  Passing something different from the supported
+        types raises :class:`TypeError` so bugs surface early.
+        """
+
         if data is None:
             return None
         if isinstance(data, SearchFilterTree):
             return data
         if not isinstance(data, dict):
             raise TypeError(
-                "SearchFilterTree expects a mapping compatible with the FilterBuilder grammar."
+                "SearchFilterTree.from_raw expects a dict-compatible tree; "
+                f"received {type(data)!r}."
             )
         return cls(raw=data)
 
     def to_dict(self) -> FilterDict:
-        """Expose the raw tree as a plain dictionary."""
+        """Return the underlying dictionary compatible with ``FilterBuilder``."""
+
         return self.raw
 
     def is_empty(self) -> bool:
-        """True when no condition is declared inside the tree."""
+        """``True`` when the tree has no conditions configured."""
+
         return not bool(self.raw)
 
     def to_hash(self) -> str:
-        """Return a deterministic hash-friendly representation."""
+        """Return a deterministic SHA-256 hash for the tree structure."""
+
         if self.is_empty():
-            return "empty"
-        return _canonical_json(self.raw)
-presentation/backend/dto/search_filters_dto.py
+            return self._empty_hash()
+
+        payload = json.dumps(self.raw, sort_keys=True, default=str).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _empty_hash() -> str:
+        return hashlib.sha256(b"EMPTY_FILTER").hexdigest()
+
+
+__all__ = ["SearchFilterTree"]
+
+infrastructure/cache/ratios_cache.py
++13
+-6
+
+@@ -184,47 +184,54 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
+            total_size = session.execute(select(func.coalesce(func.sum(CacheEntry.size_bytes), 0))).scalar_one()
+            budget = int(self._config.cache.max_cache_size_bytes)
+            if total_size <= budget:
+                return
+
+            # LFU + FIFO: menos acessado primeiro; em empate, mais antigo primeiro
+            victims = session.scalars(
+                select(CacheEntry).order_by(
+                    CacheEntry.access_count.asc(),
+                    CacheEntry.created_at.asc(),
+                )
+            )
+            for v in victims:
+                if total_size <= budget:
+                    break
+                Path(v.file_path).unlink(missing_ok=True)
+                total_size -= v.size_bytes
+                session.delete(v)
+
+    def _delete_entry_and_file(self, session: Session, entry: CacheEntry, *, unlink_file: bool) -> None:
+        if unlink_file:
+            Path(entry.file_path).unlink(missing_ok=True)
+        session.delete(entry)
+
+    def _build_file_path(self, *, context: CacheRatiosContextDTO, company_name: str) -> Path:
+        """
+        Constrói caminho estável: <cache_dir>/<logical_name>/v<version>/<company>/<cache_key>.parquet
+        """
+        # safe_company = self._sanitize_company_name(company_name)
+        # version_segment = f"v{context.version}"
+        target_dir = self._config.paths.cache_dir # / context.logical_name / version_segment / safe_company
+        """Return a stable Parquet location within the cache directory hierarchy."""
+
+        safe_company = self._sanitize_company_name(company_name)
+        version_segment = f"v{context.version}"
+
+        target_dir = (
+            self._config.paths.cache_dir
+            / context.logical_name
+            / version_segment
+            / safe_company
+        )
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        return target_dir / f"{context.cache_key}.parquet"
+
+    def _sanitize_company_name(self, company_name: str) -> str:
+        normalized = unicodedata.normalize("NFKD", company_name)
+        ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+        cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
+        return cleaned[:120] if cleaned else "unknown"
+
+    def _as_timedelta(self, value) -> timedelta:
+        """
+        Aceita tanto timedelta quanto uma duration-like de config.
+        """
+        if isinstance(value, timedelta):
+            return value
+        # fallback simples: minutos
+        return timedelta(minutes=int(value))
+presentation/backend/api.py
++4
+-0
+
+# presentation/backend/api.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from presentation.backend.routers.charts import router as charts_router
+from presentation.backend.routers.companies import router as companies_router
+from presentation.backend.routers.account_charts import (
+    router as account_charts_router,
+)
+from presentation.backend.routers.ratios_charts import (
+    router as ratios_charts_router,
+)
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="FLY Web API",
+        version="0.1.0",
+    )
+
+    # CORS para permitir o frontend do Vite (http://localhost:5173)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Camada de apresentação: apenas inclui routers finos
+    app.include_router(charts_router)
+    app.include_router(account_charts_router)
+    app.include_router(ratios_charts_router)
+    app.include_router(companies_router)
+
+    return app
+
+
+app = create_app()
+presentation/backend/dependencies/ratios_chart_dependencies.py
+New
++64
+-0
+
+from __future__ import annotations
+
+from fastapi import Depends
+
+from application.usecases.get_company_accounts_chart import (
+    GetCompanyAccountsChartUseCase,
+)
+from application.usecases.get_company_ratios_frame import GetCompanyRatiosFrameUseCase
+from infrastructure.cache.ratios_cache import CacheRatiosAdapter
+from infrastructure.config.config_adapter import ConfigAdapter
+from infrastructure.logging.logger_adapter import Logger
+from infrastructure.repositories.repository_company_eligible import (
+    RepositoryCompanyEligible,
+)
+from infrastructure.repositories.repository_indicators import RepositoryIndicators
+from infrastructure.repositories.repository_statements_fetched import (
+    RepositoryStatementsFetched,
+)
+from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
+from infrastructure.uow.uow import UowFactory
+from infrastructure.utils.metrics_collector import MetricsCollector
+from infrastructure.utils.worker_pool import WorkerPool
+
+
+def get_company_ratios_frame_usecase() -> GetCompanyRatiosFrameUseCase:
+    config = ConfigAdapter()
+    logger = Logger(config)
+
+    repository_company = RepositoryCompanyEligible(config=config, logger=logger)
+    repository_indicators = RepositoryIndicators(config=config, logger=logger)
+    repository_statements = RepositoryStatementsFetched(config=config, logger=logger)
+    repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
+
+    uow_factory = UowFactory(session_factory=repository_company.Session)
+
+    cache_port = CacheRatiosAdapter(config=config, logger=logger)
+
+    metrics = MetricsCollector()
+    worker_pool = WorkerPool(config=config, metrics_collector=metrics, max_workers=config.worker_pool.max_workers)
+
+    return GetCompanyRatiosFrameUseCase(
+        config=config,
+        logger=logger,
+        repository_stock_quote=repository_stock_quote,
+        repository_indicators=repository_indicators,
+        repository_statements_fetched=repository_statements,
+        cache_ratios=cache_port,
+        companies_eligible_port=repository_company,
+        uow_factory=uow_factory,
+        worker_pool=worker_pool,
+    )
+
+
+def get_company_accounts_chart_usecase(
+    ratios_usecase: GetCompanyRatiosFrameUseCase = Depends(get_company_ratios_frame_usecase),
+) -> GetCompanyAccountsChartUseCase:
+    return GetCompanyAccountsChartUseCase(ratios_frame_usecase=ratios_usecase)
+
+
+__all__ = [
+    "get_company_accounts_chart_usecase",
+    "get_company_ratios_frame_usecase",
+]
+
+presentation/backend/dto/chart_dto.py
++3
+-0
+
+@@ -3,28 +3,31 @@ from __future__ import annotations
+from pydantic import BaseModel, Field
+from typing import Any, List, Dict, Optional
+
+
+class PlotlyTraceDTO(BaseModel):
+    """
+    Trace genérico para Plotly.
+
+    Mantém estrutura mínima para 80% dos gráficos (scatter, bar etc.).
+    """
+    x: List[Any]
+    y: List[Any]
+    type: str = Field(default="scatter")
+    mode: Optional[str] = Field(default="lines")
+    name: Optional[str] = None
+    # campo extra para qualquer coisa específica de Plotly
+    extra: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ChartDTO(BaseModel):
+    """
+    DTO de saída da API para o frontend Vue/Plotly.
+
+    'data' é uma lista de traces Plotly,
+    'layout' é um dict livre conforme API do Plotly.js.
+    'meta' carrega metadados auxiliares (empresa, cache etc.).
+    """
+
+    data: List[PlotlyTraceDTO]
+    layout: Dict[str, Any] = Field(default_factory=dict)
+    meta: Dict[str, Any] = Field(default_factory=dict)
+presentation/backend/dto/company_accounts_chart_request_dto.py
 New
 +20
 -0
+
+from __future__ import annotations
+
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+from presentation.backend.dto.search_filters_dto import SearchFiltersDTO
+
+
+class CompanyAccountsChartRequestDTO(BaseModel):
+    company_name: str = Field(..., description="Nome da empresa alvo.")
+    accounts: List[str] = Field(..., description="Lista de contas/ratios desejadas.")
+    filters: Optional[SearchFiltersDTO] = Field(
+        default=None,
+        description="Filtro estruturado aplicado ao dataset.",
+    )
+
+
+__all__ = ["CompanyAccountsChartRequestDTO"]
+
+presentation/backend/dto/search_filters_dto.py
+New
++33
+-0
+
+"""Pydantic representation of the generic filter tree contract."""
 
 from __future__ import annotations
 
@@ -248,25 +1294,159 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from domain.value_objects.search_filter_tree import SearchFilterTree
+from domain.value_objects import SearchFilterTree
 
 
 class SearchFiltersDTO(BaseModel):
-    """Pydantic DTO que espelha a árvore de filtros estruturados."""
+    """Request body wrapper for the reusable search filter tree.
+
+    ``tree`` mirrors the dictionary grammar interpreted by ``FilterBuilder`` and
+    documented in :class:`domain.value_objects.search_filter_tree.SearchFilterTree`.
+    Keeping the structure explicit in a DTO allows FastAPI to validate the JSON
+    received from the frontend (or CLI mocks) before touching the domain layer.
+    """
 
     tree: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Árvore de filtros compatível com o FilterBuilder.",
+        description="Árvore de filtros estruturados compatível com FilterBuilder.",
     )
 
     def to_domain(self) -> Optional[SearchFilterTree]:
-        """Converte o DTO em ``SearchFilterTree`` do domínio."""
+        """Convert the DTO to the domain value object."""
+
         return SearchFilterTree.from_raw(self.tree)
+
+
+__all__ = ["SearchFiltersDTO"]
+
+presentation/backend/mappers/accounts_series_chart_mapper.py
+New
++50
+-0
+
+from __future__ import annotations
+
+from typing import List
+
+from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
+from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
+
+
+def company_accounts_to_chart(dto: CompanyAccountsSeriesDTO) -> ChartDTO:
+    traces: List[PlotlyTraceDTO] = []
+
+    for series in dto.series:
+        x = [point.date for point in series.points]
+        y = [point.value for point in series.points]
+        traces.append(
+            PlotlyTraceDTO(
+                x=x,
+                y=y,
+                type="scatter",
+                mode="lines",
+                name=f"{series.account_code} - {series.label}",
+                extra={"ticker": series.ticker},
+            )
+        )
+
+    layout = {
+        "title": f"Ratios – {dto.company_name}",
+        "xaxis": {"title": "Data"},
+        "yaxis": {"title": "Valor"},
+    }
+
+    meta = dict(dto.meta)
+    if dto.cache_info:
+        meta.setdefault("cache", {})
+        meta["cache"].update(
+            {
+                "key": dto.cache_info.cache_key,
+                "hit": dto.cache_info.hit,
+            }
+        )
+
+    return ChartDTO(
+        data=traces,
+        layout=layout,
+        meta=meta,
+    )
+
+
+__all__ = ["company_accounts_to_chart"]
+
+presentation/backend/routers/ratios_charts.py
+New
++63
+-0
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from application.usecases.get_company_accounts_chart import (
+    GetCompanyAccountsChartUseCase,
+)
+from domain import DomainError
+from domain.value_objects import SearchFilterTree
+from presentation.backend.dependencies.ratios_chart_dependencies import (
+    get_company_accounts_chart_usecase,
+)
+from presentation.backend.dto.chart_dto import ChartDTO
+from presentation.backend.dto.company_accounts_chart_request_dto import (
+    CompanyAccountsChartRequestDTO,
+)
+from presentation.backend.dto.search_filters_dto import SearchFiltersDTO
+from presentation.backend.mappers.accounts_series_chart_mapper import (
+    company_accounts_to_chart,
+)
+
+
+router = APIRouter(prefix="/api/charts/ratios", tags=["charts-ratios"])
+
+
+@router.post("/company", response_model=ChartDTO)
+async def get_company_ratios_chart(
+    payload: CompanyAccountsChartRequestDTO,
+    usecase: GetCompanyAccountsChartUseCase = Depends(
+        get_company_accounts_chart_usecase
+    ),
+) -> ChartDTO:
+    filter_tree = _map_filters(payload.filters)
+
+    try:
+        series_dto = usecase(
+            company_name=payload.company_name,
+            accounts=payload.accounts,
+            filters=filter_tree,
+        )
+    except DomainError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    if not series_dto.series:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nenhuma série encontrada para os parâmetros informados.",
+        )
+
+    return company_accounts_to_chart(series_dto)
+
+
+def _map_filters(filters: SearchFiltersDTO | None) -> SearchFilterTree | None:
+    if filters is None:
+        return None
+    return filters.to_domain()
+
+
+__all__ = ["router"]
+
 presentation/controllers/cli.py
-+5
++4
 -5
 
-@@ -2,50 +2,54 @@ from application.ports.config_port import ConfigPort
+from application.ports.config_port import ConfigPort
 from application.ports.http_client_port import AffinityHttpClientPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
@@ -290,11 +1470,10 @@ from domain.ports.companies_eligible_port import CompaniesEligiblePort
 from domain.services.service_company_data import CompanyDataService
 from domain.services.service_nsd import NsdService
 from domain.services.service_ratios import RatiosService
-from domain.services.service_stock_quote import StockQuoteService
-
 from presentation.controllers.filter_presets import (
-    build_default_ratios_filter,
+    build_ratios_filter_by_issuing_company,
 )
+from domain.services.service_stock_quote import StockQuoteService
 
 # from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
 from infrastructure.utils.byte_formatter import ByteFormatter
@@ -319,9 +1498,7 @@ class Cli:
         logger: LoggerPort,
         repository_company: RepositoryCompanyDataPort,
         repository_nsd: RepositoryNsdPort,
-        repository_stock_quote: RepositoryStockQuotePort,
-        repository_indicators: RepositoryIndicatorsPort,
-@@ -205,32 +209,28 @@ class Cli:
+@@ -205,33 +208,29 @@ class Cli:
         # filters: Dicionário de filtros (ex: {'company_name': {'contains': 'GERDAU'}}).
         #             Se None, processa todas as empresas elegíveis.
         #             cada folha da árvore é uma condição concreta sobre uma coluna (Cmp, StrMatch, NullCheck, ListAny).
@@ -349,29 +1526,38 @@ class Cli:
 
         filters = {
              "and": [
-                {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
+                {"issuing_company": {"==": "PETR", "case": False}},
             ]
         }
-        filters = build_default_ratios_filter()
+        filters = build_ratios_filter_by_issuing_company("PETR")
 
-        return ratios_service(filters=filters)
+        df_ratios = ratios_service(filters=filters)
+        return df_ratios
 presentation/controllers/filter_presets.py
 New
-+32
++44
 -0
+
+"""Utilities that centralise reusable filter trees for CLI and adapters."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
+
 FilterDict = Dict[str, Any]
 
 
 def build_ratios_filter_by_issuing_company(issuing_company: str) -> FilterDict:
-    """Retorna um filtro simples para restringir ratios por empresa emissora."""
+    """Return a simple tree filtering companies by ``issuing_company``.
+
+    The structure aligns with :class:`SearchFilterTree` and ``FilterBuilder``,
+    making it safe to reuse in CLI automation and HTTP adapters.
+    """
+
     company = (issuing_company or "").strip()
     if not company:
-        raise ValueError("issuing_company não pode ser vazio")
+        raise ValueError("issuing_company must be a non-empty string")
 
     return {
         "and": [
@@ -386,9 +1572,622 @@ def build_ratios_filter_by_issuing_company(issuing_company: str) -> FilterDict:
 
 
 def build_default_ratios_filter() -> FilterDict:
-    """Filtro padrão reutilizado pelo CLI ao processar ratios."""
-    return {
-        "and": [
-            {"industry_segment": {"ne": "TELECOMUNICACOES", "case": False}},
-        ]
+    """Return the default tree used when no custom filter is provided."""
+
+    return {}
+
+
+__all__ = [
+    "build_default_ratios_filter",
+    "build_ratios_filter_by_issuing_company",
+]
+
+presentation/frontend/src/services/apiService.js
++24
+-0
+
+@@ -30,25 +30,49 @@ export async function fetchAccountLineChart(ticker, accountCode, params = {}) {
+  if (!t || !a) {
+    throw new Error('Ticker e accountCode são obrigatórios')
+  }
+
+  const res = await api.get(
+    `/api/charts/accounts/line/${encodeURIComponent(t)}`,
+    {
+      params: {
+        account_code: a,
+        ...params,
+      },
+    },
+  )
+  return res.data
+}
+
+export async function searchCompanies(filterQuery) {
+  const res = await api.post('/companies/search', filterQuery || { clauses: [] })
+  return res.data
+}
+
+export async function fetchCompanyFacets() {
+  const res = await api.get('/companies/facets')
+  return res.data
+}
+
+export async function fetchCompanyRatiosChart(companyName, accounts, filterTree = null) {
+  const name = String(companyName || '').trim()
+  if (!name) {
+    throw new Error('Nome da companhia é obrigatório para carregar o gráfico de ratios')
+  }
+
+  const normalizedAccounts = Array.isArray(accounts)
+    ? accounts.map((code) => String(code || '').trim()).filter(Boolean)
+    : []
+
+  if (!normalizedAccounts.length) {
+    throw new Error('Selecione pelo menos uma conta para carregar o gráfico')
+  }
+
+  const payload = {
+    company_name: name,
+    accounts: normalizedAccounts,
+    filters: filterTree ? { tree: filterTree } : null,
+  }
+
+  const res = await api.post('/api/charts/ratios/company', payload)
+  return res.data
+}
+presentation/frontend/src/store/accountChartsStore.js
++45
+-52
+
+import { defineStore } from 'pinia'
+import { fetchAccountLineChart } from '../services/apiService'
+
+import { fetchCompanyRatiosChart } from '../services/apiService'
+import { buildChartFilterTree } from '../utils/chartFilters'
+
+export const useAccountChartsStore = defineStore('accountCharts', {
+  state: () => ({
+    ticker: '',
+    charts: {
+      '02.03': null,
+      '03.01': null,
+    },
+    isLoading: {
+      '02.03': false,
+      '03.01': false,
+    },
+    error: {
+      '02.03': '',
+      '03.01': '',
+    },
+    companyName: '',
+    selectedAccounts: [],
+    filterTree: null,
+    chart: null,
+    isLoading: false,
+    error: null,
+  }),
+
+  actions: {
+    setTicker(ticker) {
+      this.ticker = String(ticker || '').trim()
+    setCompanyName(name) {
+      this.companyName = String(name || '').trim()
+    },
+
+    _ensureKeys(code) {
+      if (!(code in this.charts)) {
+        this.charts = { ...this.charts, [code]: null }
+      }
+      if (!(code in this.isLoading)) {
+        this.isLoading = { ...this.isLoading, [code]: false }
+      }
+      if (!(code in this.error)) {
+        this.error = { ...this.error, [code]: '' }
+      }
+    setSelectedAccounts(accounts) {
+      this.selectedAccounts = Array.isArray(accounts)
+        ? accounts.map((code) => String(code || '').trim()).filter(Boolean)
+        : []
+    },
+
+    async loadAccountChart(accountCode, params = {}) {
+      const code = String(accountCode || '').trim()
+      if (!code) {
+    setFilterFromFilterQuery(filterQuery) {
+      this.filterTree = buildChartFilterTree(filterQuery)
+    },
+
+    resetChart() {
+      this.chart = null
+      this.error = null
+    },
+
+    async loadChart() {
+      if (!this.companyName) {
+        this.error = 'Selecione uma companhia antes de carregar o gráfico'
+        this.chart = null
+        return
+      }
+
+      this._ensureKeys(code)
+
+      if (!this.ticker) {
+        this.error = {
+          ...this.error,
+          [code]: 'Ticker e código da conta são obrigatórios',
+        }
+      if (!this.selectedAccounts.length) {
+        this.error = 'Selecione ao menos uma conta para exibir'
+        this.chart = null
+        return
+      }
+
+      this.isLoading = { ...this.isLoading, [code]: true }
+      this.error = { ...this.error, [code]: '' }
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const chart = await fetchAccountLineChart(this.ticker, code, params)
+        this.charts = { ...this.charts, [code]: chart }
+        const dto = await fetchCompanyRatiosChart(
+          this.companyName,
+          this.selectedAccounts,
+          this.filterTree,
+        )
+        this.chart = dto
+      } catch (err) {
+        console.error(err)
+        const message = err?.message || 'Falha ao carregar gráfico'
+        this.error = { ...this.error, [code]: message }
+        this.charts = { ...this.charts, [code]: null }
+        const message = err?.response?.data?.detail || err?.message || 'Falha ao carregar gráfico de ratios'
+        this.error = message
+        this.chart = null
+      } finally {
+        this.isLoading = { ...this.isLoading, [code]: false }
+        this.isLoading = false
+      }
+    },
+
+    async loadMultipleAccounts(accountCodes, params = {}) {
+      const codes = (accountCodes || [])
+        .map(code => String(code || '').trim())
+        .filter(Boolean)
+
+      await Promise.all(codes.map(code => this.loadAccountChart(code, params)))
+    },
+  },
+})
+
+presentation/frontend/src/utils/chartFilters.js
+New
++115
+-0
+
+const OPERATOR_MAP = {
+  IN: 'in',
+  EQUALS: 'eq',
+  CONTAINS: 'contains',
+  STARTS_WITH: 'startswith',
+  ENDS_WITH: 'endswith',
+  BETWEEN: 'between',
+  GT: 'gt',
+  GTE: 'gte',
+  LT: 'lt',
+  LTE: 'lte',
+}
+
+function normalizeValues(values) {
+  return (Array.isArray(values) ? values : [values])
+    .map((value) => {
+      if (value === null || value === undefined) {
+        return ''
+      }
+      return String(value).trim()
+    })
+    .filter(Boolean)
+}
+
+function buildLeaf(condition) {
+  if (!condition || !condition.field) {
+    return null
+  }
+
+  const field = condition.field
+  const operator = String(condition.operator || '').toUpperCase()
+  const values = normalizeValues(condition.values || [])
+
+  if (!values.length) {
+    return null
+  }
+
+  const op = OPERATOR_MAP[operator]
+
+  if (!op || op === 'eq') {
+    if (values.length === 1) {
+      return { [field]: values[0] }
     }
+    return { [field]: { in: values } }
+  }
+
+  if (op === 'in') {
+    return { [field]: { in: values } }
+  }
+
+  if (op === 'between' && values.length >= 2) {
+    return { [field]: { between: values.slice(0, 2) } }
+  }
+
+  if (['gt', 'gte', 'lt', 'lte'].includes(op)) {
+    return { [field]: { [op]: values.length === 1 ? values[0] : values } }
+  }
+
+  return { [field]: { [op]: values.length === 1 ? values[0] : values } }
+}
+
+export function buildChartFilterTree(filterQuery) {
+  if (!filterQuery || !Array.isArray(filterQuery.clauses)) {
+    return null
+  }
+
+  const andClauses = []
+  const orClauses = []
+  const notClauses = []
+
+  for (const clause of filterQuery.clauses) {
+    if (!clause || !clause.condition) {
+      continue
+    }
+
+    const leaf = buildLeaf(clause.condition)
+    if (!leaf) {
+      continue
+    }
+
+    const logical = String(clause.logical || 'AND').toUpperCase()
+    if (logical === 'OR') {
+      orClauses.push(leaf)
+    } else if (logical === 'NOT') {
+      notClauses.push({ not: leaf })
+    } else {
+      andClauses.push(leaf)
+    }
+  }
+
+  let tree = null
+
+  if (andClauses.length === 1) {
+    tree = andClauses[0]
+  } else if (andClauses.length > 1) {
+    tree = { and: andClauses }
+  }
+
+  if (orClauses.length === 1) {
+    tree = tree ? { and: [tree, orClauses[0]] } : orClauses[0]
+  } else if (orClauses.length > 1) {
+    const orNode = { or: orClauses }
+    tree = tree ? { and: [tree, orNode] } : orNode
+  }
+
+  if (notClauses.length === 1) {
+    tree = tree ? { and: [tree, notClauses[0]] } : notClauses[0]
+  } else if (notClauses.length > 1) {
+    const notNode = { and: notClauses }
+    tree = tree ? { and: [tree, notNode] } : notNode
+  }
+
+  return tree
+}
+
+presentation/frontend/src/views/AccountChartsView.vue
++128
+-72
+
+<template>
+  <section class="account-charts">
+    <header class="account-charts__header">
+      <h2>Gráficos por conta contábil</h2>
+      <p>
+        Informe um ticker e visualize múltiplas contas financeiras usando o mesmo
+        pipeline.
+      <h2>Gráficos de ratios por empresa</h2>
+
+      <p v-if="activeCompanyName">
+        Companhia selecionada:
+        <strong>{{ activeCompanyName }}</strong>
+      </p>
+      <p v-else class="muted">
+        Nenhuma companhia selecionada. Utilize os filtros na busca para escolher uma.
+      </p>
+
+      <div class="account-charts__controls">
+        <label class="account-charts__select">
+          Contas
+          <select multiple v-model="localAccounts">
+            <option value="02.03">02.03 – Patrimônio Líquido</option>
+            <option value="03.01">03.01 – Receita Líquida</option>
+            <option value="04.02">04.02 – EBITDA</option>
+            <option value="05.01">05.01 – Lucro Líquido</option>
+          </select>
+        </label>
+
+        <button
+          type="button"
+          class="account-charts__button"
+          @click="onReload"
+          :disabled="!canReload"
+        >
+          Carregar gráficos
+        </button>
+      </div>
+    </header>
+
+    <div class="account-charts__controls">
+      <label for="ticker-input">Ticker</label>
+      <input
+        id="ticker-input"
+        v-model="localTicker"
+        type="text"
+        placeholder="Ex.: PETR4"
+        @keyup.enter="load"
+    <main class="account-charts__body">
+      <div v-if="chartsStore.isLoading" role="status" aria-live="polite">
+        Carregando gráficos de ratios...
+      </div>
+
+      <div v-else-if="chartsStore.error" role="alert">
+        {{ chartsStore.error }}
+      </div>
+
+      <PlotlyViewer
+        v-else-if="chartsStore.chart"
+        :chart="chartsStore.chart"
+        :isLoading="chartsStore.isLoading"
+        :error="chartsStore.error"
+        aria-label="Gráfico de séries de ratios da empresa selecionada"
+      />
+
+      <button type="button" @click="load">
+        Carregar gráficos
+      </button>
+    </div>
+
+    <div class="account-charts__grid">
+      <section class="account-chart" aria-live="polite">
+        <h3>02.03 – Patrimônio Líquido</h3>
+        <PlotlyViewer
+          :chart="charts['02.03']"
+          :isLoading="isLoading['02.03']"
+          :error="error['02.03']"
+        />
+      </section>
+
+      <section class="account-chart" aria-live="polite">
+        <h3>03.01 – Receita Líquida</h3>
+        <PlotlyViewer
+          :chart="charts['03.01']"
+          :isLoading="isLoading['03.01']"
+          :error="error['03.01']"
+        />
+      </section>
+    </div>
+      <div v-else class="muted">
+        Selecione uma companhia, escolha as contas desejadas e clique em “Carregar gráficos”.
+      </div>
+    </main>
+  </section>
+</template>
+
+<script setup>
+import { computed, ref } from 'vue'
+import { useAccountChartsStore } from '../store/accountChartsStore'
+import PlotlyViewer from '../components/PlotlyViewer.vue'
+
+const store = useAccountChartsStore()
+const localTicker = ref(store.ticker)
+
+const charts = computed(() => store.charts)
+const isLoading = computed(() => store.isLoading)
+const error = computed(() => store.error)
+import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+
+async function load() {
+  store.setTicker(localTicker.value)
+  await store.loadMultipleAccounts(['02.03', '03.01'])
+import PlotlyViewer from '../components/PlotlyViewer.vue'
+import { useAccountChartsStore } from '../store/accountChartsStore'
+import { useCompanyStore } from '../store/companyStore'
+
+const chartsStore = useAccountChartsStore()
+const companyStore = useCompanyStore()
+
+const { selectedPairs, filterQuery } = storeToRefs(companyStore)
+
+const activeCompanyName = computed(() => {
+  const pairs = selectedPairs.value || []
+  if (!pairs.length) {
+    return ''
+  }
+  return pairs[0].company || ''
+})
+
+const localAccounts = ref(['02.03', '03.01'])
+
+const canReload = computed(() => {
+  return Boolean(activeCompanyName.value && localAccounts.value.length && !chartsStore.isLoading)
+})
+
+watch(
+  activeCompanyName,
+  (name) => {
+    chartsStore.setCompanyName(name)
+    chartsStore.resetChart()
+  },
+  { immediate: true },
+)
+
+watch(
+  filterQuery,
+  (query) => {
+    chartsStore.setFilterFromFilterQuery(query)
+  },
+  { deep: true, immediate: true },
+)
+
+watch(
+  localAccounts,
+  (accounts) => {
+    chartsStore.setSelectedAccounts(accounts)
+    chartsStore.resetChart()
+  },
+  { deep: true, immediate: true },
+)
+
+async function onReload() {
+  await chartsStore.loadChart()
+}
+</script>
+
+<style scoped>
+.account-charts {
+  display: flex;
+  flex-direction: column;
+  display: grid;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.account-charts__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.account-charts__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.account-charts__controls input {
+.account-charts__select {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.account-charts__select select {
+  min-width: 220px;
+  min-height: 96px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border: 1px solid #cbd5f5;
+  border-radius: 4px;
+  min-width: 160px;
+}
+
+.account-charts__controls button {
+  padding: 0.5rem 1rem;
+.account-charts__button {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #2563eb;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.account-charts__controls button:hover {
+  background-color: #1d4ed8;
+.account-charts__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-charts__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+.account-charts__body {
+  min-height: 280px;
+}
+
+.account-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+.muted {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+</style>
+
+tests/application/usecases/test_normalize_ratios_flow.py
++2
+-1
+
+@@ -96,52 +96,53 @@ class DummyCacheRatiosPort:
+        return None
+
+    def load(self, cache_key: str):  # noqa: D401
+        return None
+
+    def store(self, *, context, df, company_name):  # noqa: ANN001, ARG002, D401
+        raise NotImplementedError
+
+    def invalidate_outdated(self, *, code_hash: str) -> None:  # noqa: ARG002
+        return None
+
+
+class FakeCacheRatiosService:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def get_or_compute(
+        self,
+        *,
+        company_name: str,
+        quotes,
+        statements,
+        indicators,
+        compute_fn,
+        code_hash: str,
+        filters=None,
+    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
+        del quotes, statements, indicators, compute_fn
+        del quotes, statements, indicators, compute_fn, filters
+        self.calls.append(company_name)
+        entry = CacheRatiosEntryDTO(
+            cache_key=f"{company_name}-cache",
+            file_path="/tmp/fake",
+            size_bytes=0,
+            created_at=datetime.now(),
+            accessed_at=datetime.now(),
+            access_count=1,
+            code_hash=code_hash,
+        )
+        result = CacheRatiosResultDTO(
+            company_name=company_name,
+            cache_key=entry.cache_key,
+            hit=False,
+            entry=entry,
+        )
+        return pd.DataFrame({"company": [company_name]}), result
+
+
+class SequentialWorkerPool:
+    def __call__(
+        self,
+        *,
+        logger,
+        tasks,
