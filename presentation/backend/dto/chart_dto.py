@@ -25,6 +25,9 @@ class ChartDTO(BaseModel):
 
     'data' é uma lista de traces Plotly,
     'layout' é um dict livre conforme API do Plotly.js.
+    'meta' carrega metadados auxiliares (empresa, cache etc.).
     """
+
     data: List[PlotlyTraceDTO]
     layout: Dict[str, Any] = Field(default_factory=dict)
+    meta: Dict[str, Any] = Field(default_factory=dict)

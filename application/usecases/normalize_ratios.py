@@ -74,6 +74,12 @@ class NormalizeUseCase:
         self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
         self.companies_eligible_port = companies_eligible_port
 
+    @property
+    def ratios_code_hash(self) -> str:
+        """Expose the code hash used for cache coordination."""
+
+        return self._ratios_code_hash
+
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.run(companies=kwds.get("companies"))
 

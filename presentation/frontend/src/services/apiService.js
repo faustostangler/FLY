@@ -52,3 +52,27 @@ export async function fetchCompanyFacets() {
   const res = await api.get('/companies/facets')
   return res.data
 }
+
+export async function fetchCompanyRatiosChart(companyName, accounts, filterTree = null) {
+  const name = String(companyName || '').trim()
+  if (!name) {
+    throw new Error('Nome da companhia é obrigatório para carregar o gráfico de ratios')
+  }
+
+  const normalizedAccounts = Array.isArray(accounts)
+    ? accounts.map((code) => String(code || '').trim()).filter(Boolean)
+    : []
+
+  if (!normalizedAccounts.length) {
+    throw new Error('Selecione pelo menos uma conta para carregar o gráfico')
+  }
+
+  const payload = {
+    company_name: name,
+    accounts: normalizedAccounts,
+    filters: filterTree ? { tree: filterTree } : null,
+  }
+
+  const res = await api.post('/api/charts/ratios/company', payload)
+  return res.data
+}
