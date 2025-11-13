@@ -81,7 +81,7 @@ watch(
 )
 
 // Caso ninguém tenha setado contas ainda, usa defaults
-const defaultAccounts = ['02.03', '03.01']
+const defaultAccounts = ['02.03', '03.01', '03.11']
 if (!selectedAccounts.value.length) {
   chartsStore.setSelectedAccounts(defaultAccounts)
 }

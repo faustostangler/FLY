@@ -84,7 +84,7 @@ const selectedPairs = computed(() => {
 
 const onVisualizarGraficos = () => {
   chartsStore.setCompanies(selectedPairs.value)
-  chartsStore.setSelectedAccounts(['02.03', '03.01'])
+  chartsStore.setSelectedAccounts(['02.03', '03.01', '03.11'])
   chartsStore.loadCharts()
 }
 </script>
