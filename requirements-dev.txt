@@ -4,3 +4,5 @@ ruff
 black
 isort
 pre-commit
+pandas>=2.0
+pyarrow>=15.0

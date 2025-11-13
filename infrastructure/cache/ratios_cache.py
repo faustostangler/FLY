@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -182,7 +182,7 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         """
         Remove entradas antigas por versão de código (code_hash) ou por idade máxima.
         """
-        cutoff: datetime = datetime.now() - self._as_timedelta(self._config.cache.max_age)
+        cutoff: datetime = datetime.now() - self._config.cache.max_age
         with self.Session.begin() as session:
             rows = session.scalars(
                 select(CacheEntry).where(
@@ -232,7 +232,7 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         Onde:
           - cache_dir vem de config.paths.cache_dir
           - empresa-normalizada é o nome sanitizado da companhia
-          - cache_key garante unicidade por versão/filtros/etc.
+          - cache_key garante unicidade por versão e snapshot de dados
         """
         base_dir = Path(self._config.paths.cache_dir)
 
@@ -249,11 +249,3 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
         cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
         return cleaned[:120] if cleaned else "unknown"
 
-    def _as_timedelta(self, value) -> timedelta:
-        """
-        Aceita tanto timedelta quanto uma duration-like de config.
-        """
-        if isinstance(value, timedelta):
-            return value
-        # fallback simples: minutos
-        return timedelta(minutes=int(value))
