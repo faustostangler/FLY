@@ -6,6 +6,7 @@ from typing import Optional
 import pandas as pd
 
 from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
+from application.processors.filter_builder import FilterBuilder
 from application.ports.config_port import ConfigPort
 from application.ports.logger_port import LoggerPort
 from application.ports.uow_port import UowFactoryPort
@@ -21,6 +22,7 @@ from domain.ports.repository_statements_fetched_port import (
 )
 from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
 from domain.value_objects import SearchFilterTree
+from infrastructure.utils.pandas_visitor import PandasVisitor
 
 
 @dataclass
@@ -101,8 +103,9 @@ class GetCompanyRatiosFrameUseCase:
             indicators=company_data.get("indicators"),
             compute_fn=_compute,
             code_hash=self._normalize_usecase.ratios_code_hash,
-            filters=filters,
         )
+
+        df = self._apply_filters(df, filters)
 
         ticker = next(iter(company.ticker_codes), None)
         meta = {
@@ -117,6 +120,18 @@ class GetCompanyRatiosFrameUseCase:
             ticker=ticker,
             meta=meta,
         )
+
+    def _apply_filters(
+        self,
+        df: pd.DataFrame,
+        filters: Optional[SearchFilterTree],
+    ) -> pd.DataFrame:
+        if filters is None or filters.is_empty():
+            return df
+
+        spec = FilterBuilder().build_spec(filters.to_dict())
+        mask = spec.accept(PandasVisitor(), df)
+        return df.loc[mask].copy()
 
     def _load_treated_indicators(self) -> dict[str, dict[str, pd.DataFrame]]:
         with self.uow_factory() as uow:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import Iterable
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -14,7 +15,6 @@ class CacheRatiosContextDTO:
     statements_hash: str
     indicators_hash: str
     code_hash: str
-    filters_hash: str = ""
 
     @property
     def app_hash(self) -> str:
@@ -23,7 +23,12 @@ class CacheRatiosContextDTO:
 
     @property
     def cache_key(self) -> str:
-        payload = (
-            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}{self.filters_hash}".encode()
+        parts: Iterable[str] = (
+            self.app_hash,
+            self.quotes_hash,
+            self.statements_hash,
+            self.indicators_hash,
+            self.code_hash,
         )
+        payload = "|".join(parts).encode("utf-8")
         return hashlib.sha256(payload).hexdigest()

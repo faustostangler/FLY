@@ -118,9 +118,8 @@ class FakeCacheRatiosService:
         indicators,
         compute_fn,
         code_hash: str,
-        filters=None,
     ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
-        del quotes, statements, indicators, compute_fn, filters
+        del quotes, statements, indicators, compute_fn
         self.calls.append(company_name)
         entry = CacheRatiosEntryDTO(
             cache_key=f"{company_name}-cache",
@@ -141,6 +140,9 @@ class FakeCacheRatiosService:
 
 
 class SequentialWorkerPool:
+    def __init__(self) -> None:
+        self.processed_tasks: list[tuple[int, dict]] = []
+
     def __call__(
         self,
         *,
@@ -152,8 +154,10 @@ class SequentialWorkerPool:
         max_workers,
         total_size,
     ):
-        del logger, post_callback, max_workers, total_size
-        for index, data in tasks:
+        del logger, post_callback, max_workers
+        tasks_list = list(tasks)
+        self.processed_tasks.extend(tasks_list)
+        for index, data in tasks_list:
             task = WorkerTaskDTO(
                 index=index,
                 data=data,
@@ -173,6 +177,7 @@ def config(tmp_path):
         database=SimpleNamespace(connection_string=f"sqlite:///{db_path}"),
         worker_pool=SimpleNamespace(max_workers=1),
         repository=SimpleNamespace(batch_size=50, persistence_threshold=1),
+        fly_settings=SimpleNamespace(app_name="test-app", version="1"),
     )
 
 
@@ -247,6 +252,8 @@ def test_normalize_pipeline_reads_projection(config):
     assert len(projection) == 1
     assert projection[0].ticker_codes == ("ACME3",)
 
+    companies_df = pd.DataFrame([company.to_dict() for company in projection])
+
     normalize_usecase = NormalizeUseCase(
         config=config,
         logger=logger,
@@ -262,7 +269,47 @@ def test_normalize_pipeline_reads_projection(config):
     normalize_usecase.cache_ratios_service = fake_cache
     normalize_usecase._ratios_code_hash = "fake-code"
 
-    results = normalize_usecase.run()
+    sample_statements = pd.DataFrame(
+        {
+            "quarter": [pd.Timestamp("2023-12-31")],
+            "account": ["ACC"],
+            "value": [100.0],
+        }
+    )
+    sample_quotes = {
+        "stock_1": pd.DataFrame(
+            {
+                "date": [pd.Timestamp("2023-12-15")],
+                "close": [10.5],
+            }
+        )
+    }
+
+    def _mock_load_quotes(self, *, ticker_codes, uow):  # noqa: ANN001, ARG001
+        return sample_quotes
+
+    def _mock_load_statements(self, *, company_name, uow):  # noqa: ANN001, ARG001
+        return {"statements": sample_statements}
+
+    def _mock_treat_data(self, data, aggregate_method="last"):  # noqa: ANN001
+        return {
+            "quotes": data.get("quotes", {}),
+            "statements": data.get("statements", {}),
+            "indicators": data.get("indicators", {}),
+        }
+
+    def _mock_create_ratios(self, company_data):  # noqa: ANN001
+        return pd.DataFrame({
+            "company": [projection[0].company_name],
+            "value": [42.0],
+        })
+
+    normalize_usecase._load_quotes = _mock_load_quotes.__get__(normalize_usecase, NormalizeUseCase)
+    normalize_usecase._load_statements = _mock_load_statements.__get__(normalize_usecase, NormalizeUseCase)
+    normalize_usecase._treat_data = _mock_treat_data.__get__(normalize_usecase, NormalizeUseCase)
+    normalize_usecase._create_ratios = _mock_create_ratios.__get__(normalize_usecase, NormalizeUseCase)
+
+    results = normalize_usecase.run(companies=companies_df)
 
     assert len(results.items) == 1
     assert fake_cache.calls == ["ACME SA"]
