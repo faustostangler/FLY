@@ -1,30 +1,25 @@
 <template>
   <main class="home">
-    <section class="home__search">
+    <section id=CompanySearchBuilder class="home__search">
       <CompanySearchBuilder />
     </section>
 
-    <section class="home__charts">
-      <div id="CompanySelectionSummary">
+    <section id="CompanySelectionSummary" class="home__charts">
         <h2>{{ title }}</h2>
         <CompanySelectionSummary
           :selected-pairs="selectedPairs"
           @visualizar-graficos="onVisualizarGraficos"
         />
-      </div>
     </section>
 
-    <section
-      class="home__charts-results"
-      aria-labelledby="chart-results-heading"
-    >
-      <h2 id="chart-results-heading">Resultados</h2>
-
-      <CompanyChartsView v-if="selectedPairs.length" />
-
-      <p v-else class="home__charts-empty">
-        Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
-      </p>
+    <section id="CompanyChartsView" class="home__charts-results">
+      <h2>Resultados</h2>
+        <div v-if="selectedPairs.length" aria-labelledby="chart-results-heading">
+            <CompanyChartsView />
+        </div>
+        <div v-else class="home__charts-empty">
+          Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
+        </div>
     </section>
   </main>
 </template>
