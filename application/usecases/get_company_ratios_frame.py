@@ -25,6 +25,11 @@ from domain.value_objects import SearchFilterTree
 from infrastructure.utils.pandas_visitor import PandasVisitor
 
 
+ALLOWED_RATIO_FILTER_FIELDS: set[str] = {
+    "date",
+}
+
+
 @dataclass
 class GetCompanyRatiosFrameUseCase:
     config: ConfigPort
@@ -105,12 +110,16 @@ class GetCompanyRatiosFrameUseCase:
             code_hash=self._normalize_usecase.ratios_code_hash,
         )
 
-        df = self._apply_filters(df, filters)
+        effective_filters: Optional[SearchFilterTree] = None
+        if filters is not None and not filters.is_empty():
+            effective_filters = filters.filtered_by_fields(ALLOWED_RATIO_FILTER_FIELDS)
+
+        df = self._apply_filters(df, effective_filters)
 
         ticker = next(iter(company.ticker_codes), None)
         meta = {
             "company_id": company.id,
-            "filters": filters.to_dict() if filters else None,
+            "filters": effective_filters.to_dict() if effective_filters else None,
         }
 
         return CompanyRatiosFrameDTO(
@@ -126,12 +135,22 @@ class GetCompanyRatiosFrameUseCase:
         df: pd.DataFrame,
         filters: Optional[SearchFilterTree],
     ) -> pd.DataFrame:
+        if df is None or df.empty:
+            return df
         if filters is None or filters.is_empty():
             return df
 
-        spec = FilterBuilder().build_spec(filters.to_dict())
-        mask = spec.accept(PandasVisitor(), df)
-        return df.loc[mask].copy()
+        try:
+            spec = FilterBuilder().build_spec(filters.to_dict())
+            mask = spec.accept(PandasVisitor(), df)
+            return df.loc[mask].copy()
+        except Exception as exc:  # pragma: no cover - defensive branch
+            if self.logger:
+                self.logger.warning(
+                    "Falha ao aplicar filtros em GetCompanyRatiosFrameUseCase: %s",
+                    exc,
+                )
+            return df
 
     def _load_treated_indicators(self) -> dict[str, dict[str, pd.DataFrame]]:
         with self.uow_factory() as uow:
