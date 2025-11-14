@@ -20,7 +20,7 @@
     >
       <h2 id="chart-results-heading">Resultados</h2>
 
-      <AccountChartsView v-if="selectedPairs.length" />
+      <CompanyChartsView v-if="selectedPairs.length" />
 
       <p v-else class="home__charts-empty">
         Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
@@ -35,7 +35,7 @@ import { storeToRefs } from 'pinia'
 
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
-import AccountChartsView from './AccountChartsView.vue'
+import CompanyChartsView from './CompanyChartsView.vue'
 
 import { useCompanyStore } from '../store/companyStore'
 import { useAccountChartsStore } from '../store/accountChartsStore'

@@ -2,7 +2,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ChartView from '../views/ChartView.vue'
-import AccountChartsView from '../views/AccountChartsView.vue'
+import CompanyChartsView from '../views/CompanyChartsView.vue'
 
 const routes = [
   {
@@ -19,7 +19,7 @@ const routes = [
     path: '/charts/accounts',
     // Keep this name in sync with views that navigate to the account charts page.
     name: 'account-charts',
-    component: AccountChartsView,
+    component: CompanyChartsView,
   },
 ]
 

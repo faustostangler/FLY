@@ -1,4 +1,4 @@
-<!-- presentation/frontend/src/views/AccountChartsView.vue -->
+<!-- presentation/frontend/src/views/CompanyChartsView.vue -->
 <template>
   <section class="account-charts">
     <header class="account-charts__header">

@@ -104,7 +104,7 @@ presentation/frontend/src/store/accountChartsStore.js
 presentation/frontend/src/utils/chartFilters.js
 New
 
-presentation/frontend/src/views/AccountChartsView.vue
+presentation/frontend/src/views/CompanyChartsView.vue
 +128
 -72
 
@@ -1882,7 +1882,7 @@ export function buildChartFilterTree(filterQuery) {
   return tree
 }
 
-presentation/frontend/src/views/AccountChartsView.vue
+presentation/frontend/src/views/CompanyChartsView.vue
 +128
 -72
 

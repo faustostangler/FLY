@@ -1,6 +1,6 @@
 Resumo: Tenho uma empresa, vários accounts, um cache de ratios em Parquet. Preciso transformar isso em séries para o Plotly em Vue via FastAPI. A refatoração precisa alinhar os blocos existentes em torno de um contrato de filtros e de um caso de uso de “gráfico de accounts por empresa”, mantendo hexágono limpo.
 
-O sistema deve entregar: O usuário filtra com facetas e escolhe uma empresa no frontend. O AccountChartsView.vue deve exibir vários gráficos de linha de diferentes accounts dessa empresa. Cada série de linha corresponde a uma coluna da tabela de ratios em cache. Extrair a “linguagem de filtros” do CLI para um módulo próprio, com um dicionário de filtros em forma de árvore, em que cada folha é uma condição sobre uma coluna (criar um DTO Pydantic de entrada que envolva o filtro; os endpoints que precisam de filtro recebem SearchFiltersDTO no body; Pinia guarda um estado de filtro que consiga ser serializado para o mesmo formato que o DTO Pydantic espera; e a action do Pinia transforma o estado atual das facetas). 
+O sistema deve entregar: O usuário filtra com facetas e escolhe uma empresa no frontend. O CompanyChartsView.vue deve exibir vários gráficos de linha de diferentes accounts dessa empresa. Cada série de linha corresponde a uma coluna da tabela de ratios em cache. Extrair a “linguagem de filtros” do CLI para um módulo próprio, com um dicionário de filtros em forma de árvore, em que cada folha é uma condição sobre uma coluna (criar um DTO Pydantic de entrada que envolva o filtro; os endpoints que precisam de filtro recebem SearchFiltersDTO no body; Pinia guarda um estado de filtro que consiga ser serializado para o mesmo formato que o DTO Pydantic espera; e a action do Pinia transforma o estado atual das facetas). 
 
 1. Fluxo atual: do cli.py até o parquet de ratios. Onde os ratios são calculados, papel do _ratios_service() e como o CLI chega até ele. 1.A. Origem dos dados: O cálculo de ratios vive no NormalizeUseCase em application/usecases/normalize_ratios.py. Carrega os indicadores brutos e trata para df limpo, carrega empresas elegíveis (filtradas, hoje em cli.py, refatorar para um SearchFiltersDTO) em df para tasks. Para cada empresa, monta o snapshot (com indicators, statements e quotes), trata e organiza em company_data. Então chama o serviço de cache de ratios. 1.B. Regra de negócios ratios: processa dados e monta calculate_df para aplicar fórmulas de intel.py. Cada fórmula gera uma nova coluna adicionada ao df. Cada coluna representa um “account” ou um ratio calculado (uma série no endpoint). 1.C. CacheRatiosService e do cache Parquet: application/services/cache_ratios_service.py recebe os dados brutos e devolve um df de ratios e CacheRatiosResultDTO. Independente de CLI ou futuro FastAPI, O produto final do pipeline de ratios é sempre um DataFrame por empresa (Índice: datas (date) e Colunas: múltiplos accounts / ratios) calculado em _create_ratios, salvo/lido como Parquet pelo CacheRatiosService + CacheRatiosPort e usado no NormalizeUseCase para atualizar o cache e medir métricas. Para o frontend, as séries são colunas específicas desse df. 
 
@@ -14,7 +14,7 @@ O sistema deve entregar: O usuário filtra com facetas e escolhe uma empresa no 
 
 6. Adaptador FastAPI como uma casca fina (A rota só traduz HTTP para DTO e DTO para HTTP. Toda a lógica de negócio está fora dela). Três funções básicas. Receber o corpo da requisição JSON: company_name, accounts, filters. Validar automaticamente com Pydantic no DTO de entrada. Resolver o caso de uso via injeção de dependências: FastAPI pede um GetCompanyAccountsChartUseCase, O container monta esse use case com as implementações concretas de ports de cache e repositórios. Invocar o caso de uso e receber um ChartDTO. Pydantic valida esse ChartDTO de saída e o FastAPI devolve como JSON.
 
-7. Vue frontend com o contrato de gráfico. AccountChartsView.vue não precisa saber nada sobre Parquet, DataFrame ou regras de cálculo. Ele só consome ChartDTO. Camada de estado (Pinia): Guarda os parâmetros de filtro relevantes para gráficos, Guarda o último ChartDTO retornado pelo backend, Exibe isLoading e erros. Camada de serviço de API: Tem uma função que sabe chamar o endpoint de gráficos, Envia company_name, accounts e filters no formato correto, Devolve um ChartDTO. Camada de apresentação: AccountChartsView.vue orquestra: Leitura e atualização de filtros do usuário, Disparo de ações de carregamento de gráficos, Passagem do ChartDTO para um componente que desenha o Plotly.
+7. Vue frontend com o contrato de gráfico. CompanyChartsView.vue não precisa saber nada sobre Parquet, DataFrame ou regras de cálculo. Ele só consome ChartDTO. Camada de estado (Pinia): Guarda os parâmetros de filtro relevantes para gráficos, Guarda o último ChartDTO retornado pelo backend, Exibe isLoading e erros. Camada de serviço de API: Tem uma função que sabe chamar o endpoint de gráficos, Envia company_name, accounts e filters no formato correto, Devolve um ChartDTO. Camada de apresentação: CompanyChartsView.vue orquestra: Leitura e atualização de filtros do usuário, Disparo de ações de carregamento de gráficos, Passagem do ChartDTO para um componente que desenha o Plotly.
 
 O mesmo pipeline de cálculo de ratios serve tanto ao CLI quanto ao FastAPI, o cache é único e o frontend recebe sempre o mesmo formato de ChartDTO, independentemente de como o backend decidiu calcular ou ler do cache. 
 
@@ -2105,11 +2105,11 @@ Se isso estiver funcionando, o Bloco 4 está pronto para o frontend consumir o e
 ---
 
 Tarefa 5 – Integração Vue + Pinia com o novo endpoint e filtros
-Objetivo: fazer o AccountChartsView.vue consumir o novo endpoint de ratios e alinhar o estado de filtros com o contrato SearchFiltersDTO.
+Objetivo: fazer o CompanyChartsView.vue consumir o novo endpoint de ratios e alinhar o estado de filtros com o contrato SearchFiltersDTO.
 5.1. Serviço de API no frontend: Em presentation/frontend/src/services/apiService.js: Adicionar função nova agnóstica de Plotly. Ela só devolve o ChartDTO JSON.
 5.2. Store de gráficos de accounts: Em presentation/frontend/src/store/accountChartsStore.js. Hoje a store chama fetchAccountLineChart(this.ticker, code, params).
-Nova estratégia: Guardar: companyName em vez de ticker se o backend trabalhar com company_name. Uma lista de accounts observada pelo AccountChartsView. Um único ChartDTO com múltiplas séries ou um charts[accountCode] se preferir um gráfico por card. loadMultipleAccounts passa a chamar o novo serviço. Para manter “um card por account”, deve desmembrar o ChartDTO em traces individuais no componente, sem mudar o contrato do backend.
-5.3. AccountChartsView.vue consumindo ChartDTO: Em presentation/frontend/src/views/AccountChartsView.vue: 
+Nova estratégia: Guardar: companyName em vez de ticker se o backend trabalhar com company_name. Uma lista de accounts observada pelo CompanyChartsView. Um único ChartDTO com múltiplas séries ou um charts[accountCode] se preferir um gráfico por card. loadMultipleAccounts passa a chamar o novo serviço. Para manter “um card por account”, deve desmembrar o ChartDTO em traces individuais no componente, sem mudar o contrato do backend.
+5.3. CompanyChartsView.vue consumindo ChartDTO: Em presentation/frontend/src/views/CompanyChartsView.vue: 
 Hoje: Recebe ticker. Chama store.loadMultipleAccounts(['02.03', '03.01']). Cada <PlotlyViewer> recebe um chart separado.
 Estratégia: Usar o mesmo Pinia que controla os filtros de empresa (facetas) para derivar: companyName selecionado. filterTree compatível com SearchFiltersDTO. Chamar store.loadMultipleAccounts(accountCodes, currentFilterTree). Passar o ChartDTO único para um <PlotlyViewer> que contenha múltiplas séries ou, se preferir, filtrar as séries dentro do componente.
 5.4. Filtro → DTO no frontend: A partir das facetas existentes (setor, subsetor, segmento, etc.), você precisa de uma função pura que gere o dicionário no formato da árvore:
@@ -2290,11 +2290,11 @@ Essa store assume:
 
 ---
 
-## 5.3 – AccountChartsView.vue integrando seleção de empresa, accounts e ChartDTO único
+## 5.3 – CompanyChartsView.vue integrando seleção de empresa, accounts e ChartDTO único
 
 **Contexto**
 
-`AccountChartsView.vue` deve:
+`CompanyChartsView.vue` deve:
 
 * Ler a companhia selecionada no `companyStore`
 * Derivar os filtros do `companyStore.filterQuery`
@@ -2304,7 +2304,7 @@ Essa store assume:
 
 **Implementação**
 
-Arquivo: `presentation/frontend/src/views/AccountChartsView.vue`
+Arquivo: `presentation/frontend/src/views/CompanyChartsView.vue`
 
 ```vue
 <template>
@@ -2677,5 +2677,5 @@ Esse Bloco 5 fica aderente ao resto da refatoração:
 
 * Endpoint de ratios entrega um `ChartDTO` único com múltiplas séries
 * Pinia centraliza empresa, accounts, filtro e ChartDTO
-* AccountChartsView.vue só orquestra seleção e disparo de ação
+* CompanyChartsView.vue só orquestra seleção e disparo de ação
 * Builder de filtros garante compatibilidade com o contrato do backend e com a DSL já usada pelo CLI e pelo `companyStore`
