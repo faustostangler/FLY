@@ -522,7 +522,7 @@ onMounted(() => {
   padding: 1rem;
   border: 1px solid var(--vt-c-divider-light, #e2e8f0);
   border-radius: 12px;
-  background-color: var(--vt-c-bg-mute, #f8fafc);
+  /* background-color: var(--vt-c-bg-mute, #e9f3fd); */
 }
 
 .company-search__header {

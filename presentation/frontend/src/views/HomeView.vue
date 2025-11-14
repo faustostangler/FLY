@@ -1,18 +1,25 @@
 <template>
   <main class="home">
-    <CompanySearchBuilder class="home__search" />
+    <section class="home__search">
+      <CompanySearchBuilder />
+    </section>
 
     <section class="home__charts">
+      <div id="CompanySelectionSummary">
       <h2>{{ title }}</h2>
+          <CompanySelectionSummary />
+      </div>
 
-      <CompanySelectionSummary />
+      <section id="CompanySelectionPanel">
+        <CompanySelectionPanel
+          :selected-pairs="selectedPairs"
+          @visualizar-graficos="onVisualizarGraficos"
+        />
+      </section>
 
-      <SelectedCompaniesPanel
-        :selected-pairs="selectedPairs"
-        @visualizar-graficos="onVisualizarGraficos"
-      />
+    </section>
 
-      <section
+    <section
         class="home__charts-results"
         aria-labelledby="chart-results-heading"
       >
@@ -24,7 +31,6 @@
           Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
         </p>
       </section>
-    </section>
   </main>
 </template>
 
@@ -34,11 +40,12 @@ import { storeToRefs } from 'pinia'
 
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
-import SelectedCompaniesPanel from '../components/SelectedCompaniesPanel.vue'
+import SelectedCompaniesPanel from '../components/CompanySelectionPanel.vue'
 import AccountChartsView from './AccountChartsView.vue'
 
 import { useCompanyStore } from '../store/companyStore'
 import { useAccountChartsStore } from '../store/accountChartsStore'
+import CompanySelectionPanel from '../components/CompanySelectionPanel.vue'
 
 const title = ref('Dashboard de Indicadores')
 
@@ -70,16 +77,22 @@ const onVisualizarGraficos = () => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  background-color: #a3c6f1;
+  border-radius: 50px;
 }
 
 .home__charts-results {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  background-color: #d2f7c3;
+  border-radius: 50px;
 }
 
 .home__search {
   max-width: 100%;
+  background-color: #dde1e6;
+  border-radius: 50px;
 }
 
 .home__charts-empty {
