@@ -32,6 +32,17 @@
         </p>
       </li>
     </ul>
+
+    <div class="home__selected-actions-bar">
+      <button
+        type="button"
+        class="home__charts-button"
+        :disabled="!hasSelection"
+        @click="emitVisualizarGraficos"
+      >
+        Visualizar Gráficos
+      </button>
+    </div>
   </section>
 </template>
 
@@ -40,6 +51,16 @@ import { computed } from 'vue'
 import { useCompanyStore } from '../store/companyStore'
 import { useChartStore } from '../store/chartStore'
 import { extractTicker } from '../utils/tickers'
+
+const props = defineProps({
+  selectedPairs: {
+    type: Array,
+    required: false,
+    default: () => [],
+  },
+})
+
+const emit = defineEmits(['visualizar-graficos'])
 
 const companyStore = useCompanyStore()
 const chartStore = useChartStore()
@@ -74,6 +95,19 @@ const selectedSummaries = computed(() => {
     .map((value) => index.get(value))
     .filter(Boolean)
 })
+
+const hasSelection = computed(() => {
+  if (props.selectedPairs && props.selectedPairs.length > 0) {
+    return true
+  }
+
+  return selectedSummaries.value.length > 0
+})
+
+const emitVisualizarGraficos = () => {
+  if (!hasSelection.value) return
+  emit('visualizar-graficos')
+}
 
 async function onTickerClick(item) {
   if (!item?.value) {
@@ -146,5 +180,31 @@ async function onTickerClick(item) {
 .muted {
   color: #64748b;
   margin: 0.1rem 0 0;
+}
+
+.home__selected-actions-bar {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.home__charts-button {
+  padding: 0.75rem 1.5rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.home__charts-button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.home__charts-button:not(:disabled):hover {
+  background: #1d4ed8;
 }
 </style>
