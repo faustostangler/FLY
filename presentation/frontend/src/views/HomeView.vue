@@ -6,31 +6,26 @@
 
     <section class="home__charts">
       <div id="CompanySelectionSummary">
-      <h2>{{ title }}</h2>
-          <CompanySelectionSummary />
-      </div>
-
-      <section id="CompanySelectionPanel">
-        <CompanySelectionPanel
+        <h2>{{ title }}</h2>
+        <CompanySelectionSummary
           :selected-pairs="selectedPairs"
           @visualizar-graficos="onVisualizarGraficos"
         />
-      </section>
-
+      </div>
     </section>
 
     <section
-        class="home__charts-results"
-        aria-labelledby="chart-results-heading"
-      >
-        <h2 id="chart-results-heading">Resultados</h2>
+      class="home__charts-results"
+      aria-labelledby="chart-results-heading"
+    >
+      <h2 id="chart-results-heading">Resultados</h2>
 
-        <AccountChartsView v-if="selectedPairs.length" />
+      <AccountChartsView v-if="selectedPairs.length" />
 
-        <p v-else class="home__charts-empty">
-          Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
-        </p>
-      </section>
+      <p v-else class="home__charts-empty">
+        Selecione uma ou mais companhias e clique em “Visualizar Gráficos”.
+      </p>
+    </section>
   </main>
 </template>
 
@@ -40,12 +35,10 @@ import { storeToRefs } from 'pinia'
 
 import CompanySearchBuilder from '../components/CompanySearchBuilder.vue'
 import CompanySelectionSummary from '../components/CompanySelectionSummary.vue'
-import SelectedCompaniesPanel from '../components/CompanySelectionPanel.vue'
 import AccountChartsView from './AccountChartsView.vue'
 
 import { useCompanyStore } from '../store/companyStore'
 import { useAccountChartsStore } from '../store/accountChartsStore'
-import CompanySelectionPanel from '../components/CompanySelectionPanel.vue'
 
 const title = ref('Dashboard de Indicadores')
 
