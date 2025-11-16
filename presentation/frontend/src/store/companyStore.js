@@ -645,7 +645,7 @@ export const useCompanyStore = defineStore('companyStore', {
         const parsed = this.parseQuery(this.queryText)
         this.filterQuery = parsed
         this.queryText = this.serializeQuery(parsed)
-        this.loadCompanies()
+        // State-only helper: no implicit fetch here.
         return { ok: true }
       } catch (error) {
         const message = error instanceof ParseError ? error.message : 'Consulta inválida.'
@@ -654,9 +654,17 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     resetFilters() {
+      this.resetFiltersAndReload()
+    },
+
+    resetFiltersState() {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
       this.selectedItems = []
+    },
+
+    resetFiltersAndReload() {
+      this.resetFiltersState()
       this.loadCompanies()
     },
 
@@ -671,14 +679,25 @@ export const useCompanyStore = defineStore('companyStore', {
       this.selectedItems = normalized
     },
 
-    async loadCompanies() {
+    async fetchCompaniesOnly() {
       this.isLoading = true
       this.error = null
       try {
         const payload = await searchCompanies(this.filterQuery)
         this.companies = payload.items || []
         this.total = payload.total || 0
+      } catch (err) {
+        console.error(err)
+        this.error = 'Falha ao carregar companhias'
+      } finally {
+        this.isLoading = false
+      }
+    },
 
+    async loadCompanies() {
+      await this.fetchCompaniesOnly()
+
+      try {
         this._rebuildIndustryCascade(this.companies)
         this._pruneSelection()
         if (!this.queryText) {
@@ -686,9 +705,7 @@ export const useCompanyStore = defineStore('companyStore', {
         }
       } catch (err) {
         console.error(err)
-        this.error = 'Falha ao carregar companhias'
-      } finally {
-        this.isLoading = false
+        this.error = 'Falha ao processar resultados de companhias'
       }
     },
 

@@ -310,7 +310,7 @@ function onFacetChange({ field, logical, values, operator }) {
 }
 
 function clearFilters() {
-  store.resetFilters()
+  store.resetFiltersAndReload()
 }
 
 onMounted(() => {

@@ -420,10 +420,11 @@ function applyQuery() {
     return
   }
   parseError.value = ''
+  reload()
 }
 
 function clearFilters() {
-  store.resetFilters()
+  store.resetFiltersState()
   parseError.value = ''
   draftFacets.value = {}
 }
