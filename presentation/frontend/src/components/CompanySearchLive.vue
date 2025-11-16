@@ -1,13 +1,14 @@
 <template>
-  <section class="company-search">
+  <section class="company-search company-search--live">
     <header class="company-search__header">
-      <h2>Construtor de filtros</h2>
+      <h2>Busca ao vivo</h2>
       <div class="company-search__actions">
+        <button type="button" class="ghost" @click="clearFilters">Limpar filtros</button>
       </div>
     </header>
 
-    <section class="company-search__facets" aria-labelledby="filters-heading">
-      <h2 id="filters-heading">Filtros</h2>
+    <section class="company-search__facets" aria-labelledby="live-filters-heading">
+      <h2 id="live-filters-heading">Filtros</h2>
 
       <div
         v-for="facet in facetConfigs"
@@ -18,14 +19,13 @@
           :field="facet.field"
           :label="facet.label"
           :options="facetOptions(facet)"
-          :logical="facetLogical(facet.field)"
+          :logical="'AND'"
           :operator="facetOperator(facet.field)"
           :values="facetValues(facet.field)"
           :multiple="facet.multiple !== false"
           :type="facet.type || 'text'"
           :searchable="Boolean(facet.searchable)"
-          @change="onFacetDraftChange"
-          @commit="onFacetCommit"
+          @change="onFacetChange"
         />
 
         <div
@@ -51,22 +51,6 @@
       </div>
     </section>
 
-    <div class="company-search__query">
-      <label for="queryText">Consulta estruturada</label>
-      <textarea
-        id="queryText"
-        v-model="queryTextModel"
-        rows="2"
-        placeholder="AND sector IN (Energia, Financeiro)"
-      ></textarea>
-      <div class="company-search__query-actions">
-        <button type="button" @click="applyQuery">Buscar</button>
-        <button type="button" class="ghost" @click="clearFilters">Limpar filtros</button>
-        <!-- <button type="button" @click="reload">Buscar</button> -->
-        <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
-      </div>
-    </div>
-
     <div class="company-search__results">
       <header>
         <h3>Resultados ({{ total }})</h3>
@@ -88,24 +72,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
 import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
-import { useChartStore } from '../store/chartStore'
-import { extractTickers } from '../utils/tickers'
 import CompanyFacet from './CompanyFacet.vue'
 import CompanyResultSelect from './CompanyResultSelect.vue'
 
 const store = useCompanyStore()
-const chartStore = useChartStore()
-const route = useRoute()
-const router = useRouter()
-let isSyncingSelection = false
-
 const facetConfigs = COMPANY_FACETS
-const parseError = ref('')
-const draftFacets = ref({})
 const DEFAULT_OPERATOR = 'IN'
 
 const CASCADE_CONFIG = {
@@ -129,14 +103,6 @@ function isCascadeField(field) {
   return CASCADE_FIELDS.includes(field)
 }
 
-const queryTextModel = computed({
-  get: () => store.queryText,
-  set: (value) => {
-    parseError.value = ''
-    store.setQueryText(value)
-  },
-})
-
 const companies = computed(() => store.companies)
 const total = computed(() => store.total)
 const staticFacets = computed(() => store.facets || {})
@@ -148,38 +114,12 @@ const selectedValuesByField = computed(() => store.selectedValuesByField)
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
   set: (values) => {
-    onSelectionChange(values)
+    const normalized = Array.isArray(values)
+      ? values.map((value) => String(value)).filter((value) => value.length)
+      : []
+    store.setSelectedItems(normalized)
   },
 })
-
-function normalizeSelection(values) {
-  if (!Array.isArray(values)) {
-    return []
-  }
-  return values
-    .map((value) => String(value || '').trim())
-    .filter((value) => value.length)
-}
-
-function parseSelectionParam(rawValue) {
-  if (!rawValue) {
-    return []
-  }
-
-  const values = Array.isArray(rawValue) ? rawValue : [rawValue]
-
-  return values
-    .flatMap((entry) => String(entry || '').split(','))
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length)
-}
-
-function selectionsAreEqual(a = [], b = []) {
-  if (a.length !== b.length) {
-    return false
-  }
-  return a.every((value, index) => value === b[index])
-}
 
 function booleanLabel(value) {
   if (value === 'true') return 'Sim'
@@ -334,27 +274,18 @@ function applyIndustryCascade(field, options, cascade, { selectedSectors, select
   )
 }
 
-function facetLogical(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.logical) {
-    return draft.logical
-  }
-  return store.clauseByField[field]?.logical || 'AND'
+function currentCascadeValues(field) {
+  const committed = store.clauseByField[field]?.condition?.values || []
+  return committed
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
 }
 
 function facetOperator(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.operator) {
-    return draft.operator
-  }
-  return store.clauseByField[field]?.condition?.operator || ''
+  return store.clauseByField[field]?.condition?.operator || DEFAULT_OPERATOR
 }
 
 function facetValues(field) {
-  const draft = draftFacets.value[field]
-  if (draft && Array.isArray(draft.values)) {
-    return draft.values
-  }
   return store.clauseByField[field]?.condition?.values || []
 }
 
@@ -367,194 +298,24 @@ function removeFacetValue(field, valueToRemove) {
   const next = current.filter((value) => value !== valueToRemove)
 
   store.setFacetSelection(field, 'AND', next, DEFAULT_OPERATOR)
+  store.loadCompanies()
 }
 
-function currentCascadeValues(field) {
-  const committed = store.clauseByField[field]?.condition?.values || []
-  const draft = draftFacets.value[field]?.values || []
-  const all = [...committed, ...draft]
-    .map((value) => String(value || '').trim())
-    .filter(Boolean)
-
-  const seen = new Set()
-  const result = []
-  for (const value of all) {
-    if (seen.has(value)) continue
-    seen.add(value)
-    result.push(value)
-  }
-  return result
-}
-
-function onFacetDraftChange({ field, values, operator }) {
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: 'AND',
-      operator: operator || '',
-      values: Array.isArray(values) ? [...values] : [],
-    },
-  }
-}
-
-function onFacetCommit({ field, values, operator }) {
+function onFacetChange({ field, logical, values, operator }) {
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
 
   store.setFacetSelection(field, 'AND', finalValues, finalOperator)
-
-  draftFacets.value = {
-    ...draftFacets.value,
-    [field]: {
-      logical: 'AND',
-      operator: finalOperator,
-      values: [],
-    },
-  }
-}
-
-function applyQuery() {
-  const result = store.applyQueryText()
-  if (!result.ok) {
-    parseError.value = result.message || 'Não foi possível interpretar a consulta.'
-    return
-  }
-  parseError.value = ''
+  store.loadCompanies()
 }
 
 function clearFilters() {
   store.resetFilters()
-  parseError.value = ''
-  draftFacets.value = {}
 }
-
-function reload() {
-  store.loadCompanies()
-}
-
-async function syncChartWithSelection(selectionValues, { forceLoad = false } = {}) {
-  const tickers = extractTickers(selectionValues)
-  const [primaryTicker, ...comparisonTickers] = tickers
-  const currentType = chartStore.params.type || ''
-  const currentSelection = chartStore.params.selection || []
-
-  const typeChanged = primaryTicker !== currentType
-  const selectionChanged = !selectionsAreEqual(comparisonTickers, currentSelection)
-
-  if (typeChanged) {
-    chartStore.setType(primaryTicker)
-  }
-  if (selectionChanged) {
-    chartStore.setSelection(comparisonTickers)
-  }
-
-  if (forceLoad || typeChanged || selectionChanged) {
-    await chartStore.loadChart()
-  }
-}
-
-async function onSelectionChange(values) {
-  if (isSyncingSelection) {
-    return
-  }
-
-  isSyncingSelection = true
-
-  try {
-    const normalized = normalizeSelection(values)
-    const current = store.selectedItems || []
-    const querySelection = parseSelectionParam(route.query.selection)
-    const selectionChanged = !selectionsAreEqual(normalized, current)
-
-    if (selectionChanged) {
-      store.setSelectedItems(normalized)
-    }
-
-    const selectionParam = normalized.join(',')
-    const nextQuery = {
-      ...route.query,
-      selection: selectionParam || undefined,
-    }
-
-    if (!selectionsAreEqual(normalized, querySelection)) {
-      try {
-        await router.replace({ query: nextQuery })
-      } catch (error) {
-        console.error(error)
-      }
-    }
-
-    await syncChartWithSelection(normalized, { forceLoad: selectionChanged })
-  } finally {
-    isSyncingSelection = false
-  }
-}
-
-onMounted(async () => {
-  const initialSelection = parseSelectionParam(route.query.selection)
-
-  isSyncingSelection = true
-  try {
-    const current = store.selectedItems || []
-    if (!selectionsAreEqual(initialSelection, current)) {
-      store.setSelectedItems(initialSelection)
-    }
-  } finally {
-    isSyncingSelection = false
-  }
-
-  const normalizedSelection = store.selectedItems || initialSelection
-  await syncChartWithSelection(normalizedSelection, { forceLoad: true })
-})
-
-watch(
-  () => store.selectedItems,
-  async (values) => {
-    if (isSyncingSelection) {
-      return
-    }
-
-    const normalized = normalizeSelection(values)
-    const querySelection = parseSelectionParam(route.query.selection)
-
-    const needsQuerySync = !selectionsAreEqual(normalized, querySelection)
-
-    if (needsQuerySync) {
-      await onSelectionChange(normalized)
-      return
-    }
-
-    await syncChartWithSelection(normalized)
-  },
-  { deep: true },
-)
-
-watch(
-  () => route.query.selection,
-  async (value) => {
-    if (isSyncingSelection) {
-      return
-    }
-
-    isSyncingSelection = true
-    try {
-      const parsed = parseSelectionParam(value)
-      const companySelection = store.selectedItems || []
-
-      if (!selectionsAreEqual(parsed, companySelection)) {
-        store.setSelectedItems(parsed)
-      }
-
-      await syncChartWithSelection(parsed)
-    } finally {
-      isSyncingSelection = false
-    }
-  },
-)
 
 onMounted(() => {
   if (!store.companies.length) {
-    reload()
+    store.loadCompanies()
   }
   if (!Object.keys(store.facets || {}).length) {
     store.loadFacets()
@@ -566,19 +327,17 @@ onMounted(() => {
 .company-search {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--vt-c-divider-light, #e2e8f0);
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8fafc;
   border-radius: 12px;
-  /* background-color: var(--vt-c-bg-mute, #e9f3fd); */
+  border: 1px solid #e2e8f0;
 }
 
 .company-search__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
 .company-search__actions {
@@ -599,41 +358,6 @@ onMounted(() => {
   background: transparent;
   border: 1px solid #0f172a;
   color: #0f172a;
-}
-
-.company-search__actions button:not(.ghost) {
-  background: #2563eb;
-}
-
-.company-search__query label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.company-search__query textarea {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid #cbd5f5;
-  padding: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  resize: vertical;
-}
-
-.company-search__query-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.company-search__query-actions button {
-  padding: 0.35rem 0.9rem;
-  border-radius: 6px;
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
 }
 
 .company-search__facets {
@@ -666,6 +390,10 @@ onMounted(() => {
 .company-search__error {
   color: #dc2626;
   font-size: 0.9rem;
+}
+
+.company-search--live {
+  gap: 1.5rem;
 }
 
 .company-search__facet {
