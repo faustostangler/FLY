@@ -1,3046 +1,899 @@
 Summary
 
-Established a reusable filter grammar by introducing the SearchFilterTree value object, a matching SearchFiltersDTO, and centralized CLI presets so every adapter shares the same structured filter tree.
+Centralized company facet state by adding companyFilter/companyFacets, filteredCompanies tracking, and rebuildCompanyFacets logic in the store, keeping selection pruning aligned with the filtered subset.
 
-Refactored the ratios pipeline into dedicated use cases that produce DataFrame and chart-ready DTOs while extending cache context hashing, enabling consistent company-level ratios retrieval for downstream services.
+Introduced pure company facet utilities to apply facet filters and rebuild deterministic facet option lists for sectors, subsectors, and segments.
 
-Delivered a ratios chart FastAPI endpoint, mapper, and corresponding Vue/Pinia integration (store, filter builder, API client, and view) to render multi-account Plotly charts from the new ChartDTO contract.
+Updated the search builder to source facet options from the store, trigger centralized filter updates, and show counts from filtered results, while the selection summary now reflects only the filtered company set.
 
 Testing
 
-⚠️ pytest *(fails: pytest-cov plugin missing, pytest cannot parse --cov options)*
+⚠️ Not run (not requested)
 
 
-Files (27)
+Arquivos (5)
 
-application/dtos/account_series_dto.py
-+5
--5
+presentation/frontend/src/components/CompanySearchBuilder.vue
++25
+-123
 
-application/dtos/company_accounts_series_dto.py
-New
-
-application/dtos/company_ratios_frame_dto.py
-New
-
-application/processors/filter_builder.py
-+15
--0
-
-application/services/cache_ratios_service.py
-+10
+presentation/frontend/src/components/CompanySelectionSummary.vue
++1
 -1
 
-application/usecases/get_company_accounts_chart.py
-New
+presentation/frontend/src/core/companyFacetEngine.js
+Novo
 
-application/usecases/get_company_ratios_frame.py
-New
+presentation/frontend/src/core/facetEngine.js
+Novo
 
-application/usecases/normalize_ratios.py
-+469
--367
-
-domain/dtos/cache_ratios_context_dto.py
-+17
--1
-
-domain/exceptions.py
-New
-
-domain/services/service_ratios.py
-+16
--5
-
-domain/value_objects/__init__.py
-+2
--0
-
-domain/value_objects/search_filter_tree.py
-New
-
-infrastructure/cache/ratios_cache.py
-+9
--1
-
-presentation/backend/api.py
-+4
--0
-
-presentation/backend/dependencies/ratios_chart_dependencies.py
-New
-
-presentation/backend/dto/chart_dto.py
-+2
--5
-
-presentation/backend/dto/company_accounts_chart_request_dto.py
-New
-
-presentation/backend/dto/search_filters_dto.py
-New
-
-presentation/backend/mappers/accounts_series_chart_mapper.py
-New
-
-presentation/backend/routers/ratios_charts.py
-New
-
-presentation/controllers/cli.py
-+4
--5
-
-presentation/controllers/filter_presets.py
-New
-
-presentation/frontend/src/services/apiService.js
-+24
--0
-
-presentation/frontend/src/store/accountChartsStore.js
+presentation/frontend/src/store/companyStore.js
 +42
--52
+-63
 
-presentation/frontend/src/utils/chartFilters.js
-New
 
-presentation/frontend/src/views/CompanyChartsView.vue
-+115
--71
 
-application/dtos/account_series_dto.py
-+5
--5
+Diferença
+Registros
 
-from __future__ import annotations
+presentation/frontend/src/components/CompanySearchBuilder.vue
++25
+-123
 
-from dataclasses import dataclass
-from datetime import date
-from typing import List
-from datetime import date, datetime
-from typing import List, Optional, Union
-
-
-@dataclass
-class AccountSeriesPointDTO:
-    date: date
-    value: float
-    date: Union[date, datetime]
-    value: Optional[float]
-
-
-@dataclass
-class AccountSeriesDTO:
-    ticker: str
-    ticker: Optional[str]
-    account_code: str
-    label: str
-    points: List[AccountSeriesPointDTO]
-application/dtos/company_accounts_series_dto.py
-New
-+18
--0
-
-"""DTO grouping time-series accounts for a company."""
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
-from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
-
-from .account_series_dto import AccountSeriesDTO
-
-
-@dataclass(frozen=True)
-class CompanyAccountsSeriesDTO:
-    company_name: str
-    ticker: Optional[str]
-    series: List[AccountSeriesDTO]
-    cache_info: Optional[CacheRatiosResultDTO] = None
-    meta: Dict[str, Any] = field(default_factory=dict)
-application/dtos/company_ratios_frame_dto.py
-New
-+20
--0
-
-"""Application DTO representing a ratios DataFrame for a company."""
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
-
-import pandas as pd
-
-from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
-
-
-@dataclass(frozen=True)
-class CompanyRatiosFrameDTO:
-    """Normalized ratios DataFrame for a given company."""
-
-    company_name: str
-    frame: pd.DataFrame
-    cache_info: CacheRatiosResultDTO
-    ticker: Optional[str] = None
-    meta: Dict[str, Any] = field(default_factory=dict)
-application/processors/filter_builder.py
-+15
--0
-
-# application/processors/filter_builder.py
-from __future__ import annotations
-from typing import Any
-from dataclasses import dataclass
-from domain.utils.specs import And, Or, Not, Cmp, StrMatch, NullCheck, ListAny, Spec
-
-@dataclass(frozen=True)
-class FilterBuilder:
-    '''
-    Gramática resumida:
-
-        {
-            "and": [
-                {"status": "ATIVO"},
-                {
-                    "or": [
-                        {"market": {"in": ["NM", "N2"]}},
-                        {"has_bdr": True},
-                    ]
-                },
-                {"listing_date": {">=": "2020-01-01"}}
-            ]
-        }
-
-    Operadores aceitos pelo FilterBuilder (um por linha):
-
-    # Lógicos (estrutura da árvore)
-    and → todas as condições verdadeiras.
-    or → pelo menos uma condição verdadeira.
-    not → inverte o resultado do filtro interno.
-
-    # Comparativos numéricos ou de data (folhas Cmp)
-    == ou eq → igual a.
-    != ou ne → diferente de.
-    >  ou gt → maior que.
-    >= ou gte → maior ou igual a.
-    <  ou lt → menor que.
-    <= ou lte → menor ou igual a.
-    in → valor está dentro de uma lista.
-    nin → valor não está dentro de uma lista.
-    between → valor entre dois limites (inclusive).
-
-    # Textuais (folhas StrMatch)
-    contains → texto contém o padrão.
-    startswith → texto começa com o padrão.
-    endswith → texto termina com o padrão.
-    regex → casa com expressão regular.
-    modificadores opcionais: case (sensível a maiúsculas), na (como tratar nulos).
-    
-application/services/cache_ratios_service.py
-+10
--1
-
-from __future__ import annotations
-
-import hashlib
-import inspect
-from collections.abc import Mapping
-from types import ModuleType
-from typing import Any, Callable, Iterable
-from typing import Any, Callable, Iterable, Optional
-
-import pandas as pd
-
-from domain.dtos.cache_ratios_context_dto import CacheRatiosContextDTO
-from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.value_objects.search_filter_tree import SearchFilterTree
-
-
-class CacheRatiosService:
-    """High-level helper responsible for caching ratios computations."""
-
-    def __init__(
-        self,
-        *,
-        cache_port: CacheRatiosPort,
-        logical_name: str = "ratios",
-        version: str = '1',
-    ) -> None:
-        self._cache_port = cache_port
-        self._logical_name = logical_name
-        self._version = version
-        self._cache_port.initialize()
-
-    @staticmethod
-    def build_code_hash(items: Iterable[Any]) -> str:
-        """
-        Calcula um hash SHA-256 determinístico a partir de uma lista de objetos
-        (funções, módulos, classes ou qualquer outro Python object).
-
-        Args:
-            items: iterável de objetos a serem inspecionados.
-@@ -50,55 +51,58 @@ class CacheRatiosService:
-                try:
-                    # se for módulo, tenta ler o arquivo
-                    if isinstance(obj, ModuleType) and hasattr(obj, "__file__"):
-                        with open(obj.__file__, "r", encoding="utf-8") as f:
-                            src = f.read()
-                    else:
-                        # fallback: repr das chaves conhecidas
-                        src = repr(sorted(vars(obj).keys()))
-                except Exception:
-                    src = repr(obj)
-
-            parts.append(src)
-
-        payload = "\n/*--SEGMENT--*/\n".join(parts).encode("utf-8")
-        return hashlib.sha256(payload).hexdigest()
-
-    def get_or_compute(
-        self,
-        *,
-        company_name: str,
-        quotes: Mapping[str, pd.DataFrame] | None,
-        statements: Mapping[str, pd.DataFrame] | None,
-        indicators: Mapping[str, pd.DataFrame] | None,
-        compute_fn: Callable[[], pd.DataFrame],
-        code_hash: str,
-        filters: Optional[SearchFilterTree] = None,
-    ) -> tuple[pd.DataFrame, CacheRatiosResultDTO]:
-        """Return cached ratios or compute and persist them when absent"""
-        context = CacheRatiosContextDTO(
-            logical_name=self._logical_name,
-            version=self._version,
-            company_name=company_name,
-            filters_hash=self._hash_filters(filters),
-            quotes_hash=self._hash_mapping(quotes),
-            statements_hash=self._hash_mapping(statements),
-            indicators_hash=self._hash_mapping(indicators),
-            code_hash=code_hash,
-        )
-        cache_key = context.cache_key
-
-        cached = self._cache_port.load(cache_key)
-        if cached is not None:
-            df_cached, entry = cached
-            return df_cached, CacheRatiosResultDTO(
-                company_name=company_name,
-                cache_key=cache_key,
-                hit=True,
-                entry=entry,
-            )
-
-        df = compute_fn()
-        entry = self._cache_port.store(
-            context=context,
-            df=df,
-            company_name=company_name,
-        )
-        return df, CacheRatiosResultDTO(
-            company_name=company_name,
-@@ -130,25 +134,30 @@ class CacheRatiosService:
-        return hashlib.sha256(payload).hexdigest()
-
-    @staticmethod
-    def _hash_dataframe(df: pd.DataFrame) -> str:
-        if df is None or df.empty:
-            return CacheRatiosService._empty_hash()
-
-        normalized = df.copy()
-        normalized = normalized.sort_index()
-        normalized = normalized.sort_index(axis=1)
-
-        if isinstance(normalized.index, pd.DatetimeIndex):
-            normalized.index = normalized.index.tz_localize(None)
-
-        for column in normalized.columns:
-            series = normalized[column]
-            if pd.api.types.is_datetime64_any_dtype(series):
-                normalized[column] = pd.to_datetime(series, errors="coerce")
-
-        hashed = pd.util.hash_pandas_object(normalized, index=True).values.tobytes()
-        return hashlib.sha256(hashed).hexdigest()
-
-    @staticmethod
-    def _empty_hash() -> str:
-        return hashlib.sha256(b"EMPTY").hexdigest()
-
-    def _hash_filters(self, filters: Optional[SearchFilterTree]) -> str:
-        if filters is None or filters.is_empty():
-            return hashlib.sha256(b"NO_FILTERS").hexdigest()
-        return filters.to_hash()
-application/usecases/get_company_accounts_chart.py
-New
-+149
--0
-
-"""Use case to transform ratios DataFrame into chart-ready series."""
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
-
-import pandas as pd
-
-from application.dtos.account_series_dto import (
-    AccountSeriesDTO,
-    AccountSeriesPointDTO,
-)
-from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
-from application.usecases.get_company_ratios_frame import (
-    GetCompanyRatiosFrameRequest,
-    GetCompanyRatiosFrameUseCase,
-)
-from domain.exceptions import DomainError
-from domain.value_objects.search_filter_tree import SearchFilterTree
-
-
-@dataclass
-class GetCompanyAccountsChartUseCase:
-    ratios_frame_usecase: GetCompanyRatiosFrameUseCase
-    account_labels: Optional[dict[str, str]] = None
-
-    def __call__(
-        self,
-        *,
-        company_name: str,
-        accounts: Sequence[str],
-        filters: Optional[SearchFilterTree] = None,
-    ) -> CompanyAccountsSeriesDTO:
-        company = (company_name or "").strip()
-        if not company:
-            raise DomainError("company_name é obrigatório")
-
-        account_codes = [str(code).strip() for code in accounts if str(code).strip()]
-        if not account_codes:
-            raise DomainError("É necessário informar pelo menos uma account")
-
-        frame_request = GetCompanyRatiosFrameRequest(
-            company_name=company,
-            filters=filters,
-        )
-        frame_dto = self.ratios_frame_usecase(frame_request)
-        df = frame_dto.frame
-        if df is None or df.empty:
-            raise DomainError(
-                f"Nenhum dado de ratios disponível para '{frame_dto.company_name}'."
-            )
-
-        df = self._ensure_datetime_index(df)
-        df_selected = self._select_accounts(df, account_codes, frame_dto)
-        series = self._build_series_dtos(
-            df_selected,
-            ticker=frame_dto.ticker,
-            company_name=frame_dto.company_name,
-        )
-
-        meta = dict(frame_dto.meta)
-        if frame_dto.cache_info:
-            meta.setdefault(
-                "cache",
-                {
-                    "cache_key": frame_dto.cache_info.cache_key,
-                    "hit": frame_dto.cache_info.hit,
-                },
-            )
-
-        return CompanyAccountsSeriesDTO(
-            company_name=frame_dto.company_name,
-            ticker=frame_dto.ticker,
-            series=series,
-            cache_info=frame_dto.cache_info,
-            meta=meta,
-        )
-
-    def _ensure_datetime_index(self, df: pd.DataFrame) -> pd.DataFrame:
-        if isinstance(df.index, (pd.DatetimeIndex, pd.PeriodIndex)):
-            return df.sort_index()
-
-        df = df.copy()
-        if "date" in df.columns:
-            df["date"] = pd.to_datetime(df["date"], errors="coerce")
-            df = df.set_index("date")
-        else:
-            df.index = pd.to_datetime(df.index, errors="coerce")
-        return df.sort_index()
-
-    def _select_accounts(
-        self,
-        df: pd.DataFrame,
-        account_codes: Sequence[str],
-        frame_dto,
-    ) -> pd.DataFrame:
-        missing = [code for code in account_codes if code not in df.columns]
-        if missing:
-            raise DomainError(
-                "Accounts ausentes: "
-                + ", ".join(missing)
-                + f". Disponíveis: {', '.join(df.columns)}"
-            )
-        return df[account_codes].sort_index()
-
-    def _build_series_dtos(
-        self,
-        df: pd.DataFrame,
-        *,
-        ticker: Optional[str],
-        company_name: str,
-    ) -> List[AccountSeriesDTO]:
-        labels = self._get_account_labels(df.columns)
-        series_list: List[AccountSeriesDTO] = []
-
-        for account_code in df.columns:
-            column = df[account_code]
-            points: List[AccountSeriesPointDTO] = []
-            for idx, value in column.items():
-                if pd.isna(value):
-                    numeric = None
-                else:
-                    numeric = float(value)
-                if hasattr(idx, "to_pydatetime"):
-                    dt_value = idx.to_pydatetime()
-                else:
-                    dt_value = idx
-                points.append(
-                    AccountSeriesPointDTO(
-                        date=dt_value,
-                        value=numeric,
-                    )
-                )
-
-            series_list.append(
-                AccountSeriesDTO(
-                    ticker=ticker or company_name,
-                    account_code=account_code,
-                    label=labels.get(account_code, account_code),
-                    points=points,
-                )
-            )
-
-        return series_list
-
-    def _get_account_labels(self, account_codes: Iterable[str]) -> dict[str, str]:
-        if not self.account_labels:
-            return {code: code for code in account_codes}
-        return {code: self.account_labels.get(code, code) for code in account_codes}
-application/usecases/get_company_ratios_frame.py
-New
-+237
--0
-
-"""Use case to obtain the ratios DataFrame for a single company."""
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Dict, Optional
-
-import pandas as pd
-
-import domain.utils.intel as intel
-from application.dtos.company_ratios_frame_dto import CompanyRatiosFrameDTO
-from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import Uow, UowFactoryPort
-from application.services.cache_ratios_service import CacheRatiosService
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.value_objects.search_filter_tree import SearchFilterTree
-
-from .normalize_ratios import (
-    _create_ratios_helper,
-    _treat_data_helper,
-    _treat_indicators_helper,
-)
-
-
-@dataclass(frozen=True)
-class GetCompanyRatiosFrameRequest:
-    company_name: str
-    filters: Optional[SearchFilterTree] = None
-
-
-def _load_indicators(
-    repository: RepositoryIndicatorsPort,
-    *,
-    uow: Uow,
-) -> Dict[str, pd.DataFrame]:
-    indicators: Dict[str, pd.DataFrame] = {}
-    rows = repository.get_all(uow=uow)
-    if not rows:
-        return indicators
-
-    indicators_df = pd.DataFrame(rows)
-    indicators_df["date"] = pd.to_datetime(indicators_df["date"], errors="coerce")
-    indicators_df["value"] = pd.to_numeric(indicators_df["value"], errors="coerce")
-    indicators_df.sort_values(["code", "name", "date"], inplace=True)
-    indicators_df = indicators_df.dropna(subset=["date"]).reset_index(drop=True)
-
-    for (source, code), group in indicators_df.groupby(["source", "code"]):
-        pivot = (
-            group.pivot_table(
-                index="date",
-                columns="name",
-                values="value",
-                aggfunc="last",
-            )
-            .sort_index()
-            .reset_index()
-        )
-        indicators[str(code)] = pivot
-
-    return indicators
-
-
-def _load_statements(
-    repository: RepositoryStatementFetchedPort,
-    *,
-    company_name: str,
-    uow: Uow,
-) -> Dict[str, pd.DataFrame]:
-    statements_df: Dict[str, pd.DataFrame] = {}
-    rows = repository.get_by_column_values(values=[("company_name", company_name)], uow=uow)
-    if not rows:
-        return statements_df
-
-    def _build_set(df: pd.DataFrame, use_other: bool, df_other: pd.DataFrame) -> pd.DataFrame:
-        if df is None or df.empty:
-            return pd.DataFrame()
-        parts = [df]
-        if use_other and df_other is not None and not df_other.empty:
-            parts.append(df_other)
-        out = pd.concat(parts, ignore_index=True)
-        return out.sort_values(["quarter", "account"], kind="mergesort").reset_index(drop=True)
-
-    statements = pd.DataFrame(rows)
-    statements["quarter"] = pd.to_datetime(statements["quarter"], errors="coerce")
-    statements["value"] = pd.to_numeric(statements["value"], errors="coerce")
-    statements["version_numeric"] = pd.to_numeric(statements["version"], errors="coerce").fillna(-1)
-    statements.sort_values(["company_name", "quarter", "version_numeric"], inplace=True)
-    df = statements.dropna(subset=["quarter"]).reset_index(drop=True)
-
-    mask = df["version_numeric"] == df.groupby("quarter")["version_numeric"].transform("max")
-    df = df[mask].reset_index(drop=True)
-
-    if "grupo" not in df.columns:
-        raise ValueError("coluna 'grupo' ausente")
-
-    df_ind0 = df[df["grupo"] == "DFs Individuais"]
-    df_con0 = df[df["grupo"] == "DFs Consolidadas"]
-    df_other = df[~df["grupo"].isin(["DFs Individuais", "DFs Consolidadas"])].drop(columns=[], errors="ignore")
-
-    has_ind = not df_ind0.empty
-    has_con = not df_con0.empty
-    has_other = not df_other.empty
-
-    if has_con:
-        statements_df["statements"] = _build_set(df_con0, has_other and has_con, df_other)
-    else:
-        statements_df["statements"] = _build_set(df_ind0, has_other and has_ind, df_other)
-
-    if has_con:
-        statements_df["df_consolidadas"] = _build_set(df_con0, has_other and has_con, df_other)
-    if has_ind:
-        statements_df["df_individuais"] = _build_set(df_ind0, has_other and has_ind, df_other)
-
-    return statements_df
-
-
-def _load_quotes(
-    repository: RepositoryStockQuotePort,
-    *,
-    ticker_codes: list[str],
-    uow: Uow,
-) -> Dict[str, pd.DataFrame]:
-    quotes_df: Dict[str, pd.DataFrame] = {}
-    for ticker in ticker_codes:
-        rows = repository.get_by_column_values(values=[("ticker", ticker)], uow=uow)
-        if not rows:
-            continue
-
-        quotes = pd.DataFrame(rows)
-        quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
-        numeric_cols = ["open", "low", "high", "close", "adj_close", "volume"]
-        for col in numeric_cols:
-            quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
-        quotes.sort_values(["ticker", "date"], inplace=True)
-
-        key = f"stock_{len(quotes_df) + 1}"
-        quotes_df[key] = quotes.dropna(subset=["date"]).reset_index(drop=True)
-
-    return quotes_df
-
-
-@dataclass
-class GetCompanyRatiosFrameUseCase:
-    config: ConfigPort
-    logger: LoggerPort
-    repository_stock_quote: RepositoryStockQuotePort
-    repository_indicators: RepositoryIndicatorsPort
-    repository_statements_fetched: RepositoryStatementFetchedPort
-    cache_ratios: CacheRatiosPort
-    companies_eligible_port: CompaniesEligiblePort
-    uow_factory: UowFactoryPort
-
-    def __post_init__(self) -> None:
-        self._cache_service = CacheRatiosService(
-            cache_port=self.cache_ratios,
-            logical_name=self.config.fly_settings.app_name,
-            version=self.config.fly_settings.version,
-        )
-        self._code_hash = CacheRatiosService.build_code_hash([
-            _create_ratios_helper,
-            intel,
-        ])
-
-    def __call__(self, request: GetCompanyRatiosFrameRequest) -> CompanyRatiosFrameDTO:
-        return self.run(request)
-
-    def run(self, request: GetCompanyRatiosFrameRequest) -> CompanyRatiosFrameDTO:
-        company_name = (request.company_name or "").strip()
-        if not company_name:
-            raise ValueError("company_name é obrigatório")
-
-        with self.uow_factory() as uow:
-            indicators_raw = _load_indicators(self.repository_indicators, uow=uow)
-
-        treated_indicators = {
-            key: _treat_indicators_helper(df)
-            for key, df in indicators_raw.items()
-        }
-
-        with self.uow_factory() as uow:
-            eligible = self.companies_eligible_port.list(
-                uow=uow,
-                company_name=company_name,
-            )
-
-        ticker_codes = list(eligible[0].ticker_codes) if eligible else []
-
-        with self.uow_factory() as uow:
-            statements = _load_statements(
-                self.repository_statements_fetched,
-                company_name=company_name,
-                uow=uow,
-            )
-            quotes = _load_quotes(
-                self.repository_stock_quote,
-                ticker_codes=ticker_codes,
-                uow=uow,
-            )
-
-        data_snapshot = {
-            "indicators": treated_indicators,
-            "statements": statements,
-            "quotes": quotes,
-        }
-
-        company_data = _treat_data_helper(data_snapshot, aggregate_method="last")
-
-        def compute_fn() -> pd.DataFrame:
-            return _create_ratios_helper(company_data)
-
-        frame, cache_result = self._cache_service.get_or_compute(
-            company_name=company_name,
-            quotes=company_data.get("quotes"),
-            statements=company_data.get("statements"),
-            indicators=company_data.get("indicators"),
-            compute_fn=compute_fn,
-            code_hash=self._code_hash,
-            filters=request.filters,
-        )
-
-        meta = {
-            "filters_hash": request.filters.to_hash() if request.filters else None,
-        }
-
-        return CompanyRatiosFrameDTO(
-            company_name=company_name,
-            ticker=ticker_codes[0] if ticker_codes else None,
-            frame=frame,
-            cache_info=cache_result,
-            meta=meta,
-        )
-application/usecases/normalize_ratios.py
-+469
--367
-
-@@ -5,90 +5,522 @@ from typing import Any, cast, List, Optional
-
-import numpy as np
-import pandas as pd
-from dateutil.relativedelta import relativedelta
-
-import domain.utils.intel as intel
-from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import Uow, UowFactoryPort
-from application.ports.worker_pool_port import WorkerPoolPort
-from application.services.cache_ratios_service import CacheRatiosService
-from domain.dtos.cache_ratios_result_dto import CacheRatiosResultDTO
-from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
-from infrastructure.models.company_eligible_model import CompanyEligibleModel
-from domain.dtos.worker_task_dto import WorkerTaskDTO
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-
-
-def _treat_quotes_helper(q: pd.DataFrame, calendar: pd.DataFrame | None = None) -> pd.DataFrame:
-    if "date" in q.columns:
-        q["date"] = pd.to_datetime(q["date"])
-        q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-    else:
-        q.index = pd.to_datetime(q.index)
-        q = q.sort_index().drop_duplicates()
-
-    if calendar is not None and not calendar.empty:
-        q = q.sort_index().reindex(calendar.index, method="ffill")
-        if not q.empty and q.iloc[0].isna().any():
-            q = q.bfill()
-
-    return q
-
-
-def _treat_statements_helper(s: pd.DataFrame, calendar: pd.DataFrame | None = None) -> pd.DataFrame:
-    s = s.copy()
-    s["quarter"] = pd.to_datetime(s["quarter"])
-
-    key_columns = ["company_name", "quarter", "account"]
-    s["account_description"] = (
-        s["account"]
-        + " - "
-        + s["description"]
-        + " - "
-        + s["grupo"]
-        + " - "
-        + s["quadro"]
-    )
-
-    context_columns = ["nsd", "company_name", "version"]
-    meta = (
-        s[["quarter"] + context_columns]
-        .drop_duplicates(subset=["quarter"], keep="last")
-        .set_index("quarter")
-    )
-
-    s = s.sort_values(key_columns)
-    s = s.drop_duplicates(subset=key_columns, keep="last")
-    s = (
-        s.pivot_table(
-            index=["quarter"],
-            columns="account_description",
-            values="value",
-            aggfunc="last",
-        )
-        .sort_index()
-    )
-    s.columns.name = None
-
-    s = meta.join(s, how="right")
-
-    if calendar is not None:
-        s = s.copy()
-        s = s.reset_index()
-        s["quarter"] = pd.to_datetime(s["quarter"])
-        s = s.rename(columns={"quarter": "date"}).set_index("date").sort_index()
-        s = s.reindex(calendar.index, method="ffill")
-        if not s.empty and s.iloc[0].isna().any():
-            s = s.bfill()
-        s = s.set_index(context_columns, append=True).sort_index()
-
-    return s
-
-
-def _treat_indicators_helper(i: pd.DataFrame, calendar: pd.DataFrame | None = None) -> pd.DataFrame:
-    if calendar is None:
-        i = i.copy()
-        i["date"] = pd.to_datetime(i["date"])
-        i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-        return i
-
-    i = i.sort_index().reindex(calendar.index, method="ffill")
-    if not i.empty and i.iloc[0].isna().any():
-        i = i.bfill()
-    return i
-
-
-def _get_stock_calendar_helper(
-    data: dict[str, dict[str, pd.DataFrame]],
-    cutoff: datetime,
-) -> pd.DatetimeIndex:
-    stock_calendar = pd.DatetimeIndex([])
-    data_quotes = data.get("quotes", {})
-    if data_quotes:
-        for dfq in data_quotes.values():
-            if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
-                stock_calendar = pd.to_datetime(dfq["date"], errors="coerce")
-                stock_calendar = pd.DatetimeIndex(stock_calendar).tz_localize(None)
-                stock_calendar = stock_calendar[~stock_calendar.isna()]
-                stock_calendar = stock_calendar[stock_calendar > cutoff]
-                break
-
-    return stock_calendar
-
-
-def _create_daily_calendar_helper(
-    data: dict[str, dict[str, pd.DataFrame]],
-    cutoff: datetime,
-) -> pd.DatetimeIndex:
-    date_min = cutoff
-    date_max = pd.Timestamp.now()
-    data_quotes = data.get("quotes", {})
-    data_statements = data.get("statements", {})
-    data_indicators = data.get("indicators", {})
-
-    if data_quotes:
-        mins: list[pd.Timestamp] = []
-        maxs: list[pd.Timestamp] = []
-        for dfq in data_quotes.values():
-            if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
-                dts = pd.to_datetime(dfq["date"], errors="coerce")
-                dts = pd.DatetimeIndex(dts).tz_localize(None)
-                dts = dts[~dts.isna()]
-                if len(dts):
-                    mins.append(dts.min())
-                    maxs.append(dts.max())
-        if mins:
-            date_min = min(mins)
-        if maxs:
-            date_max = max(maxs)
-
-    if date_min == cutoff and data_statements:
-        statements = data_statements.get("statements")
-        if statements is not None and not statements.empty and "quarter" in statements.columns:
-            dates = pd.to_datetime(statements["quarter"].unique())
-            date_min = dates.min().tz_localize(None)
-            date_max = dates.max().tz_localize(None)
-
-    if date_min == cutoff and data_indicators:
-        mins = []
-        maxs = []
-        for dfi in data_indicators.values():
-            if isinstance(dfi, pd.DataFrame) and not dfi.empty:
-                dts = pd.to_datetime(dfi.index, errors="coerce").tz_localize(None)
-                dts = dts[~dts.isna()]
-                if len(dts):
-                    mins.append(dts.min())
-                    maxs.append(dts.max())
-        if mins:
-            date_min = min(mins)
-        if maxs:
-            date_max = max(maxs)
-
-    start = max(date_min, pd.Timestamp(cutoff)) + pd.Timedelta(days=1)
-    end = max(date_max, pd.Timestamp.now()) - pd.Timedelta(days=1)
-    daily_calendar = pd.date_range(start, end, freq="B")
-    return daily_calendar
-
-
-def _infer_granularity_helper(idx: pd.Index) -> str:
-    if not isinstance(idx, pd.DatetimeIndex):
-        try:
-            idx = pd.to_datetime(idx, errors="coerce")
-            idx = idx[~idx.isna()]
-            if len(idx) < 2:
-                return "unknown"
-        except Exception:
-            return "unknown"
-
-    inferred_freq = pd.infer_freq(idx)
-    freq_map = {
-        "D": "day",
-        "B": "business days",
-        "ME": "month",
-        "MS": "month",
-        "QE": "quarter",
-        "QS": "quarter",
-        "YE": "year",
-        "YS": "year",
-    }
-    if inferred_freq in freq_map:
-        return freq_map[inferred_freq]
-
-    deltas = np.diff(idx.view("i8"))
-    if len(deltas) == 0:
-        return "unknown"
-
-    med = np.median(deltas)
-    d1 = pd.Timedelta(days=1).value
-
-    if med <= 7 * d1:
-        return "B"
-    if med <= 45 * d1:
-        return "ME"
-    if med <= 120 * d1:
-        return "QE"
-    return "YE"
-
-
-def _resample_series_helper(
-    df_data: pd.DataFrame,
-    df_anchor_calendar: pd.DataFrame,
-    aggregate_method: str,
-) -> pd.DataFrame:
-    if df_data.empty:
-        return df_data
-
-    if not isinstance(df_data.index, pd.DatetimeIndex):
-        df_data.index = pd.to_datetime(df_data.index, errors="coerce")
-        df_data = df_data.dropna(subset=[df_data.index.name])
-
-    granularity_order = {
-        "B": 1,
-        "D": 2,
-        "MS": 3,
-        "ME": 4,
-        "QS": 5,
-        "QE": 6,
-        "YS": 7,
-        "YE": 8,
-    }
-    granularity_anchor = pd.infer_freq(df_anchor_calendar.index) or "B"
-    granularity_data = _infer_granularity_helper(df_data.index)
-    sampling_anchor = granularity_order[granularity_anchor]
-    sampling_data = granularity_order.get(granularity_data, 1)
-
-    if sampling_data > sampling_anchor:
-        sampling_action = "upsampling"
-    elif sampling_data < sampling_anchor:
-        sampling_action = "downsampling"
-    else:
-        sampling_action = "same"
-
-    if sampling_action == "upsampling":
-        df_data = df_data.sort_index()
-        df_data = df_data.reindex(df_data.index.union(df_anchor_calendar.index))
-        df_data = df_data.ffill().bfill()
-        df_data = df_data.reindex(df_anchor_calendar.index).sort_index()
-    elif sampling_action == "downsampling":
-        df_data = df_data.sort_index()
-        daily_index = pd.date_range(df_data.index.min(), df_data.index.max(), freq="B")
-        df_data = df_data.reindex(daily_index).ffill().bfill()
-        grouper_freq = granularity_anchor
-        agg_dict: dict[str, str] = {}
-        for col in df_data.columns:
-            if col in ["open"]:
-                agg_dict[col] = "first"
-            elif col in ["high"]:
-                agg_dict[col] = "max"
-            elif col in ["low"]:
-                agg_dict[col] = "min"
-            elif col in ["close", "adj_close"]:
-                agg_dict[col] = "last"
-            elif col in ["volume"]:
-                agg_dict[col] = "sum"
-            else:
-                agg_dict[col] = aggregate_method
-
-        df_data = df_data.groupby(pd.Grouper(freq=grouper_freq)).agg(agg_dict)
-        df_data = df_data.reindex(df_anchor_calendar.index)
-
-    return df_data
-
-
-def _create_calendar_helper(
-    data: dict[str, dict[str, pd.DataFrame]],
-    cutoff: datetime,
-    granularity: str = "month",
-    aggregate_method: str = "last",
-) -> pd.DataFrame:
-    cutoff = cutoff or datetime(year=2010, month=12, day=31)
-    allowed_granularities = [
-        "D",
-        "day",
-        "B",
-        "business days",
-        "ME",
-        "month",
-        "MS",
-        "month start",
-        "QE",
-        "quarter",
-        "QS",
-        "quarter start",
-        "YE",
-        "year",
-        "YS",
-        "year start",
-    ]
-    if granularity not in allowed_granularities:
-        raise ValueError(
-            f"Invalid granularity: {granularity}. Must be one of {allowed_granularities}."
-        )
-    allowed_aggregate_methods = [
-        "last",
-        "first",
-        "mean",
-        "median",
-        "max",
-        "min",
-        "sum",
-        "std",
-        "var",
-    ]
-    if aggregate_method not in allowed_aggregate_methods:
-        raise ValueError(
-            "Invalid aggregate_method: {aggregate_method}. Must be one of "
-            f"{allowed_aggregate_methods}."
-        )
-
-    daily_calendar = _get_stock_calendar_helper(data, cutoff)
-    if daily_calendar.empty:
-        daily_calendar = _create_daily_calendar_helper(data, cutoff)
-    else:
-        daily_calendar = pd.Index(daily_calendar)
-
-    daily_series = pd.Series(1, index=daily_calendar)
-
-    if granularity == "D":
-        df_anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
-    else:
-        df_anchor_calendar = (
-            daily_series.groupby(pd.Grouper(freq=granularity)).size().to_frame(name="trading_days")
-        )
-    df_anchor_calendar.index.name = "date"
-    return df_anchor_calendar
-
-
-def _treat_data_helper(
-    data: dict[str, dict[str, pd.DataFrame]],
-    aggregate_method: str = "last",
-) -> dict[str, dict[str, pd.DataFrame]]:
-    cutoff: datetime = datetime(year=2010, month=12, day=31)
-    granularity_map: dict[str, str] = {"day": "D", "month": "ME", "quarter": "QE", "year": "Y"}
-    granularity = granularity_map["day"]
-    calendar: pd.DataFrame = _create_calendar_helper(
-        data,
-        cutoff,
-        granularity=granularity,
-        aggregate_method=aggregate_method,
-    )
-
-    data_treated: dict[str, dict[str, pd.DataFrame]] = {}
-    for key, frames in data.items():
-        if key == "quotes":
-            data_treated[key] = {}
-            for stock_quote, df_stock_quote in frames.items():
-                df_stock_quote = df_stock_quote.set_index("date")
-                _resample_series_helper(df_stock_quote, calendar, aggregate_method=aggregate_method)
-                data_treated[key][stock_quote] = _treat_quotes_helper(df_stock_quote, calendar)
-        elif key == "statements":
-            data_treated[key] = {}
-            if frames:
-                for statement, df_statement in frames.items():
-                    data_treated[key][statement] = _treat_statements_helper(df_statement, calendar)
-            else:
-                data_treated[key] = []
-        elif key == "indicators":
-            data_treated[key] = {}
-            if frames:
-                for indicator, df_indicator in frames.items():
-                    data_treated[key][indicator] = _treat_indicators_helper(df_indicator, calendar)
-            else:
-                data_treated[key] = []
-
-    return data_treated
-
-
-def _create_ratios_helper(company_data: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
-    source_df = company_data["statements"]["statements"].copy()
-    ratios_df = source_df.copy()
-
-    quotes: dict[str, pd.DataFrame] = company_data.get("quotes", {}) or {}
-
-    stock_keys = [k for k in quotes.keys() if str(k).startswith("stock_")]
-    stock_keys.sort(key=lambda x: int(str(x).split("_", 1)[1]) if "_" in str(x) else float("inf"))
-
-    ignore_stock_keys_cols = ["id", "date", "company_name", "ticker"]
-    frames: list[pd.DataFrame] = []
-
-    for i, qkey in enumerate(stock_keys):
-        try:
-            suffix = qkey.split("_", 1)[1]
-            code = f"99.{suffix}"
-        except Exception:
-            code = f"99.{i + 3}"
-
-        dfq = quotes.get(qkey)
-        if dfq is None or dfq.empty:
-            continue
-
-        dfq = dfq.loc[:, [c for c in dfq.columns if c not in ignore_stock_keys_cols]].copy()
-        if dfq.empty:
-            continue
-
-        dfq.columns = [f"{code}.{c} - {qkey}" for c in dfq.columns]
-        frames.append(dfq)
-
-    if frames:
-        price_df = pd.concat(frames, axis=1)
-        source_df = source_df.join(price_df, how="left")
-        ratios_df = ratios_df.join(price_df, how="left")
-
-    account_long_map = {c: c.split(" - ")[0] for c in source_df.columns if " - " in c}
-    calculate_df = source_df.rename(columns=account_long_map).copy()
-
-    indicator_names = [
-        name
-        for name in dir(intel)
-        if name.startswith("indicators_") and isinstance(getattr(intel, name), list)
-    ]
-    indicator_names.sort()
-
-    for name in indicator_names:
-        ratios_df = ratios_df.copy()
-        calculate_df = calculate_df.copy()
-        indicators_list = getattr(intel, name)
-        for indicator in indicators_list:
-            account_name = indicator["account"]
-            description = indicator["description"]
-            formula_obj = indicator["formula"]
-            col_out = f"{account_name} - {description}"
-            try:
-                series_value = formula_obj(calculate_df)
-                ratios_df[col_out] = series_value
-                calculate_df[account_name] = series_value
-            except KeyError:
-                ratios_df[col_out] = np.nan
-                calculate_df[account_name] = np.nan
-
-    if isinstance(ratios_df.index, pd.MultiIndex):
-        ratios_df = ratios_df.reset_index(drop=False)
-        ratios_df = ratios_df.set_index("date").sort_index()
-
-    return ratios_df.fillna(0)
-
-
-class NormalizeUseCase:
-    """Use case for synchronizing data between scraper and repository."""
-
-    def __init__(
-        self,
-        config: ConfigPort,
-        logger: LoggerPort,
-
-        repository_stock_quote: RepositoryStockQuotePort,
-        repository_indicators: RepositoryIndicatorsPort,
-        repository_statements_fetched: RepositoryStatementFetchedPort,
-        cache_ratios: CacheRatiosPort,
-        companies_eligible_port: CompaniesEligiblePort,
-
-        uow_factory: UowFactoryPort,
-        worker_pool: WorkerPoolPort,
-
-        max_workers: int | None = None,
-    ):
-        """Initialize the use case with its dependencies.
-
-        Args:
-            config (ConfigPort): Application configuration provider.
-            logger (LoggerPort): Logger interface for capturing messages.
-            repository (RepositoryCompanyDataPort): Repository for persisting company data.
-            scraper (ScraperCompanyDataPort): Scraper used to fetch company data.
-            max_workers (int, optional): Maximum number of workers for parallel execution.
-                Defaults to 1, or falls back to the value in the config worker pool.
-        """
-        self.config = config
-        self.logger = logger
-        self.repository_stock_quote = repository_stock_quote
-        self.repository_indicators = repository_indicators
-        self.repository_statements_fetched = repository_statements_fetched
-        self.cache_ratios_service = CacheRatiosService(
-                cache_port=cache_ratios,
-                logical_name=self.config.fly_settings.app_name,
-                version=self.config.fly_settings.version
-                )
-        self._ratios_code_hash = CacheRatiosService.build_code_hash([self._create_ratios, intel,])
-        self._ratios_code_hash = CacheRatiosService.build_code_hash([
-            _create_ratios_helper,
-            intel,
-        ])
-
-        self.uow_factory = uow_factory
-        self.worker_pool = worker_pool
-
-        self.max_workers = max_workers or self.config.worker_pool.max_workers or 1
-        self.companies_eligible_port = companies_eligible_port
-
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return self.run(companies=kwds.get("companies"))
-
-    def run(self, companies:pd.DataFrame) -> SyncResultsDTO:
-        """Run the full synchronization pipeline.
-
-        Steps:
-            1. Retrieve company data from the persistence layer.
-            2. Transform results into normalized ``pandas`` data structures.
-            3. Cache the calculated ratios for reuse across runs.
-
-        Returns:
-            SyncCompanyDataResultDTO: Summary of the synchronization process,
-            including counts and network usage metrics.
-        """
-        metrics = 0
-        cache_results: List[CacheRatiosResultDTO] = []
-        start_time = time.perf_counter()
-@@ -288,409 +720,79 @@ class NormalizeUseCase:
-
-        return statements_df
-
-    def _load_quotes(self, ticker_codes: List, uow: Uow) -> dict[str, pd.DataFrame]:
-        quotes_df = {}
-        for ticker in ticker_codes:
-            rows = self.repository_stock_quote.get_by_column_values(values=[("ticker", ticker)], uow=uow)
-            if not rows:
-                continue
-
-            quotes = pd.DataFrame(rows)
-            quotes["date"] = pd.to_datetime(quotes["date"], errors="coerce")
-            numeric_cols = ["open", "low", "high", "close", "adj_close", "volume"]
-            for col in numeric_cols:
-                quotes[col] = pd.to_numeric(quotes[col], errors="coerce")
-            quotes.sort_values(["ticker", "date"], inplace=True)
-
-
-            m = re.search(r'\d+$', ticker)
-            digit = m.group() if m else ""
-            key = f"stock_{digit}" if digit else f"stock_{len(quotes_df)+1}"
-            quotes_df[key] = quotes.dropna(subset=["date"]).reset_index(drop=True)
-
-        return quotes_df
-
-    def _treat_quotes(self, q: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-    def _treat_quotes(self, q: pd.DataFrame, c: pd.DataFrame | None = None) -> pd.DataFrame:
-        return _treat_quotes_helper(q, c)
-
-        if "date" in q.columns:
-            q["date"] = pd.to_datetime(q["date"])
-            q = q.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-        else:
-            q.index = pd.to_datetime(q.index)
-            q = q.sort_index().drop_duplicates()
-
-        if c is not None and not c.empty:
-            q = q.sort_index().reindex(c.index, method="ffill")
-            if q.iloc[0].isna().any():
-                q = q.bfill()
-
-        return q
-    def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame | None = None) -> pd.DataFrame:
-        return _treat_statements_helper(s, c)
-
-    def _treat_statements(self, s: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-        s["quarter"] = pd.to_datetime(s["quarter"])
-
-        key_columns = ["company_name", "quarter", "account"]
-        s["account_description"] = s["account"] + " - " + s["description"] + " - " + s["grupo"] + " - " + s["quadro"]
-    def _treat_indicators(self, i: pd.DataFrame, c: pd.DataFrame | None = None) -> pd.DataFrame:
-        return _treat_indicators_helper(i, c)
-
-        context_columns = ["nsd", "company_name", "version"]
-        meta = (
-            s[["quarter"] + context_columns]
-            .drop_duplicates(subset=["quarter"], keep="last")
-            .set_index("quarter")
-        )
-
-        s = s.sort_values(key_columns)
-        s = s.drop_duplicates(subset=key_columns, keep="last")
-        s = s.pivot_table(index=["quarter"],
-                                columns="account_description",  # use "description" se preferir nomes ou "account" se preferir contas
-                                values="value",
-                                aggfunc="last").sort_index()
-        s.columns.name = None
-
-        s = meta.join(s, how="right")
-
-        if c is not None:
-            s = s.copy()
-            s = s.reset_index()
-
-            s["quarter"] = pd.to_datetime(s["quarter"])
-            s = (
-                s.rename(columns={"quarter": "date"})
-                .set_index("date")
-                .sort_index()
-            )
-
-            s = s.reindex(c.index, method="ffill")
-            if s.iloc[0].isna().any():
-                s = s.bfill()
-
-            s = s.set_index(context_columns, append=True).sort_index()
-
-        return s
-
-    def _treat_indicators(self, i: pd.DataFrame, c: pd.DataFrame|None = None) -> pd.DataFrame:
-        if c is None:
-            i["date"] = pd.to_datetime(i["date"])
-            i = i.sort_values("date").drop_duplicates(subset=["date"]).set_index("date")
-        else:
-            i = i.sort_index().reindex(c.index, method="ffill")
-            if i.iloc[0].isna().any():
-                i = i.bfill()
-
-        return i
-
-    def _get_stock_calendar(self, data:dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DatetimeIndex:
-        stock_calendar = pd.DatetimeIndex([])
-        data_quotes = data.get("quotes", {})
-        if data_quotes:
-            for k, dfq in data_quotes.items():
-                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
-                    stock_calendar = pd.to_datetime(dfq["date"], errors="coerce")
-                    stock_calendar = pd.DatetimeIndex(stock_calendar).tz_localize(None)
-                    stock_calendar = stock_calendar[~stock_calendar.isna()]
-                    stock_calendar = stock_calendar[stock_calendar > cutoff]
-                    break
-
-        return stock_calendar
-
-    def _create_daily_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime) -> pd.DatetimeIndex:
-        date_min = cutoff
-        date_max = pd.Timestamp.now()
-        data_quotes = data.get("quotes", {})
-        data_statements = data.get("statements", {})
-        data_indicators = data.get("indicators", {})
-
-        if data_quotes:
-            mins = []
-            maxs = []
-            for k, dfq in data_quotes.items():
-                if isinstance(dfq, pd.DataFrame) and "date" in dfq.columns and not dfq.empty:
-                    dts = pd.to_datetime(dfq["date"], errors="coerce")
-                    dts = pd.DatetimeIndex(dts).tz_localize(None)
-                    dts = dts[~dts.isna()]
-                    if len(dts):
-                        mins.append(dts.min())
-                        maxs.append(dts.max())
-            if mins:
-                date_min = min(mins)
-            if maxs:
-                date_max = max(maxs)
-
-        if date_min == cutoff and data_statements:
-            statements = data.get("statements", {}).get("statements")
-            if statements is not None and not statements.empty and "quarter" in statements.columns:
-                dates = pd.to_datetime(statements["quarter"].unique())
-                date_min = dates.min().tz_localize(None)
-                date_max = dates.max().tz_localize(None)
-
-        if date_min == cutoff and data_indicators:
-            mins = []
-            maxs = []
-            for k, dfi in data_indicators.items():
-                if isinstance(dfi, pd.DataFrame) and not dfi.empty:
-                    dts = pd.to_datetime(dfi.index, errors="coerce").tz_localize(None)
-                    dts = dts[~dts.isna()]
-                    if len(dts):
-                        mins.append(dts.min())
-                        maxs.append(dts.max())
-            if mins:
-                date_min = min(mins)
-            if maxs:
-                date_max = max(maxs)
-
-        start = max(date_min, pd.Timestamp(cutoff)) + pd.Timedelta(days=1)
-        end = max(date_max, pd.Timestamp.now()) - pd.Timedelta(days=1)
-        daily_calendar = pd.date_range(start, end, freq='B')
-
-        return daily_calendar
-
-    def _create_calendar(self, data: dict[str, dict[str, pd.DataFrame]], cutoff:datetime, granularity:str="month", aggregate_method:str="last") -> pd.DataFrame:
-        cutoff = cutoff or datetime(year=2010, month=12, day=31)
-        allowed_granularities = [
-            'D', 'day', 'B', 'business days',  # Diária (calendário ou business)
-            'ME', 'month', 'MS', 'month start',  # Mensal (end ou start)
-            'QE', 'quarter', 'QS', 'quarter start',  # Trimestral
-            'YE', 'year', 'YS', 'year start'  # Anual
-            ]
-        if granularity not in allowed_granularities:
-            raise ValueError(f"Invalid granularity: {granularity}. Must be one of {allowed_granularities}.")
-        allowed_aggregate_methods = ['last', 'first', 'mean', 'median', 'max', 'min', 'sum', 'std', 'var']
-        if aggregate_method not in allowed_aggregate_methods:
-            raise ValueError(f"Invalid aggregate_method: {aggregate_method}. Must be one of {allowed_aggregate_methods}.")
-
-        daily_calendar = self._get_stock_calendar(data, cutoff)
-        if daily_calendar.empty:
-            daily_calendar = self._create_daily_calendar(data, cutoff)
-        daily_calendar_2 = self._create_daily_calendar(data, cutoff)
-
-        daily_series = pd.Series(1, index=daily_calendar) # Valor 1 em cada trading day
-
-        if granularity == 'D':
-            df_anchor_calendar = daily_calendar
-            df_anchor_calendar = pd.DataFrame({"trading_days": daily_series}, index=daily_calendar)
-        else:
-            df_anchor_calendar = daily_series.groupby(pd.Grouper(freq=granularity)).size().to_frame(name="trading_days")
-        df_anchor_calendar.index.name = 'date'
-
-        return df_anchor_calendar
-    def _get_stock_calendar(
-        self,
-        data: dict[str, dict[str, pd.DataFrame]],
-        cutoff: datetime,
-    ) -> pd.DatetimeIndex:
-        return _get_stock_calendar_helper(data, cutoff)
-
-    def _infer_granularity(self, idx:pd.Index) -> str:
-        """
-        Infere a granularidade de um índice DatetimeIndex.
-    def _create_daily_calendar(
-        self,
-        data: dict[str, dict[str, pd.DataFrame]],
-        cutoff: datetime,
-    ) -> pd.DatetimeIndex:
-        return _create_daily_calendar_helper(data, cutoff)
-
-        Args:
-            idx: pd.Index, esperado como DatetimeIndex.
-            data_type: Tipo de dado ('quotes', 'statements', 'indicators') para ajustar lógica.
-    def _create_calendar(
-        self,
-        data: dict[str, dict[str, pd.DataFrame]],
-        cutoff: datetime,
-        granularity: str = "month",
-        aggregate_method: str = "last",
-    ) -> pd.DataFrame:
-        return _create_calendar_helper(data, cutoff, granularity, aggregate_method)
-
-        Returns:
-            str: Granularidade inferida ('day', 'month', 'quarter', 'year') ou 'unknown' se falhar.
-        """
-        if not isinstance(idx, pd.DatetimeIndex):
-            try:
-                idx = pd.to_datetime(idx, errors='coerce')
-                idx = idx[~idx.isna()]
-                if len(idx) < 2:
-                    return 'unknown'
-            except Exception as e:
-                return 'unknown'
-
-        inferred_freq = pd.infer_freq(idx)
-        freq_map = {
-            'D': 'day', 'B': 'business days',  # Diária (calendário ou business)
-            'ME': 'month', 'MS': 'month',  # Mensal (end ou start)
-            'QE': 'quarter', 'QS': 'quarter',  # Trimestral
-            'YE': 'year', 'YS': 'year'  # Anual
-        }
-        if inferred_freq in freq_map:
-            return freq_map[inferred_freq]
-
-        deltas = np.diff(idx.view("i8"))  # Diferenças em nanossegundos
-        if len(deltas) == 0:
-            return 'unknown'
-
-        med = np.median(deltas)
-        d1 = pd.Timedelta(days=1).value  # 1 dia em nanossegundos
-
-        if med <= 7 * d1:
-            return 'B'
-        if med <= 45 * d1:
-            return 'ME'
-        if med <= 120 * d1:
-            return 'QE'
-        return 'YE'
-    def _infer_granularity(self, idx: pd.Index) -> str:
-        return _infer_granularity_helper(idx)
-
-
-    def _resample_series(
-        self,
-        df_data: pd.DataFrame,
-        df_anchor_calendar: pd.DataFrame,
-        aggregate_method: str,
-    ) -> pd.DataFrame:
-        """
-        Alinha df_data ao df_anchor_calendar com upsampling_action ou downsampling.
-
-        Args:
-            df_data: DataFrame com índice DatetimeIndex.
-            df_anchor_calendar: DataFrame com índice date e coluna trading_days.
-            granularity_anchor: Granularidade do anchor ('D', 'B', 'ME', 'QE', 'YE').
-            aggregate_method: Método de agregação padrão ('last', 'mean', etc.).
-            data_type: Tipo de dado ('quotes', 'statements', 'indicators').
-
-        Returns:
-            pd.DataFrame: DataFrame alinhado ao df_anchor_calendar.
-        """
-        df_data.to_csv("df_data.csv", index=True)
-        df_anchor_calendar.to_csv("df_anchor_calendar.csv", index=True)
-        if df_data.empty:
-            return df_data
-
-        if not isinstance(df_data.index, pd.DatetimeIndex):
-            df_data.index = pd.to_datetime(df_data.index, errors='coerce')
-            df_data = df_data.dropna(subset=[df_data.index.name])
-
-        granularity_order = {'B': 1, 'D': 2, 'MS': 3,'ME': 4, 'QS': 5,'QE': 6, 'YS': 7,'YE': 8} # granularidade: menor significa mais fino, mais diário e detalhado
-        granularity_anchor = pd.infer_freq(df_anchor_calendar.index) or 'B'
-        granularity_data = self._infer_granularity(df_data.index)
-        sampling_anchor = granularity_order[granularity_anchor]  # Default to 'business day'
-        sampling_data = granularity_order.get(granularity_data, 1)  # Default to 'business day'
-        if sampling_data > sampling_anchor:
-            sampling_action = "upsampling" # dados grossos: precisa preencher com valores intermediários
-        elif sampling_data < sampling_anchor:
-            sampling_action = "downsampling" # dados finos: precisa agregar com valores agrupados
-        else:
-            sampling_action = "same" # apenas reindexar
-
-        if sampling_action == "upsampling":
-            df_data = df_data.sort_index()
-            df_data = df_data.reindex(df_data.index.union(df_anchor_calendar.index))
-            df_data = df_data.ffill().bfill()
-            df_data = df_data.reindex(df_anchor_calendar.index).sort_index()
-        elif sampling_action == "downsampling":
-            df_data = df_data.sort_index()
-
-            daily_index = pd.date_range(df_data.index.min(), df_data.index.max(), freq='B')
-            df_data = df_data.reindex(daily_index).ffill().bfill()
-            grouper_freq = granularity_anchor
-            agg_dict = {}
-            for col in df_data.columns:
-                if col in ['open']:
-                    agg_dict[col] = 'first'
-                elif col in ['high']:
-                    agg_dict[col] = 'max'
-                elif col in ['low']:
-                    agg_dict[col] = 'min'
-                elif col in ['close', 'adj_close']:
-                    agg_dict[col] = 'last'
-                elif col in ['volume']:
-                    agg_dict[col] = 'sum'
-                else:
-                    agg_dict[col] = aggregate_method
-
-            df_data = df_data.groupby(pd.Grouper(freq=grouper_freq)).agg(agg_dict)
-            df_data = df_data.reindex(df_anchor_calendar.index)
-
-        return df_data
-
-    def _treat_data(self, data:dict[str, dict[str, pd.DataFrame]], aggregate_method:str="last") -> dict[str, dict[str, pd.DataFrame]]:
-        cutoff:datetime = datetime(year=2010, month=12, day=31)
-        g_map:dict[str, str] = {'day': 'D', 'month': 'ME', 'quarter': 'QE', 'year': 'Y'}
-        granularity = g_map['day']
-        calendar:pd.DataFrame = self._create_calendar(data, cutoff, granularity=granularity, aggregate_method=aggregate_method)
-
-        data_treated = {}
-        for k, d in data.items():
-            k = "quotes"
-            data_treated[k] = {}
-            for stock_quote, df_stock_quote in data[k].items():
-                df_stock_quote = df_stock_quote.set_index('date')
-                resampled = self._resample_series(df_stock_quote, calendar, aggregate_method=aggregate_method)
-                data_treated[k][stock_quote] = self._treat_quotes(df_stock_quote, calendar)
-
-            k = "statements"
-            data_treated[k] = {}
-            if data[k]:
-                for statement, df_statement in data[k].items():
-                    data_treated[k][statement] = self._treat_statements(df_statement, calendar)
-            else:
-                data_treated[k] = []
-
-            k = "indicators"
-            data_treated[k] = {}
-            if data[k]:
-                for indicator, df_indicator in data[k].items():
-                    data_treated[k][indicator] = self._treat_indicators(df_indicator, calendar)
-            else:
-                data_treated[k] = []
-        return _resample_series_helper(df_data, df_anchor_calendar, aggregate_method)
-
-        return data_treated
-    def _treat_data(
-        self,
-        data: dict[str, dict[str, pd.DataFrame]],
-        aggregate_method: str = "last",
-    ) -> dict[str, dict[str, pd.DataFrame]]:
-        return _treat_data_helper(data, aggregate_method)
-
-    def _create_ratios(self, c: dict[str, dict[str, pd.DataFrame]]) -> pd.DataFrame:
-        ''' Description'''
-        source_df = c['statements']['statements'].copy()
-        ratios_df = source_df.copy()
-
-        quotes: dict[str, pd.DataFrame] = c.get("quotes", {}) or {}
-
-        stock_keys = [k for k in quotes.keys() if str(k).startswith('stock_')]
-        stock_keys.sort(key=lambda x: int(str(x).split('_', 1)[1]) if '_' in str(x) else float('inf'))
-
-        ignore_stock_keys_cols = ['id', 'date', 'company_name', 'ticker']
-        frames = []
-
-        for i, qkey in enumerate(stock_keys):
-            try:
-                suffix = qkey.split("_", 1)[1]           # '3', '4', ...
-                code = f"99.{suffix}"
-            except Exception:
-                code = f"99.{i+3}"
-
-            dfq = quotes.get(qkey)
-            if dfq is None or dfq.empty:
-                continue
-
-            dfq = dfq.loc[:, [c for c in dfq.columns if c not in ignore_stock_keys_cols]].copy()
-            if dfq.empty:
-                continue
-
-            dfq.columns = [f"{code}.{c} - {qkey}" for c in dfq.columns]
-            frames.append(dfq)
-
-        if frames:
-            price_df = pd.concat(frames, axis=1)
-            source_df = source_df.join(price_df, how='left')
-            ratios_df = ratios_df.join(price_df, how="left")
-
-        account_long_map = {c: c.split(" - ")[0] for c in source_df.columns if " - " in c}
-        calculate_df = source_df.rename(columns=account_long_map).copy()
-
-        indicator_names = [
-            name
-            for name in dir(intel)
-            if name.startswith('indicators_')
-            and isinstance(getattr(intel, name), list)
-            ]
-        indicator_names.sort()
-
-        for name in indicator_names:
-            ratios_df = ratios_df.copy()
-            calculate_df = calculate_df.copy()
-            indicators_list = getattr(intel, name)
-            for indicator in indicators_list:
-                account_name = indicator["account"]
-                description  = indicator["description"]
-                formula_obj  = indicator["formula"]
-                col_out = f"{account_name} - {description}"
-                try:
-                    series_value = formula_obj(calculate_df)
-                    ratios_df[col_out] = series_value
-                    calculate_df[account_name] = series_value   # persiste para loops
-                except KeyError:
-                    ratios_df[col_out] = np.nan
-                    calculate_df[account_name] = np.nan   # persiste para loops
-
-        if isinstance(ratios_df.index, pd.MultiIndex):
-            ratios_df = ratios_df.reset_index(drop=False)  # transforma níveis do índice em colunas
-            ratios_df = ratios_df.set_index("date").sort_index()
-
-        return ratios_df.fillna(0)
-        return _create_ratios_helper(c)
-
-domain/dtos/cache_ratios_context_dto.py
-+17
--1
-
-from __future__ import annotations
-
-import hashlib
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True, kw_only=True)
-class CacheRatiosContextDTO:
-    """Hashes describing the inputs used to compute ratios for caching."""
-
-    logical_name: str
-    version: str
-    company_name: str
-    filters_hash: str
-    quotes_hash: str
-    statements_hash: str
-    indicators_hash: str
-    code_hash: str
-
-    @property
-    def app_hash(self) -> str:
-        payload = f"{self.logical_name}|{self.version}".encode()
-        return hashlib.sha256(payload).hexdigest()
-
-    @property
-    def company_hash(self) -> str:
-        return hashlib.sha256(self.company_name.encode("utf-8")).hexdigest()
-
-    @property
-    def cache_key(self) -> str:
-        payload = (
-            f"{self.app_hash}{self.quotes_hash}{self.statements_hash}{self.indicators_hash}{self.code_hash}".encode()
-            "|".join(
-                [
-                    self.app_hash,
-                    self.company_hash,
-                    self.filters_hash,
-                    self.quotes_hash,
-                    self.statements_hash,
-                    self.indicators_hash,
-                    self.code_hash,
-                ]
-            ).encode()
-        )
-        return hashlib.sha256(payload).hexdigest()
-domain/exceptions.py
-New
-+8
--0
-
-"""Common domain-level exceptions."""
-from __future__ import annotations
-
-
-class DomainError(Exception):
-    """Base exception for recoverable domain validation issues."""
-
-    pass
-domain/services/service_ratios.py
-+16
--5
-
-@@ -3,50 +3,51 @@ import pandas as pd
-
-
-from application.processors.filter_builder import FilterBuilder
-from infrastructure.utils.pandas_visitor import PandasVisitor
-from application.ports.config_port import ConfigPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import UowFactoryPort
-from application.ports.worker_pool_port import WorkerPoolPort
-from application.services.eligible_companies_batch_updater_service import (
-    EligibleCompaniesBatchUpdaterService,
-)
-from application.usecases.normalize_ratios import NormalizeUseCase
-from application.usecases.companies_eligible import (
-    CompaniesEligibleUseCase,
-)
-from domain.dtos.company_eligible_dto import CompanyEligibleDTO
-from domain.dtos import CacheRatiosResultDTO, SyncResultsDTO
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-from domain.value_objects.search_filter_tree import SearchFilterTree
-
-
-class RatiosService:
-    """Service layer to coordinate company-related synchronization use cases."""
-
-    def __init__(
-        self,
-        config: ConfigPort,
-        logger: LoggerPort,
-
-        repository_company: RepositoryCompanyDataPort,
-        repository_stock_quote: RepositoryStockQuotePort,
-        repository_indicators: RepositoryIndicatorsPort,
-        repository_statements_fetched: RepositoryStatementFetchedPort,
-        cache_ratios: CacheRatiosPort,
-
-        uow_factory: UowFactoryPort,
-        worker_pool: WorkerPoolPort,
-        companies_eligible_port: CompaniesEligiblePort,
-    ):
-        """Initialize the service with required dependencies.
-
-        Args:
-            config (ConfigPort): Provides application configuration settings.
-            logger (LoggerPort): Logging interface for tracking operations.
-@@ -92,41 +93,51 @@ class RatiosService:
-            repository_statements_fetched=self.repository_statements_fetched,
-            cache_ratios=self.cache_ratios,
-            companies_eligible_port=companies_eligible_port,
-
-            uow_factory=self.uow_factory,
-            worker_pool=self.worker_pool,
-            # http_client=self.http_client,
-
-            # max_workers=self.config.worker_pool.max_workers,
-        )
-
-    def __call__(self, *args: Any, **kwds: Any) -> SyncResultsDTO[CacheRatiosResultDTO]:
-        return self.run(filters=kwds.get("filters"))
-
-    def run(self, filters: Optional[Dict[str, Any]] = None) -> SyncResultsDTO[CacheRatiosResultDTO]:
-        """
-        Executa a normalização com filtros complexos.
-
-        Args:
-        """
-        with self.uow_factory() as uow:
-            companies_eligible: List[CompanyEligibleDTO] = self.companies_eligible_port.list(uow=uow)
-
-        df = pd.DataFrame([c.to_dict() for c in companies_eligible])
-
-        companies_to_process = self._apply_filters(df, filters)
-        filter_tree = SearchFilterTree.from_raw(filters)
-
-        companies_to_process = self._apply_filters(df, filter_tree)
-        if companies_to_process.empty:
-            return SyncResultsDTO(items=[], metrics=0)
-
-        return self.normalize_usecase(companies=companies_to_process)
-
-    def _apply_filters(self, df: pd.DataFrame, filters: dict | None) -> pd.DataFrame:
-        if not filters:
-    def _apply_filters(
-        self,
-        df: pd.DataFrame,
-        filters: Optional[SearchFilterTree],
-    ) -> pd.DataFrame:
-        if filters is None or filters.is_empty():
-            return df
-        try:
-            spec = FilterBuilder().build_spec(filters)
-            spec = FilterBuilder.build_spec(filters.to_dict())
-            mask = spec.accept(PandasVisitor(), df)
-            return df[mask]
-        except Exception as e:
-        except Exception as exc:  # noqa: BLE001
-            if self.logger:
-                self.logger.log(
-                    f"RatiosService: falha ao aplicar filtros ({exc})", level="warning"
-                )
-            return df
-
-domain/value_objects/__init__.py
-+2
--0
-
-"""Domain-level value objects shared across use cases."""
-
-from .company_filters import (
-    CompanyField,
-    ComparisonOperator,
-    LogicalOperator,
-    CompanyFilterCondition,
-    CompanyFilterClause,
-    CompanyFilterQuery,
-)
-from .account_code import AccountCode
-from .search_filter_tree import SearchFilterTree
-
-__all__ = [
-    "CompanyField",
-    "ComparisonOperator",
-    "LogicalOperator",
-    "CompanyFilterCondition",
-    "CompanyFilterClause",
-    "CompanyFilterQuery",
-    "AccountCode",
-    "SearchFilterTree",
-]
-domain/value_objects/search_filter_tree.py
-New
-+76
--0
-
-"""Domain-level representation for structured search filters."""
-from __future__ import annotations
-
-import hashlib
-import json
-from dataclasses import dataclass
-from typing import Any, Dict, Optional
-
-
-FilterDict = Dict[str, Any]
-
-
-@dataclass(frozen=True)
-class SearchFilterTree:
-    """Immutable value object describing a structured filter tree.
-
-    The ``raw`` attribute stores the canonical dictionary consumed by the
-    :class:`application.processors.filter_builder.FilterBuilder`. The grammar is
-    intentionally generic and mirrors what the CLI, FastAPI and frontend share.
-
-    Example::
-
-        SearchFilterTree(
-            raw={
-                "and": [
-                    {"status": "ATIVO"},
-                    {
-                        "or": [
-                            {"market": {"in": ["NM", "N2"]}},
-                            {"has_bdr": True},
-                        ]
-                    },
-                    {"listing_date": {">=": "2020-01-01"}},
-                ]
-            }
-        )
-
-    Leaves can be literal values (``{"status": "ATIVO"}``) or dictionaries
-    describing operators such as ``==``, ``in``, ``contains``, ``isnull`` etc.
-    Logical nodes use ``and``/``or``/``not`` keys to combine other filters.
-    """
-
-    raw: FilterDict
-
-    @classmethod
-    def from_raw(cls, data: Optional[Any]) -> Optional["SearchFilterTree"]:
-        """Normalize ``dict`` or :class:`SearchFilterTree` into a VO instance."""
-        if data is None:
-            return None
-        if isinstance(data, SearchFilterTree):
-            return data
-        if not isinstance(data, dict):
-            raise TypeError(
-                "SearchFilterTree.from_raw expects a dict or SearchFilterTree, "
-                f"received {type(data)!r}"
-            )
-        return cls(raw=data)
-
-    def to_dict(self) -> FilterDict:
-        """Return the underlying dictionary representation."""
-        return self.raw
-
-    def is_empty(self) -> bool:
-        """Return ``True`` when the tree has no conditions."""
-        return not bool(self.raw)
-
-    def to_hash(self) -> str:
-        """Produce a stable SHA-256 hash of the serialized tree."""
-        if self.is_empty():
-            return self._empty_hash()
-        payload = json.dumps(self.raw, sort_keys=True, default=str).encode("utf-8")
-        return hashlib.sha256(payload).hexdigest()
-
-    @staticmethod
-    def _empty_hash() -> str:
-        return hashlib.sha256(b"EMPTY_FILTER").hexdigest()
-infrastructure/cache/ratios_cache.py
-+9
--1
-
-@@ -189,42 +189,50 @@ class CacheRatiosAdapter(CacheRatiosPort, EngineSetup):
-            # LFU + FIFO: menos acessado primeiro; em empate, mais antigo primeiro
-            victims = session.scalars(
-                select(CacheEntry).order_by(
-                    CacheEntry.access_count.asc(),
-                    CacheEntry.created_at.asc(),
-                )
-            )
-            for v in victims:
-                if total_size <= budget:
-                    break
-                Path(v.file_path).unlink(missing_ok=True)
-                total_size -= v.size_bytes
-                session.delete(v)
-
-    def _delete_entry_and_file(self, session: Session, entry: CacheEntry, *, unlink_file: bool) -> None:
-        if unlink_file:
-            Path(entry.file_path).unlink(missing_ok=True)
-        session.delete(entry)
-
-    def _build_file_path(self, *, context: CacheRatiosContextDTO, company_name: str) -> Path:
-        """
-        Constrói caminho estável: <cache_dir>/<logical_name>/v<version>/<company>/<cache_key>.parquet
-        """
-        # safe_company = self._sanitize_company_name(company_name)
-        # version_segment = f"v{context.version}"
-        target_dir = self._config.paths.cache_dir # / context.logical_name / version_segment / safe_company
-        safe_company = self._sanitize_company_name(company_name)
-        version_segment = f"v{context.version}"
-        target_dir = (
-            self._config.paths.cache_dir
-            / context.logical_name
-            / version_segment
-            / safe_company
-        )
-        target_dir.mkdir(parents=True, exist_ok=True)
-        return target_dir / f"{context.cache_key}.parquet"
-
-    def _sanitize_company_name(self, company_name: str) -> str:
-        normalized = unicodedata.normalize("NFKD", company_name)
-        ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
-        cleaned = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-")
-        return cleaned[:120] if cleaned else "unknown"
-
-    def _as_timedelta(self, value) -> timedelta:
-        """
-        Aceita tanto timedelta quanto uma duration-like de config.
-        """
-        if isinstance(value, timedelta):
-            return value
-        # fallback simples: minutos
-        return timedelta(minutes=int(value))
-presentation/backend/api.py
-+4
--0
-
-# presentation/backend/api.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from presentation.backend.routers.charts import router as charts_router
-from presentation.backend.routers.companies import router as companies_router
-from presentation.backend.routers.account_charts import (
-    router as account_charts_router,
-)
-from presentation.backend.routers.ratios_charts import (
-    router as ratios_charts_router,
-)
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(
-        title="FLY Web API",
-        version="0.1.0",
-    )
-
-    # CORS para permitir o frontend do Vite (http://localhost:5173)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Camada de apresentação: apenas inclui routers finos
-    app.include_router(charts_router)
-    app.include_router(account_charts_router)
-    app.include_router(ratios_charts_router)
-    app.include_router(companies_router)
-
-    return app
-
-
-app = create_app()
-presentation/backend/dependencies/ratios_chart_dependencies.py
-New
-+53
--0
-
-"""FastAPI dependencies wiring ratios/chart use cases."""
-from __future__ import annotations
-
-from fastapi import Depends
-
-from application.usecases.get_company_accounts_chart import (
-    GetCompanyAccountsChartUseCase,
-)
-from application.usecases.get_company_ratios_frame import (
-    GetCompanyRatiosFrameUseCase,
-)
-from infrastructure.cache.ratios_cache import CacheRatiosAdapter
-from infrastructure.config.config_adapter import ConfigAdapter
-from infrastructure.logging.logger_adapter import Logger
-from infrastructure.repositories.repository_company_eligible import RepositoryCompanyEligible
-from infrastructure.repositories.repository_indicators import RepositoryIndicators
-from infrastructure.repositories.repository_statements_fetched import (
-    StatementFetchedRepository,
-)
-from infrastructure.repositories.repository_stock_quote import RepositoryStockQuote
-from infrastructure.uow.uow import UowFactory
-
-
-def get_company_ratios_frame_usecase() -> GetCompanyRatiosFrameUseCase:
-    config = ConfigAdapter()
-    logger = Logger(config)
-
-    cache_port = CacheRatiosAdapter(config=config, logger=logger)
-    repository_indicators = RepositoryIndicators(config=config, logger=logger)
-    repository_statements = StatementFetchedRepository(config=config, logger=logger)
-    repository_stock_quote = RepositoryStockQuote(config=config, logger=logger)
-    companies_eligible = RepositoryCompanyEligible(config=config, logger=logger)
-
-    uow_factory = UowFactory(session_factory=companies_eligible.Session)
-
-    return GetCompanyRatiosFrameUseCase(
-        config=config,
-        logger=logger,
-        repository_stock_quote=repository_stock_quote,
-        repository_indicators=repository_indicators,
-        repository_statements_fetched=repository_statements,
-        cache_ratios=cache_port,
-        companies_eligible_port=companies_eligible,
-        uow_factory=uow_factory,
-    )
-
-
-def get_company_accounts_chart_usecase(
-    ratios_frame_usecase: GetCompanyRatiosFrameUseCase = Depends(
-        get_company_ratios_frame_usecase
-    ),
-) -> GetCompanyAccountsChartUseCase:
-    return GetCompanyAccountsChartUseCase(ratios_frame_usecase=ratios_frame_usecase)
-presentation/backend/dto/chart_dto.py
-+2
--5
-
-# presentation/backend/schemas/chart_dto.py
-from __future__ import annotations
-from pydantic import BaseModel, Field
-from typing import Any, List, Dict, Optional
-
-
-class PlotlyTraceDTO(BaseModel):
-    """
-    Trace genérico para Plotly.
-
-    Mantém estrutura mínima para 80% dos gráficos (scatter, bar etc.).
-    """
-    x: List[Any]
-    y: List[Any]
-    type: str = Field(default="scatter")
-    mode: Optional[str] = Field(default="lines")
-    name: Optional[str] = None
-    # campo extra para qualquer coisa específica de Plotly
-    extra: Dict[str, Any] = Field(default_factory=dict)
-
-
-class ChartDTO(BaseModel):
-    """
-    DTO de saída da API para o frontend Vue/Plotly.
-    """DTO de saída da API para o frontend Vue/Plotly."""
-
-    'data' é uma lista de traces Plotly,
-    'layout' é um dict livre conforme API do Plotly.js.
-    """
-    data: List[PlotlyTraceDTO]
-    layout: Dict[str, Any] = Field(default_factory=dict)
-    meta: Dict[str, Any] = Field(default_factory=dict)
-presentation/backend/dto/company_accounts_chart_request_dto.py
-New
-+17
--0
-
-"""Request DTO for company accounts chart endpoint."""
-from __future__ import annotations
-
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
-
-from presentation.backend.dto.search_filters_dto import SearchFiltersDTO
-
-
-class CompanyAccountsChartRequestDTO(BaseModel):
-    company_name: str = Field(..., description="Empresa alvo das séries")
-    accounts: List[str] = Field(..., description="Lista de accounts/ratios desejadas")
-    filters: Optional[SearchFiltersDTO] = Field(
-        default=None,
-        description="Árvore de filtros estruturados",
-    )
-presentation/backend/dto/search_filters_dto.py
-New
-+21
--0
-
-"""Pydantic DTO representing structured search filters."""
-from __future__ import annotations
-
-from typing import Any, Dict, Optional
-
-from pydantic import BaseModel, Field
-
-from domain.value_objects.search_filter_tree import SearchFilterTree
-
-
-class SearchFiltersDTO(BaseModel):
-    """Wrapper around the tree structure consumed by ``FilterBuilder``."""
-
-    tree: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Árvore de filtros estruturados, compatível com FilterBuilder.",
-    )
-
-    def to_domain(self) -> Optional[SearchFilterTree]:
-        """Convert the DTO into the domain value object."""
-        return SearchFilterTree.from_raw(self.tree)
-presentation/backend/mappers/accounts_series_chart_mapper.py
-New
-+50
--0
-
-"""Mappers converting account series DTOs into Plotly-friendly payloads."""
-from __future__ import annotations
-
-from typing import List
-
-from application.dtos.company_accounts_series_dto import CompanyAccountsSeriesDTO
-from presentation.backend.dto.chart_dto import ChartDTO, PlotlyTraceDTO
-
-
-def company_accounts_to_chart(dto: CompanyAccountsSeriesDTO) -> ChartDTO:
-    traces: List[PlotlyTraceDTO] = []
-
-    for series in dto.series:
-        x = [point.date for point in series.points]
-        y = [point.value for point in series.points]
-        traces.append(
-            PlotlyTraceDTO(
-                x=x,
-                y=y,
-                type="scatter",
-                mode="lines",
-                name=f"{series.account_code} - {series.label}",
-                extra={
-                    "ticker": series.ticker,
-                    "account_code": series.account_code,
-                },
-            )
-        )
-
-    layout = {
-        "title": f"Ratios – {dto.company_name}",
-        "xaxis": {"title": "Data"},
-        "yaxis": {"title": "Valor"},
-    }
-
-    meta = dict(dto.meta)
-    if dto.cache_info:
-        meta.setdefault(
-            "cache",
-            {
-                "cache_key": dto.cache_info.cache_key,
-                "hit": dto.cache_info.hit,
-            },
-        )
-
-    meta.setdefault("company_name", dto.company_name)
-    if dto.series:
-        meta.setdefault("accounts", [series.account_code for series in dto.series])
-
-    return ChartDTO(data=traces, layout=layout, meta=meta)
-presentation/backend/routers/ratios_charts.py
-New
-+55
--0
-
-"""FastAPI router exposing company ratios charts."""
-from __future__ import annotations
-
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from application.usecases.get_company_accounts_chart import (
-    GetCompanyAccountsChartUseCase,
-)
-from domain.exceptions import DomainError
-from domain.value_objects.search_filter_tree import SearchFilterTree
-from presentation.backend.dependencies.ratios_chart_dependencies import (
-    get_company_accounts_chart_usecase,
-)
-from presentation.backend.dto.chart_dto import ChartDTO
-from presentation.backend.dto.company_accounts_chart_request_dto import (
-    CompanyAccountsChartRequestDTO,
-)
-from presentation.backend.mappers.accounts_series_chart_mapper import (
-    company_accounts_to_chart,
-)
-
-router = APIRouter(
-    prefix="/api/charts/ratios",
-    tags=["charts-ratios"],
-)
-
-
-def _map_filters(filters_dto) -> SearchFilterTree | None:
-    if filters_dto is None:
-        return None
-    return filters_dto.to_domain()
-
-
-@router.post("/company", response_model=ChartDTO)
-async def get_company_ratios_chart(
-    payload: CompanyAccountsChartRequestDTO,
-    usecase: GetCompanyAccountsChartUseCase = Depends(
-        get_company_accounts_chart_usecase
-    ),
-) -> ChartDTO:
-    filter_tree = _map_filters(payload.filters)
-
-    try:
-        series_dto = usecase(
-            company_name=payload.company_name,
-            accounts=payload.accounts,
-            filters=filter_tree,
-        )
-    except DomainError as exc:  # pragma: no cover - FastAPI handles response
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    return company_accounts_to_chart(series_dto)
-presentation/controllers/cli.py
-+4
--5
-
-from application.ports.config_port import ConfigPort
-from application.ports.http_client_port import AffinityHttpClientPort
-from application.ports.logger_port import LoggerPort
-from application.ports.uow_port import UowFactoryPort
-from application.ports.worker_pool_port import WorkerPoolPort
-from domain.dtos.sync_results_dto import SyncResultsDTO
-from domain.polices.nsd_policy import NsdPolicyPort
-from domain.ports.cache_ratios_port import CacheRatiosPort
-from domain.ports.repository_company_data_port import RepositoryCompanyDataPort
-from domain.ports.repository_indicators_port import RepositoryIndicatorsPort
-from domain.ports.repository_nsd_port import RepositoryNsdPort
-from domain.ports.repository_statements_fetched_port import (
-    RepositoryStatementFetchedPort,
-)
-from domain.ports.repository_statements_raw_port import RepositoryStatementsRawPort
-from domain.ports.repository_stock_quote_port import RepositoryStockQuotePort
-from domain.ports.scraper_company_data_port import ScraperCompanyDataPort
-from domain.ports.scraper_nsd_port import ScraperNsdPort
-from domain.ports.scraper_statements_raw_port import ScraperStatementRawPort
-from domain.ports.scraper_stock_quote_port import ScraperStockQuotePort
-from domain.ports.companies_eligible_port import CompaniesEligiblePort
-from domain.services.service_company_data import CompanyDataService
-from domain.services.service_nsd import NsdService
-from domain.services.service_ratios import RatiosService
-from domain.services.service_stock_quote import StockQuoteService
-from presentation.controllers.filter_presets import (
-    build_ratios_filter_by_issuing_company,
-)
-
-# from domain.ports.scraper_statements_fetched_port import ScraperStatementFetchedPort
-from infrastructure.utils.byte_formatter import ByteFormatter
-
-
-class Cli:
-    """CLI façade that coordinates domain services.
-
-    This class is intentionally minimal: it composes dependencies and
-    triggers the high-level workflows without embedding domain logic.
-
-    Args:
-        config (ConfigPort): Read-only application configuration.
-        logger (LoggerPort): Logging abstraction for structured events.
-        repository_company (RepositoryCompanyDataPort): Persistence port for company data.
-        scraper_company_data (ScraperCompanyDataPort): Scraper port for fetching company data.
-    """
-
-    def __init__(
-        self,
-        config: ConfigPort,
-        logger: LoggerPort,
-        repository_company: RepositoryCompanyDataPort,
-        repository_nsd: RepositoryNsdPort,
-        repository_stock_quote: RepositoryStockQuotePort,
-@@ -205,33 +208,29 @@ class Cli:
-        # filters: Dicionário de filtros (ex: {'company_name': {'contains': 'GERDAU'}}).
-        #             Se None, processa todas as empresas elegíveis.
-        #             cada folha da árvore é uma condição concreta sobre uma coluna (Cmp, StrMatch, NullCheck, ListAny).
-        #             {
-        #         "and": [
-        #             {"status": "ATIVO"},
-        #             {
-        #             "or": [
-        #                 {
-        #                 "and": [
-        #                     {"has_bdr": True},
-        #                     {"market": {"in": ["NM"]}}
-        #                 ]
-        #                 },
-        #                 {"listing_date": {">=": "2020-01-01"}}
-        #             ]
-        #             },
-        #             {"market": {"in": ["NM", "N2"]}}
-        #         ]
-        #         }
-        #         Essa estrutura representa:
-        #         (status == "ATIVO") 
-        #         AND ( (has_bdr == True AND market in ["NM"]) OR (listing_date >= "2020-01-01") )
-        #         AND (market in ["NM", "N2"])
-
-        filters = {
-             "and": [
-                {"issuing_company": {"==": "PETR", "case": False}},
-            ]
-        }
-        filters = build_ratios_filter_by_issuing_company("PETR")
-
-        df_ratios = ratios_service(filters=filters)
-        return df_ratios
-presentation/controllers/filter_presets.py
-New
-+31
--0
-
-"""Reusable filter presets shared by CLI and web adapters."""
-from __future__ import annotations
-
-from typing import Any, Dict
-
-FilterDict = Dict[str, Any]
-
-
-def build_ratios_filter_by_issuing_company(issuing_company: str) -> FilterDict:
-    """Return a filter tree matching the given issuing company (case insensitive)."""
-
-    company = str(issuing_company or "").strip()
-    if not company:
-        return {}
-
-    return {
-        "and": [
-            {
-                "issuing_company": {
-                    "==": company,
-                    "case": False,
-                }
-            }
-        ]
-    }
-
-
-def build_default_ratios_filter() -> FilterDict:
-    """Placeholder for a richer default ratios filter."""
-
-    return {}
-presentation/frontend/src/services/apiService.js
-+24
--0
-
-@@ -21,34 +21,58 @@ export async function fetchChart(params) {
-    params: query,
-  })
-  return res.data
-}
-
-export async function fetchAccountLineChart(ticker, accountCode, params = {}) {
-  const t = String(ticker || '').trim()
-  const a = String(accountCode || '').trim()
-
-  if (!t || !a) {
-    throw new Error('Ticker e accountCode são obrigatórios')
-  }
-
-  const res = await api.get(
-    `/api/charts/accounts/line/${encodeURIComponent(t)}`,
-    {
-      params: {
-        account_code: a,
-        ...params,
-      },
-    },
-  )
-  return res.data
-}
-
-export async function fetchCompanyRatiosChart(companyName, accounts, filterTree = null) {
-  const name = String(companyName || '').trim()
-  if (!name) {
-    throw new Error('Nome de companhia inválido para carregar gráficos de ratios')
-  }
-
-  const normalizedAccounts = Array.isArray(accounts)
-    ? accounts.map(code => String(code || '').trim()).filter(Boolean)
-    : []
-
-  if (!normalizedAccounts.length) {
-    throw new Error('Informe ao menos uma account para o gráfico')
-  }
-
-  const payload = {
-    company_name: name,
-    accounts: normalizedAccounts,
-    filters: filterTree ? { tree: filterTree } : null,
-  }
-
-  const res = await api.post('/api/charts/ratios/company', payload)
-  return res.data
-}
-
-export async function searchCompanies(filterQuery) {
-  const res = await api.post('/companies/search', filterQuery || { clauses: [] })
-  return res.data
-}
-
-export async function fetchCompanyFacets() {
-  const res = await api.get('/companies/facets')
-  return res.data
-}
-presentation/frontend/src/store/accountChartsStore.js
-+42
--52
-
-import { defineStore } from 'pinia'
-import { fetchAccountLineChart } from '../services/apiService'
-import { fetchCompanyRatiosChart } from '../services/apiService'
-import { buildChartFilterTree } from '../utils/chartFilters'
-
-export const useAccountChartsStore = defineStore('accountCharts', {
-  state: () => ({
-    ticker: '',
-    charts: {
-      '02.03': null,
-      '03.01': null,
-    },
-    isLoading: {
-      '02.03': false,
-      '03.01': false,
-    },
-    error: {
-      '02.03': '',
-      '03.01': '',
-    },
-    companyName: '',
-    selectedAccounts: [],
-    filterTree: null,
-    chart: null,
-    isLoading: false,
-    error: null,
-  }),
-
-  actions: {
-    setTicker(ticker) {
-      this.ticker = String(ticker || '').trim()
-    setCompanyName(name) {
-      this.companyName = String(name || '').trim()
-    },
-
-    _ensureKeys(code) {
-      if (!(code in this.charts)) {
-        this.charts = { ...this.charts, [code]: null }
-      }
-      if (!(code in this.isLoading)) {
-        this.isLoading = { ...this.isLoading, [code]: false }
-      }
-      if (!(code in this.error)) {
-        this.error = { ...this.error, [code]: '' }
-      }
-    setSelectedAccounts(accounts) {
-      this.selectedAccounts = Array.isArray(accounts)
-        ? accounts.map(code => String(code || '').trim()).filter(Boolean)
-        : []
-    },
-
-    async loadAccountChart(accountCode, params = {}) {
-      const code = String(accountCode || '').trim()
-      if (!code) {
-    setFilterFromFilterQuery(filterQuery) {
-      this.filterTree = buildChartFilterTree(filterQuery)
-    },
-
-    resetChart() {
-      this.chart = null
-      this.error = null
-    },
-
-    async loadChart() {
-      if (!this.companyName) {
-        this.error = 'Selecione uma companhia para carregar o gráfico'
-        this.chart = null
-        return
-      }
-
-      this._ensureKeys(code)
-
-      if (!this.ticker) {
-        this.error = {
-          ...this.error,
-          [code]: 'Ticker e código da conta são obrigatórios',
-        }
-      if (!this.selectedAccounts.length) {
-        this.error = 'Informe ao menos uma account'
-        this.chart = null
-        return
-      }
-
-      this.isLoading = { ...this.isLoading, [code]: true }
-      this.error = { ...this.error, [code]: '' }
-      this.isLoading = true
-      this.error = null
-
-      try {
-        const chart = await fetchAccountLineChart(this.ticker, code, params)
-        this.charts = { ...this.charts, [code]: chart }
-        const dto = await fetchCompanyRatiosChart(
-          this.companyName,
-          this.selectedAccounts,
-          this.filterTree,
-        )
-        this.chart = dto
-      } catch (err) {
-        console.error(err)
-        const message = err?.message || 'Falha ao carregar gráfico'
-        this.error = { ...this.error, [code]: message }
-        this.charts = { ...this.charts, [code]: null }
-        this.error = err?.response?.data?.detail || err?.message || 'Erro ao carregar gráfico'
-        this.chart = null
-      } finally {
-        this.isLoading = { ...this.isLoading, [code]: false }
-        this.isLoading = false
-      }
-    },
-
-    async loadMultipleAccounts(accountCodes, params = {}) {
-      const codes = (accountCodes || [])
-        .map(code => String(code || '').trim())
-        .filter(Boolean)
-
-      await Promise.all(codes.map(code => this.loadAccountChart(code, params)))
-    },
-  },
-})
-presentation/frontend/src/utils/chartFilters.js
-New
-+108
--0
-
-const OPERATOR_TO_FILTER_BUILDER = {
-  IN: 'in',
-  EQUALS: 'eq',
-  EQ: 'eq',
-  '=': 'eq',
-  '==': 'eq',
-  CONTAINS: 'contains',
-  STARTS_WITH: 'startswith',
-  STARTSWITH: 'startswith',
-  BETWEEN: 'between',
-  GT: 'gt',
-  GTE: 'gte',
-  LT: 'lt',
-  LTE: 'lte',
-}
-
-function buildLeaf(condition) {
-  if (!condition || !condition.field) {
-    return null
-  }
-
-  const field = condition.field
-  const operator = String(condition.operator || '').toUpperCase()
-  const values = Array.isArray(condition.values) ? condition.values : []
-
-  const cleanedValues = values
-    .map((value) => (value === null || value === undefined ? '' : String(value).trim()))
-    .filter((value) => value.length)
-
-  if (!cleanedValues.length) {
-    return null
-  }
-
-  const mapped = OPERATOR_TO_FILTER_BUILDER[operator] || null
-
-  if ((mapped === 'eq' || mapped === 'in') && cleanedValues.length === 1) {
-    return { [field]: cleanedValues[0] }
-  }
-
-  if (mapped === 'in' || (mapped === 'eq' && cleanedValues.length > 1)) {
-    return { [field]: { in: cleanedValues } }
-  }
-
-  if (mapped === 'between' && cleanedValues.length === 2) {
-    return { [field]: { between: cleanedValues } }
-  }
-
-  if (['gt', 'gte', 'lt', 'lte'].includes(mapped)) {
-    return { [field]: { [mapped]: cleanedValues.length === 1 ? cleanedValues[0] : cleanedValues } }
-  }
-
-  if (['contains', 'startswith'].includes(mapped)) {
-    return { [field]: { [mapped]: cleanedValues.length === 1 ? cleanedValues[0] : cleanedValues } }
-  }
-
-  return { [field]: cleanedValues[0] }
-}
-
-export function buildChartFilterTree(filterQuery) {
-  if (!filterQuery || !Array.isArray(filterQuery.clauses)) {
-    return null
-  }
-
-  const andClauses = []
-  const orClauses = []
-  const notClauses = []
-
-  for (const clause of filterQuery.clauses) {
-    if (!clause || !clause.condition) continue
-    const leaf = buildLeaf(clause.condition)
-    if (!leaf) continue
-
-    const logical = String(clause.logical || 'AND').toUpperCase()
-    if (logical === 'AND') {
-      andClauses.push(leaf)
-    } else if (logical === 'OR') {
-      orClauses.push(leaf)
-    } else if (logical === 'NOT') {
-      notClauses.push({ not: leaf })
-    }
-  }
-
-  let tree = null
-
-  if (andClauses.length === 1) {
-    tree = andClauses[0]
-  } else if (andClauses.length > 1) {
-    tree = { and: andClauses }
-  }
-
-  if (orClauses.length === 1) {
-    const orNode = orClauses[0]
-    tree = tree ? { and: [tree, orNode] } : orNode
-  } else if (orClauses.length > 1) {
-    const orNode = { or: orClauses }
-    tree = tree ? { and: [tree, orNode] } : orNode
-  }
-
-  if (notClauses.length === 1) {
-    const notNode = notClauses[0]
-    tree = tree ? { and: [tree, notNode] } : notNode
-  } else if (notClauses.length > 1) {
-    const notNode = { and: notClauses }
-    tree = tree ? { and: [tree, notNode] } : notNode
-  }
-
-  return tree
-}
-presentation/frontend/src/views/CompanyChartsView.vue
-+115
--71
-
-<template>
-  <section class="account-charts">
-    <header class="account-charts__header">
-      <h2>Gráficos por conta contábil</h2>
-      <p>
-        Informe um ticker e visualize múltiplas contas financeiras usando o mesmo
-        pipeline.
-      <h2>Gráficos de ratios por empresa</h2>
-      <p v-if="activeCompanyName">
-        Companhia selecionada: <strong>{{ activeCompanyName }}</strong>
+@@ -60,323 +60,225 @@
       </p>
-      <p v-else class="muted">
-        Nenhuma companhia selecionada. Use as facetas para escolher uma.
-      </p>
-
-      <div class="account-charts__controls">
-        <label for="accounts-select">Accounts</label>
-        <select
-          id="accounts-select"
-          multiple
-          v-model="localAccounts"
-        >
-          <option value="02.03">02.03 – Patrimônio Líquido</option>
-          <option value="03.01">03.01 – Receita Líquida</option>
-          <option value="04.02">04.02 – EBITDA</option>
-        </select>
-
-        <button
-          type="button"
-          :disabled="!canReload"
-          @click="onReload"
-        >
-          Carregar gráficos
-        </button>
-      </div>
-    </header>
-
-    <div class="account-charts__controls">
-      <label for="ticker-input">Ticker</label>
-      <input
-        id="ticker-input"
-        v-model="localTicker"
-        type="text"
-        placeholder="Ex.: PETR4"
-        @keyup.enter="load"
-    <main class="account-charts__body" aria-live="polite">
-      <div v-if="store.isLoading">Carregando gráficos...</div>
-      <div v-else-if="store.error" class="error">{{ store.error }}</div>
-      <PlotlyViewer
-        v-else-if="store.chart"
-        :chart="store.chart"
-        :isLoading="store.isLoading"
-        :error="store.error"
-        aria-label="Gráfico de séries de ratios"
-      />
-
-      <button type="button" @click="load">
-        Carregar gráficos
-      </button>
     </div>
-
-    <div class="account-charts__grid">
-      <section class="account-chart" aria-live="polite">
-        <h3>02.03 – Patrimônio Líquido</h3>
-        <PlotlyViewer
-          :chart="charts['02.03']"
-          :isLoading="isLoading['02.03']"
-          :error="error['02.03']"
-        />
-      </section>
-
-      <section class="account-chart" aria-live="polite">
-        <h3>03.01 – Receita Líquida</h3>
-        <PlotlyViewer
-          :chart="charts['03.01']"
-          :isLoading="isLoading['03.01']"
-          :error="error['03.01']"
-        />
-      </section>
-    </div>
-      <p v-else class="muted">
-        Escolha uma companhia e as contas desejadas para visualizar as séries.
-      </p>
-    </main>
   </section>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useAccountChartsStore } from '../store/accountChartsStore'
-import { computed, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import PlotlyViewer from '../components/PlotlyViewer.vue'
-import { useAccountChartsStore } from '../store/accountChartsStore'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { COMPANY_FACETS } from '../config/companyFacets'
 import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
+import { extractTickers } from '../utils/tickers'
+import CompanyFacet from './CompanyFacet.vue'
+import CompanyResultSelect from './CompanyResultSelect.vue'
 
-const store = useAccountChartsStore()
-const localTicker = ref(store.ticker)
+const store = useCompanyStore()
+const chartStore = useChartStore()
+const route = useRoute()
+const router = useRouter()
+let isSyncingSelection = false
 
-const charts = computed(() => store.charts)
+const facetConfigs = COMPANY_FACETS
+const parseError = ref('')
+const draftFacets = ref({})
+const DEFAULT_OPERATOR = 'IN'
+
+const CASCADE_CONFIG = {
+  industry_sector: {
+    level: 'sector',
+    parentField: null,
+  },
+  industry_subsector: {
+    level: 'subsector',
+    parentField: 'industry_sector',
+  },
+  industry_segment: {
+    level: 'segment',
+    parentField: 'industry_subsector',
+  },
+const COMPANY_FACET_FIELDS = ['industry_sector', 'industry_subsector', 'industry_segment']
+const COMPANY_FACET_MAP = {
+  industry_sector: 'sector',
+  industry_subsector: 'subsector',
+  industry_segment: 'segment',
+}
+
+const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
+
+function isCascadeField(field) {
+  return CASCADE_FIELDS.includes(field)
+function isCompanyFacetField(field) {
+  return COMPANY_FACET_FIELDS.includes(field)
+}
+
+const queryTextModel = computed({
+  get: () => store.queryText,
+  set: (value) => {
+    parseError.value = ''
+    store.setQueryText(value)
+  },
+})
+
+const companies = computed(() => store.companies)
+const total = computed(() => store.total)
+const companies = computed(() => store.filteredCompanies || [])
+const total = computed(() => (store.filteredCompanies || []).length)
+const facets = computed(() => store.facets || {})
+const companyFacets = computed(() => store.companyFacets || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
-async function load() {
-  store.setTicker(localTicker.value)
-  await store.loadMultipleAccounts(['02.03', '03.01'])
-const companyStore = useCompanyStore()
-const { selectedPairs, filterQuery } = storeToRefs(companyStore)
-
-const activeCompanyName = computed(() => {
-  const pairs = selectedPairs.value || []
-  if (!pairs.length) return ''
-  return pairs[0].company || ''
+const selectedItemsModel = computed({
+  get: () => store.selectedItems,
+  set: (values) => {
+    onSelectionChange(values)
+  },
 })
 
-const localAccounts = ref(['02.03', '03.01'])
+function normalizeSelection(values) {
+  if (!Array.isArray(values)) {
+    return []
+  }
+  return values
+    .map((value) => String(value || '').trim())
+    .filter((value) => value.length)
+}
 
-const canReload = computed(() => {
-  return (
-    !!activeCompanyName.value &&
-    localAccounts.value.length > 0 &&
-    !store.isLoading
+function parseSelectionParam(rawValue) {
+  if (!rawValue) {
+    return []
+  }
+
+  const values = Array.isArray(rawValue) ? rawValue : [rawValue]
+
+  return values
+    .flatMap((entry) => String(entry || '').split(','))
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length)
+}
+
+function selectionsAreEqual(a = [], b = []) {
+  if (a.length !== b.length) {
+    return false
+  }
+  return a.every((value, index) => value === b[index])
+}
+
+function booleanLabel(value) {
+  if (value === 'true') return 'Sim'
+  if (value === 'false') return 'Não'
+  return value
+}
+
+function facetOptions(facet) {
+  const field = facet.field
+  if (isCompanyFacetField(field)) {
+    const facetKey = COMPANY_FACET_MAP[field]
+    return companyFacets.value[facetKey] || []
+  }
+  const dynamic = facets.value[field] || []
+
+  if (facet.type === 'boolean') {
+    const base = Array.isArray(facet.options) ? facet.options : []
+    const normalized = []
+    const seen = new Set()
+
+    const pushOption = (rawValue, rawLabel) => {
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        return
+      }
+      const stringValue = String(rawValue).toLowerCase()
+      if (!stringValue) return
+      if (seen.has(stringValue)) return
+      seen.add(stringValue)
+      const label = rawLabel ?? booleanLabel(stringValue)
+      normalized.push({ value: stringValue, label })
+    }
+
+    for (const option of base) {
+      if (option && typeof option === 'object') {
+        pushOption(option.value ?? option.label ?? '', option.label)
+      } else {
+        pushOption(option, undefined)
+      }
+    }
+
+    for (const option of dynamic) {
+      if (option && typeof option === 'object') {
+        pushOption(option.value ?? option.label ?? '', option.label)
+      } else if (typeof option === 'boolean') {
+        pushOption(option ? 'true' : 'false', undefined)
+      } else {
+        pushOption(option, undefined)
+      }
+    }
+
+    return normalized
+  }
+
+  if (facet.type === 'date-range') {
+    return facet.options || []
+  }
+
+  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
+
+  if (!isCascadeField(field)) {
+    return baseOptions
+  }
+
+  const cascade = store.industryCascade || {}
+  const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
+
+  const selectedSectors = currentCascadeValues('industry_sector')
+  const selectedSubsectors = currentCascadeValues('industry_subsector')
+
+  let allowedValues = null
+
+  if (field === 'industry_sector') {
+    const sectorsFromGraph = Object.keys(sectorToSubsectors).length
+      ? Object.keys(sectorToSubsectors)
+      : Object.keys(sectorToSegments)
+
+    if (sectorsFromGraph.length) {
+      allowedValues = sectorsFromGraph
+    }
+  } else if (field === 'industry_subsector') {
+    const sectors = selectedSectors.length
+      ? selectedSectors
+      : Object.keys(sectorToSubsectors)
+
+    const aggregated = new Set()
+    for (const sector of sectors) {
+      for (const subsector of sectorToSubsectors[sector] || []) {
+        aggregated.add(subsector)
+      }
+    }
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  } else if (field === 'industry_segment') {
+    const aggregated = new Set()
+
+    if (selectedSubsectors.length) {
+      for (const subsector of selectedSubsectors) {
+        for (const segment of subsectorToSegments[subsector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else if (selectedSectors.length) {
+      for (const sector of selectedSectors) {
+        for (const segment of sectorToSegments[sector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else {
+      for (const key of Object.keys(subsectorToSegments)) {
+        for (const segment of subsectorToSegments[key] || []) {
+          aggregated.add(segment)
+        }
+      }
+    }
+
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  }
+
+  if (!allowedValues || !allowedValues.length) {
+    // Sem restrição de cascata calculada: devolve a lista original
+    return baseOptions
+  }
+
+  // Aqui a cascata entra em ação de fato
+  const allowedSet = new Set(
+    allowedValues.map((value) => String(value || '').trim()),
   )
+
+  // Garante que todas as opções sejam { value, label }
+  const normalized = baseOptions.map((option) => {
+    if (option && typeof option === 'object') {
+      const value = String(option.value ?? option.label ?? '').trim()
+      const label = option.label ?? value
+      return { value, label }
+    }
+    const value = String(option || '').trim()
+    return { value, label: value }
+  })
+
+  return normalized.filter((option) =>
+    allowedSet.has(String(option.value || '').trim()),
+  )
+  return baseOptions
+}
+
+function facetLogical(field) {
+  const draft = draftFacets.value[field]
+  if (draft && draft.logical) {
+    return draft.logical
+  }
+  return store.clauseByField[field]?.logical || 'AND'
+}
+
+function facetOperator(field) {
+  const draft = draftFacets.value[field]
+  if (draft && draft.operator) {
+    return draft.operator
+  }
+  return store.clauseByField[field]?.condition?.operator || ''
+}
+
+function facetValues(field) {
+  const draft = draftFacets.value[field]
+  if (draft && Array.isArray(draft.values)) {
+    return draft.values
+  }
+  return store.clauseByField[field]?.condition?.values || []
+}
+
+function currentCascadeValues(field) {
+  const committed = store.clauseByField[field]?.condition?.values || []
+  const draft = draftFacets.value[field]?.values || []
+  const all = [...committed, ...draft]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+
+  const seen = new Set()
+  const result = []
+  for (const value of all) {
+    if (seen.has(value)) continue
+    seen.add(value)
+    result.push(value)
+  }
+  return result
+}
+
+function onFacetDraftChange({ field, logical, values, operator }) {
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: logical || 'AND',
+      operator: operator || '',
+      values: Array.isArray(values) ? [...values] : [],
+    },
+  }
+
+  if (isCompanyFacetField(field)) {
+    const facetKey = COMPANY_FACET_MAP[field]
+    store.setCompanyFacetFilter({ facetId: facetKey, values })
+  }
+}
+
+function onFacetCommit({ field, logical, values, operator }) {
+  const finalLogical = logical || 'AND'
+  const finalValues = Array.isArray(values) ? [...values] : []
+  const finalOperator = operator || DEFAULT_OPERATOR
+
+  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+
+  if (isCompanyFacetField(field)) {
+    const facetKey = COMPANY_FACET_MAP[field]
+    store.setCompanyFacetFilter({ facetId: facetKey, values: finalValues })
+  }
+
+  draftFacets.value = {
+    ...draftFacets.value,
+    [field]: {
+      logical: finalLogical,
+      operator: finalOperator,
+      values: [],
+    },
+  }
+}
+
+function applyQuery() {
+  const result = store.applyQueryText()
+  if (!result.ok) {
+    parseError.value = result.message || 'Não foi possível interpretar a consulta.'
+    return
+  }
+  parseError.value = ''
+}
+
+function clearFilters() {
+  store.resetFilters()
+  parseError.value = ''
+  draftFacets.value = {}
+}
+
+presentation/frontend/src/components/CompanySelectionSummary.vue
++1
+-1
+
+@@ -46,51 +46,51 @@
+  </section>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { useCompanyStore } from '../store/companyStore'
+import { useChartStore } from '../store/chartStore'
+import { extractTicker } from '../utils/tickers'
+
+const props = defineProps({
+  selectedPairs: {
+    type: Array,
+    required: false,
+    default: () => [],
+  },
 })
 
-watch(
-  activeCompanyName,
-  (name) => {
-    store.setCompanyName(name)
-    store.resetChart()
+const emit = defineEmits(['visualizar-graficos'])
+
+const companyStore = useCompanyStore()
+const chartStore = useChartStore()
+
+const selectedSummaries = computed(() => {
+  const index = new Map()
+
+  for (const company of companyStore.companies || []) {
+  for (const company of companyStore.filteredCompanies || []) {
+    const companyName = company.company_name || ''
+
+    for (const ticker of company.tickers || []) {
+      if (!ticker) continue
+
+      const value = `${companyName}::${ticker}`
+
+      if (!index.has(value)) {
+        index.set(value, {
+          value,
+          companyName,
+          ticker,
+          tradingName: company.trading_name || '',
+          sector: company.sector || '',
+          subsector: company.subsector || '',
+          segment: company.segment || '',
+          market: company.market || '',
+        })
+      }
+    }
+  }
+
+  return (companyStore.selectedItems || [])
+    .map((value) => index.get(value))
+    .filter(Boolean)
+presentation/frontend/src/core/companyFacetEngine.js
+Novo
++66
+-0
+
+import { bucketsToOptions } from './facetEngine'
+
+export function applyCompanyFilter(companies = [], filter = {}) {
+  const { sector = [], subsector = [], segment = [] } = filter
+
+  return (companies || []).filter((company) => {
+    const matchSector = sector.length === 0 || sector.includes(company.sectorCode)
+    const matchSubsector =
+      subsector.length === 0 || subsector.includes(company.subsectorCode)
+    const matchSegment = segment.length === 0 || segment.includes(company.segmentCode)
+
+    return matchSector && matchSubsector && matchSegment
+  })
+}
+
+export function buildCompanyFacets(companies = []) {
+  const sectorBuckets = new Map()
+  const subsectorBuckets = new Map()
+  const segmentBuckets = new Map()
+
+  for (const company of companies || []) {
+    const sectorKey = company.sectorCode
+    const sectorLabel = company.sectorName || sectorKey
+    if (sectorKey) {
+      sectorBuckets.set(sectorKey, {
+        key: sectorKey,
+        label: sectorLabel,
+        count: (sectorBuckets.get(sectorKey)?.count || 0) + 1,
+      })
+    }
+
+    const subsectorKey = company.subsectorCode
+    const subsectorLabel = company.subsectorName || subsectorKey
+    if (subsectorKey) {
+      subsectorBuckets.set(subsectorKey, {
+        key: subsectorKey,
+        label: subsectorLabel,
+        count: (subsectorBuckets.get(subsectorKey)?.count || 0) + 1,
+      })
+    }
+
+    const segmentKey = company.segmentCode
+    const segmentLabel = company.segmentName || segmentKey
+    if (segmentKey) {
+      segmentBuckets.set(segmentKey, {
+        key: segmentKey,
+        label: segmentLabel,
+        count: (segmentBuckets.get(segmentKey)?.count || 0) + 1,
+      })
+    }
+  }
+
+  const sectorOptions = bucketsToOptions([...sectorBuckets.values()])
+  const subsectorOptions = bucketsToOptions([...subsectorBuckets.values()])
+  const segmentOptions = bucketsToOptions([...segmentBuckets.values()])
+
+  sectorOptions.sort((a, b) => a.label.localeCompare(b.label))
+  subsectorOptions.sort((a, b) => a.label.localeCompare(b.label))
+  segmentOptions.sort((a, b) => a.label.localeCompare(b.label))
+
+  return {
+    sector: sectorOptions,
+    subsector: subsectorOptions,
+    segment: segmentOptions,
+  }
+}
+presentation/frontend/src/core/facetEngine.js
+Novo
++16
+-0
+
+export function bucketsToOptions(buckets = []) {
+  return (buckets || [])
+    .map((bucket) => {
+      const key = bucket?.key
+      if (key === undefined || key === null || String(key).length === 0) {
+        return null
+      }
+      const label = bucket?.label ?? String(key)
+      return {
+        value: key,
+        label: String(label),
+        count: bucket?.count ?? 0,
+      }
+    })
+    .filter(Boolean)
+}
+presentation/frontend/src/store/companyStore.js
++42
+-63
+
+import { defineStore } from 'pinia'
+import { applyCompanyFilter, buildCompanyFacets } from '@/core/companyFacetEngine'
+import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
+
+const DEFAULT_OPERATOR = 'IN'
+const SELECTION_SEPARATOR = '::'
+
+const LOGICAL_ALIASES = {
+  AND: 'AND',
+  MUST: 'AND',
+  OR: 'OR',
+  SHOULD: 'OR',
+  NOT: 'NOT',
+  MUST_NOT: 'NOT',
+  SHOULD_NOT: 'NOT',
+  OR_NOT: 'NOT',
+  'OR-NOT': 'NOT',
+}
+
+const OPERATOR_ALIASES = {
+  IN: 'IN',
+  EQUALS: 'EQUALS',
+  EQ: 'EQUALS',
+  '=': 'EQUALS',
+  '==': 'EQUALS',
+  CONTAINS: 'CONTAINS',
+  HAS: 'CONTAINS',
+@@ -174,50 +175,58 @@ function serializeClauses(clauses = []) {
+      const logical = clause.logical || 'AND'
+      if (clause.group) {
+        const inner = serializeClauses(clause.group.clauses || [])
+        return `${logical} (${inner})`
+      }
+      const condition = clause.condition || {}
+      const operator = condition.operator || DEFAULT_OPERATOR
+      const values = (condition.values || []).map(formatValue).join(', ')
+      return `${logical} ${condition.field} ${operator} (${values})`
+    })
+    .join(' ; ')
+}
+
+function buildSelectionValue(company, ticker) {
+  return `${company}${SELECTION_SEPARATOR}${ticker}`
+}
+
+function splitSelectionValue(value) {
+  if (!value || typeof value !== 'string') {
+    return { company: '', ticker: '' }
+  }
+  const [company, ticker] = value.split(SELECTION_SEPARATOR)
+  return { company: company || '', ticker: ticker || '' }
+}
+
+function createEmptyCompanyFilter() {
+  return {
+    sector: [],
+    subsector: [],
+    segment: [],
+  }
+}
+
+function tokenize(input) {
+  const tokens = []
+  let index = 0
+  while (index < input.length) {
+    const char = input[index]
+    if (/\s/.test(char)) {
+      index += 1
+      continue
+    }
+    if (char === '(') {
+      tokens.push({ type: 'LPAREN', value: char })
+      index += 1
+      continue
+    }
+    if (char === ')') {
+      tokens.push({ type: 'RPAREN', value: char })
+      index += 1
+      continue
+    }
+    if (char === ',') {
+      tokens.push({ type: 'COMMA', value: char })
+      index += 1
+      continue
+    }
+    if (char === ';') {
+@@ -536,235 +545,205 @@ class QueryParser {
+}
+
+function parseTextToQuery(text) {
+  try {
+    const tokens = tokenize(text)
+    const parser = new QueryParser(tokens)
+    const ast = parser.parse()
+    if (!ast) {
+      return { clauses: [] }
+    }
+    const clauses = astToClauses(ast, 'AND')
+    return { clauses }
+  } catch (error) {
+    if (error instanceof ParseError) {
+      throw error
+    }
+    throw new ParseError('Não foi possível interpretar a consulta fornecida.')
+  }
+}
+
+export const useCompanyStore = defineStore('companyStore', {
+  state: () => ({
+    filterQuery: { clauses: [] },
+    queryText: '',
+    companies: [],
+    filteredCompanies: [],
+    total: 0,
+    facets: {},
+    companyFacets: {
+      sector: [],
+      subsector: [],
+      segment: [],
+    },
+    companyFilter: {
+      sector: [],
+      subsector: [],
+      segment: [],
+    },
+    selectedItems: [],
+    isLoading: false,
+    error: null,
+
+    // Estrutura da cascata Setor → Subsetor → Segmento
+    industryCascade: {
+      sectorToSubsectors: {},
+      sectorToSegments: {},
+      subsectorToSegments: {},
+    },
+  }),
+
+  getters: {
+    clauseByField(state) {
+      const map = {}
+      for (const clause of state.filterQuery.clauses || []) {
+        if (clause.condition && clause.condition.field) {
+          map[clause.condition.field] = clause
+        }
+      }
+      return map
+    },
+    selectedPairs(state) {
+      return (state.selectedItems || []).map(splitSelectionValue)
+    },
   },
-  { immediate: true }
-)
 
-watch(
-  filterQuery,
-  (fq) => {
-    store.setFilterFromFilterQuery(fq)
+  actions: {
+    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+      const normalizedField = normalizeField(field) || field
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+      const normalizedValues = normalizeValues(values)
+      const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
+
+      const clauses = cloneClauses(this.filterQuery.clauses || [])
+      const filteredClauses = clauses.filter(
+        (clause) => !clause.condition || clause.condition.field !== normalizedField,
+      )
+
+      if (normalizedValues.length) {
+        filteredClauses.push({
+          logical: normalizedLogical,
+          condition: {
+            field: normalizedField,
+            operator: normalizedOperator,
+            values: normalizedValues,
+          },
+        })
+      }
+
+      this.filterQuery = { clauses: filteredClauses }
+      this.queryText = this.serializeQuery(this.filterQuery)
+    },
+
+    setCompanyFacetFilter({ facetId, values }) {
+      this.companyFilter = {
+        ...this.companyFilter,
+        [facetId]: Array.isArray(values) ? values : [],
+      }
+
+      this.rebuildCompanyFacets()
+    },
+
+    setQueryText(text) {
+      this.queryText = text
+    },
+
+    applyQueryText() {
+      try {
+        const parsed = this.parseQuery(this.queryText)
+        this.filterQuery = parsed
+        this.queryText = this.serializeQuery(parsed)
+        this.loadCompanies()
+        return { ok: true }
+      } catch (error) {
+        const message = error instanceof ParseError ? error.message : 'Consulta inválida.'
+        return { ok: false, message }
+      }
+    },
+
+    resetFilters() {
+      this.filterQuery = { clauses: [] }
+      this.queryText = ''
+      this.selectedItems = []
+      this.companyFilter = createEmptyCompanyFilter()
+      this.rebuildCompanyFacets()
+      this.loadCompanies()
+    },
+
+    setSelectedItems(values) {
+      const normalized = Array.isArray(values)
+        ? values.map((value) => String(value)).filter((value) => value.length)
+        : []
+      this.selectedItems = normalized
+    },
+
+    async loadCompanies() {
+      this.isLoading = true
+      this.error = null
+      try {
+        const payload = await searchCompanies(this.filterQuery)
+        this.companies = payload.items || []
+        this.total = payload.total || 0
+
+        this._rebuildIndustryCascade(this.companies)
+        this.rebuildCompanyFacets()
+        this._pruneSelection()
+        if (!this.queryText) {
+          this.queryText = this.serializeQuery(this.filterQuery)
+        }
+      } catch (err) {
+        console.error(err)
+        this.error = 'Falha ao carregar companhias'
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async loadFacets() {
+      try {
+        const payload = await fetchCompanyFacets()
+        this.facets = payload.facets || {}
+      } catch (err) {
+        console.error(err)
+      }
+    },
+
+    serializeQuery(query) {
+      if (!query || !Array.isArray(query.clauses) || query.clauses.length === 0) {
+        return ''
+      }
+      return serializeClauses(query.clauses)
+    },
+
+    parseQuery(text) {
+      if (!text || !text.trim()) {
+        return { clauses: [] }
+      }
+      return parseTextToQuery(text)
+    },
+
+    _rebuildIndustryCascade(items = []) {
+      const sectorToSubsectors = new Map()
+      const sectorToSegments = new Map()
+      const subsectorToSegments = new Map()
+
+      for (const company of items || []) {
+        const sector = (company.sector || '').trim()
+        const subsector = (company.subsector || '').trim()
+        const segment = (company.segment || '').trim()
+
+        if (!sector && !subsector && !segment) continue
+
+        if (sector) {
+          if (!sectorToSubsectors.has(sector)) {
+            sectorToSubsectors.set(sector, new Set())
+          }
+          if (!sectorToSegments.has(sector)) {
+            sectorToSegments.set(sector, new Set())
+          }
+        }
+
+        if (subsector) {
+          if (!subsectorToSegments.has(subsector)) {
+            subsectorToSegments.set(subsector, new Set())
+          }
+        }
+
+        if (sector && subsector) {
+          sectorToSubsectors.get(sector).add(subsector)
+        }
+
+        if (sector && segment) {
+          sectorToSegments.get(sector).add(segment)
+        }
+
+        if (subsector && segment) {
+          subsectorToSegments.get(subsector).add(segment)
+        }
+      }
+
+      const normalizeMap = (map) => {
+        const result = {}
+        for (const [key, set] of map.entries()) {
+          const values = Array.from(set).filter((value) => value && value.length)
+          if (values.length) {
+            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          }
+        }
+        return result
+    rebuildCompanyFacets() {
+      const filter = this.companyFilter || createEmptyCompanyFilter()
+      const normalizedFilter = {
+        sector: Array.isArray(filter.sector) ? filter.sector : [],
+        subsector: Array.isArray(filter.subsector) ? filter.subsector : [],
+        segment: Array.isArray(filter.segment) ? filter.segment : [],
+      }
+
+      this.industryCascade = {
+        sectorToSubsectors: normalizeMap(sectorToSubsectors),
+        sectorToSegments: normalizeMap(sectorToSegments),
+        subsectorToSegments: normalizeMap(subsectorToSegments),
+      }
+      const filtered = applyCompanyFilter(this.companies || [], normalizedFilter)
+      this.filteredCompanies = filtered
+      this.companyFacets = buildCompanyFacets(filtered)
+    },
+
+    _pruneSelection() {
+      if (!this.selectedItems || this.selectedItems.length === 0) {
+        return
+      }
+      const valid = new Set()
+      for (const company of this.companies || []) {
+      for (const company of this.filteredCompanies || []) {
+        const companyName = company.company_name || ''
+        for (const ticker of company.tickers || []) {
+          if (!ticker) continue
+          valid.add(buildSelectionValue(companyName, ticker))
+        }
+      }
+      const filtered = this.selectedItems.filter((value) => valid.has(value))
+      if (filtered.length !== this.selectedItems.length) {
+        this.selectedItems = filtered
+      }
+    },
   },
-  { deep: true, immediate: true }
-)
+})
 
-watch(
-  localAccounts,
-  (accounts) => {
-    store.setSelectedAccounts(accounts)
-    store.resetChart()
-  },
-  { deep: true, immediate: true }
-)
-
-async function onReload() {
-  await store.loadChart()
-}
-</script>
-
-<style scoped>
-.account-charts {
-  display: flex;
-  flex-direction: column;
-  display: grid;
-  gap: 1.5rem;
-  padding: 1rem;
-}
-
-.account-charts__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.account-charts__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.account-charts__controls input {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-width: 160px;
-.account-charts__controls select {
-  min-width: 220px;
-  min-height: 120px;
-}
-
-.account-charts__controls button {
-  padding: 0.5rem 1rem;
-  border: none;
-  padding: 0.5rem 1.25rem;
-  background-color: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.account-charts__controls button:hover {
-.account-charts__controls button:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-}
-
-.account-charts__controls button:not(:disabled):hover {
-  background-color: #1d4ed8;
-}
-
-.account-charts__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-.account-charts__body {
-  min-height: 260px;
-}
-
-.account-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-.muted {
-  opacity: 0.7;
-}
-
-.error {
-  color: #dc2626;
-}
-</style>
+export { ParseError }
