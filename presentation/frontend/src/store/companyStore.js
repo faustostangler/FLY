@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
+import { applyCompanyFilter, buildCompanyFacets } from '../core/companyFacetEngine'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -28,6 +29,14 @@ const OPERATOR_ALIASES = {
   STARTSWITH: 'STARTS_WITH',
   PREFIX: 'STARTS_WITH',
   BETWEEN: 'BETWEEN',
+}
+
+function createEmptyCompanyFilter() {
+  return {
+    sector: [],
+    subsector: [],
+    segment: [],
+  }
 }
 
 const FIELD_ALIASES = {
@@ -558,18 +567,14 @@ export const useCompanyStore = defineStore('companyStore', {
     filterQuery: { clauses: [] },
     queryText: '',
     companies: [],
+    filteredCompanies: [],
     total: 0,
     facets: {},
+    companyFilter: createEmptyCompanyFilter(),
+    companyFacets: createEmptyCompanyFilter(),
     selectedItems: [],
     isLoading: false,
     error: null,
-
-    // Estrutura da cascata Setor → Subsetor → Segmento
-    industryCascade: {
-      sectorToSubsectors: {},
-      sectorToSegments: {},
-      subsectorToSegments: {},
-    },
   }),
 
   getters: {
@@ -588,6 +593,19 @@ export const useCompanyStore = defineStore('companyStore', {
   },
 
   actions: {
+    setCompanyFacetFilter({ facetId, values }) {
+      const normalizedValues = Array.isArray(values)
+        ? values.map((v) => String(v || '').trim()).filter(Boolean)
+        : []
+
+      this.companyFilter = {
+        ...this.companyFilter,
+        [facetId]: normalizedValues,
+      }
+
+      this.rebuildCompanyFacets()
+    },
+
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
       const normalizedField = normalizeField(field) || field
       const normalizedLogical = normalizeLogical(logical) || 'AND'
@@ -634,6 +652,9 @@ export const useCompanyStore = defineStore('companyStore', {
     resetFilters() {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
+      this.companyFilter = createEmptyCompanyFilter()
+      this.companyFacets = createEmptyCompanyFilter()
+      this.filteredCompanies = this.companies || []
       this.selectedItems = []
       this.loadCompanies()
     },
@@ -653,7 +674,7 @@ export const useCompanyStore = defineStore('companyStore', {
         this.companies = payload.items || []
         this.total = payload.total || 0
 
-        this._rebuildIndustryCascade(this.companies)
+        this.rebuildCompanyFacets()
         this._pruneSelection()
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
@@ -689,62 +710,20 @@ export const useCompanyStore = defineStore('companyStore', {
       return parseTextToQuery(text)
     },
 
-    _rebuildIndustryCascade(items = []) {
-      const sectorToSubsectors = new Map()
-      const sectorToSegments = new Map()
-      const subsectorToSegments = new Map()
+    rebuildCompanyFacets() {
+      const allCompanies = this.companies || []
+      const filter = this.companyFilter || createEmptyCompanyFilter()
 
-      for (const company of items || []) {
-        const sector = (company.sector || '').trim()
-        const subsector = (company.subsector || '').trim()
-        const segment = (company.segment || '').trim()
-
-        if (!sector && !subsector && !segment) continue
-
-        if (sector) {
-          if (!sectorToSubsectors.has(sector)) {
-            sectorToSubsectors.set(sector, new Set())
-          }
-          if (!sectorToSegments.has(sector)) {
-            sectorToSegments.set(sector, new Set())
-          }
-        }
-
-        if (subsector) {
-          if (!subsectorToSegments.has(subsector)) {
-            subsectorToSegments.set(subsector, new Set())
-          }
-        }
-
-        if (sector && subsector) {
-          sectorToSubsectors.get(sector).add(subsector)
-        }
-
-        if (sector && segment) {
-          sectorToSegments.get(sector).add(segment)
-        }
-
-        if (subsector && segment) {
-          subsectorToSegments.get(subsector).add(segment)
-        }
+      const normalizedFilter = {
+        sector: Array.isArray(filter.sector) ? filter.sector : [],
+        subsector: Array.isArray(filter.subsector) ? filter.subsector : [],
+        segment: Array.isArray(filter.segment) ? filter.segment : [],
       }
 
-      const normalizeMap = (map) => {
-        const result = {}
-        for (const [key, set] of map.entries()) {
-          const values = Array.from(set).filter((value) => value && value.length)
-          if (values.length) {
-            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
-          }
-        }
-        return result
-      }
+      const filtered = applyCompanyFilter(allCompanies, normalizedFilter)
 
-      this.industryCascade = {
-        sectorToSubsectors: normalizeMap(sectorToSubsectors),
-        sectorToSegments: normalizeMap(sectorToSegments),
-        subsectorToSegments: normalizeMap(subsectorToSegments),
-      }
+      this.companyFacets = buildCompanyFacets(filtered)
+      this.filteredCompanies = filtered
     },
 
     _pruneSelection() {
@@ -752,7 +731,7 @@ export const useCompanyStore = defineStore('companyStore', {
         return
       }
       const valid = new Set()
-      for (const company of this.companies || []) {
+      for (const company of this.filteredCompanies || this.companies || []) {
         const companyName = company.company_name || ''
         for (const ticker of company.tickers || []) {
           if (!ticker) continue
