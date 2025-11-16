@@ -124,46 +124,6 @@ const draftFacets = ref({})
 const DEFAULT_OPERATOR = 'IN'
 
 // ---------------------------------------------------------------------------
-// Industry cascade configuration
-// ---------------------------------------------------------------------------
-
-/**
- * CASCADE_CONFIG describes how the industry hierarchy is structured
- * (sector -> subsector -> segment) and how fields depend on each other.
- *
- * Each entry defines:
- * - level: the conceptual level in the hierarchy
- * - parentField: the field above it that constrains its options
- */
-const CASCADE_CONFIG = {
-  industry_sector: {
-    level: 'sector',
-    parentField: null,
-  },
-  industry_subsector: {
-    level: 'subsector',
-    parentField: 'industry_sector',
-  },
-  industry_segment: {
-    level: 'segment',
-    parentField: 'industry_subsector',
-  },
-}
-
-// Convenient list of fields that participate in the cascade
-const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
-
-/**
- * Returns true when the given field belongs to the industry cascade.
- *
- * @param {string} field - Field name to check.
- * @returns {boolean} Whether the field participates in the cascade.
- */
-function isCascadeField(field) {
-  return CASCADE_FIELDS.includes(field)
-}
-
-// ---------------------------------------------------------------------------
 // Query text computed model
 // ---------------------------------------------------------------------------
 
@@ -188,9 +148,10 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.companies)
 const total = computed(() => store.total)
-const facets = computed(() => store.facets || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
+const facetOptionsByField = computed(() => store.facetOptions)
+const selectedValuesByField = computed(() => store.selectedValuesByField)
 
 /**
  * Computed v-model for selected companies.
@@ -289,50 +250,32 @@ function booleanLabel(value) {
  * 1. Merge static options (from config) with dynamic options (from store)
  * 2. Normalize options into { value, label } objects
  * 3. Handle special types (boolean, date-range)
- * 4. For cascade fields, restrict options to those allowed by the cascade graph
  *
  * @param {object} facet - Facet configuration object.
  * @returns {Array<{value: string, label: string}>} Resolved options.
  */
 function facetOptions(facet) {
   const field = facet.field
-  const dynamic = facets.value[field] || []
+  const dynamic = facetOptionsByField.value[field] || []
+  const base = Array.isArray(facet.options) ? facet.options : []
 
-  // Special handling for boolean facets to avoid duplicated or invalid values
   if (facet.type === 'boolean') {
-    const base = Array.isArray(facet.options) ? facet.options : []
     const normalized = []
     const seen = new Set()
+    const candidates = [...base, ...dynamic]
 
-    /**
-     * Register a single boolean option, ensuring uniqueness and normalization.
-     *
-     * @param {unknown} rawValue - Raw option value (can be object/boolean/string).
-     * @param {string|undefined} rawLabel - Optional label override.
-     */
     const pushOption = (rawValue, rawLabel) => {
       if (rawValue === null || rawValue === undefined || rawValue === '') {
         return
       }
       const stringValue = String(rawValue).toLowerCase()
-      if (!stringValue) return
-      if (seen.has(stringValue)) return
+      if (!stringValue || seen.has(stringValue)) return
       seen.add(stringValue)
       const label = rawLabel ?? booleanLabel(stringValue)
       normalized.push({ value: stringValue, label })
     }
 
-    // Step 1: process configured base options
-    for (const option of base) {
-      if (option && typeof option === 'object') {
-        pushOption(option.value ?? option.label ?? '', option.label)
-      } else {
-        pushOption(option, undefined)
-      }
-    }
-
-    // Step 2: process dynamic options from backend
-    for (const option of dynamic) {
+    for (const option of candidates) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else if (typeof option === 'boolean') {
@@ -345,114 +288,15 @@ function facetOptions(facet) {
     return normalized
   }
 
-  // Date-range facets simply reuse options defined in config
   if (facet.type === 'date-range') {
-    return facet.options || []
+    return base
   }
 
-  // For generic facets, start from dynamic or fallback to static options
-  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
-
-  // If this facet does not participate in the cascade, return as-is
-  if (!isCascadeField(field)) {
-    return baseOptions
+  if (dynamic.length) {
+    return dynamic
   }
 
-  // -----------------------------------------------------------------------
-  // Cascade filtering logic for industry_* fields
-  // -----------------------------------------------------------------------
-
-  const cascade = store.industryCascade || {}
-  const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
-
-  // Read committed + draft selections in the cascade
-  const selectedSectors = currentCascadeValues('industry_sector')
-  const selectedSubsectors = currentCascadeValues('industry_subsector')
-
-  let allowedValues = null
-
-  // 1) Sector: use graph keys as allowed sectors if present
-  if (field === 'industry_sector') {
-    const sectorsFromGraph = Object.keys(sectorToSubsectors).length
-      ? Object.keys(sectorToSubsectors)
-      : Object.keys(sectorToSegments)
-
-    if (sectorsFromGraph.length) {
-      allowedValues = sectorsFromGraph
-    }
-  // 2) Subsector: derive from selected sectors or all sectors
-  } else if (field === 'industry_subsector') {
-    const sectors = selectedSectors.length
-      ? selectedSectors
-      : Object.keys(sectorToSubsectors)
-
-    const aggregated = new Set()
-    for (const sector of sectors) {
-      for (const subsector of sectorToSubsectors[sector] || []) {
-        aggregated.add(subsector)
-      }
-    }
-    if (aggregated.size) {
-      allowedValues = Array.from(aggregated)
-    }
-  // 3) Segment: derive from selected subsectors, then from sectors, then from whole graph
-  } else if (field === 'industry_segment') {
-    const aggregated = new Set()
-
-    if (selectedSubsectors.length) {
-      // a) subsectors selected: union segments across selected subsectors
-      for (const subsector of selectedSubsectors) {
-        for (const segment of subsectorToSegments[subsector] || []) {
-          aggregated.add(segment)
-        }
-      }
-    } else if (selectedSectors.length) {
-      // b) sectors selected: union segments across sectors
-      for (const sector of selectedSectors) {
-        for (const segment of sectorToSegments[sector] || []) {
-          aggregated.add(segment)
-        }
-      }
-    } else {
-      // c) nothing selected: allow all segments from the entire graph
-      for (const key of Object.keys(subsectorToSegments)) {
-        for (const segment of subsectorToSegments[key] || []) {
-          aggregated.add(segment)
-        }
-      }
-    }
-
-    if (aggregated.size) {
-      allowedValues = Array.from(aggregated)
-    }
-  }
-
-  // If the cascade graph does not constrain anything, keep original options
-  if (!allowedValues || !allowedValues.length) {
-    // No cascade restriction calculated: return original list
-    return baseOptions
-  }
-
-  // At this point the cascade actually filters the options
-  const allowedSet = new Set(
-    allowedValues.map((value) => String(value || '').trim()),
-  )
-
-  // Normalize every option to { value, label } form
-  const normalized = baseOptions.map((option) => {
-    if (option && typeof option === 'object') {
-      const value = String(option.value ?? option.label ?? '').trim()
-      const label = option.label ?? value
-      return { value, label }
-    }
-    const value = String(option || '').trim()
-    return { value, label: value }
-  })
-
-  // Keep only options whose value is allowed by the cascade constraints
-  return normalized.filter((option) =>
-    allowedSet.has(String(option.value || '').trim()),
-  )
+  return base
 }
 
 /**
@@ -463,11 +307,7 @@ function facetOptions(facet) {
  * @returns {string} Logical operator to use.
  */
 function facetLogical(field) {
-  const draft = draftFacets.value[field]
-  if (draft && draft.logical) {
-    return draft.logical
-  }
-  return store.clauseByField[field]?.logical || 'AND'
+  return 'AND'
 }
 
 /**
@@ -497,36 +337,7 @@ function facetValues(field) {
   if (draft && Array.isArray(draft.values)) {
     return draft.values
   }
-  return store.clauseByField[field]?.condition?.values || []
-}
-
-/**
- * Compute the current cascade values for a given field.
- *
- * Steps:
- * 1. Read committed values from store
- * 2. Read draft values from local state
- * 3. Merge both, normalize to trimmed strings
- * 4. Deduplicate while preserving order
- *
- * @param {string} field - Cascade field name.
- * @returns {string[]} Unique merged values.
- */
-function currentCascadeValues(field) {
-  const committed = store.clauseByField[field]?.condition?.values || []
-  const draft = draftFacets.value[field]?.values || []
-  const all = [...committed, ...draft]
-    .map((value) => String(value || '').trim())
-    .filter(Boolean)
-
-  const seen = new Set()
-  const result = []
-  for (const value of all) {
-    if (seen.has(value)) continue
-    seen.add(value)
-    result.push(value)
-  }
-  return result
+  return selectedValuesByField.value[field] || []
 }
 
 /**
@@ -558,7 +369,7 @@ function onFacetDraftChange({ field, logical, values, operator }) {
  *
  * @param {object} payload - Commit event from CompanyFacet.
  */
-function onFacetCommit({ field, logical, values, operator }) {
+async function onFacetCommit({ field, logical, values, operator }) {
   const finalLogical = logical || 'AND'
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
@@ -575,6 +386,9 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
   }
+
+  await store.loadCompanies()
+  await store.loadFacetsForCurrentQuery()
 }
 
 /**
@@ -585,13 +399,14 @@ function onFacetCommit({ field, logical, values, operator }) {
  * 2. If parsing fails, expose human readable error message
  * 3. If success, clear any previous parse error
  */
-function applyQuery() {
+async function applyQuery() {
   const result = store.applyQueryText()
   if (!result.ok) {
     parseError.value = result.message || 'Não foi possível interpretar a consulta.'
     return
   }
   parseError.value = ''
+  await reload()
 }
 
 /**
@@ -602,18 +417,20 @@ function applyQuery() {
  * 2. Clear local parse error
  * 3. Clear local draft facets
  */
-function clearFilters() {
+async function clearFilters() {
   store.resetFilters()
   parseError.value = ''
   draftFacets.value = {}
+  await reload()
 }
 
 /**
  * Trigger a reload of companies from the backend
  * using the current filters in the store.
  */
-function reload() {
-  store.loadCompanies()
+async function reload() {
+  await store.loadCompanies()
+  await store.loadFacetsForCurrentQuery()
 }
 
 /**
@@ -818,15 +635,12 @@ watch(
 // Additional mount hook: ensure companies and facets are loaded
 // ---------------------------------------------------------------------------
 
-onMounted(() => {
-  // Ensure companies are loaded at least once
-  if (!store.companies.length) {
-    reload()
-  }
-  // Ensure facet metadata is available for filters
+onMounted(async () => {
   if (!Object.keys(store.facets || {}).length) {
-    store.loadFacets()
+    await store.loadFacets()
   }
+  await store.loadCompanies()
+  await store.loadFacetsForCurrentQuery()
 })
 </script>
 

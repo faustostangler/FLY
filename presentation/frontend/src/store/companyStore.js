@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia'
-import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
+import {
+  searchCompanies,
+  fetchCompanyFacets,
+  fetchCompanyFacetsForQuery,
+} from '../services/apiService'
 
 /**
  * Default comparison operator when the user does not explicitly provide one.
@@ -837,6 +841,19 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedPairs(state) {
       return (state.selectedItems || []).map(splitSelectionValue)
     },
+
+    selectedValuesByField(state) {
+      const result = {}
+      for (const clause of state.filterQuery.clauses || []) {
+        if (!clause?.condition?.field) continue
+        result[clause.condition.field] = clause.condition.values || []
+      }
+      return result
+    },
+
+    facetOptions(state) {
+      return state.facets || {}
+    },
   },
 
   /**
@@ -855,7 +872,7 @@ export const useCompanyStore = defineStore('companyStore', {
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
       // 1) Normalize raw inputs to keep the internal API consistent
       const normalizedField = normalizeField(field) || field
-      const normalizedLogical = normalizeLogical(logical) || 'AND'
+      const normalizedLogical = 'AND'
       const normalizedValues = normalizeValues(values)
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
@@ -993,6 +1010,15 @@ export const useCompanyStore = defineStore('companyStore', {
     async loadFacets() {
       try {
         const payload = await fetchCompanyFacets()
+        this.facets = payload.facets || {}
+      } catch (err) {
+        console.error(err)
+      }
+    },
+
+    async loadFacetsForCurrentQuery() {
+      try {
+        const payload = await fetchCompanyFacetsForQuery(this.filterQuery)
         this.facets = payload.facets || {}
       } catch (err) {
         console.error(err)

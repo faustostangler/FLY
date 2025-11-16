@@ -36,7 +36,7 @@ async def search_companies(
     filters: CompanyFilterQueryDTO = Body(default_factory=CompanyFilterQueryDTO),
     use_case: SearchCompaniesUseCase = Depends(get_company_search_usecase),
 ) -> CompanySearchResponseDTO:
-    query = _map_to_domain(filters)
+    query = _to_domain_filter_query(filters)
     result = use_case(query=query)
     return CompanySearchResponseDTO(**asdict(result))
 
@@ -49,17 +49,27 @@ async def get_company_facets(
     return CompanyFacetsResponseDTO(**asdict(result))
 
 
-def _map_to_domain(dto: CompanyFilterQueryDTO | None) -> CompanyFilterQuery:
+@router.post("/facets", response_model=CompanyFacetsResponseDTO)
+async def get_company_facets_for_query(
+    filters: CompanyFilterQueryDTO = Body(default_factory=CompanyFilterQueryDTO),
+    use_case: GetCompanyFacetsUseCase = Depends(get_company_facets_usecase),
+) -> CompanyFacetsResponseDTO:
+    query = _to_domain_filter_query(filters)
+    result = use_case(filter_query=query)
+    return CompanyFacetsResponseDTO(**asdict(result))
+
+
+def _to_domain_filter_query(dto: CompanyFilterQueryDTO | None) -> CompanyFilterQuery:
     if dto is None:
         return CompanyFilterQuery()
 
     clauses: list[CompanyFilterClause] = []
-    for clause in dto.clauses:
+    for clause in (dto.clauses or []):
         logical = _map_logical(clause.logical)
         if logical is None:
             continue
         condition = _map_condition(clause.condition)
-        group = _map_to_domain(clause.group) if clause.group else None
+        group = _to_domain_filter_query(clause.group) if clause.group else None
 
         if group is not None and not group.clauses:
             group = None

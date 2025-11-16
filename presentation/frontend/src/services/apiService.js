@@ -97,6 +97,11 @@ export async function fetchCompanyFacets() {
   return res.data
 }
 
+export async function fetchCompanyFacetsForQuery(filterQuery) {
+  const res = await api.post('/companies/facets', filterQuery || { clauses: [] })
+  return res.data
+}
+
 /**
  * fetchCompanyRatiosChart
  *

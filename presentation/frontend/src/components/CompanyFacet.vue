@@ -101,6 +101,29 @@
               {{ option.label }}
             </option>
           </select>
+
+          <ul v-if="localSelection.length" class="company-facet__chips">
+            <li v-for="value in localSelection" :key="value" class="company-facet__chip">
+              <span>{{ labelFor(value) }}</span>
+              <button
+                type="button"
+                class="company-facet__chip-remove"
+                :aria-label="`Remover filtro ${labelFor(value)}`"
+                @click="removeValue(value)"
+              >
+                ×
+              </button>
+            </li>
+          </ul>
+
+          <button
+            v-if="localSelection.length"
+            type="button"
+            class="company-facet__clear"
+            @click="clearFacet"
+          >
+            Limpar {{ label }}
+          </button>
         </div>
         <!--
           Fallback shown when there are no options available for this facet.
@@ -115,23 +138,8 @@
       - explicit "commit" button that sends the current state to the parent
     -->
     <div class="company-facet__footer">
-      <!--
-        Local logical operator selector.
-        v-model keeps localLogical in sync and triggers draft emit via watch.
-      -->
-      <select v-model="localLogical" aria-label="Operador lógico">
-        <option v-for="option in logicalOptions" :key="option" :value="option">
-          {{ option }}
-        </option>
-      </select>
-
-      <!--
-        Commit button:
-        - emits a "commit" event with the current facet state
-        - parent decides when to actually trigger a search/query
-      -->
       <button type="button" class="company-facet__commit" @click="commit">
-        Enviar para consulta
+        Aplicar
       </button>
     </div>
   </section>
@@ -174,15 +182,8 @@ const props = defineProps({
  */
 const emit = defineEmits(['change', 'commit'])
 
-/**
- * Available logical operators for the facet.
- * These are UI-level choices and can be interpreted by the parent/store.
- */
-const logicalOptions = ['AND', 'OR', 'NOT']
-
-// Local reactive copy of the logical operator.
-// Starts from the incoming prop value to stay in sync with the parent.
-const localLogical = ref(props.logical || 'AND')
+// Logical operator is fixed to AND for simple facet composition.
+const localLogical = ref('AND')
 
 // Local selection used for textual facets (single or multiple values).
 const localSelection = ref([])
@@ -335,9 +336,19 @@ function currentValues() {
   }
 
   // Textual facet: ensure we always return an array of strings.
-  return Array.isArray(localSelection.value)
+  const rawValues = Array.isArray(localSelection.value)
     ? localSelection.value.map((value) => String(value))
     : []
+
+  const seen = new Set()
+  const uniqueValues = []
+  for (const value of rawValues) {
+    if (!value) continue
+    if (seen.has(value)) continue
+    seen.add(value)
+    uniqueValues.push(value)
+  }
+  return uniqueValues
 }
 
 /**
@@ -388,6 +399,23 @@ function onSearch() {
   }
 }
 
+function removeValue(valueToRemove) {
+  localSelection.value = (localSelection.value || []).filter((value) => value !== valueToRemove)
+  emitDraftChange()
+  commit()
+}
+
+function clearFacet() {
+  localSelection.value = []
+  emitDraftChange()
+  commit()
+}
+
+function labelFor(value) {
+  const option = normalizedOptions.value.find((entry) => entry.value === value)
+  return option?.label ?? String(value)
+}
+
 /**
  * Watchers that keep the parent informed whenever local state changes.
  * These represent the "user is editing" flow and feed the 'change' event.
@@ -403,23 +431,6 @@ watch(localBoolean, emitDraftChange)
 // Date-range facet: emit drafts whenever either boundary changes.
 watch(startDate, emitDraftChange)
 watch(endDate, emitDraftChange)
-
-// Logical operator: emit drafts when the user selects a different operator.
-watch(localLogical, emitDraftChange)
-
-/**
- * Sync local logical operator when the parent updates the 'logical' prop.
- * Only assign when the incoming value actually differs from the local one
- * to avoid unnecessary updates and event noise.
- */
-watch(
-  () => props.logical,
-  (value) => {
-    if (value && value !== localLogical.value) {
-      localLogical.value = value
-    }
-  }
-)
 
 /**
  * Sync local selection state whenever the parent updates the 'values' prop.
@@ -566,6 +577,44 @@ watch(
   border-radius: 6px;
   border: 1px solid #cbd5f5;
   padding: 0.4rem;
+}
+
+.company-facet__chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0;
+}
+
+.company-facet__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #edf2ff;
+  border: 1px solid #cbd5f5;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.company-facet__chip-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: #334155;
+}
+
+.company-facet__clear {
+  align-self: flex-start;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+  background-color: #ffffff;
+  cursor: pointer;
 }
 
 /* Layout for the two date inputs (start and end) in a grid. */

@@ -7,7 +7,7 @@ from application.dtos.company_facets_dto import CompanyFacetsResponseDTO
 from application.ports.uow_port import UowFactoryPort
 from domain.dtos.company_eligible_dto import CompanyEligibleDTO
 from domain.ports.repository_company_eligible_port import RepositoryCompanyEligiblePort
-from domain.value_objects.company_filters import CompanyField
+from domain.value_objects.company_filters import CompanyField, CompanyFilterQuery
 
 DEFAULT_FACETS_BATCH_SIZE = 500
 
@@ -17,12 +17,25 @@ class GetCompanyFacetsUseCase:
     repository: RepositoryCompanyEligiblePort
     uow_factory: UowFactoryPort
 
-    def __call__(self) -> CompanyFacetsResponseDTO:
+    def __call__(
+        self,
+        filter_query: CompanyFilterQuery | None = None,
+        batch_size: int = DEFAULT_FACETS_BATCH_SIZE,
+    ) -> CompanyFacetsResponseDTO:
         with self.uow_factory() as uow:
-            items: List[CompanyEligibleDTO] = self.repository.get_all(
-                uow=uow,
-                batch_size=DEFAULT_FACETS_BATCH_SIZE,
-            )
+            has_filter = bool(filter_query and filter_query.clauses)
+
+            if has_filter:
+                items: List[CompanyEligibleDTO] = self.repository.search(
+                    uow=uow,
+                    query=filter_query,
+                    limit=batch_size,
+                )
+            else:
+                items = self.repository.get_all(
+                    uow=uow,
+                    batch_size=batch_size,
+                )
 
         facets = self._build_facets(items)
         return CompanyFacetsResponseDTO(facets=facets)
