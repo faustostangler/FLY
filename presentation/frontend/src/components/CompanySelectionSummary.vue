@@ -68,7 +68,7 @@ const chartStore = useChartStore()
 const selectedSummaries = computed(() => {
   const index = new Map()
 
-  for (const company of companyStore.companies || []) {
+  for (const company of companyStore.filteredCompanies || []) {
     const companyName = company.company_name || ''
 
     for (const ticker of company.tickers || []) {
