@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
+import { buildFacetBuckets, bucketsToOptions } from '../core/facetEngine'
+import { buildSearchFilterTree } from '../core/searchFilterTreeMapper'
+import { COMPANY_FACETS } from '../config/companyFacets'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -585,12 +588,31 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedPairs(state) {
       return (state.selectedItems || []).map(splitSelectionValue)
     },
+    dynamicFacetBuckets(state) {
+      const facetFields = COMPANY_FACETS.map((facet) => facet.field)
+      return buildFacetBuckets(state.companies, facetFields)
+    },
+    dynamicFacetOptions() {
+      const buckets = this.dynamicFacetBuckets
+      return bucketsToOptions(buckets)
+    },
+    selectedValuesByField(state) {
+      const result = {}
+      for (const clause of state.filterQuery.clauses || []) {
+        const condition = clause.condition || {}
+        const field = condition.field
+        const values = condition.values || []
+
+        if (!field || !values.length) continue
+        result[field] = [...values]
+      }
+      return result
+    },
   },
 
   actions: {
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
       const normalizedField = normalizeField(field) || field
-      const normalizedLogical = normalizeLogical(logical) || 'AND'
       const normalizedValues = normalizeValues(values)
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
@@ -601,7 +623,7 @@ export const useCompanyStore = defineStore('companyStore', {
 
       if (normalizedValues.length) {
         filteredClauses.push({
-          logical: normalizedLogical,
+          logical: 'AND',
           condition: {
             field: normalizedField,
             operator: normalizedOperator,
@@ -636,6 +658,10 @@ export const useCompanyStore = defineStore('companyStore', {
       this.queryText = ''
       this.selectedItems = []
       this.loadCompanies()
+    },
+
+    buildCurrentFilterTree() {
+      return buildSearchFilterTree(this.filterQuery)
     },
 
     setSelectedItems(values) {
