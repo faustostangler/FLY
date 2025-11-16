@@ -48,8 +48,9 @@ export async function searchCompanies(filterQuery) {
   return res.data
 }
 
-export async function fetchCompanyFacets() {
-  const res = await api.get('/companies/facets')
+export async function fetchCompanyFacets(filters = { clauses: [] }) {
+  const payload = filters || { clauses: [] }
+  const res = await api.post('/companies/facets', payload)
   return res.data
 }
 

@@ -348,7 +348,7 @@ function onFacetDraftChange({ field, logical, values, operator }) {
   }
 }
 
-function onFacetCommit({ field, logical, values, operator }) {
+async function onFacetCommit({ field, logical, values, operator }) {
   const finalLogical = logical || 'AND'
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
@@ -363,10 +363,12 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
   }
+
+  await Promise.all([store.loadCompanies(), store.loadFacets()])
 }
 
-function applyQuery() {
-  const result = store.applyQueryText()
+async function applyQuery() {
+  const result = await store.applyQueryText()
   if (!result.ok) {
     parseError.value = result.message || 'Não foi possível interpretar a consulta.'
     return
@@ -374,8 +376,8 @@ function applyQuery() {
   parseError.value = ''
 }
 
-function clearFilters() {
-  store.resetFilters()
+async function clearFilters() {
+  await store.resetFilters()
   parseError.value = ''
   draftFacets.value = {}
 }

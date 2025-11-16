@@ -41,11 +41,13 @@ async def search_companies(
     return CompanySearchResponseDTO(**asdict(result))
 
 
-@router.get("/facets", response_model=CompanyFacetsResponseDTO)
+@router.post("/facets", response_model=CompanyFacetsResponseDTO)
 async def get_company_facets(
+    filters: CompanyFilterQueryDTO = Body(default_factory=CompanyFilterQueryDTO),
     use_case: GetCompanyFacetsUseCase = Depends(get_company_facets_usecase),
 ) -> CompanyFacetsResponseDTO:
-    result = use_case()
+    query = _map_to_domain(filters)
+    result = use_case(query=query)
     return CompanyFacetsResponseDTO(**asdict(result))
 
 

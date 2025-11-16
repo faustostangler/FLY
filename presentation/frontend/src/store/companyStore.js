@@ -618,12 +618,15 @@ export const useCompanyStore = defineStore('companyStore', {
       this.queryText = text
     },
 
-    applyQueryText() {
+    async applyQueryText() {
       try {
         const parsed = this.parseQuery(this.queryText)
         this.filterQuery = parsed
         this.queryText = this.serializeQuery(parsed)
-        this.loadCompanies()
+        await Promise.all([
+          this.loadCompanies(),
+          this.loadFacets(this.filterQuery),
+        ])
         return { ok: true }
       } catch (error) {
         const message = error instanceof ParseError ? error.message : 'Consulta inválida.'
@@ -631,11 +634,14 @@ export const useCompanyStore = defineStore('companyStore', {
       }
     },
 
-    resetFilters() {
+    async resetFilters() {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
       this.selectedItems = []
-      this.loadCompanies()
+      await Promise.all([
+        this.loadCompanies(),
+        this.loadFacets({ clauses: [] }),
+      ])
     },
 
     setSelectedItems(values) {
@@ -666,9 +672,11 @@ export const useCompanyStore = defineStore('companyStore', {
       }
     },
 
-    async loadFacets() {
+    async loadFacets(filters = null) {
       try {
-        const payload = await fetchCompanyFacets()
+        const payload = await fetchCompanyFacets(
+          filters?.clauses ? filters : this.filterQuery,
+        )
         this.facets = payload.facets || {}
       } catch (err) {
         console.error(err)
