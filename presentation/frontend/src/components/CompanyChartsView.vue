@@ -62,7 +62,7 @@ import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import PlotlyViewer from '../components/PlotlyViewer.vue'
-import { useAccountChartsStore } from '../store/accountChartsStore'
+import { useAccountChartsStore } from '../store/companyChartsStore'
 import { useCompanyStore } from '../store/companyStore'
 
 const chartsStore = useAccountChartsStore()
