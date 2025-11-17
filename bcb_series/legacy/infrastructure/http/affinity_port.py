@@ -1,0 +1,9 @@
+
+# Protocol for HTTP clients that support session affinity (used by StatementsRawcraper).
+from __future__ import annotations
+from typing import Protocol, Any, ContextManager
+
+class AffinityHttpClient(Protocol):
+    def fetch(self, url: str, headers: dict[str, str] | None = None) -> bytes: ...
+    def fetch_with(self, session: Any, url: str, headers: dict[str, str] | None = None) -> bytes: ...
+    def borrow_session(self) -> ContextManager[Any]: ...
