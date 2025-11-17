@@ -93,7 +93,8 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.filteredCompanies || [])
 const total = computed(() => (store.filteredCompanies || []).length)
-const facets = computed(() => store.dynamicFacetOptions || {})
+const staticFacets = computed(() => store.facets || {})
+const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
@@ -141,17 +142,31 @@ function booleanLabel(value) {
 
 function facetOptions(facet) {
   const field = facet.field
-  const dynamic = facets.value[field] || []
+  let baseOptions = dynamicFacetOptions.value[field]
+
+  if (!baseOptions || !baseOptions.length) {
+    const fallback = staticFacets.value[field] || []
+    if (fallback.length) {
+      baseOptions = fallback
+        .map((value) => {
+          const text = String(value ?? '').trim()
+          return text ? { value: text, label: text, count: null } : null
+        })
+        .filter(Boolean)
+    }
+  }
+
+  if (!baseOptions || !baseOptions.length) {
+    baseOptions = Array.isArray(facet.options) ? facet.options : []
+  }
 
   if (facet.type === 'boolean') {
-    const base = Array.isArray(facet.options) ? facet.options : []
+    const defaults = Array.isArray(facet.options) ? facet.options : []
     const normalized = []
     const seen = new Set()
 
     const pushOption = (rawValue, rawLabel) => {
-      if (rawValue === null || rawValue === undefined || rawValue === '') {
-        return
-      }
+      if (rawValue === null || rawValue === undefined || rawValue === '') return
       const stringValue = String(rawValue).toLowerCase()
       if (!stringValue) return
       if (seen.has(stringValue)) return
@@ -160,7 +175,7 @@ function facetOptions(facet) {
       normalized.push({ value: stringValue, label })
     }
 
-    for (const option of base) {
+    for (const option of defaults) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else {
@@ -168,7 +183,7 @@ function facetOptions(facet) {
       }
     }
 
-    for (const option of dynamic) {
+    for (const option of baseOptions || []) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else if (typeof option === 'boolean') {
@@ -182,10 +197,8 @@ function facetOptions(facet) {
   }
 
   if (facet.type === 'date-range') {
-    return facet.options || []
+    return Array.isArray(facet.options) ? facet.options : []
   }
-
-  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
 
   return baseOptions
 }
