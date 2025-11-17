@@ -793,7 +793,18 @@ export const useCompanyStore = defineStore('companyStore', {
       this.error = null
       try {
         const payload = await searchCompanies(this.filterQuery)
-        this.companies = payload.items || []
+        const rawItems = payload.items || []
+
+        this.companies = rawItems.map((item) => ({
+          ...item,
+          // normaliza nomes de campos para bater com COMPANY_FACETS
+          industry_sector: item.industry_sector || item.sector || '',
+          industry_subsector: item.industry_subsector || item.subsector || '',
+          industry_segment: item.industry_segment || item.segment || '',
+          issuing_company: item.issuing_company || '',
+          code: item.code || (Array.isArray(item.tickers) ? item.tickers[0] : ''),
+          cnpj: item.cnpj || '',
+        }))
         this.total = payload.total || 0
 
         this.previewFilters = {}
