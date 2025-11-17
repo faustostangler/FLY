@@ -15,3 +15,7 @@ class CompanySearchResultDTO(BaseModel):
     market: Optional[str] = None
     institution_common: Optional[str] = None
     institution_preferred: Optional[str] = None
+
+    issuing_company: Optional[str] = None
+    code: Optional[str] = None
+    cnpj: Optional[str] = None
