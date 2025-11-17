@@ -47,5 +47,8 @@ class SearchCompaniesUseCase:
             market=dto.market,
             institution_common=dto.institution_common,
             institution_preferred=dto.institution_preferred,
+            issuing_company=dto.issuing_company,
+            code=dto.code or (dto.ticker_codes[0] if dto.ticker_codes else None),
+            cnpj=dto.cnpj,
         )
 

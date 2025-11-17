@@ -15,3 +15,6 @@ class CompanySearchResultDTO:
     market: str | None = None
     institution_common: str | None = None
     institution_preferred: str | None = None
+    issuing_company: str | None = None
+    code: str | None = None
+    cnpj: str | None = None
