@@ -88,6 +88,7 @@ const total = computed(() => (store.filteredCompanies || []).length)
 const staticFacets = computed(() => store.facets || {})
 const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
+const selectedValuesByField = computed(() => store.selectedValuesByField)
 
 function booleanLabel(value) {
   if (value === 'true') return 'Sim'
@@ -185,8 +186,7 @@ function facetValues(field) {
 function facetSelectedValues(field) {
   const key = normalizeFacetKey(field)
   if (!key) return []
-  const selection = store.selection || {}
-  const values = selection[key]
+  const values = selectedValuesByField.value[key]
   return Array.isArray(values) ? values : []
 }
 
@@ -210,7 +210,7 @@ function onFacetCommit({ field, logical, values, operator }) {
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
 
-  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+  store.setFacetFilter(field, finalLogical, finalValues, finalOperator)
 
   draftFacets.value = {
     ...draftFacets.value,
