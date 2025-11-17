@@ -147,30 +147,6 @@ function normalizeValues(values) {
     .filter((value) => value.length)
 }
 
-function buildSearchFilterTree({ selection = {}, logical = {}, operators = {} } = {}) {
-  const clauses = []
-
-  for (const [rawField, rawValues] of Object.entries(selection || {})) {
-    const field = normalizeField(rawField) || rawField
-    const values = normalizeValues(rawValues)
-    if (!field || !values.length) continue
-
-    const normalizedLogical = normalizeLogical(logical[field]) || 'AND'
-    const normalizedOperator = normalizeOperator(operators[field]) || DEFAULT_OPERATOR
-
-    clauses.push({
-      logical: normalizedLogical,
-      condition: {
-        field,
-        operator: normalizedOperator,
-        values,
-      },
-    })
-  }
-
-  return { clauses }
-}
-
 function cloneClauses(clauses = []) {
   return clauses.map((clause) => ({
     logical: clause.logical,
@@ -645,11 +621,18 @@ function parseTextToQuery(text) {
 
 export const useCompanyStore = defineStore('companyStore', {
   state: () => ({
-    selection: {},
-    logical: {},
-    operators: {},
+    // Filtro efetivo usado pela API e pelos charts (combinação)
     filterQuery: { clauses: [] },
+
+    // Filtro universal das facetas (chips “X”)
+    facetQuery: { clauses: [] },
+
+    // Filtro do query builder (texto + “enviar para consulta”)
+    builderQuery: { clauses: [] },
+
+    // Texto do query builder
     queryText: '',
+
     companies: [],
     filteredCompanies: [],
     total: 0,
@@ -664,7 +647,7 @@ export const useCompanyStore = defineStore('companyStore', {
   getters: {
     clauseByField(state) {
       const map = {}
-      for (const clause of state.filterQuery.clauses || []) {
+      for (const clause of state.facetQuery.clauses || []) {
         if (clause.condition && clause.condition.field) {
           map[clause.condition.field] = clause
         }
@@ -719,9 +702,35 @@ export const useCompanyStore = defineStore('companyStore', {
       const buckets = this.dynamicFacetBuckets
       return bucketsToOptions(buckets)
     },
+
+    selectedValuesByField(state) {
+      const result = {}
+      for (const clause of state.facetQuery.clauses || []) {
+        const condition = clause.condition || {}
+        const field = condition.field
+        const values = condition.values || []
+
+        if (!field || !values.length) continue
+        result[field] = [...values]
+      }
+      return result
+    },
   },
 
   actions: {
+    _updateFilterQuery() {
+      const facetClauses = Array.isArray(this.facetQuery?.clauses)
+        ? this.facetQuery.clauses
+        : []
+      const builderClauses = Array.isArray(this.builderQuery?.clauses)
+        ? this.builderQuery.clauses
+        : []
+
+      this.filterQuery = {
+        clauses: [...facetClauses, ...builderClauses],
+      }
+    },
+
     setPreviewFacet(field, values) {
       const normalizedField = String(field || '').trim()
       const normalizedValues = Array.isArray(values)
@@ -761,72 +770,83 @@ export const useCompanyStore = defineStore('companyStore', {
       this._applyPreviewFilters()
     },
 
-    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
-      const rawField = String(field || '').trim()
-      const normalizedField = normalizeField(rawField) || rawField
-      if (!normalizedField) return
-
-      const normalizedLogical = normalizeLogical(logical) || 'AND'
+    // Filtro universal (facetas + chips “X”)
+    setFacetFilter(field, logical, values, operator = DEFAULT_OPERATOR) {
+      const normalizedField = normalizeField(field) || field
       const normalizedValues = normalizeValues(values)
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
-      const nextSelection = { ...this.selection }
-      const nextLogical = { ...this.logical }
-      const nextOperators = { ...this.operators }
+      if (!normalizedField) return
+
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+      const clauses = cloneClauses(this.facetQuery.clauses || [])
+      const filteredClauses = clauses.filter(
+        (clause) => !clause.condition || clause.condition.field !== normalizedField,
+      )
 
       if (normalizedValues.length) {
-        nextSelection[normalizedField] = normalizedValues
-        nextLogical[normalizedField] = normalizedLogical
-        nextOperators[normalizedField] = normalizedOperator
-      } else {
-        delete nextSelection[normalizedField]
-        delete nextLogical[normalizedField]
-        delete nextOperators[normalizedField]
+        filteredClauses.push({
+          logical: normalizedLogical,
+          condition: {
+            field: normalizedField,
+            operator: normalizedOperator,
+            values: normalizedValues,
+          },
+        })
       }
 
-      this.selection = nextSelection
-      this.logical = nextLogical
-      this.operators = nextOperators
-
-      this.filterQuery = buildSearchFilterTree({
-        selection: this.selection,
-        logical: this.logical,
-        operators: this.operators,
-      })
-
-      this.queryText = this.serializeQuery(this.filterQuery)
+      this.facetQuery = { clauses: filteredClauses }
+      this._updateFilterQuery()
     },
 
+    // Wrapper para compatibilidade com chamadas antigas
+    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+      this.setFacetFilter(field, logical, values, operator)
+    },
+
+    // Query builder: cláusulas geradas via “Enviar para consulta”
+    setBuilderFacet(field, logical, values, operator = DEFAULT_OPERATOR) {
+      const normalizedField = normalizeField(field) || field
+      const normalizedValues = normalizeValues(values)
+      const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+
+      if (!normalizedField) return
+
+      const clauses = cloneClauses(this.builderQuery.clauses || [])
+      const filteredClauses = clauses.filter(
+        (clause) => !clause.condition || clause.condition.field !== normalizedField,
+      )
+
+      if (normalizedValues.length) {
+        filteredClauses.push({
+          logical: normalizedLogical,
+          condition: {
+            field: normalizedField,
+            operator: normalizedOperator,
+            values: normalizedValues,
+          },
+        })
+      }
+
+      this.builderQuery = { clauses: filteredClauses }
+      this._updateFilterQuery()
+      this.queryText = this.serializeQuery(this.builderQuery)
+
+      // espelho em selection/logical/operators com base no filtro combinado
+      this._syncSelectionFromFilterQuery(this.filterQuery)
+    },
+
+    // Chips tiram valores só do filtro universal
     removeFacetValue(field, value) {
       const key = normalizeFacetKey(field)
       if (!key) return
 
-      const current = this.selection[key] || []
+      const current = this.selectedValuesByField[key] || []
       const normalizedTarget = normalizeValues([value])[0]
       const nextValues = current.filter((item) => item !== normalizedTarget)
 
-      const nextSelection = { ...this.selection }
-      const nextLogical = { ...this.logical }
-      const nextOperators = { ...this.operators }
-
-      if (nextValues.length) {
-        nextSelection[key] = nextValues
-      } else {
-        delete nextSelection[key]
-        delete nextLogical[key]
-        delete nextOperators[key]
-      }
-
-      this.selection = nextSelection
-      this.logical = nextLogical
-      this.operators = nextOperators
-
-      this.filterQuery = buildSearchFilterTree({
-        selection: this.selection,
-        logical: this.logical,
-        operators: this.operators,
-      })
-      this.queryText = this.serializeQuery(this.filterQuery)
+      this.setFacetFilter(key, 'AND', nextValues, DEFAULT_OPERATOR)
     },
 
     setQueryText(text) {
@@ -836,9 +856,15 @@ export const useCompanyStore = defineStore('companyStore', {
     applyQueryText() {
       try {
         const parsed = this.parseQuery(this.queryText)
-        this.filterQuery = parsed
-        this.queryText = this.serializeQuery(parsed)
-        this._syncSelectionFromFilterQuery(parsed)
+
+        // texto controla só o builderQuery
+        this.builderQuery = parsed
+        this._updateFilterQuery()
+        this.queryText = this.serializeQuery(this.builderQuery)
+
+        // espelho em selection/logical/operators com base no filtro combinado
+        this._syncSelectionFromFilterQuery(this.filterQuery)
+
         this.previewFilters = {}
         this.loadCompanies()
         return { ok: true }
@@ -849,6 +875,8 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     resetFilters() {
+      this.facetQuery = { clauses: [] }
+      this.builderQuery = { clauses: [] }
       this.filterQuery = { clauses: [] }
       this.queryText = ''
       this.selectedItems = []
@@ -888,9 +916,7 @@ export const useCompanyStore = defineStore('companyStore', {
         this.previewFilters = {}
         this.filteredCompanies = this.companies
         this._pruneSelection()
-        if (!this.queryText) {
-          this.queryText = this.serializeQuery(this.filterQuery)
-        }
+        // aqui NÃO mexe em queryText
       } catch (err) {
         console.error(err)
         this.error = 'Falha ao carregar companhias'

@@ -120,6 +120,7 @@ const staticFacets = computed(() => store.facets || {})
 const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
+const selectedValuesByField = computed(() => store.selectedValuesByField)
 
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
@@ -253,8 +254,7 @@ function facetValues(field) {
 function facetSelectedValues(field) {
   const key = normalizeFacetKey(field)
   if (!key) return []
-  const selection = store.selection || {}
-  const values = selection[key]
+  const values = selectedValuesByField.value[key]
   return Array.isArray(values) ? values : []
 }
 
@@ -278,7 +278,8 @@ function onFacetCommit({ field, logical, values, operator }) {
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
 
-  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+  // “Enviar para consulta” atua só no builder
+  store.setBuilderFacet(field, finalLogical, finalValues, finalOperator)
 
   draftFacets.value = {
     ...draftFacets.value,
@@ -294,6 +295,7 @@ function onFacetCommit({ field, logical, values, operator }) {
 
 function removeFacetValue(field, value) {
   store.removeFacetValue(field, value)
+  store.loadCompanies()
 }
 
 function applyQuery() {
