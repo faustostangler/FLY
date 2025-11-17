@@ -93,7 +93,7 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.filteredCompanies || [])
 const total = computed(() => (store.filteredCompanies || []).length)
-const facets = computed(() => store.facets || {})
+const facets = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
@@ -215,14 +215,18 @@ function facetValues(field) {
 }
 
 function onFacetDraftChange({ field, logical, values, operator }) {
+  const finalValues = Array.isArray(values) ? [...values] : []
+
   draftFacets.value = {
     ...draftFacets.value,
     [field]: {
       logical: logical || 'AND',
       operator: operator || '',
-      values: Array.isArray(values) ? [...values] : [],
+      values: finalValues,
     },
   }
+
+  store.setPreviewFacet(field, finalValues)
 }
 
 function onFacetCommit({ field, logical, values, operator }) {
@@ -240,6 +244,8 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
   }
+
+  store.clearPreviewFacet(field)
 }
 
 function applyQuery() {

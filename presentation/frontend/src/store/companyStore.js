@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { COMPANY_FACETS } from '../config/companyFacets'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
@@ -194,6 +195,66 @@ function splitSelectionValue(value) {
   }
   const [company, ticker] = value.split(SELECTION_SEPARATOR)
   return { company: company || '', ticker: ticker || '' }
+}
+
+function normalizeBucketValue(value) {
+  const text = String(value ?? '').trim()
+  return text.length ? text : null
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value
+  if (value === null || value === undefined) return []
+  return [value]
+}
+
+function buildFacetBuckets(companies = [], fields = []) {
+  const buckets = {}
+  for (const field of fields) {
+    buckets[field] = new Map()
+  }
+
+  for (const company of companies) {
+    for (const field of fields) {
+      const values = toArray(company?.[field])
+      for (const raw of values) {
+        const value = normalizeBucketValue(raw)
+        if (!value) continue
+
+        const map = buckets[field]
+        map.set(value, (map.get(value) || 0) + 1)
+      }
+    }
+  }
+
+  const normalizedBuckets = {}
+  for (const field of fields) {
+    const entries = Array.from(buckets[field].entries()).map(([value, count]) => ({
+      value,
+      count,
+    }))
+
+    entries.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return a.value.localeCompare(b.value)
+    })
+
+    normalizedBuckets[field] = entries
+  }
+
+  return normalizedBuckets
+}
+
+function bucketsToOptions(buckets = {}) {
+  const options = {}
+  for (const [field, entries] of Object.entries(buckets)) {
+    options[field] = (entries || []).map((entry) => ({
+      value: entry.value,
+      label: entry.value,
+      count: entry.count,
+    }))
+  }
+  return options
 }
 
 function tokenize(input) {
@@ -564,6 +625,8 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedItems: [],
     isLoading: false,
     error: null,
+
+    previewFilters: {},
   }),
 
   getters: {
@@ -579,9 +642,93 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedPairs(state) {
       return (state.selectedItems || []).map(splitSelectionValue)
     },
+
+    previewedCompanies(state) {
+      const filters = state.previewFilters || {}
+      const companies = state.companies || []
+
+      const entries = Object.entries(filters)
+        .map(([field, values]) => [
+          field,
+          (values || []).map((v) => String(v || '').trim()).filter(Boolean),
+        ])
+        .filter(([, values]) => values.length)
+
+      if (!entries.length) {
+        return companies
+      }
+
+      return companies.filter((company) =>
+        entries.every(([field, values]) => {
+          const raw = company[field]
+          if (raw == null) return false
+          const normalizedValues = toArray(raw)
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+
+          if (!normalizedValues.length) return false
+          return values.some((value) => normalizedValues.includes(value))
+        }),
+      )
+    },
+
+    dynamicFacetBuckets() {
+      const facetFields = COMPANY_FACETS.map((facet) => facet.field)
+
+      const hasPreview =
+        this.previewFilters && Object.keys(this.previewFilters).length > 0
+
+      const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
+
+      return buildFacetBuckets(baseCompanies, facetFields)
+    },
+
+    dynamicFacetOptions() {
+      const buckets = this.dynamicFacetBuckets
+      return bucketsToOptions(buckets)
+    },
   },
 
   actions: {
+    setPreviewFacet(field, values) {
+      const normalizedField = String(field || '').trim()
+      const normalizedValues = Array.isArray(values)
+        ? values.map((v) => String(v || '').trim()).filter(Boolean)
+        : []
+
+      if (!normalizedField) {
+        return
+      }
+
+      if (!normalizedValues.length) {
+        this.clearPreviewFacet(normalizedField)
+        return
+      }
+
+      this.previewFilters = {
+        ...this.previewFilters,
+        [normalizedField]: normalizedValues,
+      }
+
+      this._applyPreviewFilters()
+    },
+
+    clearPreviewFacet(field) {
+      const normalizedField = String(field || '').trim()
+      if (!normalizedField) {
+        return
+      }
+      const next = { ...this.previewFilters }
+      delete next[normalizedField]
+      this.previewFilters = next
+      this._applyPreviewFilters()
+    },
+
+    clearAllPreviewFilters() {
+      this.previewFilters = {}
+      this._applyPreviewFilters()
+    },
+
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
       const normalizedField = normalizeField(field) || field
       const normalizedLogical = normalizeLogical(logical) || 'AND'
@@ -617,6 +764,7 @@ export const useCompanyStore = defineStore('companyStore', {
         const parsed = this.parseQuery(this.queryText)
         this.filterQuery = parsed
         this.queryText = this.serializeQuery(parsed)
+        this.previewFilters = {}
         this.loadCompanies()
         return { ok: true }
       } catch (error) {
@@ -628,8 +776,8 @@ export const useCompanyStore = defineStore('companyStore', {
     resetFilters() {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
-      this.filteredCompanies = this.companies || []
       this.selectedItems = []
+      this.previewFilters = {}
       this.loadCompanies()
     },
 
@@ -648,6 +796,7 @@ export const useCompanyStore = defineStore('companyStore', {
         this.companies = payload.items || []
         this.total = payload.total || 0
 
+        this.previewFilters = {}
         this.filteredCompanies = this.companies
         this._pruneSelection()
         if (!this.queryText) {
@@ -700,6 +849,11 @@ export const useCompanyStore = defineStore('companyStore', {
       if (filtered.length !== this.selectedItems.length) {
         this.selectedItems = filtered
       }
+    },
+
+    _applyPreviewFilters() {
+      this.filteredCompanies = this.previewedCompanies
+      this._pruneSelection()
     },
   },
 })
