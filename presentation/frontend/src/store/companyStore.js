@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
-import { applyCompanyFilter, buildCompanyFacets } from '../core/companyFacetEngine'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -29,14 +28,6 @@ const OPERATOR_ALIASES = {
   STARTSWITH: 'STARTS_WITH',
   PREFIX: 'STARTS_WITH',
   BETWEEN: 'BETWEEN',
-}
-
-function createEmptyCompanyFilter() {
-  return {
-    sector: [],
-    subsector: [],
-    segment: [],
-  }
 }
 
 const FIELD_ALIASES = {
@@ -570,8 +561,6 @@ export const useCompanyStore = defineStore('companyStore', {
     filteredCompanies: [],
     total: 0,
     facets: {},
-    companyFilter: createEmptyCompanyFilter(),
-    companyFacets: createEmptyCompanyFilter(),
     selectedItems: [],
     isLoading: false,
     error: null,
@@ -593,19 +582,6 @@ export const useCompanyStore = defineStore('companyStore', {
   },
 
   actions: {
-    setCompanyFacetFilter({ facetId, values }) {
-      const normalizedValues = Array.isArray(values)
-        ? values.map((v) => String(v || '').trim()).filter(Boolean)
-        : []
-
-      this.companyFilter = {
-        ...this.companyFilter,
-        [facetId]: normalizedValues,
-      }
-
-      this.rebuildCompanyFacets()
-    },
-
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
       const normalizedField = normalizeField(field) || field
       const normalizedLogical = normalizeLogical(logical) || 'AND'
@@ -652,8 +628,6 @@ export const useCompanyStore = defineStore('companyStore', {
     resetFilters() {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
-      this.companyFilter = createEmptyCompanyFilter()
-      this.companyFacets = createEmptyCompanyFilter()
       this.filteredCompanies = this.companies || []
       this.selectedItems = []
       this.loadCompanies()
@@ -674,7 +648,7 @@ export const useCompanyStore = defineStore('companyStore', {
         this.companies = payload.items || []
         this.total = payload.total || 0
 
-        this.rebuildCompanyFacets()
+        this.filteredCompanies = this.companies
         this._pruneSelection()
         if (!this.queryText) {
           this.queryText = this.serializeQuery(this.filterQuery)
@@ -708,22 +682,6 @@ export const useCompanyStore = defineStore('companyStore', {
         return { clauses: [] }
       }
       return parseTextToQuery(text)
-    },
-
-    rebuildCompanyFacets() {
-      const allCompanies = this.companies || []
-      const filter = this.companyFilter || createEmptyCompanyFilter()
-
-      const normalizedFilter = {
-        sector: Array.isArray(filter.sector) ? filter.sector : [],
-        subsector: Array.isArray(filter.subsector) ? filter.subsector : [],
-        segment: Array.isArray(filter.segment) ? filter.segment : [],
-      }
-
-      const filtered = applyCompanyFilter(allCompanies, normalizedFilter)
-
-      this.companyFacets = buildCompanyFacets(filtered)
-      this.filteredCompanies = filtered
     },
 
     _pruneSelection() {

@@ -83,16 +83,6 @@ const parseError = ref('')
 const draftFacets = ref({})
 const DEFAULT_OPERATOR = 'IN'
 
-const COMPANY_FACET_FIELD_MAP = {
-  industry_sector: 'sector',
-  industry_subsector: 'subsector',
-  industry_segment: 'segment',
-}
-
-function isCompanyFacetField(field) {
-  return Object.prototype.hasOwnProperty.call(COMPANY_FACET_FIELD_MAP, field)
-}
-
 const queryTextModel = computed({
   get: () => store.queryText,
   set: (value) => {
@@ -104,8 +94,6 @@ const queryTextModel = computed({
 const companies = computed(() => store.filteredCompanies || [])
 const total = computed(() => (store.filteredCompanies || []).length)
 const facets = computed(() => store.facets || {})
-const companyFacets = computed(() => store.companyFacets || {})
-const companyFilter = computed(() => store.companyFilter || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 
@@ -153,10 +141,6 @@ function booleanLabel(value) {
 
 function facetOptions(facet) {
   const field = facet.field
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    return companyFacets.value[facetId] || []
-  }
   const dynamic = facets.value[field] || []
 
   if (facet.type === 'boolean') {
@@ -211,9 +195,6 @@ function facetLogical(field) {
   if (draft && draft.logical) {
     return draft.logical
   }
-  if (isCompanyFacetField(field)) {
-    return 'AND'
-  }
   return store.clauseByField[field]?.logical || 'AND'
 }
 
@@ -222,17 +203,10 @@ function facetOperator(field) {
   if (draft && draft.operator) {
     return draft.operator
   }
-  if (isCompanyFacetField(field)) {
-    return DEFAULT_OPERATOR
-  }
   return store.clauseByField[field]?.condition?.operator || ''
 }
 
 function facetValues(field) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    return companyFilter.value[facetId] || []
-  }
   const draft = draftFacets.value[field]
   if (draft && Array.isArray(draft.values)) {
     return draft.values
@@ -241,11 +215,6 @@ function facetValues(field) {
 }
 
 function onFacetDraftChange({ field, logical, values, operator }) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    store.setCompanyFacetFilter({ facetId, values })
-    return
-  }
   draftFacets.value = {
     ...draftFacets.value,
     [field]: {
@@ -257,11 +226,6 @@ function onFacetDraftChange({ field, logical, values, operator }) {
 }
 
 function onFacetCommit({ field, logical, values, operator }) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    store.setCompanyFacetFilter({ facetId, values })
-    return
-  }
   const finalLogical = logical || 'AND'
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
