@@ -123,6 +123,11 @@ function normalizeField(value) {
   return FIELD_ALIASES[key] || null
 }
 
+export function normalizeFacetKey(field) {
+  const rawField = String(field || '').trim()
+  return normalizeField(rawField) || rawField
+}
+
 function normalizeValues(values) {
   return (values || [])
     .map((value) => {
@@ -140,6 +145,30 @@ function normalizeValues(values) {
       return raw
     })
     .filter((value) => value.length)
+}
+
+function buildSearchFilterTree({ selection = {}, logical = {}, operators = {} } = {}) {
+  const clauses = []
+
+  for (const [rawField, rawValues] of Object.entries(selection || {})) {
+    const field = normalizeField(rawField) || rawField
+    const values = normalizeValues(rawValues)
+    if (!field || !values.length) continue
+
+    const normalizedLogical = normalizeLogical(logical[field]) || 'AND'
+    const normalizedOperator = normalizeOperator(operators[field]) || DEFAULT_OPERATOR
+
+    clauses.push({
+      logical: normalizedLogical,
+      condition: {
+        field,
+        operator: normalizedOperator,
+        values,
+      },
+    })
+  }
+
+  return { clauses }
 }
 
 function cloneClauses(clauses = []) {
@@ -616,6 +645,9 @@ function parseTextToQuery(text) {
 
 export const useCompanyStore = defineStore('companyStore', {
   state: () => ({
+    selection: {},
+    logical: {},
+    operators: {},
     filterQuery: { clauses: [] },
     queryText: '',
     companies: [],
@@ -730,28 +762,70 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
-      const normalizedField = normalizeField(field) || field
+      const rawField = String(field || '').trim()
+      const normalizedField = normalizeField(rawField) || rawField
+      if (!normalizedField) return
+
       const normalizedLogical = normalizeLogical(logical) || 'AND'
       const normalizedValues = normalizeValues(values)
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
-      const clauses = cloneClauses(this.filterQuery.clauses || [])
-      const filteredClauses = clauses.filter(
-        (clause) => !clause.condition || clause.condition.field !== normalizedField,
-      )
+      const nextSelection = { ...this.selection }
+      const nextLogical = { ...this.logical }
+      const nextOperators = { ...this.operators }
 
       if (normalizedValues.length) {
-        filteredClauses.push({
-          logical: normalizedLogical,
-          condition: {
-            field: normalizedField,
-            operator: normalizedOperator,
-            values: normalizedValues,
-          },
-        })
+        nextSelection[normalizedField] = normalizedValues
+        nextLogical[normalizedField] = normalizedLogical
+        nextOperators[normalizedField] = normalizedOperator
+      } else {
+        delete nextSelection[normalizedField]
+        delete nextLogical[normalizedField]
+        delete nextOperators[normalizedField]
       }
 
-      this.filterQuery = { clauses: filteredClauses }
+      this.selection = nextSelection
+      this.logical = nextLogical
+      this.operators = nextOperators
+
+      this.filterQuery = buildSearchFilterTree({
+        selection: this.selection,
+        logical: this.logical,
+        operators: this.operators,
+      })
+
+      this.queryText = this.serializeQuery(this.filterQuery)
+    },
+
+    removeFacetValue(field, value) {
+      const key = normalizeFacetKey(field)
+      if (!key) return
+
+      const current = this.selection[key] || []
+      const normalizedTarget = normalizeValues([value])[0]
+      const nextValues = current.filter((item) => item !== normalizedTarget)
+
+      const nextSelection = { ...this.selection }
+      const nextLogical = { ...this.logical }
+      const nextOperators = { ...this.operators }
+
+      if (nextValues.length) {
+        nextSelection[key] = nextValues
+      } else {
+        delete nextSelection[key]
+        delete nextLogical[key]
+        delete nextOperators[key]
+      }
+
+      this.selection = nextSelection
+      this.logical = nextLogical
+      this.operators = nextOperators
+
+      this.filterQuery = buildSearchFilterTree({
+        selection: this.selection,
+        logical: this.logical,
+        operators: this.operators,
+      })
       this.queryText = this.serializeQuery(this.filterQuery)
     },
 
@@ -764,6 +838,7 @@ export const useCompanyStore = defineStore('companyStore', {
         const parsed = this.parseQuery(this.queryText)
         this.filterQuery = parsed
         this.queryText = this.serializeQuery(parsed)
+        this._syncSelectionFromFilterQuery(parsed)
         this.previewFilters = {}
         this.loadCompanies()
         return { ok: true }
@@ -777,6 +852,9 @@ export const useCompanyStore = defineStore('companyStore', {
       this.filterQuery = { clauses: [] }
       this.queryText = ''
       this.selectedItems = []
+      this.selection = {}
+      this.logical = {}
+      this.operators = {}
       this.previewFilters = {}
       this.loadCompanies()
     },
@@ -842,6 +920,29 @@ export const useCompanyStore = defineStore('companyStore', {
         return { clauses: [] }
       }
       return parseTextToQuery(text)
+    },
+
+    _syncSelectionFromFilterQuery(query = this.filterQuery) {
+      const clauses = Array.isArray(query?.clauses) ? query.clauses : []
+
+      const nextSelection = {}
+      const nextLogical = {}
+      const nextOperators = {}
+
+      for (const clause of clauses) {
+        const condition = clause?.condition || {}
+        const field = condition.field ? normalizeField(condition.field) || condition.field : null
+        const values = normalizeValues(condition.values || [])
+        if (!field || !values.length) continue
+
+        nextSelection[field] = values
+        nextLogical[field] = normalizeLogical(clause.logical) || 'AND'
+        nextOperators[field] = normalizeOperator(condition.operator) || DEFAULT_OPERATOR
+      }
+
+      this.selection = nextSelection
+      this.logical = nextLogical
+      this.operators = nextOperators
     },
 
     _pruneSelection() {
