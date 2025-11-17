@@ -26,6 +26,7 @@ from presentation.backend.dto.company_search_dto import (
     CompanyFilterQueryDTO,
     CompanySearchResponseDTO,
 )
+from presentation.backend.routers.company_field_normalizer import normalize_field
 
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -105,12 +106,8 @@ def _map_condition(
 ) -> CompanyFilterCondition | None:
     if condition_dto is None:
         return None
-    field_value = (condition_dto.field or "").strip()
-    if not field_value:
-        return None
-    try:
-        field = CompanyField(field_value)
-    except ValueError:
+    field = normalize_field(condition_dto.field)
+    if field is None:
         return None
 
     operator_value = (condition_dto.operator or "IN").strip().upper()
