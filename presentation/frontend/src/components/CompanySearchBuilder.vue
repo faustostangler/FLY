@@ -9,21 +9,45 @@
     <section class="company-search__facets" aria-labelledby="filters-heading">
       <h2 id="filters-heading">Filtros</h2>
 
-      <CompanyFacet
+      <div
         v-for="facet in facetConfigs"
         :key="facet.field"
-        :field="facet.field"
-        :label="facet.label"
-        :options="facetOptions(facet)"
-        :logical="facetLogical(facet.field)"
-        :operator="facetOperator(facet.field)"
-        :values="facetValues(facet.field)"
-        :multiple="facet.multiple !== false"
-        :type="facet.type || 'text'"
-        :searchable="Boolean(facet.searchable)"
-        @change="onFacetDraftChange"
-        @commit="onFacetCommit"
-      />
+        class="company-search__facet"
+      >
+        <CompanyFacet
+          :field="facet.field"
+          :label="facet.label"
+          :options="facetOptions(facet)"
+          :logical="facetLogical(facet.field)"
+          :operator="facetOperator(facet.field)"
+          :values="facetValues(facet.field)"
+          :multiple="facet.multiple !== false"
+          :type="facet.type || 'text'"
+          :searchable="Boolean(facet.searchable)"
+          @change="onFacetDraftChange"
+          @commit="onFacetCommit"
+        />
+
+        <div
+          v-if="facetSelectedValues(facet.field).length"
+          class="company-search__facet-selection"
+        >
+          <span
+            v-for="value in facetSelectedValues(facet.field)"
+            :key="value"
+            class="company-facet__chip"
+          >
+            {{ value }}
+            <button
+              type="button"
+              class="company-facet__chip-remove"
+              @click="removeFacetValue(facet.field, value)"
+            >
+              ×
+            </button>
+          </span>
+        </div>
+      </div>
     </section>
 
     <div class="company-search__query">
@@ -37,7 +61,6 @@
       <div class="company-search__query-actions">
         <button type="button" @click="applyQuery">Buscar</button>
         <button type="button" class="ghost" @click="clearFilters">Limpar filtros</button>
-        <!-- <button type="button" @click="reload">Buscar</button> -->
         <span v-if="parseError" class="company-search__error">{{ parseError }}</span>
       </div>
     </div>
@@ -66,7 +89,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { COMPANY_FACETS } from '../config/companyFacets'
-import { useCompanyStore } from '../store/companyStore'
+import { normalizeFacetKey, useCompanyStore } from '../store/companyStore'
 import { useChartStore } from '../store/chartStore'
 import { extractTickers } from '../utils/tickers'
 import CompanyFacet from './CompanyFacet.vue'
@@ -83,16 +106,6 @@ const parseError = ref('')
 const draftFacets = ref({})
 const DEFAULT_OPERATOR = 'IN'
 
-const COMPANY_FACET_FIELD_MAP = {
-  industry_sector: 'sector',
-  industry_subsector: 'subsector',
-  industry_segment: 'segment',
-}
-
-function isCompanyFacetField(field) {
-  return Object.prototype.hasOwnProperty.call(COMPANY_FACET_FIELD_MAP, field)
-}
-
 const queryTextModel = computed({
   get: () => store.queryText,
   set: (value) => {
@@ -103,11 +116,11 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.filteredCompanies || [])
 const total = computed(() => (store.filteredCompanies || []).length)
-const facets = computed(() => store.facets || {})
-const companyFacets = computed(() => store.companyFacets || {})
-const companyFilter = computed(() => store.companyFilter || {})
+const staticFacets = computed(() => store.facets || {})
+const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
+const selectedValuesByField = computed(() => store.selectedValuesByField)
 
 const selectedItemsModel = computed({
   get: () => store.selectedItems,
@@ -153,21 +166,31 @@ function booleanLabel(value) {
 
 function facetOptions(facet) {
   const field = facet.field
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    return companyFacets.value[facetId] || []
+  let baseOptions = dynamicFacetOptions.value[field]
+
+  if (!baseOptions || !baseOptions.length) {
+    const fallback = staticFacets.value[field] || []
+    if (fallback.length) {
+      baseOptions = fallback
+        .map((value) => {
+          const text = String(value ?? '').trim()
+          return text ? { value: text, label: text, count: null } : null
+        })
+        .filter(Boolean)
+    }
   }
-  const dynamic = facets.value[field] || []
+
+  if (!baseOptions || !baseOptions.length) {
+    baseOptions = Array.isArray(facet.options) ? facet.options : []
+  }
 
   if (facet.type === 'boolean') {
-    const base = Array.isArray(facet.options) ? facet.options : []
+    const defaults = Array.isArray(facet.options) ? facet.options : []
     const normalized = []
     const seen = new Set()
 
     const pushOption = (rawValue, rawLabel) => {
-      if (rawValue === null || rawValue === undefined || rawValue === '') {
-        return
-      }
+      if (rawValue === null || rawValue === undefined || rawValue === '') return
       const stringValue = String(rawValue).toLowerCase()
       if (!stringValue) return
       if (seen.has(stringValue)) return
@@ -176,7 +199,7 @@ function facetOptions(facet) {
       normalized.push({ value: stringValue, label })
     }
 
-    for (const option of base) {
+    for (const option of defaults) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else {
@@ -184,7 +207,7 @@ function facetOptions(facet) {
       }
     }
 
-    for (const option of dynamic) {
+    for (const option of baseOptions || []) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else if (typeof option === 'boolean') {
@@ -198,10 +221,8 @@ function facetOptions(facet) {
   }
 
   if (facet.type === 'date-range') {
-    return facet.options || []
+    return Array.isArray(facet.options) ? facet.options : []
   }
-
-  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
 
   return baseOptions
 }
@@ -211,9 +232,6 @@ function facetLogical(field) {
   if (draft && draft.logical) {
     return draft.logical
   }
-  if (isCompanyFacetField(field)) {
-    return 'AND'
-  }
   return store.clauseByField[field]?.logical || 'AND'
 }
 
@@ -222,17 +240,10 @@ function facetOperator(field) {
   if (draft && draft.operator) {
     return draft.operator
   }
-  if (isCompanyFacetField(field)) {
-    return DEFAULT_OPERATOR
-  }
   return store.clauseByField[field]?.condition?.operator || ''
 }
 
 function facetValues(field) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    return companyFilter.value[facetId] || []
-  }
   const draft = draftFacets.value[field]
   if (draft && Array.isArray(draft.values)) {
     return draft.values
@@ -240,33 +251,35 @@ function facetValues(field) {
   return store.clauseByField[field]?.condition?.values || []
 }
 
+function facetSelectedValues(field) {
+  const key = normalizeFacetKey(field)
+  if (!key) return []
+  const values = selectedValuesByField.value[key]
+  return Array.isArray(values) ? values : []
+}
+
 function onFacetDraftChange({ field, logical, values, operator }) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    store.setCompanyFacetFilter({ facetId, values })
-    return
-  }
+  const finalValues = Array.isArray(values) ? [...values] : []
+
   draftFacets.value = {
     ...draftFacets.value,
     [field]: {
       logical: logical || 'AND',
       operator: operator || '',
-      values: Array.isArray(values) ? [...values] : [],
+      values: finalValues,
     },
   }
+
+  store.setPreviewFacet(field, finalValues)
 }
 
 function onFacetCommit({ field, logical, values, operator }) {
-  if (isCompanyFacetField(field)) {
-    const facetId = COMPANY_FACET_FIELD_MAP[field]
-    store.setCompanyFacetFilter({ facetId, values })
-    return
-  }
   const finalLogical = logical || 'AND'
   const finalValues = Array.isArray(values) ? [...values] : []
   const finalOperator = operator || DEFAULT_OPERATOR
 
-  store.setFacetSelection(field, finalLogical, finalValues, finalOperator)
+  // “Enviar para consulta” atua só no builder
+  store.setBuilderFacet(field, finalLogical, finalValues, finalOperator)
 
   draftFacets.value = {
     ...draftFacets.value,
@@ -276,6 +289,13 @@ function onFacetCommit({ field, logical, values, operator }) {
       values: [],
     },
   }
+
+  store.clearPreviewFacet(field)
+}
+
+function removeFacetValue(field, value) {
+  store.removeFacetValue(field, value)
+  store.loadCompanies()
 }
 
 function applyQuery() {
@@ -510,6 +530,38 @@ onMounted(() => {
 .company-search__facets > h2 {
   grid-column: 1 / -1;
   margin: 0;
+}
+
+.company-search__facet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.company-search__facet-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.company-facet__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem 0.15rem 0.65rem;
+  font-size: 0.9rem;
+}
+
+.company-facet__chip-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: #0f172a;
 }
 
 .company-search__results header {

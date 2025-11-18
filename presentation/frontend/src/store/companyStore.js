@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
+import { COMPANY_FACETS } from '../config/companyFacets'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
-import { applyCompanyFilter, buildCompanyFacets } from '../core/companyFacetEngine'
 
 const DEFAULT_OPERATOR = 'IN'
 const SELECTION_SEPARATOR = '::'
@@ -29,14 +29,6 @@ const OPERATOR_ALIASES = {
   STARTSWITH: 'STARTS_WITH',
   PREFIX: 'STARTS_WITH',
   BETWEEN: 'BETWEEN',
-}
-
-function createEmptyCompanyFilter() {
-  return {
-    sector: [],
-    subsector: [],
-    segment: [],
-  }
 }
 
 const FIELD_ALIASES = {
@@ -131,6 +123,11 @@ function normalizeField(value) {
   return FIELD_ALIASES[key] || null
 }
 
+export function normalizeFacetKey(field) {
+  const rawField = String(field || '').trim()
+  return normalizeField(rawField) || rawField
+}
+
 function normalizeValues(values) {
   return (values || [])
     .map((value) => {
@@ -203,6 +200,66 @@ function splitSelectionValue(value) {
   }
   const [company, ticker] = value.split(SELECTION_SEPARATOR)
   return { company: company || '', ticker: ticker || '' }
+}
+
+function normalizeBucketValue(value) {
+  const text = String(value ?? '').trim()
+  return text.length ? text : null
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value
+  if (value === null || value === undefined) return []
+  return [value]
+}
+
+function buildFacetBuckets(companies = [], fields = []) {
+  const buckets = {}
+  for (const field of fields) {
+    buckets[field] = new Map()
+  }
+
+  for (const company of companies) {
+    for (const field of fields) {
+      const values = toArray(company?.[field])
+      for (const raw of values) {
+        const value = normalizeBucketValue(raw)
+        if (!value) continue
+
+        const map = buckets[field]
+        map.set(value, (map.get(value) || 0) + 1)
+      }
+    }
+  }
+
+  const normalizedBuckets = {}
+  for (const field of fields) {
+    const entries = Array.from(buckets[field].entries()).map(([value, count]) => ({
+      value,
+      count,
+    }))
+
+    entries.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      return a.value.localeCompare(b.value)
+    })
+
+    normalizedBuckets[field] = entries
+  }
+
+  return normalizedBuckets
+}
+
+function bucketsToOptions(buckets = {}) {
+  const options = {}
+  for (const [field, entries] of Object.entries(buckets)) {
+    options[field] = (entries || []).map((entry) => ({
+      value: entry.value,
+      label: entry.value,
+      count: entry.count,
+    }))
+  }
+  return options
 }
 
 function tokenize(input) {
@@ -564,23 +621,33 @@ function parseTextToQuery(text) {
 
 export const useCompanyStore = defineStore('companyStore', {
   state: () => ({
+    // Filtro efetivo usado pela API e pelos charts (combinação)
     filterQuery: { clauses: [] },
+
+    // Filtro universal das facetas (chips “X”)
+    facetQuery: { clauses: [] },
+
+    // Filtro do query builder (texto + “enviar para consulta”)
+    builderQuery: { clauses: [] },
+
+    // Texto do query builder
     queryText: '',
+
     companies: [],
     filteredCompanies: [],
     total: 0,
     facets: {},
-    companyFilter: createEmptyCompanyFilter(),
-    companyFacets: createEmptyCompanyFilter(),
     selectedItems: [],
     isLoading: false,
     error: null,
+
+    previewFilters: {},
   }),
 
   getters: {
     clauseByField(state) {
       const map = {}
-      for (const clause of state.filterQuery.clauses || []) {
+      for (const clause of state.facetQuery.clauses || []) {
         if (clause.condition && clause.condition.field) {
           map[clause.condition.field] = clause
         }
@@ -590,29 +657,129 @@ export const useCompanyStore = defineStore('companyStore', {
     selectedPairs(state) {
       return (state.selectedItems || []).map(splitSelectionValue)
     },
+
+    previewedCompanies(state) {
+      const filters = state.previewFilters || {}
+      const companies = state.companies || []
+
+      const entries = Object.entries(filters)
+        .map(([field, values]) => [
+          field,
+          (values || []).map((v) => String(v || '').trim()).filter(Boolean),
+        ])
+        .filter(([, values]) => values.length)
+
+      if (!entries.length) {
+        return companies
+      }
+
+      return companies.filter((company) =>
+        entries.every(([field, values]) => {
+          const raw = company[field]
+          if (raw == null) return false
+          const normalizedValues = toArray(raw)
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+
+          if (!normalizedValues.length) return false
+          return values.some((value) => normalizedValues.includes(value))
+        }),
+      )
+    },
+
+    dynamicFacetBuckets() {
+      const facetFields = COMPANY_FACETS.map((facet) => facet.field)
+
+      const hasPreview =
+        this.previewFilters && Object.keys(this.previewFilters).length > 0
+
+      const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
+
+      return buildFacetBuckets(baseCompanies, facetFields)
+    },
+
+    dynamicFacetOptions() {
+      const buckets = this.dynamicFacetBuckets
+      return bucketsToOptions(buckets)
+    },
+
+    selectedValuesByField(state) {
+      const result = {}
+      for (const clause of state.facetQuery.clauses || []) {
+        const condition = clause.condition || {}
+        const field = condition.field
+        const values = condition.values || []
+
+        if (!field || !values.length) continue
+        result[field] = [...values]
+      }
+      return result
+    },
   },
 
   actions: {
-    setCompanyFacetFilter({ facetId, values }) {
+    _updateFilterQuery() {
+      const facetClauses = Array.isArray(this.facetQuery?.clauses)
+        ? this.facetQuery.clauses
+        : []
+      const builderClauses = Array.isArray(this.builderQuery?.clauses)
+        ? this.builderQuery.clauses
+        : []
+
+      this.filterQuery = {
+        clauses: [...facetClauses, ...builderClauses],
+      }
+    },
+
+    setPreviewFacet(field, values) {
+      const normalizedField = String(field || '').trim()
       const normalizedValues = Array.isArray(values)
         ? values.map((v) => String(v || '').trim()).filter(Boolean)
         : []
 
-      this.companyFilter = {
-        ...this.companyFilter,
-        [facetId]: normalizedValues,
+      if (!normalizedField) {
+        return
       }
 
-      this.rebuildCompanyFacets()
+      if (!normalizedValues.length) {
+        this.clearPreviewFacet(normalizedField)
+        return
+      }
+
+      this.previewFilters = {
+        ...this.previewFilters,
+        [normalizedField]: normalizedValues,
+      }
+
+      this._applyPreviewFilters()
     },
 
-    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+    clearPreviewFacet(field) {
+      const normalizedField = String(field || '').trim()
+      if (!normalizedField) {
+        return
+      }
+      const next = { ...this.previewFilters }
+      delete next[normalizedField]
+      this.previewFilters = next
+      this._applyPreviewFilters()
+    },
+
+    clearAllPreviewFilters() {
+      this.previewFilters = {}
+      this._applyPreviewFilters()
+    },
+
+    // Filtro universal (facetas + chips “X”)
+    setFacetFilter(field, logical, values, operator = DEFAULT_OPERATOR) {
       const normalizedField = normalizeField(field) || field
-      const normalizedLogical = normalizeLogical(logical) || 'AND'
       const normalizedValues = normalizeValues(values)
       const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
 
-      const clauses = cloneClauses(this.filterQuery.clauses || [])
+      if (!normalizedField) return
+
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+      const clauses = cloneClauses(this.facetQuery.clauses || [])
       const filteredClauses = clauses.filter(
         (clause) => !clause.condition || clause.condition.field !== normalizedField,
       )
@@ -628,8 +795,58 @@ export const useCompanyStore = defineStore('companyStore', {
         })
       }
 
-      this.filterQuery = { clauses: filteredClauses }
-      this.queryText = this.serializeQuery(this.filterQuery)
+      this.facetQuery = { clauses: filteredClauses }
+      this._updateFilterQuery()
+    },
+
+    // Wrapper para compatibilidade com chamadas antigas
+    setFacetSelection(field, logical, values, operator = DEFAULT_OPERATOR) {
+      this.setFacetFilter(field, logical, values, operator)
+    },
+
+    // Query builder: cláusulas geradas via “Enviar para consulta”
+    setBuilderFacet(field, logical, values, operator = DEFAULT_OPERATOR) {
+      const normalizedField = normalizeField(field) || field
+      const normalizedValues = normalizeValues(values)
+      const normalizedOperator = normalizeOperator(operator) || DEFAULT_OPERATOR
+      const normalizedLogical = normalizeLogical(logical) || 'AND'
+
+      if (!normalizedField) return
+
+      const clauses = cloneClauses(this.builderQuery.clauses || [])
+      const filteredClauses = clauses.filter(
+        (clause) => !clause.condition || clause.condition.field !== normalizedField,
+      )
+
+      if (normalizedValues.length) {
+        filteredClauses.push({
+          logical: normalizedLogical,
+          condition: {
+            field: normalizedField,
+            operator: normalizedOperator,
+            values: normalizedValues,
+          },
+        })
+      }
+
+      this.builderQuery = { clauses: filteredClauses }
+      this._updateFilterQuery()
+      this.queryText = this.serializeQuery(this.builderQuery)
+
+      // espelho em selection/logical/operators com base no filtro combinado
+      this._syncSelectionFromFilterQuery(this.filterQuery)
+    },
+
+    // Chips tiram valores só do filtro universal
+    removeFacetValue(field, value) {
+      const key = normalizeFacetKey(field)
+      if (!key) return
+
+      const current = this.selectedValuesByField[key] || []
+      const normalizedTarget = normalizeValues([value])[0]
+      const nextValues = current.filter((item) => item !== normalizedTarget)
+
+      this.setFacetFilter(key, 'AND', nextValues, DEFAULT_OPERATOR)
     },
 
     setQueryText(text) {
@@ -639,8 +856,16 @@ export const useCompanyStore = defineStore('companyStore', {
     applyQueryText() {
       try {
         const parsed = this.parseQuery(this.queryText)
-        this.filterQuery = parsed
-        this.queryText = this.serializeQuery(parsed)
+
+        // texto controla só o builderQuery
+        this.builderQuery = parsed
+        this._updateFilterQuery()
+        this.queryText = this.serializeQuery(this.builderQuery)
+
+        // espelho em selection/logical/operators com base no filtro combinado
+        this._syncSelectionFromFilterQuery(this.filterQuery)
+
+        this.previewFilters = {}
         this.loadCompanies()
         return { ok: true }
       } catch (error) {
@@ -650,12 +875,15 @@ export const useCompanyStore = defineStore('companyStore', {
     },
 
     resetFilters() {
+      this.facetQuery = { clauses: [] }
+      this.builderQuery = { clauses: [] }
       this.filterQuery = { clauses: [] }
       this.queryText = ''
-      this.companyFilter = createEmptyCompanyFilter()
-      this.companyFacets = createEmptyCompanyFilter()
-      this.filteredCompanies = this.companies || []
       this.selectedItems = []
+      this.selection = {}
+      this.logical = {}
+      this.operators = {}
+      this.previewFilters = {}
       this.loadCompanies()
     },
 
@@ -671,14 +899,24 @@ export const useCompanyStore = defineStore('companyStore', {
       this.error = null
       try {
         const payload = await searchCompanies(this.filterQuery)
-        this.companies = payload.items || []
+        const rawItems = payload.items || []
+
+        this.companies = rawItems.map((item) => ({
+          ...item,
+          // normaliza nomes de campos para bater com COMPANY_FACETS
+          industry_sector: item.industry_sector || item.sector || '',
+          industry_subsector: item.industry_subsector || item.subsector || '',
+          industry_segment: item.industry_segment || item.segment || '',
+          issuing_company: item.issuing_company || '',
+          code: item.code || (Array.isArray(item.tickers) ? item.tickers[0] : ''),
+          cnpj: item.cnpj || '',
+        }))
         this.total = payload.total || 0
 
-        this.rebuildCompanyFacets()
+        this.previewFilters = {}
+        this.filteredCompanies = this.companies
         this._pruneSelection()
-        if (!this.queryText) {
-          this.queryText = this.serializeQuery(this.filterQuery)
-        }
+        // aqui NÃO mexe em queryText
       } catch (err) {
         console.error(err)
         this.error = 'Falha ao carregar companhias'
@@ -710,20 +948,27 @@ export const useCompanyStore = defineStore('companyStore', {
       return parseTextToQuery(text)
     },
 
-    rebuildCompanyFacets() {
-      const allCompanies = this.companies || []
-      const filter = this.companyFilter || createEmptyCompanyFilter()
+    _syncSelectionFromFilterQuery(query = this.filterQuery) {
+      const clauses = Array.isArray(query?.clauses) ? query.clauses : []
 
-      const normalizedFilter = {
-        sector: Array.isArray(filter.sector) ? filter.sector : [],
-        subsector: Array.isArray(filter.subsector) ? filter.subsector : [],
-        segment: Array.isArray(filter.segment) ? filter.segment : [],
+      const nextSelection = {}
+      const nextLogical = {}
+      const nextOperators = {}
+
+      for (const clause of clauses) {
+        const condition = clause?.condition || {}
+        const field = condition.field ? normalizeField(condition.field) || condition.field : null
+        const values = normalizeValues(condition.values || [])
+        if (!field || !values.length) continue
+
+        nextSelection[field] = values
+        nextLogical[field] = normalizeLogical(clause.logical) || 'AND'
+        nextOperators[field] = normalizeOperator(condition.operator) || DEFAULT_OPERATOR
       }
 
-      const filtered = applyCompanyFilter(allCompanies, normalizedFilter)
-
-      this.companyFacets = buildCompanyFacets(filtered)
-      this.filteredCompanies = filtered
+      this.selection = nextSelection
+      this.logical = nextLogical
+      this.operators = nextOperators
     },
 
     _pruneSelection() {
@@ -742,6 +987,11 @@ export const useCompanyStore = defineStore('companyStore', {
       if (filtered.length !== this.selectedItems.length) {
         this.selectedItems = filtered
       }
+    },
+
+    _applyPreviewFilters() {
+      this.filteredCompanies = this.previewedCompanies
+      this._pruneSelection()
     },
   },
 })
