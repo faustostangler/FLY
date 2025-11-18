@@ -106,6 +106,24 @@ const parseError = ref('')
 const draftFacets = ref({})
 const DEFAULT_OPERATOR = 'IN'
 
+const CASCADE_CONFIG = {
+  industry_sector: {
+    level: 'sector',
+    parentField: null,
+  },
+  industry_subsector: {
+    level: 'subsector',
+    parentField: 'industry_sector',
+  },
+  industry_segment: {
+    level: 'segment',
+    parentField: 'industry_subsector',
+  },
+}
+
+const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
+
+
 const queryTextModel = computed({
   get: () => store.queryText,
   set: (value) => {
