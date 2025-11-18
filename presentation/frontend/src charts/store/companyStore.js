@@ -633,7 +633,9 @@ export const useCompanyStore = defineStore('companyStore', {
     // Texto do query builder
     queryText: '',
 
+    // Lista bruta vinda da API (normalizada em loadCompanies)
     companies: [],
+    // Lista que pode ser filtrada por preview (live filter)
     filteredCompanies: [],
     total: 0,
     facets: {},
@@ -694,21 +696,21 @@ export const useCompanyStore = defineStore('companyStore', {
       )
     },
 
-    dynamicFacetBuckets() {
-      const facetFields = COMPANY_FACETS.map((facet) => facet.field)
+    // dynamicFacetBuckets() {
+    //   const facetFields = COMPANY_FACETS.map((facet) => facet.field)
 
-      const hasPreview =
-        this.previewFilters && Object.keys(this.previewFilters).length > 0
+    //   const hasPreview =
+    //     this.previewFilters && Object.keys(this.previewFilters).length > 0
 
-      const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
+    //   const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
 
-      return buildFacetBuckets(baseCompanies, facetFields)
-    },
+    //   return buildFacetBuckets(baseCompanies, facetFields)
+    // },
 
-    dynamicFacetOptions() {
-      const buckets = this.dynamicFacetBuckets
-      return bucketsToOptions(buckets)
-    },
+    // dynamicFacetOptions() {
+    //   const buckets = this.dynamicFacetBuckets
+    //   return bucketsToOptions(buckets)
+    // },
 
     selectedValuesByField(state) {
       const result = {}
@@ -906,7 +908,7 @@ export const useCompanyStore = defineStore('companyStore', {
       this.error = null
       try {
         const payload = await searchCompanies(this.filterQuery)
-        this.companies = payload.items || []
+        const rawItems = payload.items || []
 
         this.companies = rawItems.map((item) => ({
           ...item,
@@ -920,13 +922,15 @@ export const useCompanyStore = defineStore('companyStore', {
         }))
         this.total = payload.total || 0
 
-        // cache em cima da estrutura normalizada
-        this._rebuildIndustryCascade(this.companies)
-        this._pruneSelection()
-
+        // reseta preview e lista filtrada
         this.previewFilters = {}
         this.filteredCompanies = this.companies
 
+        // reconstrói o grafo da cascata Setor → Subsetor → Segmento
+        this._rebuildIndustryCascade(this.companies)
+
+        // garante que seleção de empresas continua válida
+        this._pruneSelection()
         // aqui NÃO mexe em queryText
       } catch (err) {
         console.error(err)
@@ -934,6 +938,7 @@ export const useCompanyStore = defineStore('companyStore', {
       } finally {
         this.isLoading = false
       }
+
     },
 
     async loadFacets() {

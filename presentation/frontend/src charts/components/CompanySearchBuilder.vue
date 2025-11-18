@@ -123,7 +123,6 @@ const CASCADE_CONFIG = {
 
 const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
 
-
 const queryTextModel = computed({
   get: () => store.queryText,
   set: (value) => {
