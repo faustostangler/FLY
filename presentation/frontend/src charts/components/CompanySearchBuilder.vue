@@ -134,8 +134,9 @@ const queryTextModel = computed({
 
 const companies = computed(() => store.filteredCompanies || [])
 const total = computed(() => (store.filteredCompanies || []).length)
-const staticFacets = computed(() => store.facets || {})
-const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
+const facets = computed(() => store.facets || {})
+// const staticFacets = computed(() => store.facets || {})
+// const dynamicFacetOptions = computed(() => store.dynamicFacetOptions || {})
 const isLoading = computed(() => store.isLoading)
 const error = computed(() => store.error)
 const selectedValuesByField = computed(() => store.selectedValuesByField)
@@ -184,31 +185,17 @@ function booleanLabel(value) {
 
 function facetOptions(facet) {
   const field = facet.field
-  let baseOptions = dynamicFacetOptions.value[field]
-
-  if (!baseOptions || !baseOptions.length) {
-    const fallback = staticFacets.value[field] || []
-    if (fallback.length) {
-      baseOptions = fallback
-        .map((value) => {
-          const text = String(value ?? '').trim()
-          return text ? { value: text, label: text, count: null } : null
-        })
-        .filter(Boolean)
-    }
-  }
-
-  if (!baseOptions || !baseOptions.length) {
-    baseOptions = Array.isArray(facet.options) ? facet.options : []
-  }
+  const dynamic = facets.value[field] || []
 
   if (facet.type === 'boolean') {
-    const defaults = Array.isArray(facet.options) ? facet.options : []
+    const base = Array.isArray(facet.options) ? facet.options : []
     const normalized = []
     const seen = new Set()
 
     const pushOption = (rawValue, rawLabel) => {
-      if (rawValue === null || rawValue === undefined || rawValue === '') return
+      if (rawValue === null || rawValue === undefined || rawValue === '') {
+        return
+      }
       const stringValue = String(rawValue).toLowerCase()
       if (!stringValue) return
       if (seen.has(stringValue)) return
@@ -217,7 +204,7 @@ function facetOptions(facet) {
       normalized.push({ value: stringValue, label })
     }
 
-    for (const option of defaults) {
+    for (const option of base) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else {
@@ -225,7 +212,7 @@ function facetOptions(facet) {
       }
     }
 
-    for (const option of baseOptions || []) {
+    for (const option of dynamic) {
       if (option && typeof option === 'object') {
         pushOption(option.value ?? option.label ?? '', option.label)
       } else if (typeof option === 'boolean') {
@@ -239,10 +226,97 @@ function facetOptions(facet) {
   }
 
   if (facet.type === 'date-range') {
-    return Array.isArray(facet.options) ? facet.options : []
+    return facet.options || []
   }
 
-  return baseOptions
+  const baseOptions = dynamic.length ? dynamic : (facet.options || [])
+
+  if (!isCascadeField(field)) {
+    return baseOptions
+  }
+
+  const cascade = store.industryCascade || {}
+  const { sectorToSubsectors = {}, sectorToSegments = {}, subsectorToSegments = {} } = cascade
+
+  const selectedSectors = currentCascadeValues('industry_sector')
+  const selectedSubsectors = currentCascadeValues('industry_subsector')
+
+  let allowedValues = null
+
+  if (field === 'industry_sector') {
+    const sectorsFromGraph = Object.keys(sectorToSubsectors).length
+      ? Object.keys(sectorToSubsectors)
+      : Object.keys(sectorToSegments)
+
+    if (sectorsFromGraph.length) {
+      allowedValues = sectorsFromGraph
+    }
+  } else if (field === 'industry_subsector') {
+    const sectors = selectedSectors.length
+      ? selectedSectors
+      : Object.keys(sectorToSubsectors)
+
+    const aggregated = new Set()
+    for (const sector of sectors) {
+      for (const subsector of sectorToSubsectors[sector] || []) {
+        aggregated.add(subsector)
+      }
+    }
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  } else if (field === 'industry_segment') {
+    const aggregated = new Set()
+
+    if (selectedSubsectors.length) {
+      for (const subsector of selectedSubsectors) {
+        for (const segment of subsectorToSegments[subsector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else if (selectedSectors.length) {
+      for (const sector of selectedSectors) {
+        for (const segment of sectorToSegments[sector] || []) {
+          aggregated.add(segment)
+        }
+      }
+    } else {
+      for (const key of Object.keys(subsectorToSegments)) {
+        for (const segment of subsectorToSegments[key] || []) {
+          aggregated.add(segment)
+        }
+      }
+    }
+
+    if (aggregated.size) {
+      allowedValues = Array.from(aggregated)
+    }
+  }
+
+  if (!allowedValues || !allowedValues.length) {
+    // Sem restrição de cascata calculada: devolve a lista original
+    return baseOptions
+  }
+
+  // Aqui a cascata entra em ação de fato
+  const allowedSet = new Set(
+    allowedValues.map((value) => String(value || '').trim()),
+  )
+
+  // Garante que todas as opções sejam { value, label }
+  const normalized = baseOptions.map((option) => {
+    if (option && typeof option === 'object') {
+      const value = String(option.value ?? option.label ?? '').trim()
+      const label = option.label ?? value
+      return { value, label }
+    }
+    const value = String(option || '').trim()
+    return { value, label: value }
+  })
+
+  return normalized.filter((option) =>
+    allowedSet.has(String(option.value || '').trim()),
+  )
 }
 
 function facetLogical(field) {
