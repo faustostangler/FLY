@@ -641,7 +641,14 @@ export const useCompanyStore = defineStore('companyStore', {
     isLoading: false,
     error: null,
 
-    previewFilters: {},
+    // Estrutura da cascata Setor → Subsetor → Segmento
+    industryCascade: {
+      sectorToSubsectors: {},
+      sectorToSegments: {},
+      subsectorToSegments: {},
+    },
+
+      previewFilters: {},
   }),
 
   getters: {
