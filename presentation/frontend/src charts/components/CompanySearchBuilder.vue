@@ -123,6 +123,10 @@ const CASCADE_CONFIG = {
 
 const CASCADE_FIELDS = Object.keys(CASCADE_CONFIG)
 
+function isCascadeField(field) {
+  return CASCADE_FIELDS.includes(field)
+}
+
 const queryTextModel = computed({
   get: () => store.queryText,
   set: (value) => {
@@ -316,6 +320,23 @@ function facetOptions(facet) {
   return normalized.filter((option) =>
     allowedSet.has(String(option.value || '').trim()),
   )
+}
+
+function currentCascadeValues(field) {
+  const committed = store.clauseByField[field]?.condition?.values || []
+  const draft = draftFacets.value[field]?.values || []
+  const all = [...committed, ...draft]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+
+  const seen = new Set()
+  const result = []
+  for (const value of all) {
+    if (seen.has(value)) continue
+    seen.add(value)
+    result.push(value)
+  }
+  return result
 }
 
 function facetLogical(field) {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { COMPANY_FACETS } from '../config/companyFacets'
+// import { COMPANY_FACETS } from '../config/companyFacets'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
@@ -202,10 +202,10 @@ function splitSelectionValue(value) {
   return { company: company || '', ticker: ticker || '' }
 }
 
-function normalizeBucketValue(value) {
-  const text = String(value ?? '').trim()
-  return text.length ? text : null
-}
+// function normalizeBucketValue(value) {
+//   const text = String(value ?? '').trim()
+//   return text.length ? text : null
+// }
 
 function toArray(value) {
   if (Array.isArray(value)) return value
@@ -213,7 +213,7 @@ function toArray(value) {
   return [value]
 }
 
-function buildFacetBuckets(companies = [], fields = []) {
+// function buildFacetBuckets(companies = [], fields = []) {
   const buckets = {}
   for (const field of fields) {
     buckets[field] = new Map()
@@ -248,19 +248,19 @@ function buildFacetBuckets(companies = [], fields = []) {
   }
 
   return normalizedBuckets
-}
+// }
 
-function bucketsToOptions(buckets = {}) {
-  const options = {}
-  for (const [field, entries] of Object.entries(buckets)) {
-    options[field] = (entries || []).map((entry) => ({
-      value: entry.value,
-      label: entry.value,
-      count: entry.count,
-    }))
-  }
-  return options
-}
+// function bucketsToOptions(buckets = {}) {
+//   const options = {}
+//   for (const [field, entries] of Object.entries(buckets)) {
+//     options[field] = (entries || []).map((entry) => ({
+//       value: entry.value,
+//       label: entry.value,
+//       count: entry.count,
+//     }))
+//   }
+//   return options
+// }
 
 function tokenize(input) {
   const tokens = []
@@ -656,7 +656,7 @@ export const useCompanyStore = defineStore('companyStore', {
   getters: {
     clauseByField(state) {
       const map = {}
-      for (const clause of state.facetQuery.clauses || []) {
+      for (const clause of state.filterQuery.clauses || []) {
         if (clause.condition && clause.condition.field) {
           map[clause.condition.field] = clause
         }
@@ -993,9 +993,9 @@ export const useCompanyStore = defineStore('companyStore', {
       const subsectorToSegments = new Map()
 
       for (const company of items || []) {
-        const sector = (company.sector || '').trim()
-        const subsector = (company.subsector || '').trim()
-        const segment = (company.segment || '').trim()
+        const sector = (company.industry_sector || company.sector || '').trim()
+        const subsector = (company.industry_subsector || company.subsector || '').trim()
+        const segment = (company.industry_segment || company.segment || '').trim()
 
         if (!sector && !subsector && !segment) continue
 
