@@ -978,6 +978,64 @@ export const useCompanyStore = defineStore('companyStore', {
       this.operators = nextOperators
     },
 
+    _rebuildIndustryCascade(items = []) {
+      const sectorToSubsectors = new Map()
+      const sectorToSegments = new Map()
+      const subsectorToSegments = new Map()
+
+      for (const company of items || []) {
+        const sector = (company.sector || '').trim()
+        const subsector = (company.subsector || '').trim()
+        const segment = (company.segment || '').trim()
+
+        if (!sector && !subsector && !segment) continue
+
+        if (sector) {
+          if (!sectorToSubsectors.has(sector)) {
+            sectorToSubsectors.set(sector, new Set())
+          }
+          if (!sectorToSegments.has(sector)) {
+            sectorToSegments.set(sector, new Set())
+          }
+        }
+
+        if (subsector) {
+          if (!subsectorToSegments.has(subsector)) {
+            subsectorToSegments.set(subsector, new Set())
+          }
+        }
+
+        if (sector && subsector) {
+          sectorToSubsectors.get(sector).add(subsector)
+        }
+
+        if (sector && segment) {
+          sectorToSegments.get(sector).add(segment)
+        }
+
+        if (subsector && segment) {
+          subsectorToSegments.get(subsector).add(segment)
+        }
+      }
+
+      const normalizeMap = (map) => {
+        const result = {}
+        for (const [key, set] of map.entries()) {
+          const values = Array.from(set).filter((value) => value && value.length)
+          if (values.length) {
+            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          }
+        }
+        return result
+      }
+
+      this.industryCascade = {
+        sectorToSubsectors: normalizeMap(sectorToSubsectors),
+        sectorToSegments: normalizeMap(sectorToSegments),
+        subsectorToSegments: normalizeMap(subsectorToSegments),
+      }
+    },
+
     _pruneSelection() {
       if (!this.selectedItems || this.selectedItems.length === 0) {
         return
