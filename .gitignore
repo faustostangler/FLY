@@ -107,6 +107,7 @@ temp/
 *.odp
 *.rtf
 *.lnk
+*.txt
 
 # Compressed and archived files
 *.zip
