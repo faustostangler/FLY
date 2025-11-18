@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { COMPANY_FACETS } from '../config/companyFacets'
+// import { COMPANY_FACETS } from '../config/companyFacets'
 import { searchCompanies, fetchCompanyFacets } from '../services/apiService'
 
 const DEFAULT_OPERATOR = 'IN'
@@ -202,10 +202,10 @@ function splitSelectionValue(value) {
   return { company: company || '', ticker: ticker || '' }
 }
 
-function normalizeBucketValue(value) {
-  const text = String(value ?? '').trim()
-  return text.length ? text : null
-}
+// function normalizeBucketValue(value) {
+//   const text = String(value ?? '').trim()
+//   return text.length ? text : null
+// }
 
 function toArray(value) {
   if (Array.isArray(value)) return value
@@ -213,7 +213,7 @@ function toArray(value) {
   return [value]
 }
 
-function buildFacetBuckets(companies = [], fields = []) {
+// function buildFacetBuckets(companies = [], fields = []) {
   const buckets = {}
   for (const field of fields) {
     buckets[field] = new Map()
@@ -248,19 +248,19 @@ function buildFacetBuckets(companies = [], fields = []) {
   }
 
   return normalizedBuckets
-}
+// }
 
-function bucketsToOptions(buckets = {}) {
-  const options = {}
-  for (const [field, entries] of Object.entries(buckets)) {
-    options[field] = (entries || []).map((entry) => ({
-      value: entry.value,
-      label: entry.value,
-      count: entry.count,
-    }))
-  }
-  return options
-}
+// function bucketsToOptions(buckets = {}) {
+//   const options = {}
+//   for (const [field, entries] of Object.entries(buckets)) {
+//     options[field] = (entries || []).map((entry) => ({
+//       value: entry.value,
+//       label: entry.value,
+//       count: entry.count,
+//     }))
+//   }
+//   return options
+// }
 
 function tokenize(input) {
   const tokens = []
@@ -633,7 +633,9 @@ export const useCompanyStore = defineStore('companyStore', {
     // Texto do query builder
     queryText: '',
 
+    // Lista bruta vinda da API (normalizada em loadCompanies)
     companies: [],
+    // Lista que pode ser filtrada por preview (live filter)
     filteredCompanies: [],
     total: 0,
     facets: {},
@@ -641,13 +643,20 @@ export const useCompanyStore = defineStore('companyStore', {
     isLoading: false,
     error: null,
 
-    previewFilters: {},
+    // Estrutura da cascata Setor → Subsetor → Segmento
+    industryCascade: {
+      sectorToSubsectors: {},
+      sectorToSegments: {},
+      subsectorToSegments: {},
+    },
+
+      previewFilters: {},
   }),
 
   getters: {
     clauseByField(state) {
       const map = {}
-      for (const clause of state.facetQuery.clauses || []) {
+      for (const clause of state.filterQuery.clauses || []) {
         if (clause.condition && clause.condition.field) {
           map[clause.condition.field] = clause
         }
@@ -687,21 +696,21 @@ export const useCompanyStore = defineStore('companyStore', {
       )
     },
 
-    dynamicFacetBuckets() {
-      const facetFields = COMPANY_FACETS.map((facet) => facet.field)
+    // dynamicFacetBuckets() {
+    //   const facetFields = COMPANY_FACETS.map((facet) => facet.field)
 
-      const hasPreview =
-        this.previewFilters && Object.keys(this.previewFilters).length > 0
+    //   const hasPreview =
+    //     this.previewFilters && Object.keys(this.previewFilters).length > 0
 
-      const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
+    //   const baseCompanies = hasPreview ? this.previewedCompanies : this.companies
 
-      return buildFacetBuckets(baseCompanies, facetFields)
-    },
+    //   return buildFacetBuckets(baseCompanies, facetFields)
+    // },
 
-    dynamicFacetOptions() {
-      const buckets = this.dynamicFacetBuckets
-      return bucketsToOptions(buckets)
-    },
+    // dynamicFacetOptions() {
+    //   const buckets = this.dynamicFacetBuckets
+    //   return bucketsToOptions(buckets)
+    // },
 
     selectedValuesByField(state) {
       const result = {}
@@ -913,8 +922,14 @@ export const useCompanyStore = defineStore('companyStore', {
         }))
         this.total = payload.total || 0
 
+        // reseta preview e lista filtrada
         this.previewFilters = {}
         this.filteredCompanies = this.companies
+
+        // reconstrói o grafo da cascata Setor → Subsetor → Segmento
+        this._rebuildIndustryCascade(this.companies)
+
+        // garante que seleção de empresas continua válida
         this._pruneSelection()
         // aqui NÃO mexe em queryText
       } catch (err) {
@@ -923,6 +938,7 @@ export const useCompanyStore = defineStore('companyStore', {
       } finally {
         this.isLoading = false
       }
+
     },
 
     async loadFacets() {
@@ -969,6 +985,64 @@ export const useCompanyStore = defineStore('companyStore', {
       this.selection = nextSelection
       this.logical = nextLogical
       this.operators = nextOperators
+    },
+
+    _rebuildIndustryCascade(items = []) {
+      const sectorToSubsectors = new Map()
+      const sectorToSegments = new Map()
+      const subsectorToSegments = new Map()
+
+      for (const company of items || []) {
+        const sector = (company.industry_sector || company.sector || '').trim()
+        const subsector = (company.industry_subsector || company.subsector || '').trim()
+        const segment = (company.industry_segment || company.segment || '').trim()
+
+        if (!sector && !subsector && !segment) continue
+
+        if (sector) {
+          if (!sectorToSubsectors.has(sector)) {
+            sectorToSubsectors.set(sector, new Set())
+          }
+          if (!sectorToSegments.has(sector)) {
+            sectorToSegments.set(sector, new Set())
+          }
+        }
+
+        if (subsector) {
+          if (!subsectorToSegments.has(subsector)) {
+            subsectorToSegments.set(subsector, new Set())
+          }
+        }
+
+        if (sector && subsector) {
+          sectorToSubsectors.get(sector).add(subsector)
+        }
+
+        if (sector && segment) {
+          sectorToSegments.get(sector).add(segment)
+        }
+
+        if (subsector && segment) {
+          subsectorToSegments.get(subsector).add(segment)
+        }
+      }
+
+      const normalizeMap = (map) => {
+        const result = {}
+        for (const [key, set] of map.entries()) {
+          const values = Array.from(set).filter((value) => value && value.length)
+          if (values.length) {
+            result[key] = values.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+          }
+        }
+        return result
+      }
+
+      this.industryCascade = {
+        sectorToSubsectors: normalizeMap(sectorToSubsectors),
+        sectorToSegments: normalizeMap(sectorToSegments),
+        subsectorToSegments: normalizeMap(subsectorToSegments),
+      }
     },
 
     _pruneSelection() {
