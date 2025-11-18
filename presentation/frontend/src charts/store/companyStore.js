@@ -906,7 +906,7 @@ export const useCompanyStore = defineStore('companyStore', {
       this.error = null
       try {
         const payload = await searchCompanies(this.filterQuery)
-        const rawItems = payload.items || []
+        this.companies = payload.items || []
 
         this.companies = rawItems.map((item) => ({
           ...item,
@@ -920,9 +920,13 @@ export const useCompanyStore = defineStore('companyStore', {
         }))
         this.total = payload.total || 0
 
+        // cache em cima da estrutura normalizada
+        this._rebuildIndustryCascade(this.companies)
+        this._pruneSelection()
+
         this.previewFilters = {}
         this.filteredCompanies = this.companies
-        this._pruneSelection()
+
         // aqui NÃO mexe em queryText
       } catch (err) {
         console.error(err)
