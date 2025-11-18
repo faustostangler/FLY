@@ -207,47 +207,47 @@ function splitSelectionValue(value) {
 //   return text.length ? text : null
 // }
 
-function toArray(value) {
-  if (Array.isArray(value)) return value
-  if (value === null || value === undefined) return []
-  return [value]
-}
+// function toArray(value) {
+//   if (Array.isArray(value)) return value
+//   if (value === null || value === undefined) return []
+//   return [value]
+// }
 
-// function buildFacetBuckets(companies = [], fields = []) {
-  const buckets = {}
-  for (const field of fields) {
-    buckets[field] = new Map()
-  }
+// // function buildFacetBuckets(companies = [], fields = []) {
+//   const buckets = {}
+//   for (const field of fields) {
+//     buckets[field] = new Map()
+//   }
 
-  for (const company of companies) {
-    for (const field of fields) {
-      const values = toArray(company?.[field])
-      for (const raw of values) {
-        const value = normalizeBucketValue(raw)
-        if (!value) continue
+//   for (const company of companies) {
+//     for (const field of fields) {
+//       const values = toArray(company?.[field])
+//       for (const raw of values) {
+//         const value = normalizeBucketValue(raw)
+//         if (!value) continue
 
-        const map = buckets[field]
-        map.set(value, (map.get(value) || 0) + 1)
-      }
-    }
-  }
+//         const map = buckets[field]
+//         map.set(value, (map.get(value) || 0) + 1)
+//       }
+//     }
+//   }
 
-  const normalizedBuckets = {}
-  for (const field of fields) {
-    const entries = Array.from(buckets[field].entries()).map(([value, count]) => ({
-      value,
-      count,
-    }))
+//   const normalizedBuckets = {}
+//   for (const field of fields) {
+//     const entries = Array.from(buckets[field].entries()).map(([value, count]) => ({
+//       value,
+//       count,
+//     }))
 
-    entries.sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count
-      return a.value.localeCompare(b.value)
-    })
+//     entries.sort((a, b) => {
+//       if (b.count !== a.count) return b.count - a.count
+//       return a.value.localeCompare(b.value)
+//     })
 
-    normalizedBuckets[field] = entries
-  }
+//     normalizedBuckets[field] = entries
+//   }
 
-  return normalizedBuckets
+//   return normalizedBuckets
 // }
 
 // function bucketsToOptions(buckets = {}) {
