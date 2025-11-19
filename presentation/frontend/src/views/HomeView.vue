@@ -38,14 +38,13 @@ import { useAccountChartsStore } from '../store/accountChartsStore'
 const title = ref('Dashboard de Indicadores')
 
 const companyStore = useCompanyStore()
-const chartsStore = useAccountChartsStore()
 const { selectedPairs: selectedPairsRef } = storeToRefs(companyStore)
-
 const selectedPairs = computed(() => {
   const pairs = selectedPairsRef.value
   return Array.isArray(pairs) ? pairs : []
 })
 
+const chartsStore = useAccountChartsStore()
 const onVisualizarGraficos = () => {
   chartsStore.setCompanies(selectedPairs.value)
   chartsStore.setSelectedAccounts(['02.03', '03.01', '03.11'])

@@ -1,23 +1,24 @@
 <!-- src/App.vue -->
 <template>
-  <div class="component-box">
+  <section id="top-nav" class="component-box">
     <a href="http://localhost:5173/">Home</a> |
-    <a href="http://localhost:5173/charts">Chart</a> |
-    <a href="http://localhost:5173/charts/accounts">Contas</a>
-  </div>
-  <div>
-    <header>
-      <h1>FLY Project</h1>
-    </header>
+    <!-- <a href="http://localhost:5173/charts">Chart</a> |
+    <a href="http://localhost:5173/charts/accounts">Contas</a> -->
+  </section>
+  <section id="header">
+    <h1>FLY Project</h1>
+  </section>
+  <section id="body">
     <router-view />
+  </section>
+  <section id="footer" class="component-box">
     <p>
       (c) Crafted in the Pampas and powered by yerba mate: an authentic gaucho tech.
     </p>
-  </div>
+  </section>
 </template>
 
 <script setup>
-// por enquanto, nada aqui
 </script>
 
 <style>
