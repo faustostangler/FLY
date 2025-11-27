@@ -59,57 +59,92 @@ function buildLeaf(condition) {
   return { [field]: { [op]: values.length === 1 ? values[0] : values } }
 }
 
+function buildGroup(clauses) {
+  if (!clauses || !clauses.length) {
+    return null
+  }
+
+  // Detecta a lógica predominante no grupo olhando para o primeiro item.
+  // O parser do frontend (astToClauses) agrupa itens de lógica diferente em subgrupos,
+  // então aqui devemos ter uma lista homogênea (ex: todos OR ou todos AND).
+  const firstLogical = clauses[0].logical || 'AND'
+  const key = firstLogical.toLowerCase() // 'and', 'or', 'not'
+
+  const children = []
+
+  for (const clause of clauses) {
+    let child = null
+
+    if (clause.group) {
+      // Recursão para grupos aninhados
+      child = buildGroup(clause.group.clauses)
+    } else if (clause.condition) {
+      // Folha
+      child = buildLeaf(clause.condition)
+    }
+
+    if (child) {
+      // Se o operador lógico deste item for NOT, envolvemos ele.
+      // Nota: se a lista for toda NOT, teremos { "not": [...] } ?
+      // O backend espera { "not": { ... } }.
+      // Se tivermos múltiplos NOTs na lista, eles são AND NOT ou OR NOT?
+      // O astToClauses trata NOT como um wrapper de um grupo ou condição.
+      // Então clause.logical == 'NOT' geralmente envolve um único filho.
+
+      if (clause.logical === 'NOT') {
+        children.push({ not: child })
+      } else {
+        children.push(child)
+      }
+    }
+  }
+
+  if (!children.length) {
+    return null
+  }
+
+  // Se a chave for 'not', o comportamento é diferente?
+  // Geralmente 'not' não é uma lista de itens, mas um wrapper.
+  // Mas aqui estamos processando uma lista.
+  // Se firstLogical for NOT, significa que o primeiro item é NOT.
+  // Mas se tivermos [NOT A, NOT B], isso é (NOT A) AND (NOT B)?
+  // O astToClauses define o parentLogical.
+
+  // Se firstLogical for NOT, vamos assumir que é uma lista de negações combinadas por AND (default).
+  // Mas na verdade, o buildGroup deve retornar o container.
+  // Se os itens são {not: A}, {not: B}, eles já estão embrulhados.
+  // O container deve ser AND ou OR.
+
+  // CORREÇÃO: O `logical` no clause diz como ele se conecta ao ANTERIOR (ou ao pai).
+  // Se temos [ {logical: OR, ...}, {logical: OR, ...} ], o grupo é OR.
+  // Se temos [ {logical: NOT, ...} ], o grupo é... ?
+  // O astToClauses gera NOT sempre como um wrapper único:
+  // { logical: 'NOT', group: { clauses: [...] } }
+  // Então dentro desse grupo, as clauses terão a lógica interna (AND/OR).
+  // O wrapper em si tem logical NOT.
+
+  // Então, se estamos processando uma lista de clauses, elas devem ser AND ou OR.
+  // O caso NOT é tratado no loop (envolvendo o child).
+  // O container da lista deve ser AND ou OR.
+
+  // Se firstLogical for NOT, isso é estranho para uma lista, a menos que seja um item único.
+  // Mas vamos assumir AND se não for OR.
+
+  const containerKey = (firstLogical === 'OR') ? 'or' : 'and'
+
+  if (children.length === 1) {
+    return children[0]
+  }
+
+  return { [containerKey]: children }
+}
+
 export function buildChartFilterTree(filterQuery) {
   if (!filterQuery || !Array.isArray(filterQuery.clauses)) {
     return null
   }
 
-  const andClauses = []
-  const orClauses = []
-  const notClauses = []
-
-  for (const clause of filterQuery.clauses) {
-    if (!clause || !clause.condition) {
-      continue
-    }
-
-    const leaf = buildLeaf(clause.condition)
-    if (!leaf) {
-      continue
-    }
-
-    const logical = String(clause.logical || 'AND').toUpperCase()
-    if (logical === 'OR') {
-      orClauses.push(leaf)
-    } else if (logical === 'NOT') {
-      notClauses.push({ not: leaf })
-    } else {
-      andClauses.push(leaf)
-    }
-  }
-
-  let tree = null
-
-  if (andClauses.length === 1) {
-    tree = andClauses[0]
-  } else if (andClauses.length > 1) {
-    tree = { and: andClauses }
-  }
-
-  if (orClauses.length === 1) {
-    tree = tree ? { and: [tree, orClauses[0]] } : orClauses[0]
-  } else if (orClauses.length > 1) {
-    const orNode = { or: orClauses }
-    tree = tree ? { and: [tree, orNode] } : orNode
-  }
-
-  if (notClauses.length === 1) {
-    tree = tree ? { and: [tree, notClauses[0]] } : notClauses[0]
-  } else if (notClauses.length > 1) {
-    const notNode = { and: notClauses }
-    tree = tree ? { and: [tree, notNode] } : notNode
-  }
-
-  return tree
+  // A raiz do filterQuery é implicitamente um AND de todas as cláusulas
+  return buildGroup(filterQuery.clauses)
 }
 
