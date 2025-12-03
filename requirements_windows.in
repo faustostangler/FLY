@@ -1,0 +1,3 @@
+-r requirements.in
+pywin32; sys_platform == "win32"
+pywinpty; sys_platform == "win32"

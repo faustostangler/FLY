@@ -16,8 +16,6 @@ def main() -> None:
         3. Build controller
         4. Run controller
     """
-    setup_env.run()
-
     # Load configuration
     config = ConfigAdapter()
 
