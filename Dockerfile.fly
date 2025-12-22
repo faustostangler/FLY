@@ -1,0 +1,29 @@
+FROM python:3.12-slim
+
+# Evitar .pyc e buffering em logs
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Diretório de trabalho no container
+WORKDIR /app
+
+# Dependências de sistema mínimas (ajuste se precisar de mais libs nativas)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        gcc \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements e instalar dependências Python
+COPY requirements.txt /app/requirements.txt
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copiar o restante do código
+COPY . /app
+
+# Comando padrão: deixa o container "ligado" para dev
+CMD ["sleep", "infinity"]
